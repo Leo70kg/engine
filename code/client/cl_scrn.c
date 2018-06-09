@@ -23,13 +23,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "client.h"
 
-qboolean	scr_initialized;		// ready to draw
+static qboolean scr_initialized;		// ready to draw
 
-cvar_t		*cl_timegraph;
-cvar_t		*cl_debuggraph;
-cvar_t		*cl_graphheight;
-cvar_t		*cl_graphscale;
-cvar_t		*cl_graphshift;
+cvar_t *cl_timegraph;
+cvar_t *cl_debuggraph;
+cvar_t *cl_graphheight;
+cvar_t *cl_graphscale;
+cvar_t *cl_graphshift;
 
 /*
 ================
@@ -38,7 +38,8 @@ SCR_DrawNamedPic
 Coordinates are 640*480 virtual values
 =================
 */
-void SCR_DrawNamedPic( float x, float y, float width, float height, const char *picname ) {
+void SCR_DrawNamedPic( float x, float y, float width, float height, const char *picname )
+{
 	qhandle_t	hShader;
 
 	assert( width != 0 );
@@ -190,14 +191,13 @@ void SCR_DrawSmallChar( int x, int y, int ch ) {
 ==================
 SCR_DrawBigString[Color]
 
-Draws a multi-colored string with a drop shadow, optionally forcing
-to a fixed color.
+Draws a multi-colored string with a drop shadow, optionally forcing to a fixed color.
 
 Coordinates are at 640 by 480 virtual resolution
 ==================
 */
-void SCR_DrawStringExt( int x, int y, float size, const char *string, float *setColor, qboolean forceColor,
-		qboolean noColorEscape ) {
+void SCR_DrawStringExt( int x, int y, float size, const char *string, const float *setColor, qboolean forceColor, qboolean noColorEscape )
+{
 	vec4_t		color;
 	const char	*s;
 	int			xx;
@@ -226,7 +226,7 @@ void SCR_DrawStringExt( int x, int y, float size, const char *string, float *set
 	while ( *s ) {
 		if ( Q_IsColorString( s ) ) {
 			if ( !forceColor ) {
-				Com_Memcpy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ) );
+				memcpy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ) );
 				color[3] = setColor[3];
 				re.SetColor( color );
 			}
@@ -260,28 +260,29 @@ void SCR_DrawBigStringColor( int x, int y, const char *s, vec4_t color, qboolean
 ==================
 SCR_DrawSmallString[Color]
 
-Draws a multi-colored string with a drop shadow, optionally forcing
-to a fixed color.
+Draws a multi-colored string with a drop shadow, optionally forcing to a fixed color.
 ==================
 */
-void SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, qboolean forceColor,
-		qboolean noColorEscape ) {
-	vec4_t		color;
-	const char	*s;
-	int			xx;
+void SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, qboolean forceColor, qboolean noColorEscape )
+{
+	vec4_t color;
+	const char	*s = string;
+	int	xx = x;
 
 	// draw the colored text
-	s = string;
-	xx = x;
 	re.SetColor( setColor );
-	while ( *s ) {
-		if ( Q_IsColorString( s ) ) {
-			if ( !forceColor ) {
-				Com_Memcpy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ) );
+	while ( *s )
+    {
+		if ( Q_IsColorString( s ) )
+        {
+			if ( !forceColor )
+            {
+				memcpy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ) );
 				color[3] = setColor[3];
 				re.SetColor( color );
 			}
-			if ( !noColorEscape ) {
+			if ( !noColorEscape )
+            {
 				s += 2;
 				continue;
 			}
@@ -329,7 +330,8 @@ int	SCR_GetBigStringWidth( const char *str ) {
 SCR_DrawDemoRecording
 =================
 */
-void SCR_DrawDemoRecording( void ) {
+void SCR_DrawDemoRecording( void )
+{
 	char	string[1024];
 	int		pos;
 
@@ -447,11 +449,7 @@ void SCR_DrawDebugGraph (void)
 
 //=============================================================================
 
-/*
-==================
-SCR_Init
-==================
-*/
+
 void SCR_Init( void ) {
 	cl_timegraph = Cvar_Get ("timegraph", "0", CVAR_CHEAT);
 	cl_debuggraph = Cvar_Get ("debuggraph", "0", CVAR_CHEAT);
@@ -465,17 +463,12 @@ void SCR_Init( void ) {
 
 //=======================================================
 
-/*
-==================
-SCR_DrawScreenField
 
-This will be called twice if rendering in stereo mode
-==================
-*/
-void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
+static void SCR_DrawScreenField(void)
+{
 	qboolean uiFullscreen;
 
-	re.BeginFrame( stereoFrame );
+	re.BeginFrame( 	STEREO_CENTER );
 
 	uiFullscreen = (uivm && VM_Call( uivm, UI_IS_FULLSCREEN ));
 
@@ -515,7 +508,7 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 		case CA_LOADING:
 		case CA_PRIMED:
 			// draw the game information screen and loading progress
-			CL_CGameRendering(stereoFrame);
+			CL_CGameRendering();
 
 			// also draw the connection information, so it doesn't
 			// flash away too briefly on local or lan games
@@ -525,7 +518,7 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 			break;
 		case CA_ACTIVE:
 			// always supply STEREO_CENTER as vieworg offset is now done by the engine.
-			CL_CGameRendering(stereoFrame);
+			CL_CGameRendering();
 			SCR_DrawDemoRecording();
 #ifdef USE_VOIP
 			SCR_DrawVoipMeter();
@@ -552,39 +545,31 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 ==================
 SCR_UpdateScreen
 
-This is called every frame, and can also be called explicitly to flush
-text to the screen.
+This is called every frame, and can also be called explicitly to flush text to the screen.
 ==================
 */
-void SCR_UpdateScreen( void ) {
+void SCR_UpdateScreen( void )
+{
 	static int	recursive;
 
-	if ( !scr_initialized ) {
+	if ( !scr_initialized )
 		return;				// not initialized yet
-	}
+	
 
 	if ( ++recursive > 2 ) {
 		Com_Error( ERR_FATAL, "SCR_UpdateScreen: recursively called" );
 	}
 	recursive = 1;
 
-	// If there is no VM, there are also no rendering commands issued. Stop the renderer in
-	// that case.
+	// If there is no VM, there are also no rendering commands issued. Stop the renderer in that case.
 	if( uivm || com_dedicated->integer )
 	{
-		// XXX
-		int in_anaglyphMode = Cvar_VariableIntegerValue("r_anaglyphMode");
-		// if running in stereo, we need to draw the frame twice
-		if ( cls.glconfig.stereoEnabled || in_anaglyphMode) {
-			SCR_DrawScreenField( STEREO_LEFT );
-			SCR_DrawScreenField( STEREO_RIGHT );
-		} else {
-			SCR_DrawScreenField( STEREO_CENTER );
-		}
+		SCR_DrawScreenField();
 
 		if ( com_speeds->integer ) {
 			re.EndFrame( &time_frontend, &time_backend );
-		} else {
+		}
+        else {
 			re.EndFrame( NULL, NULL );
 		}
 	}

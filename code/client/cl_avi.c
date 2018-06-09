@@ -26,7 +26,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define INDEX_FILE_EXTENSION ".index.dat"
 
 #define MAX_RIFF_CHUNKS 16
-
+// AVI files have the start of pixel lines 4 byte-aligned
+#define AVI_LINE_PADDING 4
 typedef struct audioFormat_s
 {
   int rate;
@@ -74,33 +75,21 @@ static aviFileData_t afd;
 static byte buffer[ MAX_AVI_BUFFER ];
 static int  bufIndex;
 
-/*
-===============
-SafeFS_Write
-===============
-*/
+
 static ID_INLINE void SafeFS_Write( const void *buffer, int len, fileHandle_t f )
 {
   if( FS_Write( buffer, len, f ) < len )
     Com_Error( ERR_DROP, "Failed to write avi file" );
 }
 
-/*
-===============
-WRITE_STRING
-===============
-*/
+
 static ID_INLINE void WRITE_STRING( const char *s )
 {
-  Com_Memcpy( &buffer[ bufIndex ], s, strlen( s ) );
-  bufIndex += strlen( s );
+    memcpy( &buffer[ bufIndex ], s, strlen( s ) );
+    bufIndex += strlen( s );
 }
 
-/*
-===============
-WRITE_4BYTES
-===============
-*/
+
 static ID_INLINE void WRITE_4BYTES( int x )
 {
   buffer[ bufIndex + 0 ] = (byte)( ( x >>  0 ) & 0xFF );
@@ -120,17 +109,6 @@ static ID_INLINE void WRITE_2BYTES( int x )
   buffer[ bufIndex + 0 ] = (byte)( ( x >>  0 ) & 0xFF );
   buffer[ bufIndex + 1 ] = (byte)( ( x >>  8 ) & 0xFF );
   bufIndex += 2;
-}
-
-/*
-===============
-WRITE_1BYTES
-===============
-*/
-static ID_INLINE void WRITE_1BYTES( int x )
-{
-  buffer[ bufIndex ] = x;
-  bufIndex += 1;
 }
 
 /*
@@ -337,7 +315,7 @@ qboolean CL_OpenAVIForWriting( const char *fileName )
   if( afd.fileOpen )
     return qfalse;
 
-  Com_Memset( &afd, 0, sizeof( aviFileData_t ) );
+  memset( &afd, 0, sizeof( aviFileData_t ) );
 
   // Don't start if a framerate has not been chosen
   if( cl_aviFrameRate->integer <= 0 )
@@ -537,7 +515,7 @@ void CL_WriteAVIAudioFrame( const byte *pcmBuffer, int size )
     size = PCM_BUFFER_SIZE - bytesInBuffer;
   }
 
-  Com_Memcpy( &pcmCaptureBuffer[ bytesInBuffer ], pcmBuffer, size );
+  memcpy( &pcmCaptureBuffer[ bytesInBuffer ], pcmBuffer, size );
   bytesInBuffer += size;
 
   // Only write if we have a frame's worth of audio
@@ -587,8 +565,7 @@ void CL_TakeVideoFrame( void )
   if( !afd.fileOpen )
     return;
 
-  re.TakeVideoFrame( afd.width, afd.height,
-      afd.cBuffer, afd.eBuffer, afd.motionJpeg );
+  re.TakeVideoFrame( afd.width, afd.height, afd.cBuffer, afd.eBuffer, afd.motionJpeg );
 }
 
 /*

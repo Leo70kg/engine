@@ -248,7 +248,7 @@ void SV_AuthorizeIpPacket( netadr_t from ) {
 		// they are a demo client trying to connect to a real server
 		NET_OutOfBandPrint( NS_SERVER, challengeptr->adr, "print\nServer is not a demo server\n" );
 		// clear the challenge record so it won't timeout and let them through
-		Com_Memset( challengeptr, 0, sizeof( *challengeptr ) );
+		memset( challengeptr, 0, sizeof( *challengeptr ) );
 		return;
 	}
 	if ( !Q_stricmp( s, "accept" ) ) {
@@ -263,7 +263,7 @@ void SV_AuthorizeIpPacket( netadr_t from ) {
 			NET_OutOfBandPrint( NS_SERVER, challengeptr->adr, "print\n%s\n", r);
 		}
 		// clear the challenge record so it won't timeout and let them through
-		Com_Memset( challengeptr, 0, sizeof( *challengeptr ) );
+		memset( challengeptr, 0, sizeof( *challengeptr ) );
 		return;
 	}
 
@@ -275,7 +275,7 @@ void SV_AuthorizeIpPacket( netadr_t from ) {
 	}
 
 	// clear the challenge record so it won't timeout and let them through
-	Com_Memset( challengeptr, 0, sizeof(*challengeptr) );
+	memset( challengeptr, 0, sizeof(*challengeptr) );
 }
 #endif
 
@@ -453,7 +453,7 @@ void SV_DirectConnect( netadr_t from ) {
 	}
 
 	newcl = &temp;
-	Com_Memset (newcl, 0, sizeof(client_t));
+	memset(newcl, 0, sizeof(client_t));
 
 	// if there is already a slot for this ip, reuse it
 	for (i=0,cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++) {
@@ -652,7 +652,7 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 		{
 			if(NET_CompareAdr(drop->netchan.remoteAddress, challenge->adr))
 			{
-				Com_Memset(challenge, 0, sizeof(*challenge));
+				memset(challenge, 0, sizeof(*challenge));
 				break;
 			}
 		}
@@ -754,7 +754,7 @@ static void SV_SendClientGameState( client_t *client ) {
 	}
 
 	// write the baselines
-	Com_Memset( &nullstate, 0, sizeof( nullstate ) );
+	memset( &nullstate, 0, sizeof( nullstate ) );
 	for ( start = 0 ; start < MAX_GENTITIES; start++ ) {
 		base = &sv.svEntities[start].baseline;
 		if ( !base->number ) {
@@ -1459,8 +1459,8 @@ void SV_UserinfoChanged( client_t *cl ) {
 	else
 #endif
 	{
-		val = Info_ValueForKey(cl->userinfo, "cl_voip");
-		cl->hasVoip = atoi(val);
+		val = Info_ValueForKey(cl->userinfo, "cl_voipProtocol");
+		cl->hasVoip = !Q_stricmp( val, "opus" );
 	}
 #endif
 
@@ -1708,7 +1708,7 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 	// also use the last acknowledged server command in the key
 	key ^= MSG_HashKey(cl->reliableCommands[ cl->reliableAcknowledge & (MAX_RELIABLE_COMMANDS-1) ], 32);
 
-	Com_Memset( &nullcmd, 0, sizeof(nullcmd) );
+	memset( &nullcmd, 0, sizeof(nullcmd) );
 	oldcmd = &nullcmd;
 	for ( i = 0 ; i < cmdCount ; i++ ) {
 		cmd = &cmds[i];
@@ -1795,7 +1795,7 @@ static qboolean SV_ShouldIgnoreVoipSender(const client_t *cl)
 }
 
 static
-void SV_UserVoip(client_t *cl, msg_t *msg)
+void SV_UserVoip(client_t *cl, msg_t *msg, qboolean ignoreData)
 {
 	int sender, generation, sequence, frames, packetsize;
 	uint8_t recips[(MAX_CLIENTS + 7) / 8];
@@ -1830,12 +1830,12 @@ void SV_UserVoip(client_t *cl, msg_t *msg)
 
 	MSG_ReadData(msg, encoded, packetsize);
 
-	if (SV_ShouldIgnoreVoipSender(cl))
+	if (ignoreData || SV_ShouldIgnoreVoipSender(cl))
 		return;   // Blacklisted, disabled, etc.
 
 	// !!! FIXME: see if we read past end of msg...
 
-	// !!! FIXME: reject if not speex narrowband codec.
+	// !!! FIXME: reject if not opus data.
 	// !!! FIXME: decide if this is bogus data?
 
 	// decide who needs this VoIP packet sent to them...
@@ -1984,10 +1984,18 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 		}
 	} while ( 1 );
 
-	// read optional voip data
-	if ( c == clc_voip ) {
+	// skip legacy speex voip data
+	if ( c == clc_voipSpeex ) {
 #ifdef USE_VOIP
-		SV_UserVoip( cl, msg );
+		SV_UserVoip( cl, msg, qtrue );
+		c = MSG_ReadByte( msg );
+#endif
+	}
+
+	// read optional voip data
+	if ( c == clc_voipOpus ) {
+#ifdef USE_VOIP
+		SV_UserVoip( cl, msg, qfalse );
 		c = MSG_ReadByte( msg );
 #endif
 	}

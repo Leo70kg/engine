@@ -26,6 +26,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string.h> // memcpy
 
 trGlobals_t		tr;
+refimport_t	ri;
+
+
+
 
 static float	s_flipMatrix[16] = {
 	// convert from our coordinate system (looking down X)
@@ -37,11 +41,10 @@ static float	s_flipMatrix[16] = {
 };
 
 
-refimport_t	ri;
 
-// entities that will have procedurally generated surfaces will just
-// point at this for their sorting surface
-surfaceType_t	entitySurface = SF_ENTITY;
+// entities that will have procedurally generated surfaces 
+// will just point at this for their sorting surface
+static surfaceType_t entitySurface = SF_ENTITY;
 
 /*
 =================
@@ -341,7 +344,7 @@ void R_RotateForViewer (void)
 	float	viewerMatrix[16];
 	vec3_t	origin;
 
-	Com_Memset (&tr.or, 0, sizeof(tr.or));
+	memset (&tr.or, 0, sizeof(tr.or));
 	tr.or.axis[0][0] = 1;
 	tr.or.axis[1][1] = 1;
 	tr.or.axis[2][2] = 1;
@@ -513,22 +516,13 @@ R_SetupProjection
 void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum)
 {
 	float	xmin, xmax, ymin, ymax;
-	float	width, height, stereoSep = r_stereoSeparation->value;
+	float	width, height;
 
 	/*
 	 * offset the view origin of the viewer for stereo rendering 
 	 * by setting the projection matrix appropriately.
 	 */
 
-	if(stereoSep != 0)
-	{
-		if(dest->stereoFrame == STEREO_LEFT)
-			stereoSep = zProj / stereoSep;
-		else if(dest->stereoFrame == STEREO_RIGHT)
-			stereoSep = zProj / -stereoSep;
-		else
-			stereoSep = 0;
-	}
 
 	ymax = zProj * tan(dest->fovY * M_PI / 360.0f);
 	ymin = -ymax;
@@ -541,8 +535,8 @@ void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum)
 	
 	dest->projectionMatrix[0] = 2 * zProj / width;
 	dest->projectionMatrix[4] = 0;
-	dest->projectionMatrix[8] = (xmax + xmin + 2 * stereoSep) / width;
-	dest->projectionMatrix[12] = 2 * zProj * stereoSep / width;
+	dest->projectionMatrix[8] = (xmax + xmin ) / width;
+	dest->projectionMatrix[12] = 0;
 
 	dest->projectionMatrix[1] = 0;
 	dest->projectionMatrix[5] = 2 * zProj / height;
@@ -556,7 +550,7 @@ void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum)
 	
 	// Now that we have all the data for the projection matrix we can also setup the view frustum.
 	if(computeFrustum)
-		R_SetupFrustum(dest, xmin, xmax, ymax, zProj, stereoSep);
+		R_SetupFrustum(dest, xmin, xmax, ymax, zProj, 0);
 }
 
 /*
@@ -626,7 +620,7 @@ void R_PlaneForSurface (surfaceType_t *surfType, cplane_t *plane) {
 	vec4_t			plane4;
 
 	if (!surfType) {
-		Com_Memset (plane, 0, sizeof(*plane));
+		memset (plane, 0, sizeof(*plane));
 		plane->normal[0] = 1;
 		return;
 	}
@@ -650,7 +644,7 @@ void R_PlaneForSurface (surfaceType_t *surfType, cplane_t *plane) {
 		plane->dist = plane4[3];
 		return;
 	default:
-		Com_Memset (plane, 0, sizeof(*plane));
+		memset (plane, 0, sizeof(*plane));
 		plane->normal[0] = 1;		
 		return;
 	}
@@ -750,21 +744,21 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 				// continuous rotate
 				d = (tr.refdef.time/1000.0f) * e->e.frame;
 				VectorCopy( camera->axis[1], transformed );
-				RotatePointAroundVector( camera->axis[1], camera->axis[0], transformed, d );
+				PointRotateAroundVector( camera->axis[1], camera->axis[0], transformed, d );
 				CrossProduct( camera->axis[0], camera->axis[1], camera->axis[2] );
 			} else {
 				// bobbing rotate, with skinNum being the rotation offset
 				d = sin( tr.refdef.time * 0.003f );
 				d = e->e.skinNum + d * 4;
 				VectorCopy( camera->axis[1], transformed );
-				RotatePointAroundVector( camera->axis[1], camera->axis[0], transformed, d );
+				PointRotateAroundVector( camera->axis[1], camera->axis[0], transformed, d );
 				CrossProduct( camera->axis[0], camera->axis[1], camera->axis[2] );
 			}
 		}
 		else if ( e->e.skinNum ) {
 			d = e->e.skinNum;
 			VectorCopy( camera->axis[1], transformed );
-			RotatePointAroundVector( camera->axis[1], camera->axis[0], transformed, d );
+			PointRotateAroundVector( camera->axis[1], camera->axis[0], transformed, d );
 			CrossProduct( camera->axis[0], camera->axis[1], camera->axis[2] );
 		}
 		*mirror = qfalse;
@@ -1011,6 +1005,10 @@ int R_SpriteFogNum( trRefEntity_t *ent ) {
 		return 0;
 	}
 
+	if ( ent->e.renderfx & RF_CROSSHAIR ) {
+		return 0;
+	}
+
 	for ( i = 1 ; i < tr.world->numfogs ; i++ ) {
 		fog = &tr.world->fogs[i];
 		for ( j = 0 ; j < 3 ; j++ ) {
@@ -1140,13 +1138,6 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		// we still need to add it for hyperspace cases
 		R_AddDrawSurfCmd( drawSurfs, numDrawSurfs );
 		return;
-	}
-
-	// if we overflowed MAX_DRAWSURFS, the drawsurfs
-	// wrapped around in the buffer and we will be missing
-	// the first surfaces, not the last ones
-	if ( numDrawSurfs > MAX_DRAWSURFS ) {
-		numDrawSurfs = MAX_DRAWSURFS;
 	}
 
 	// sort the drawsurfs by sort type, then orientation, then shader
@@ -1335,6 +1326,9 @@ Visualization aid for movement clipping debugging
 ====================
 */
 void R_DebugGraphics( void ) {
+	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
+		return;
+	}
 	if ( !r_debugSurface->integer ) {
 		return;
 	}
@@ -1357,6 +1351,7 @@ or a mirror / remote location
 */
 void R_RenderView (viewParms_t *parms) {
 	int		firstDrawSurf;
+	int		numDrawSurfs;
 
 	if ( parms->viewportWidth <= 0 || parms->viewportHeight <= 0 ) {
 		return;
@@ -1379,7 +1374,15 @@ void R_RenderView (viewParms_t *parms) {
 
 	R_GenerateDrawSurfs();
 
-	R_SortDrawSurfs( tr.refdef.drawSurfs + firstDrawSurf, tr.refdef.numDrawSurfs - firstDrawSurf );
+	// if we overflowed MAX_DRAWSURFS, the drawsurfs
+	// wrapped around in the buffer and we will be missing
+	// the first surfaces, not the last ones
+	numDrawSurfs = tr.refdef.numDrawSurfs;
+	if ( numDrawSurfs > MAX_DRAWSURFS ) {
+		numDrawSurfs = MAX_DRAWSURFS;
+	}
+
+	R_SortDrawSurfs( tr.refdef.drawSurfs + firstDrawSurf, numDrawSurfs - firstDrawSurf );
 
 	// draw main system development information (surface outlines, etc)
 	R_DebugGraphics();

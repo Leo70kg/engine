@@ -253,12 +253,9 @@ void PC_InitTokenHeap(void)
 	tokenheapinitialized = qtrue;
 	*/
 } //end of the function PC_InitTokenHeap
-//============================================================================
-//
-// Parameter:			-
-// Returns:				-
-// Changes Globals:		-
-//============================================================================
+
+
+
 token_t *PC_CopyToken(token_t *token)
 {
 	token_t *t;
@@ -276,7 +273,7 @@ token_t *PC_CopyToken(token_t *token)
 		return NULL;
 	} //end if
 //	freetokens = freetokens->next;
-	Com_Memcpy(t, token, sizeof(token_t));
+	memcpy(t, token, sizeof(token_t));
 	t->next = NULL;
 	numtokens++;
 	return t;
@@ -331,7 +328,7 @@ int PC_ReadSourceToken(source_t *source, token_t *token)
 		FreeScript(script);
 	} //end while
 	//copy the already available token
-	Com_Memcpy(token, source->tokens, sizeof(token_t));
+	memcpy(token, source->tokens, sizeof(token_t));
 	//free the read token
 	t = source->tokens;
 	source->tokens = source->tokens->next;
@@ -681,7 +678,7 @@ void PC_AddBuiltinDefines(source_t *source)
 	for (i = 0; builtin[i].string; i++)
 	{
 		define = (define_t *) GetMemory(sizeof(define_t));
-		Com_Memset(define, 0, sizeof(define_t));
+		memset(define, 0, sizeof(define_t));
 		define->name = (char *) GetMemory(strlen(builtin[i].string) + 1);
 		strcpy(define->name, builtin[i].string);
 		define->flags |= DEFINE_FIXED;
@@ -995,14 +992,14 @@ int PC_Directive_include(source_t *source)
 		script = LoadScriptFile(token.string);
 		if (!script)
 		{
-			strcpy(path, source->includepath);
-			strcat(path, token.string);
+			Q_strncpyz(path, source->includepath, sizeof(path));
+			Q_strcat(path, sizeof(path), token.string);
 			script = LoadScriptFile(path);
 		} //end if
 	} //end if
 	else if (token.type == TT_PUNCTUATION && *token.string == '<')
 	{
-		strcpy(path, source->includepath);
+		Q_strncpyz(path, source->includepath, sizeof(path));
 		while(PC_ReadSourceToken(source, &token))
 		{
 			if (token.linescrossed > 0)
@@ -1011,7 +1008,7 @@ int PC_Directive_include(source_t *source)
 				break;
 			} //end if
 			if (token.type == TT_PUNCTUATION && *token.string == '>') break;
-			strncat(path, token.string, MAX_PATH - 1);
+			Q_strcat(path, sizeof(path), token.string);
 		} //end while
 		if (*token.string != '>')
 		{
@@ -1033,7 +1030,7 @@ int PC_Directive_include(source_t *source)
 #ifdef QUAKE
 	if (!script)
 	{
-		Com_Memset(&file, 0, sizeof(foundfile_t));
+		memset(&file, 0, sizeof(foundfile_t));
 		script = LoadScriptFile(path);
 		if (script) strncpy(script->filename, path, MAX_PATH);
 	} //end if
@@ -1211,7 +1208,7 @@ int PC_Directive_define(source_t *source)
 	} //end if
 	//allocate define
 	define = (define_t *) GetMemory(sizeof(define_t));
-	Com_Memset(define, 0, sizeof(define_t));
+	memset(define, 0, sizeof(define_t));
 	define->name = (char *) GetMemory(strlen(token.string) + 1);
 	strcpy(define->name, token.string);
 	//add the define to the source
@@ -1322,7 +1319,7 @@ define_t *PC_DefineFromString(char *string)
 
 	script = LoadScriptMemory(string, strlen(string), "*extern");
 	//create a new source
-	Com_Memset(&src, 0, sizeof(source_t));
+	memset(&src, 0, sizeof(source_t));
 	strncpy(src.filename, "*extern", MAX_PATH);
 	src.scriptstack = script;
 #if DEFINEHASHING
@@ -2086,9 +2083,12 @@ int PC_EvaluateTokens(source_t *source, token_t *tokens, signed long int *intval
 			//remove the second value if not question mark operator
 			if (o->operator != P_QUESTIONMARK) v = v->next;
 			//
-			if (v->prev) v->prev->next = v->next;
-			else firstvalue = v->next;
-			if (v->next) v->next->prev = v->prev;
+			if (v)
+			{
+				if (v->prev) v->prev->next = v->next;
+				else firstvalue = v->next;
+				if (v->next) v->next->prev = v->prev;
+			}
 			//FreeMemory(v);
 			FreeValue(v);
 		} //end if
@@ -2442,7 +2442,7 @@ int PC_Directive_eval(source_t *source)
 	token.whitespace_p = source->scriptstack->script_p;
 	token.endwhitespace_p = source->scriptstack->script_p;
 	token.linescrossed = 0;
-	sprintf(token.string, "%d", abs(value));
+	sprintf(token.string, "%ld", labs(value));
 	token.type = TT_NUMBER;
 	token.subtype = TT_INTEGER|TT_LONG|TT_DECIMAL;
 	PC_UnreadSourceToken(source, &token);
@@ -2547,12 +2547,12 @@ int PC_DollarDirective_evalint(source_t *source)
 	token.whitespace_p = source->scriptstack->script_p;
 	token.endwhitespace_p = source->scriptstack->script_p;
 	token.linescrossed = 0;
-	sprintf(token.string, "%d", abs(value));
+	sprintf(token.string, "%ld", labs(value));
 	token.type = TT_NUMBER;
 	token.subtype = TT_INTEGER|TT_LONG|TT_DECIMAL;
 
 #ifdef NUMBERVALUE
-	token.intvalue = abs(value);
+	token.intvalue = labs(value);
 	token.floatvalue = token.intvalue;
 #endif //NUMBERVALUE
 
@@ -2772,7 +2772,7 @@ int PC_ReadToken(source_t *source, token_t *token)
 			} //end if
 		} //end if
 		//copy token for unreading
-		Com_Memcpy(&source->token, token, sizeof(token_t));
+		memcpy(&source->token, token, sizeof(token_t));
 		//found a token
 		return qtrue;
 	} //end while
@@ -2831,6 +2831,7 @@ int PC_ExpectTokenType(source_t *source, int type, int subtype, token_t *token)
 	{
 		if ((token->subtype & subtype) != subtype)
 		{
+			strcpy(str, "");
 			if (subtype & TT_DECIMAL) strcpy(str, "decimal");
 			if (subtype & TT_HEX) strcpy(str, "hex");
 			if (subtype & TT_OCTAL) strcpy(str, "octal");
@@ -2888,12 +2889,9 @@ int PC_CheckTokenString(source_t *source, char *string)
 	PC_UnreadSourceToken(source, &tok);
 	return qfalse;
 } //end of the function PC_CheckTokenString
-//============================================================================
-//
-// Parameter:				-
-// Returns:					-
-// Changes Globals:		-
-//============================================================================
+
+
+
 int PC_CheckTokenType(source_t *source, int type, int subtype, token_t *token)
 {
 	token_t tok;
@@ -2903,7 +2901,7 @@ int PC_CheckTokenType(source_t *source, int type, int subtype, token_t *token)
 	if (tok.type == type &&
 			(tok.subtype & subtype) == subtype)
 	{
-		Com_Memcpy(token, &tok, sizeof(token_t));
+		memcpy(token, &tok, sizeof(token_t));
 		return qtrue;
 	} //end if
 	//
@@ -2954,10 +2952,14 @@ void PC_UnreadToken(source_t *source, token_t *token)
 //============================================================================
 void PC_SetIncludePath(source_t *source, char *path)
 {
-	strncpy(source->includepath, path, MAX_PATH);
+	size_t len;
+
+	Q_strncpyz(source->includepath, path, MAX_PATH-1);
+
+	len = strlen(source->includepath);
 	//add trailing path seperator
-	if (source->includepath[strlen(source->includepath)-1] != '\\' &&
-		source->includepath[strlen(source->includepath)-1] != '/')
+	if (len > 0 && source->includepath[len-1] != '\\' &&
+		source->includepath[len-1] != '/')
 	{
 		strcat(source->includepath, PATHSEPERATOR_STR);
 	} //end if
@@ -2991,7 +2993,7 @@ source_t *LoadSourceFile(const char *filename)
 	script->next = NULL;
 
 	source = (source_t *) GetMemory(sizeof(source_t));
-	Com_Memset(source, 0, sizeof(source_t));
+	memset(source, 0, sizeof(source_t));
 
 	strncpy(source->filename, filename, MAX_PATH);
 	source->scriptstack = script;
@@ -3024,7 +3026,7 @@ source_t *LoadSourceMemory(char *ptr, int length, char *name)
 	script->next = NULL;
 
 	source = (source_t *) GetMemory(sizeof(source_t));
-	Com_Memset(source, 0, sizeof(source_t));
+	memset(source, 0, sizeof(source_t));
 
 	strncpy(source->filename, name, MAX_PATH);
 	source->scriptstack = script;

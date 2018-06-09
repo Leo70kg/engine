@@ -326,7 +326,7 @@ void SV_ChangeMaxClients( void ) {
 			oldClients[i] = svs.clients[i];
 		}
 		else {
-			Com_Memset(&oldClients[i], 0, sizeof(client_t));
+			memset(&oldClients[i], 0, sizeof(client_t));
 		}
 	}
 
@@ -335,7 +335,7 @@ void SV_ChangeMaxClients( void ) {
 
 	// allocate new clients
 	svs.clients = Z_Malloc ( sv_maxclients->integer * sizeof(client_t) );
-	Com_Memset( svs.clients, 0, sv_maxclients->integer * sizeof(client_t) );
+	memset( svs.clients, 0, sv_maxclients->integer * sizeof(client_t) );
 
 	// copy the clients over
 	for ( i = 0 ; i < count ; i++ ) {
@@ -369,7 +369,7 @@ static void SV_ClearServer(void) {
 			Z_Free( sv.configstrings[i] );
 		}
 	}
-	Com_Memset (&sv, 0, sizeof(sv));
+	memset (&sv, 0, sizeof(sv));
 }
 
 /*
@@ -622,12 +622,10 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 
 /*
 ===============
-SV_Init
-
-Only called at main exe startup, not for each game
+SV_Init: Only called at main exe startup, not for each game
 ===============
 */
-void SV_Init (void)
+void SV_Init(void)
 {
 	int index;
 
@@ -657,8 +655,9 @@ void SV_Init (void)
 	sv_serverid = Cvar_Get ("sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM );
 	sv_pure = Cvar_Get ("sv_pure", "1", CVAR_SYSTEMINFO );
 #ifdef USE_VOIP
-	sv_voip = Cvar_Get("sv_voip", "1", CVAR_SYSTEMINFO | CVAR_LATCH);
+	sv_voip = Cvar_Get("sv_voip", "1", CVAR_LATCH);
 	Cvar_CheckRange(sv_voip, 0, 1, qtrue);
+	sv_voipProtocol = Cvar_Get("sv_voipProtocol", sv_voip->integer ? "opus" : "", CVAR_SYSTEMINFO | CVAR_ROM );
 #endif
 	Cvar_Get ("sv_paks", "", CVAR_SYSTEMINFO | CVAR_ROM );
 	Cvar_Get ("sv_pakNames", "", CVAR_SYSTEMINFO | CVAR_ROM );
@@ -740,11 +739,11 @@ void SV_FinalMessage( char *message ) {
 ================
 SV_Shutdown
 
-Called when each game quits,
-before Sys_Quit or Sys_Error
+Called when each game quits, before Sys_Quit or Sys_Error
 ================
 */
-void SV_Shutdown( char *finalmsg ) {
+void SV_Shutdown( char *finalmsg )
+{
 	if ( !com_sv_running || !com_sv_running->integer ) {
 		return;
 	}
@@ -774,7 +773,7 @@ void SV_Shutdown( char *finalmsg ) {
 		
 		Z_Free(svs.clients);
 	}
-	Com_Memset( &svs, 0, sizeof( svs ) );
+	memset( &svs, 0, sizeof( svs ) );
 
 	Cvar_Set( "sv_running", "0" );
 	Cvar_Set("ui_singlePlayerActive", "0");

@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "q_shared.h"
 #include "qcommon.h"
 
+
 // Max number of arguments to pass from engine to vm's vmMain function.
 // command number + 12 arguments
 #define MAX_VMMAIN_ARGS 13
@@ -132,64 +133,62 @@ typedef enum {
 typedef int	vmptr_t;
 
 typedef struct vmSymbol_s {
-	struct vmSymbol_s	*next;
-	int		symValue;
-	int		profileCount;
-	char	symName[1];		// variable sized
+	struct vmSymbol_s* next;
+	int	symValue;
+	int	profileCount;
+	char symName[1];		// variable sized
 } vmSymbol_t;
 
 #define	VM_OFFSET_PROGRAM_STACK		0
 #define	VM_OFFSET_SYSTEM_CALL		4
 
 struct vm_s {
-    // DO NOT MOVE OR CHANGE THESE WITHOUT CHANGING THE VM_OFFSET_* DEFINES
-    // USED BY THE ASM CODE
-    int			programStack;		// the vm may be recursively entered
-    intptr_t			(*systemCall)( intptr_t *parms );
+    // DO NOT MOVE OR CHANGE THESE WITHOUT CHANGING THE VM_OFFSET_* DEFINES USED BY THE ASM CODE
+    int	programStack;		// the vm may be recursively entered
+    intptr_t (*systemCall)( intptr_t *parms );
 
 	//------------------------------------
    
-	char		name[MAX_QPATH];
-	void	*searchPath;				// hint for FS_ReadFileDir()
+	char name[MAX_QPATH];
+	void *searchPath;				// hint for FS_ReadFileDir()
 
 	// for dynamic linked modules
-	void		*dllHandle;
-	intptr_t			(QDECL *entryPoint)( int callNum, ... );
+	void *dllHandle;
+	intptr_t (QDECL *entryPoint)( int callNum, ... );
 	void (*destroy)(vm_t* self);
 
 	// for interpreted modules
-	qboolean	currentlyInterpreting;
+	qboolean currentlyInterpreting;
 
-	qboolean	compiled;
-	byte		*codeBase;
-	int			entryOfs;
-	int			codeLength;
+	qboolean compiled;
+	unsigned char *codeBase;
+	int	entryOfs;
+	int	codeLength;
 
-	intptr_t	*instructionPointers;
-	int			instructionCount;
+	intptr_t *instructionPointers;
+	int	instructionCount;
 
-	byte		*dataBase;
-	int			dataMask;
+	unsigned char *dataBase;
+	int	dataMask;
 
-	int			stackBottom;		// if programStack < stackBottom, error
+	int	stackBottom;		// if programStack < stackBottom, error
+	int	numSymbols;
+	struct vmSymbol_s *symbols;
 
-	int			numSymbols;
-	struct vmSymbol_s	*symbols;
+	int	callLevel;		// counts recursive VM_Call
+	int	breakFunction;	// increment breakCount on function entry to this
+	int	breakCount;
 
-	int			callLevel;		// counts recursive VM_Call
-	int			breakFunction;		// increment breakCount on function entry to this
-	int			breakCount;
-
-	byte		*jumpTableTargets;
-	int			numJumpTableTargets;
+	unsigned char *jumpTableTargets;
+	int	numJumpTableTargets;
 };
 
 
-extern	vm_t	*currentVM;
-extern	int		vm_debugLevel;
+extern vm_t *currentVM;
+
 
 void VM_Compile( vm_t *vm, vmHeader_t *header );
-int	VM_CallCompiled( vm_t *vm, int *args );
+intptr_t VM_CallCompiled( vm_t *vm, int *args );
 
 void VM_PrepareInterpreter( vm_t *vm, vmHeader_t *header );
 int	VM_CallInterpreted( vm_t *vm, int *args );

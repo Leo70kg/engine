@@ -59,7 +59,7 @@ winding_t	*AllocWinding (int points)
 
 	s = sizeof(vec_t)*3*points + sizeof(int);
 	w = Z_Malloc (s);
-	Com_Memset (w, 0, s); 
+	memset (w, 0, s); 
 	return w;
 }
 
@@ -73,19 +73,12 @@ void FreeWinding (winding_t *w)
 	Z_Free (w);
 }
 
-/*
-============
-RemoveColinearPoints
-============
-*/
 int	c_removed;
 
-void	RemoveColinearPoints (winding_t *w)
+void RemoveColinearPoints (winding_t *w)
 {
-	int		i, j, k;
-	vec3_t	v1, v2;
-	int		nump;
-	vec3_t	p[MAX_POINTS_ON_WINDING];
+	int	i, j, k, nump;
+	vec3_t v1, v2, p[MAX_POINTS_ON_WINDING];
 
 	nump = 0;
 	for (i=0 ; i<w->numpoints ; i++)
@@ -108,7 +101,7 @@ void	RemoveColinearPoints (winding_t *w)
 
 	c_removed += w->numpoints - nump;
 	w->numpoints = nump;
-	Com_Memcpy (w->p, p, nump*sizeof(p[0]));
+	memcpy(w->p, p, nump*sizeof(p[0]));
 }
 
 /*
@@ -265,19 +258,12 @@ winding_t *BaseWindingForPlane (vec3_t normal, vec_t dist)
 	return w;	
 }
 
-/*
-==================
-CopyWinding
-==================
-*/
-winding_t	*CopyWinding (winding_t *w)
-{
-	intptr_t	size;
-	winding_t	*c;
 
-	c = AllocWinding (w->numpoints);
-	size = (intptr_t) ((winding_t *)0)->p[w->numpoints];
-	Com_Memcpy (c, w, size);
+winding_t *CopyWinding (winding_t *w)
+{
+	winding_t *c = AllocWinding (w->numpoints);
+	intptr_t  size = (intptr_t) ((winding_t *)0)->p[w->numpoints];
+	memcpy(c, w, size);
 	return c;
 }
 
@@ -647,7 +633,8 @@ Both w and *hull are on the same plane
 =================
 */
 #define	MAX_HULL_POINTS		128
-void	AddWindingToConvexHull( winding_t *w, winding_t **hull, vec3_t normal ) {
+void	AddWindingToConvexHull( winding_t *w, winding_t **hull, vec3_t normal )
+{
 	int			i, j, k;
 	float		*p, *copy;
 	vec3_t		dir;
@@ -665,7 +652,7 @@ void	AddWindingToConvexHull( winding_t *w, winding_t **hull, vec3_t normal ) {
 	}
 
 	numHullPoints = (*hull)->numpoints;
-	Com_Memcpy( hullPoints, (*hull)->p, numHullPoints * sizeof(vec3_t) );
+	memcpy( hullPoints, (*hull)->p, numHullPoints * sizeof(vec3_t) );
 
 	for ( i = 0 ; i < w->numpoints ; i++ ) {
 		p = w->p[i];
@@ -724,14 +711,14 @@ void	AddWindingToConvexHull( winding_t *w, winding_t **hull, vec3_t normal ) {
 		}
 
 		numHullPoints = numNew;
-		Com_Memcpy( hullPoints, newHullPoints, numHullPoints * sizeof(vec3_t) );
+		memcpy( hullPoints, newHullPoints, numHullPoints * sizeof(vec3_t) );
 	}
 
 	FreeWinding( *hull );
 	w = AllocWinding( numHullPoints );
 	w->numpoints = numHullPoints;
 	*hull = w;
-	Com_Memcpy( w->p, hullPoints, numHullPoints * sizeof(vec3_t) );
+	memcpy( w->p, hullPoints, numHullPoints * sizeof(vec3_t) );
 }
 
 

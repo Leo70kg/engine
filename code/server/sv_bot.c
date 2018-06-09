@@ -188,7 +188,8 @@ static void BotImport_Trace(bsp_trace_t *bsptrace, vec3_t start, vec3_t mins, ve
 	VectorCopy(trace.plane.normal, bsptrace->plane.normal);
 	bsptrace->plane.signbits = trace.plane.signbits;
 	bsptrace->plane.type = trace.plane.type;
-	bsptrace->surface.value = trace.surfaceFlags;
+	bsptrace->surface.value = 0;
+	bsptrace->surface.flags = trace.surfaceFlags;
 	bsptrace->ent = trace.entityNum;
 	bsptrace->exp_dist = 0;
 	bsptrace->sidenum = 0;
@@ -213,7 +214,8 @@ static void BotImport_EntityTrace(bsp_trace_t *bsptrace, vec3_t start, vec3_t mi
 	VectorCopy(trace.plane.normal, bsptrace->plane.normal);
 	bsptrace->plane.signbits = trace.plane.signbits;
 	bsptrace->plane.type = trace.plane.type;
-	bsptrace->surface.value = trace.surfaceFlags;
+	bsptrace->surface.value = 0;
+	bsptrace->surface.flags = trace.surfaceFlags;
 	bsptrace->ent = trace.entityNum;
 	bsptrace->exp_dist = 0;
 	bsptrace->sidenum = 0;
@@ -309,19 +311,17 @@ static void *BotImport_HunkAlloc( int size ) {
 	return Hunk_Alloc( size, h_high );
 }
 
-/*
-==================
-BotImport_DebugPolygonCreate
-==================
-*/
-int BotImport_DebugPolygonCreate(int color, int numPoints, vec3_t *points) {
+
+int BotImport_DebugPolygonCreate(int color, int numPoints, vec3_t *points)
+{
 	bot_debugpoly_t *poly;
 	int i;
 
 	if (!debugpolygons)
 		return 0;
 
-	for (i = 1; i < bot_maxdebugpolys; i++) 	{
+	for (i = 1; i < bot_maxdebugpolys; i++)
+    {
 		if (!debugpolygons[i].inuse)
 			break;
 	}
@@ -331,25 +331,23 @@ int BotImport_DebugPolygonCreate(int color, int numPoints, vec3_t *points) {
 	poly->inuse = qtrue;
 	poly->color = color;
 	poly->numPoints = numPoints;
-	Com_Memcpy(poly->points, points, numPoints * sizeof(vec3_t));
-	//
+	memcpy(poly->points, points, numPoints * sizeof(vec3_t));
+	
 	return i;
 }
 
-/*
-==================
-BotImport_DebugPolygonShow
-==================
-*/
-static void BotImport_DebugPolygonShow(int id, int color, int numPoints, vec3_t *points) {
+
+static void BotImport_DebugPolygonShow(int id, int color, int numPoints, vec3_t *points)
+{
 	bot_debugpoly_t *poly;
 
-	if (!debugpolygons) return;
+	if (!debugpolygons)
+        return;
 	poly = &debugpolygons[id];
 	poly->inuse = qtrue;
 	poly->color = color;
 	poly->numPoints = numPoints;
-	Com_Memcpy(poly->points, points, numPoints * sizeof(vec3_t));
+	memcpy(poly->points, points, numPoints * sizeof(vec3_t));
 }
 
 /*

@@ -468,17 +468,13 @@ void S_StopMusic_f( void )
 
 //=============================================================================
 
-/*
-=================
-S_Init
-=================
-*/
+
 void S_Init( void )
 {
 	cvar_t		*cv;
 	qboolean	started = qfalse;
 
-	Com_Printf( "------ Initializing Sound ------\n" );
+	Com_Printf( "\n-------- Initializing Sound --------\n" );
 
 	s_volume = Cvar_Get( "s_volume", "0.8", CVAR_ARCHIVE );
 	s_musicVolume = Cvar_Get( "s_musicvolume", "0.25", CVAR_ARCHIVE );
@@ -489,10 +485,12 @@ void S_Init( void )
 	s_muteWhenUnfocused = Cvar_Get( "s_muteWhenUnfocused", "0", CVAR_ARCHIVE );
 
 	cv = Cvar_Get( "s_initsound", "1", 0 );
-	if( !cv->integer ) {
+	
+    if( !cv->integer ) {
 		Com_Printf( "Sound disabled.\n" );
-	} else {
-
+	}
+    else
+    {
 		S_CodecInit( );
 
 		Cmd_AddCommand( "play", S_Play_f );
@@ -514,33 +512,30 @@ void S_Init( void )
 			Cvar_Set( "s_backend", "base" );
 		}
 
-		if( started ) {
+		if( started )
+        {
 			if( !S_ValidSoundInterface( &si ) ) {
 				Com_Error( ERR_FATAL, "Sound interface invalid" );
 			}
 
 			S_SoundInfo( );
-			Com_Printf( "Sound initialization successful.\n" );
-		} else {
+			Com_Printf( "--------Sound initialization successful.-------\n\n" );
+		} 
+        else
 			Com_Printf( "Sound initialization failed.\n" );
-		}
 	}
-
-	Com_Printf( "--------------------------------\n");
 }
 
-/*
-=================
-S_Shutdown
-=================
-*/
+
+
 void S_Shutdown( void )
 {
-	if( si.Shutdown ) {
+	if( si.Shutdown )
+    {
 		si.Shutdown( );
 	}
 
-	Com_Memset( &si, 0, sizeof( soundInterface_t ) );
+	memset( &si, 0, sizeof( soundInterface_t ) );
 
 	Cmd_RemoveCommand( "play" );
 	Cmd_RemoveCommand( "music");

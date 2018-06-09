@@ -418,7 +418,7 @@ static	int				numPlanes;
 static	patchPlane_t	planes[MAX_PATCH_PLANES];
 
 static	int				numFacets;
-static	facet_t			facets[MAX_PATCH_PLANES]; //maybe MAX_FACETS ??
+static	facet_t			facets[MAX_FACETS];
 
 #define	NORMAL_EPSILON	0.0001
 #define	DIST_EPSILON	0.02
@@ -626,6 +626,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i][j];
 		p2 = grid->points[i+1][j];
 		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p1, p2, up );
 
@@ -633,6 +636,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i][j+1];
 		p2 = grid->points[i+1][j+1];
 		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p2, p1, up );
 
@@ -640,6 +646,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i][j];
 		p2 = grid->points[i][j+1];
 		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p2, p1, up );
 
@@ -647,6 +656,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i+1][j];
 		p2 = grid->points[i+1][j+1];
 		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p1, p2, up );
 
@@ -654,6 +666,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i+1][j+1];
 		p2 = grid->points[i][j];
 		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p1, p2, up );
 
@@ -661,6 +676,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i][j];
 		p2 = grid->points[i+1][j+1];
 		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p1, p2, up );
 
@@ -858,7 +876,10 @@ void CM_AddFacetBevels( facet_t *facet ) {
 			}
 
 			if ( i == facet->numBorders ) {
-				if (facet->numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
+				if ( facet->numBorders >= 4 + 6 + 16 ) {
+					Com_Printf( "ERROR: too many bevels\n" );
+					continue;
+				}
 				facet->borderPlanes[facet->numBorders] = CM_FindPlane2(plane, &flipped);
 				facet->borderNoAdjust[facet->numBorders] = 0;
 				facet->borderInward[facet->numBorders] = flipped;
@@ -920,7 +941,10 @@ void CM_AddFacetBevels( facet_t *facet ) {
 				}
 
 				if ( i == facet->numBorders ) {
-					if (facet->numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
+					if ( facet->numBorders >= 4 + 6 + 16 ) {
+						Com_Printf( "ERROR: too many bevels\n" );
+						continue;
+					}
 					facet->borderPlanes[facet->numBorders] = CM_FindPlane2(plane, &flipped);
 
 					for ( k = 0 ; k < facet->numBorders ; k++ ) {
@@ -958,6 +982,10 @@ void CM_AddFacetBevels( facet_t *facet ) {
 
 #ifndef BSPC
 	//add opposite plane
+	if ( facet->numBorders >= 4 + 6 + 16 ) {
+		Com_Printf( "ERROR: too many bevels\n" );
+		return;
+	}
 	facet->borderPlanes[facet->numBorders] = facet->surfacePlane;
 	facet->borderNoAdjust[facet->numBorders] = 0;
 	facet->borderInward[facet->numBorders] = qtrue;
@@ -973,12 +1001,10 @@ typedef enum {
 	EN_LEFT
 } edgeName_t;
 
-/*
-==================
-CM_PatchCollideFromGrid
-==================
-*/
-static void CM_PatchCollideFromGrid( cGrid_t *grid, patchCollide_t *pf ) {
+
+
+static void CM_PatchCollideFromGrid( cGrid_t *grid, patchCollide_t *pf )
+{
 	int				i, j;
 	float			*p1, *p2, *p3;
 	int				gridPlanes[MAX_GRID_SIZE][MAX_GRID_SIZE][2];
@@ -1056,7 +1082,7 @@ static void CM_PatchCollideFromGrid( cGrid_t *grid, patchCollide_t *pf ) {
 				Com_Error( ERR_DROP, "MAX_FACETS" );
 			}
 			facet = &facets[numFacets];
-			Com_Memset( facet, 0, sizeof( *facet ) );
+			memset( facet, 0, sizeof( *facet ) );
 
 			if ( gridPlanes[i][j][0] == gridPlanes[i][j][1] ) {
 				if ( gridPlanes[i][j][0] == -1 ) {
@@ -1102,7 +1128,7 @@ static void CM_PatchCollideFromGrid( cGrid_t *grid, patchCollide_t *pf ) {
 					Com_Error( ERR_DROP, "MAX_FACETS" );
 				}
 				facet = &facets[numFacets];
-				Com_Memset( facet, 0, sizeof( *facet ) );
+				memset( facet, 0, sizeof( *facet ) );
 
 				facet->surfacePlane = gridPlanes[i][j][1];
 				facet->numBorders = 3;
@@ -1130,9 +1156,9 @@ static void CM_PatchCollideFromGrid( cGrid_t *grid, patchCollide_t *pf ) {
 	pf->numPlanes = numPlanes;
 	pf->numFacets = numFacets;
 	pf->facets = Hunk_Alloc( numFacets * sizeof( *pf->facets ), h_high );
-	Com_Memcpy( pf->facets, facets, numFacets * sizeof( *pf->facets ) );
+	memcpy( pf->facets, facets, numFacets * sizeof( *pf->facets ) );
 	pf->planes = Hunk_Alloc( numPlanes * sizeof( *pf->planes ), h_high );
-	Com_Memcpy( pf->planes, planes, numPlanes * sizeof( *pf->planes ) );
+	memcpy( pf->planes, planes, numPlanes * sizeof( *pf->planes ) );
 }
 
 

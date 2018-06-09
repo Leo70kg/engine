@@ -25,33 +25,45 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define	LL(x) x=LittleLong(x)
 
-static qboolean R_LoadMD3(model_t *mod, int lod, void *buffer, int bufferSize, const char *modName);
-static qboolean R_LoadMDR(model_t *mod, void *buffer, int filesize, const char *name );
+typedef struct
+{
+	char *ext;
+	qhandle_t (*ModelLoader)( const char *, model_t * );
+} modelExtToLoaderMap_t;
 
-/*
-====================
-R_RegisterMD3
-====================
-*/
-qhandle_t R_RegisterMD3(const char *name, model_t *mod)
+static qboolean R_LoadMD3(model_t *mod, int lod, void *buffer, int bufferSize, const char* modName);
+static qboolean R_LoadMDR(model_t *mod, void *buffer, int filesize, const char *name );
+static qhandle_t R_RegisterMD3(const char *name, model_t *mod);
+static qhandle_t R_RegisterMDR(const char *name, model_t *mod);
+static qhandle_t R_RegisterIQM(const char *name, model_t *mod);
+
+
+// Note that the ordering indicates the order of preference used
+// when there are multiple models of different formats available
+static modelExtToLoaderMap_t modelLoaders[ ] =
+{
+	{ "iqm", R_RegisterIQM },
+	{ "mdr", R_RegisterMDR },
+	{ "md3", R_RegisterMD3 }
+};
+
+static int numModelLoaders = ARRAY_LEN(modelLoaders);
+
+static qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 {
 	union {
 		unsigned *u;
 		void *v;
 	} buf;
-	int         size;
 	int			lod;
-	int			ident;
 	qboolean	loaded = qfalse;
-	int			numLoaded;
+	int	numLoaded = 0;
 	char filename[MAX_QPATH], namebuf[MAX_QPATH+20];
-	char *fext, defex[] = "md3";
-
-	numLoaded = 0;
+	char defex[] = "md3";
 
 	strcpy(filename, name);
 
-	fext = strchr(filename, '.');
+	char* fext = strchr(filename, '.');
 	if(!fext)
 		fext = defex;
 	else
@@ -63,15 +75,15 @@ qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 	for (lod = MD3_MAX_LODS - 1 ; lod >= 0 ; lod--)
 	{
 		if(lod)
-			Com_sprintf(namebuf, sizeof(namebuf), "%s_%d.%s", filename, lod, fext);
+			snprintf(namebuf, sizeof(namebuf), "%s_%d.%s", filename, lod, fext);
 		else
-			Com_sprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
+			snprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
 
-		size = ri.FS_ReadFile( namebuf, &buf.v );
+		int size = ri.FS_ReadFile( namebuf, &buf.v );
 		if(!buf.u)
 			continue;
 		
-		ident = LittleLong(* (unsigned *) buf.u);
+		int ident = LittleLong(* (unsigned *) buf.u);
 		if (ident == MD3_IDENT)
 			loaded = R_LoadMD3(mod, lod, buf.u, size, name);
 		else
@@ -109,12 +121,8 @@ qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 	return 0;
 }
 
-/*
-====================
-R_RegisterMDR
-====================
-*/
-qhandle_t R_RegisterMDR(const char *name, model_t *mod)
+
+static qhandle_t R_RegisterMDR(const char *name, model_t *mod)
 {
 	union {
 		unsigned *u;
@@ -147,12 +155,8 @@ qhandle_t R_RegisterMDR(const char *name, model_t *mod)
 	return mod->index;
 }
 
-/*
-====================
-R_RegisterIQM
-====================
-*/
-qhandle_t R_RegisterIQM(const char *name, model_t *mod)
+
+static qhandle_t R_RegisterIQM(const char *name, model_t *mod)
 {
 	union {
 		unsigned *u;
@@ -183,37 +187,20 @@ qhandle_t R_RegisterIQM(const char *name, model_t *mod)
 }
 
 
-typedef struct
-{
-	char *ext;
-	qhandle_t (*ModelLoader)( const char *, model_t * );
-} modelExtToLoaderMap_t;
-
-// Note that the ordering indicates the order of preference used
-// when there are multiple models of different formats available
-static modelExtToLoaderMap_t modelLoaders[ ] =
-{
-	{ "iqm", R_RegisterIQM },
-	{ "mdr", R_RegisterMDR },
-	{ "md3", R_RegisterMD3 }
-};
-
-static int numModelLoaders = ARRAY_LEN(modelLoaders);
 
 //===============================================================================
 
 /*
 ** R_GetModelByHandle
 */
-model_t	*R_GetModelByHandle( qhandle_t index ) {
-	model_t		*mod;
-
+model_t	*R_GetModelByHandle( qhandle_t index )
+{
 	// out of range gets the defualt model
 	if ( index < 1 || index >= tr.numModels ) {
 		return tr.models[0];
 	}
 
-	mod = tr.models[index];
+	model_t* mod = tr.models[index];
 
 	return mod;
 }
@@ -223,14 +210,13 @@ model_t	*R_GetModelByHandle( qhandle_t index ) {
 /*
 ** R_AllocModel
 */
-model_t *R_AllocModel( void ) {
-	model_t		*mod;
-
+model_t *R_AllocModel( void )
+{
 	if ( tr.numModels == MAX_MOD_KNOWN ) {
 		return NULL;
 	}
 
-	mod = ri.Hunk_Alloc( sizeof( *tr.models[tr.numModels] ), h_low );
+    model_t* mod = ri.Hunk_Alloc( sizeof( *tr.models[tr.numModels] ), h_low );
 	mod->index = tr.numModels;
 	tr.models[tr.numModels] = mod;
 	tr.numModels++;
@@ -285,14 +271,14 @@ qhandle_t RE_RegisterModel( const char *name ) {
 
 	// allocate a new model_t
 
-	if ( ( mod = R_AllocModel() ) == NULL ) {
+	if ( ( mod = R_AllocModel() ) == NULL )
+	{
 		ri.Printf( PRINT_WARNING, "RE_RegisterModel: R_AllocModel() failed for '%s'\n", name);
 		return 0;
 	}
 
 	// only set the name after the model has been successfully loaded
 	Q_strncpyz( mod->name, name, sizeof( mod->name ) );
-
 
 	R_IssuePendingRenderCommands();
 
@@ -345,7 +331,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 		if (i == orgLoader)
 			continue;
 
-		Com_sprintf( altName, sizeof (altName), "%s.%s", localName, modelLoaders[ i ].ext );
+		snprintf( altName, sizeof (altName), "%s.%s", localName, modelLoaders[ i ].ext );
 
 		// Load
 		hModel = modelLoaders[ i ].ModelLoader( altName, mod );
@@ -365,25 +351,18 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	return hModel;
 }
 
-/*
-=================
-R_LoadMD3
-=================
-*/
-static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, const char *modName)
-{
-	int             f, i, j, k;
 
-	md3Header_t    *md3Model;
-	md3Frame_t     *md3Frame;
+static qboolean R_LoadMD3(model_t* mod, int lod, void *buffer, int bufferSize, const char* modName)
+{
+	int f, i, j;
+
 	md3Surface_t   *md3Surf;
 	md3Shader_t    *md3Shader;
 	md3Triangle_t  *md3Tri;
 	md3St_t        *md3st;
 	md3XyzNormal_t *md3xyz;
-	md3Tag_t       *md3Tag;
 
-	mdvModel_t     *mdvModel;
+
 	mdvFrame_t     *frame;
 	mdvSurface_t   *surf;//, *surface;
 	int            *shaderIndex;
@@ -393,12 +372,10 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 	mdvTag_t       *tag;
 	mdvTagName_t   *tagName;
 
-	int             version;
-	int             size;
 
-	md3Model = (md3Header_t *) buffer;
+	md3Header_t* md3Model = (md3Header_t *) buffer;
 
-	version = LittleLong(md3Model->version);
+	int version = LittleLong(md3Model->version);
 	if(version != MD3_VERSION)
 	{
 		ri.Printf(PRINT_WARNING, "R_LoadMD3: %s has wrong version (%i should be %i)\n", modName, version, MD3_VERSION);
@@ -406,9 +383,9 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 	}
 
 	mod->type = MOD_MESH;
-	size = LittleLong(md3Model->ofsEnd);
+	int size = LittleLong(md3Model->ofsEnd);
 	mod->dataSize += size;
-	mdvModel = mod->mdv[lod] = ri.Hunk_Alloc(sizeof(mdvModel_t), h_low);
+	mdvModel_t* mdvModel = mod->mdv[lod] = ri.Hunk_Alloc(sizeof(mdvModel_t), h_low);
 
 //  Com_Memcpy(mod->md3[lod], buffer, LittleLong(md3Model->ofsEnd));
 
@@ -432,7 +409,7 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 	mdvModel->numFrames = md3Model->numFrames;
 	mdvModel->frames = frame = ri.Hunk_Alloc(sizeof(*frame) * md3Model->numFrames, h_low);
 
-	md3Frame = (md3Frame_t *) ((byte *) md3Model + md3Model->ofsFrames);
+	md3Frame_t* md3Frame = (md3Frame_t *) ((unsigned char *)md3Model + md3Model->ofsFrames);
 	for(i = 0; i < md3Model->numFrames; i++, frame++, md3Frame++)
 	{
 		frame->radius = LittleFloat(md3Frame->radius);
@@ -448,7 +425,7 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 	mdvModel->numTags = md3Model->numTags;
 	mdvModel->tags = tag = ri.Hunk_Alloc(sizeof(*tag) * (md3Model->numTags * md3Model->numFrames), h_low);
 
-	md3Tag = (md3Tag_t *) ((byte *) md3Model + md3Model->ofsTags);
+	md3Tag_t* md3Tag = (md3Tag_t *) ((byte *) md3Model + md3Model->ofsTags);
 	for(i = 0; i < md3Model->numTags * md3Model->numFrames; i++, tag++, md3Tag++)
 	{
 		for(j = 0; j < 3; j++)
@@ -518,9 +495,9 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 		// strip off a trailing _1 or _2
 		// this is a crutch for q3data being a mess
 		j = strlen(surf->name);
-		if(j > 2 && surf->name[j - 2] == '_')
+		if((j > 2) && (surf->name[j-2] == '_') )
 		{
-			surf->name[j - 2] = 0;
+			surf->name[j-2] = 0;
 		}
 
 		// register the shaders
@@ -530,9 +507,7 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 		md3Shader = (md3Shader_t *) ((byte *) md3Surf + md3Surf->ofsShaders);
 		for(j = 0; j < md3Surf->numShaders; j++, shaderIndex++, md3Shader++)
 		{
-			shader_t       *sh;
-
-			sh = R_FindShader(md3Shader->name, LIGHTMAP_NONE, qtrue);
+			shader_t* sh = R_FindShader(md3Shader->name, LIGHTMAP_NONE, qtrue);
 			if(sh->defaultShader)
 			{
 				*shaderIndex = 0;
@@ -564,6 +539,7 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 		{
 			unsigned lat, lng;
 			unsigned short normal;
+			vec3_t fNormal;
 
 			v->xyz[0] = LittleShort(md3xyz->xyz[0]) * MD3_XYZ_SCALE;
 			v->xyz[1] = LittleShort(md3xyz->xyz[1]) * MD3_XYZ_SCALE;
@@ -580,9 +556,11 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 			// decode Y as sin( lat ) * sin( long )
 			// decode Z as cos( long )
 
-			v->normal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
-			v->normal[1] = tr.sinTable[lat] * tr.sinTable[lng];
-			v->normal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
+			fNormal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
+			fNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
+			fNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
+
+			R_VaoPackNormal(v->normal, fNormal);
 		}
 
 		// swap all the ST
@@ -595,76 +573,66 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 			st->st[1] = LittleFloat(md3st->st[1]);
 		}
 
-#ifdef USE_VERT_TANGENT_SPACE
 		// calc tangent spaces
 		{
-			// Valgrind complaints: Conditional jump or move depends on uninitialised value(s)
-			// So lets Initialize them.
-			const float    *v0 = NULL, *v1 = NULL, *v2 = NULL;
-			const float    *t0 = NULL, *t1 = NULL, *t2 = NULL;
-			vec3_t          tangent = { 0, 0, 0 };
-			vec3_t          bitangent = { 0, 0, 0 };
-			vec3_t          normal = { 0, 0, 0 };
+			vec3_t *sdirs = ri.Malloc(sizeof(*sdirs) * surf->numVerts * mdvModel->numFrames);
+			vec3_t *tdirs = ri.Malloc(sizeof(*tdirs) * surf->numVerts * mdvModel->numFrames);
 
 			for(j = 0, v = surf->verts; j < (surf->numVerts * mdvModel->numFrames); j++, v++)
 			{
-				VectorClear(v->tangent);
-				VectorClear(v->bitangent);
-				if (r_recalcMD3Normals->integer)
-					VectorClear(v->normal);
+				VectorClear(sdirs[j]);
+				VectorClear(tdirs[j]);
 			}
 
 			for(f = 0; f < mdvModel->numFrames; f++)
 			{
 				for(j = 0, tri = surf->indexes; j < surf->numIndexes; j += 3, tri += 3)
 				{
-					v0 = surf->verts[surf->numVerts * f + tri[0]].xyz;
-					v1 = surf->verts[surf->numVerts * f + tri[1]].xyz;
-					v2 = surf->verts[surf->numVerts * f + tri[2]].xyz;
+					vec3_t sdir, tdir;
+					const float *v0, *v1, *v2, *t0, *t1, *t2;
+					glIndex_t index0, index1, index2;
+
+					index0 = surf->numVerts * f + tri[0];
+					index1 = surf->numVerts * f + tri[1];
+					index2 = surf->numVerts * f + tri[2];
+
+					v0 = surf->verts[index0].xyz;
+					v1 = surf->verts[index1].xyz;
+					v2 = surf->verts[index2].xyz;
 
 					t0 = surf->st[tri[0]].st;
 					t1 = surf->st[tri[1]].st;
 					t2 = surf->st[tri[2]].st;
 
-					if (!r_recalcMD3Normals->integer)
-						VectorCopy(v->normal, normal);
-					else
-						VectorClear(normal);
+					R_CalcTexDirs(sdir, tdir, v0, v1, v2, t0, t1, t2);
 
-					#if 1
-					R_CalcTangentSpace(tangent, bitangent, normal, v0, v1, v2, t0, t1, t2);
-					#else
-					R_CalcNormalForTriangle(normal, v0, v1, v2);
-					R_CalcTangentsForTriangle(tangent, bitangent, v0, v1, v2, t0, t1, t2);
-					#endif
-
-					for(k = 0; k < 3; k++)
-					{
-						float          *v;
-
-						v = surf->verts[surf->numVerts * f + tri[k]].tangent;
-						VectorAdd(v, tangent, v);
-
-						v = surf->verts[surf->numVerts * f + tri[k]].bitangent;
-						VectorAdd(v, bitangent, v);
-
-						if (r_recalcMD3Normals->integer)
-						{
-							v = surf->verts[surf->numVerts * f + tri[k]].normal;
-							VectorAdd(v, normal, v);
-						}
-					}
+					VectorAdd(sdir, sdirs[index0], sdirs[index0]);
+					VectorAdd(sdir, sdirs[index1], sdirs[index1]);
+					VectorAdd(sdir, sdirs[index2], sdirs[index2]);
+					VectorAdd(tdir, tdirs[index0], tdirs[index0]);
+					VectorAdd(tdir, tdirs[index1], tdirs[index1]);
+					VectorAdd(tdir, tdirs[index2], tdirs[index2]);
 				}
 			}
 
 			for(j = 0, v = surf->verts; j < (surf->numVerts * mdvModel->numFrames); j++, v++)
 			{
-				VectorNormalize(v->tangent);
-				VectorNormalize(v->bitangent);
-				VectorNormalize(v->normal);
+				vec3_t normal;
+				vec4_t tangent;
+
+				VectorNormalize(sdirs[j]);
+				VectorNormalize(tdirs[j]);
+
+				R_VaoUnpackNormal(normal, v->normal);
+
+				tangent[3] = R_CalcTangentSpace(tangent, NULL, normal, sdirs[j], tdirs[j]);
+
+				R_VaoPackTangent(v->tangent, tangent);
 			}
+
+			ri.Free(sdirs);
+			ri.Free(tdirs);
 		}
-#endif
 
 		// find the next surface
 		md3Surf = (md3Surface_t *) ((byte *) md3Surf + md3Surf->ofsEnd);
@@ -672,110 +640,149 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 	}
 
 	{
-		srfVBOMDVMesh_t *vboSurf;
+		srfVaoMdvMesh_t *vaoSurf;
 
-		mdvModel->numVBOSurfaces = mdvModel->numSurfaces;
-		mdvModel->vboSurfaces = ri.Hunk_Alloc(sizeof(*mdvModel->vboSurfaces) * mdvModel->numSurfaces, h_low);
+		mdvModel->numVaoSurfaces = mdvModel->numSurfaces;
+		mdvModel->vaoSurfaces = ri.Hunk_Alloc(sizeof(*mdvModel->vaoSurfaces) * mdvModel->numSurfaces, h_low);
 
-		vboSurf = mdvModel->vboSurfaces;
+		vaoSurf = mdvModel->vaoSurfaces;
 		surf = mdvModel->surfaces;
-		for (i = 0; i < mdvModel->numSurfaces; i++, vboSurf++, surf++)
+		for (i = 0; i < mdvModel->numSurfaces; i++, vaoSurf++, surf++)
 		{
-			vec3_t *verts;
-			vec2_t *texcoords;
-			uint32_t *normals;
-#ifdef USE_VERT_TANGENT_SPACE
-			uint32_t *tangents;
-#endif
+			uint32_t offset_xyz, offset_st, offset_normal, offset_tangent;
+			uint32_t stride_xyz, stride_st, stride_normal, stride_tangent;
+			uint32_t dataSize, dataOfs;
+			uint8_t *data;
 
-			byte *data;
-			int dataSize;
+			if (mdvModel->numFrames > 1)
+			{
+				// vertex animation, store texcoords first, then position/normal/tangents
+				offset_st      = 0;
+				offset_xyz     = surf->numVerts * sizeof(vec2_t);
+				offset_normal  = offset_xyz + sizeof(vec3_t);
+				offset_tangent = offset_normal + sizeof(int16_t) * 4;
+				stride_st  = sizeof(vec2_t);
+				stride_xyz = sizeof(vec3_t) + sizeof(int16_t) * 4;
+				stride_xyz += sizeof(int16_t) * 4;
+				stride_normal = stride_tangent = stride_xyz;
 
-			int ofs_xyz, ofs_normal, ofs_st;
-#ifdef USE_VERT_TANGENT_SPACE
-			int ofs_tangent;
-#endif
+				dataSize = offset_xyz + surf->numVerts * mdvModel->numFrames * stride_xyz;
+			}
+			else
+			{
+				// no animation, interleave everything
+				offset_xyz     = 0;
+				offset_st      = offset_xyz + sizeof(vec3_t);
+				offset_normal  = offset_st + sizeof(vec2_t);
+				offset_tangent = offset_normal + sizeof(int16_t) * 4;
+				stride_xyz = offset_tangent + sizeof(int16_t) * 4;
+				stride_st = stride_normal = stride_tangent = stride_xyz;
 
-			dataSize = 0;
+				dataSize = surf->numVerts * stride_xyz;
+			}
 
-			ofs_xyz = dataSize;
-			dataSize += surf->numVerts * mdvModel->numFrames * sizeof(*verts);
-
-			ofs_normal = dataSize;
-			dataSize += surf->numVerts * mdvModel->numFrames * sizeof(*normals);
-
-#ifdef USE_VERT_TANGENT_SPACE
-			ofs_tangent = dataSize;
-			dataSize += surf->numVerts * mdvModel->numFrames * sizeof(*tangents);
-#endif
-
-			ofs_st = dataSize;
-			dataSize += surf->numVerts * sizeof(*texcoords);
 
 			data = ri.Malloc(dataSize);
+			dataOfs = 0;
 
-			verts =      (void *)(data + ofs_xyz);
-			normals =    (void *)(data + ofs_normal);
-#ifdef USE_VERT_TANGENT_SPACE
-			tangents =   (void *)(data + ofs_tangent);
-#endif
-			texcoords =  (void *)(data + ofs_st);
-		
-			v = surf->verts;
-			for ( j = 0; j < surf->numVerts * mdvModel->numFrames ; j++, v++ )
+			if (mdvModel->numFrames > 1)
 			{
-				vec3_t nxt;
-				vec4_t tangent;
+				st = surf->st;
+				for ( j = 0 ; j < surf->numVerts ; j++, st++ ) {
+					memcpy(data + dataOfs, &st->st, sizeof(vec2_t));
+					dataOfs += sizeof(st->st);
+				}
 
-				VectorCopy(v->xyz,       verts[j]);
+				v = surf->verts;
+				for ( j = 0; j < surf->numVerts * mdvModel->numFrames ; j++, v++ )
+				{
+					// xyz
+					memcpy(data + dataOfs, &v->xyz, sizeof(vec3_t));
+					dataOfs += sizeof(vec3_t);
 
-				normals[j] = R_VboPackNormal(v->normal);
-#ifdef USE_VERT_TANGENT_SPACE
-				CrossProduct(v->normal, v->tangent, nxt);
-				VectorCopy(v->tangent, tangent);
-				tangent[3] = (DotProduct(nxt, v->bitangent) < 0.0f) ? -1.0f : 1.0f;
+					// normal
+					memcpy(data + dataOfs, &v->normal, sizeof(int16_t) * 4);
+					dataOfs += sizeof(int16_t) * 4;
 
-				tangents[j] = R_VboPackTangent(tangent);
-#endif
+					// tangent
+					memcpy(data + dataOfs, &v->tangent, sizeof(int16_t) * 4);
+					dataOfs += sizeof(int16_t) * 4;
+				}
+			}
+			else
+			{
+				v = surf->verts;
+				st = surf->st;
+				for ( j = 0; j < surf->numVerts; j++, v++, st++ )
+				{
+					// xyz
+					memcpy(data + dataOfs, &v->xyz, sizeof(vec3_t));
+					dataOfs += sizeof(v->xyz);
+
+					// st
+					memcpy(data + dataOfs, &st->st, sizeof(vec2_t));
+					dataOfs += sizeof(st->st);
+
+					// normal
+					memcpy(data + dataOfs, &v->normal, sizeof(int16_t) * 4);
+					dataOfs += sizeof(int16_t) * 4;
+
+					// tangent
+					memcpy(data + dataOfs, &v->tangent, sizeof(int16_t) * 4);
+					dataOfs += sizeof(int16_t) * 4;
+				}
 			}
 
-			st = surf->st;
-			for ( j = 0 ; j < surf->numVerts ; j++, st++ ) {
-				texcoords[j][0] = st->st[0];
-				texcoords[j][1] = st->st[1];
-			}
-
-			vboSurf->surfaceType = SF_VBO_MDVMESH;
-			vboSurf->mdvModel = mdvModel;
-			vboSurf->mdvSurface = surf;
-			vboSurf->numIndexes = surf->numIndexes;
-			vboSurf->numVerts = surf->numVerts;
+			vaoSurf->surfaceType = SF_VAO_MDVMESH;
+			vaoSurf->mdvModel = mdvModel;
+			vaoSurf->mdvSurface = surf;
+			vaoSurf->numIndexes = surf->numIndexes;
+			vaoSurf->numVerts = surf->numVerts;
 			
-			vboSurf->minIndex = 0;
-			vboSurf->maxIndex = surf->numVerts;
+			vaoSurf->vao = R_CreateVao(va("staticMD3Mesh_VAO '%s'", surf->name), data, dataSize, (byte *)surf->indexes, surf->numIndexes * sizeof(*surf->indexes), VAO_USAGE_STATIC);
 
-			vboSurf->vbo = R_CreateVBO(va("staticMD3Mesh_VBO '%s'", surf->name), data, dataSize, VBO_USAGE_STATIC);
+			vaoSurf->vao->attribs[ATTR_INDEX_POSITION].enabled = 1;
+			vaoSurf->vao->attribs[ATTR_INDEX_TEXCOORD].enabled = 1;
+			vaoSurf->vao->attribs[ATTR_INDEX_NORMAL  ].enabled = 1;
+			vaoSurf->vao->attribs[ATTR_INDEX_TANGENT ].enabled = 1;
 
-			vboSurf->vbo->ofs_xyz       = ofs_xyz;
-			vboSurf->vbo->ofs_normal    = ofs_normal;
-#ifdef USE_VERT_TANGENT_SPACE
-			vboSurf->vbo->ofs_tangent   = ofs_tangent;
-#endif
-			vboSurf->vbo->ofs_st        = ofs_st;
+			vaoSurf->vao->attribs[ATTR_INDEX_POSITION].count = 3;
+			vaoSurf->vao->attribs[ATTR_INDEX_TEXCOORD].count = 2;
+			vaoSurf->vao->attribs[ATTR_INDEX_NORMAL  ].count = 4;
+			vaoSurf->vao->attribs[ATTR_INDEX_TANGENT ].count = 4;
 
-			vboSurf->vbo->stride_xyz       = sizeof(*verts);
-			vboSurf->vbo->stride_normal    = sizeof(*normals);
-#ifdef USE_VERT_TANGENT_SPACE
-			vboSurf->vbo->stride_tangent   = sizeof(*tangents);
-#endif
-			vboSurf->vbo->stride_st        = sizeof(*st);
+			vaoSurf->vao->attribs[ATTR_INDEX_POSITION].type = GL_FLOAT;
+			vaoSurf->vao->attribs[ATTR_INDEX_TEXCOORD].type = GL_FLOAT;
+			vaoSurf->vao->attribs[ATTR_INDEX_NORMAL  ].type = GL_SHORT;
+			vaoSurf->vao->attribs[ATTR_INDEX_TANGENT ].type = GL_SHORT;
 
-			vboSurf->vbo->size_xyz    = sizeof(*verts) * surf->numVerts;
-			vboSurf->vbo->size_normal = sizeof(*normals) * surf->numVerts;
+			vaoSurf->vao->attribs[ATTR_INDEX_POSITION].normalized = GL_FALSE;
+			vaoSurf->vao->attribs[ATTR_INDEX_TEXCOORD].normalized = GL_FALSE;
+			vaoSurf->vao->attribs[ATTR_INDEX_NORMAL  ].normalized = GL_TRUE;
+			vaoSurf->vao->attribs[ATTR_INDEX_TANGENT ].normalized = GL_TRUE;
+
+			vaoSurf->vao->attribs[ATTR_INDEX_POSITION].offset = offset_xyz;
+			vaoSurf->vao->attribs[ATTR_INDEX_TEXCOORD].offset = offset_st;
+			vaoSurf->vao->attribs[ATTR_INDEX_NORMAL  ].offset = offset_normal;
+			vaoSurf->vao->attribs[ATTR_INDEX_TANGENT ].offset = offset_tangent;
+
+			vaoSurf->vao->attribs[ATTR_INDEX_POSITION].stride = stride_xyz;
+			vaoSurf->vao->attribs[ATTR_INDEX_TEXCOORD].stride = stride_st;
+			vaoSurf->vao->attribs[ATTR_INDEX_NORMAL  ].stride = stride_normal;
+			vaoSurf->vao->attribs[ATTR_INDEX_TANGENT ].stride = stride_tangent;
+
+			if (mdvModel->numFrames > 1)
+			{
+				vaoSurf->vao->attribs[ATTR_INDEX_POSITION2] = vaoSurf->vao->attribs[ATTR_INDEX_POSITION];
+				vaoSurf->vao->attribs[ATTR_INDEX_NORMAL2  ] = vaoSurf->vao->attribs[ATTR_INDEX_NORMAL  ];
+				vaoSurf->vao->attribs[ATTR_INDEX_TANGENT2 ] = vaoSurf->vao->attribs[ATTR_INDEX_TANGENT ];
+
+				vaoSurf->vao->frameSize = stride_xyz    * surf->numVerts;
+			}
+
+			Vao_SetVertexPointers(vaoSurf->vao);
 
 			ri.Free(data);
-
-			vboSurf->ibo = R_CreateIBO2(va("staticMD3Mesh_IBO %s", surf->name), surf->numIndexes, surf->indexes, VBO_USAGE_STATIC);
 		}
 	}
 
@@ -783,20 +790,120 @@ static qboolean R_LoadMD3(model_t * mod, int lod, void *buffer, int bufferSize, 
 }
 
 
-
 /*
-=================
-R_LoadMDR
-=================
+=============================================================
+UNCOMPRESSING BONES
+=============================================================
 */
+
+#define MC_MASK_X ((1<<(MC_BITS_X))-1)
+#define MC_MASK_Y ((1<<(MC_BITS_Y))-1)
+#define MC_MASK_Z ((1<<(MC_BITS_Z))-1)
+#define MC_MASK_VECT ((1<<(MC_BITS_VECT))-1)
+
+#define MC_SCALE_VECT (1.0f/(float)((1<<(MC_BITS_VECT-1))-2))
+
+#define MC_POS_X (0)
+#define MC_SHIFT_X (0)
+
+#define MC_POS_Y ((((MC_BITS_X))/8))
+#define MC_SHIFT_Y ((((MC_BITS_X)%8)))
+
+#define MC_POS_Z ((((MC_BITS_X+MC_BITS_Y))/8))
+#define MC_SHIFT_Z ((((MC_BITS_X+MC_BITS_Y)%8)))
+
+#define MC_POS_V11 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z))/8))
+#define MC_SHIFT_V11 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z)%8)))
+
+#define MC_POS_V12 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT))/8))
+#define MC_SHIFT_V12 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT)%8)))
+
+#define MC_POS_V13 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*2))/8))
+#define MC_SHIFT_V13 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*2)%8)))
+
+#define MC_POS_V21 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*3))/8))
+#define MC_SHIFT_V21 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*3)%8)))
+
+#define MC_POS_V22 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*4))/8))
+#define MC_SHIFT_V22 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*4)%8)))
+
+#define MC_POS_V23 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*5))/8))
+#define MC_SHIFT_V23 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*5)%8)))
+
+#define MC_POS_V31 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*6))/8))
+#define MC_SHIFT_V31 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*6)%8)))
+
+#define MC_POS_V32 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*7))/8))
+#define MC_SHIFT_V32 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*7)%8)))
+
+#define MC_POS_V33 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*8))/8))
+#define MC_SHIFT_V33 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*8)%8)))
+
+void MC_UnCompress(float mat[3][4],const unsigned char * comp)
+{
+	int val;
+
+	val=(int)((unsigned short *)(comp))[0];
+	val-=1<<(MC_BITS_X-1);
+	mat[0][3]=((float)(val))*MC_SCALE_X;
+
+	val=(int)((unsigned short *)(comp))[1];
+	val-=1<<(MC_BITS_Y-1);
+	mat[1][3]=((float)(val))*MC_SCALE_Y;
+
+	val=(int)((unsigned short *)(comp))[2];
+	val-=1<<(MC_BITS_Z-1);
+	mat[2][3]=((float)(val))*MC_SCALE_Z;
+
+	val=(int)((unsigned short *)(comp))[3];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[0][0]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[4];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[0][1]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[5];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[0][2]=((float)(val))*MC_SCALE_VECT;
+
+
+	val=(int)((unsigned short *)(comp))[6];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[1][0]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[7];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[1][1]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[8];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[1][2]=((float)(val))*MC_SCALE_VECT;
+
+
+	val=(int)((unsigned short *)(comp))[9];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[2][0]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[10];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[2][1]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[11];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[2][2]=((float)(val))*MC_SCALE_VECT;
+}
+
+
+
 static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char *mod_name ) 
 {
 	int					i, j, k, l;
 	mdrHeader_t			*pinmodel, *mdr;
 	mdrFrame_t			*frame;
 	mdrLOD_t			*lod, *curlod;
-	mdrSurface_t			*surf, *cursurf;
-	mdrTriangle_t			*tri, *curtri;
+	mdrSurface_t		*surf, *cursurf;
+	mdrTriangle_t		*tri, *curtri;
 	mdrVertex_t			*v, *curv;
 	mdrWeight_t			*weight, *curweight;
 	mdrTag_t			*tag, *curtag;
@@ -1022,7 +1129,7 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 				LL(curv->numWeights);
 			
 				// simple bounds check
-				if(curv->numWeights < 0 || (byte *) (v + 1) + (curv->numWeights - 1) * sizeof(*weight) > (byte *) mdr + size)
+				if(curv->numWeights < 0 || (unsigned char *) (v + 1) + (curv->numWeights - 1) * sizeof(*weight) > (unsigned char *) mdr + size)
 				{
 					ri.Printf(PRINT_WARNING, "R_LoadMDR: %s has broken structure.\n", mod_name);
 					return qfalse;
@@ -1126,46 +1233,6 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 
 
 
-//=============================================================================
-
-/*
-** RE_BeginRegistration
-*/
-void RE_BeginRegistration( glconfig_t *glconfigOut ) {
-
-	R_Init();
-
-	*glconfigOut = glConfig;
-
-	R_IssuePendingRenderCommands();
-
-	tr.visIndex = 0;
-	memset(tr.visClusters, -2, sizeof(tr.visClusters));	// force markleafs to regenerate
-
-	R_ClearFlares();
-	RE_ClearScene();
-
-	tr.registered = qtrue;
-}
-
-//=============================================================================
-
-/*
-===============
-R_ModelInit
-===============
-*/
-void R_ModelInit( void ) {
-	model_t		*mod;
-
-	// leave a space for NULL model
-	tr.numModels = 0;
-
-	mod = R_AllocModel();
-	mod->type = MOD_BAD;
-}
-
-
 /*
 ================
 R_Modellist_f
@@ -1230,7 +1297,7 @@ static mdvTag_t *R_GetTag( mdvModel_t *mod, int frame, const char *_tagName ) {
 	return NULL;
 }
 
-void R_GetAnimTag( mdrHeader_t *mod, int framenum, const char *tagName, mdvTag_t * dest)
+mdvTag_t *R_GetAnimTag( mdrHeader_t *mod, int framenum, const char *tagName, mdvTag_t * dest)
 {
 	int				i, j, k;
 	int				frameSize;
@@ -1263,12 +1330,11 @@ void R_GetAnimTag( mdrHeader_t *mod, int framenum, const char *tagName, mdvTag_t
 			dest->origin[1]=frame->bones[tag->boneIndex].matrix[1][3];
 			dest->origin[2]=frame->bones[tag->boneIndex].matrix[2][3];				
 
-			return;
+			return dest;
 		}
 	}
 
-	AxisClear( dest->axis );
-	VectorClear( dest->origin );
+	return NULL;
 }
 
 /*
@@ -1289,34 +1355,30 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 	{
 		if(model->type == MOD_MDR)
 		{
-			start = &start_space;
-			end = &end_space;
-			R_GetAnimTag((mdrHeader_t *) model->modelData, startFrame, tagName, start);
-			R_GetAnimTag((mdrHeader_t *) model->modelData, endFrame, tagName, end);
+			start = R_GetAnimTag((mdrHeader_t *) model->modelData, startFrame, tagName, &start_space);
+			end = R_GetAnimTag((mdrHeader_t *) model->modelData, endFrame, tagName, &end_space);
 		}
 		else if( model->type == MOD_IQM ) {
 			return R_IQMLerpTag( tag, model->modelData,
 					startFrame, endFrame,
 					frac, tagName );
-		} else {
-
-			AxisClear( tag->axis );
-			VectorClear( tag->origin );
-			return qfalse;
-
+		}
+		else{
+			start = end = NULL;
 		}
 	}
 	else
 	{
 		start = R_GetTag( model->mdv[0], startFrame, tagName );
 		end = R_GetTag( model->mdv[0], endFrame, tagName );
-		if ( !start || !end ) {
-			AxisClear( tag->axis );
-			VectorClear( tag->origin );
-			return qfalse;
-		}
 	}
-	
+
+	if ( !start || !end ) {
+		AxisClear( tag->axis );
+		VectorClear( tag->origin );
+		return qfalse;
+	}
+
 	frontLerp = frac;
 	backLerp = 1.0f - frac;
 
@@ -1333,47 +1395,37 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 }
 
 
-/*
-====================
-R_ModelBounds
-====================
-*/
-void R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs ) {
-	model_t		*model;
+void R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs )
+{
+	model_t* model = R_GetModelByHandle( handle );
 
-	model = R_GetModelByHandle( handle );
-
-	if(model->type == MOD_BRUSH) {
+	if(model->type == MOD_BRUSH)
+	{
 		VectorCopy( model->bmodel->bounds[0], mins );
 		VectorCopy( model->bmodel->bounds[1], maxs );
-		
 		return;
-	} else if (model->type == MOD_MESH) {
-		mdvModel_t	*header;
-		mdvFrame_t	*frame;
-
-		header = model->mdv[0];
-		frame = header->frames;
+	}
+	else if (model->type == MOD_MESH)
+	{
+		mdvModel_t* header = model->mdv[0];
+		mdvFrame_t* frame = header->frames;
 
 		VectorCopy( frame->bounds[0], mins );
 		VectorCopy( frame->bounds[1], maxs );
-		
 		return;
-	} else if (model->type == MOD_MDR) {
-		mdrHeader_t	*header;
-		mdrFrame_t	*frame;
-
-		header = (mdrHeader_t *)model->modelData;
-		frame = (mdrFrame_t *) ((byte *)header + header->ofsFrames);
+	}
+	else if (model->type == MOD_MDR)
+	{
+		mdrHeader_t* header = (mdrHeader_t *)model->modelData;
+		mdrFrame_t* frame = (mdrFrame_t *) ((byte *)header + header->ofsFrames);
 
 		VectorCopy( frame->bounds[0], mins );
 		VectorCopy( frame->bounds[1], maxs );
-		
 		return;
-	} else if(model->type == MOD_IQM) {
-		iqmData_t *iqmData;
-		
-		iqmData = model->modelData;
+	}
+	else if(model->type == MOD_IQM)
+	{
+		iqmData_t *iqmData = model->modelData;
 
 		if(iqmData->bounds)
 		{
@@ -1385,4 +1437,16 @@ void R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs ) {
 
 	VectorClear( mins );
 	VectorClear( maxs );
+}
+
+void R_ModelInit( void )
+{
+	// leave a space for NULL model
+	tr.numModels = 0;
+
+	model_t* mod = ri.Hunk_Alloc( sizeof( *tr.models[tr.numModels] ), h_low );
+	mod->index = tr.numModels;
+	tr.models[tr.numModels] = mod;
+	tr.numModels++;
+	mod->type = MOD_BAD;
 }

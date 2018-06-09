@@ -115,15 +115,10 @@ static void *S_CodecGetSound(const char *filename, snd_info_t *info)
 	return NULL;
 }
 
-/*
-=================
-S_CodecInit
-=================
-*/
+
 void S_CodecInit()
 {
 	codecs = NULL;
-
 
 #ifdef USE_CODEC_OPUS
 	S_CodecRegister(&opus_codec);
@@ -143,14 +138,9 @@ void S_CodecInit()
 	S_CodecRegister(&xmp_xm_codec);
 	S_CodecRegister(&xmp_it_codec);
 #endif
-
 }
 
-/*
-=================
-S_CodecShutdown
-=================
-*/
+
 void S_CodecShutdown()
 {
 	codecs = NULL;

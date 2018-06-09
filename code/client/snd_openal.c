@@ -50,15 +50,14 @@ static qboolean enumeration_all_ext = qfalse;
 #ifdef USE_VOIP
 static qboolean capture_ext = qfalse;
 #endif
-extern int xmpspeed; 		// leilei
+// extern int xmpspeed; // leilei
 
 /*
 =================
 S_AL_Format
 =================
 */
-static
-ALuint S_AL_Format(int width, int channels)
+static ALuint S_AL_Format(int width, int channels)
 {
 	ALuint format = AL_FORMAT_MONO16;
 
@@ -842,7 +841,7 @@ static void S_AL_SrcSetup(srcHandle_t src, sfxHandle_t sfx, alSrcPriority_t prio
 
 /*
 =================
-S_AL_NewLoopMaster
+S_AL_SaveLoopPos
 Remove given source as loop master if it is the master and hand off master status to another source in this case.
 =================
 */
@@ -1804,7 +1803,7 @@ void S_AL_RawSamples(int stream, int samples, int rate, int width, int channels,
 		if (!S_AL_GenBuffers(1, &buffer, "stream"))
 			return;
 
-		Com_Memcpy(oldBuffers, &streamBuffers[stream], sizeof (oldBuffers));
+		memcpy(oldBuffers, &streamBuffers[stream], sizeof (oldBuffers));
 
 		// Reorder buffer array in order of oldest to newest
 		for ( i = 0; i < streamNumBuffers[stream]; ++i )
@@ -2116,7 +2115,7 @@ void S_AL_StartBackgroundTrack( const char *intro, const char *loop )
 		issame = qfalse;
 
 	// Copy the loop over
-	strncpy( s_backgroundLoop, loop, sizeof( s_backgroundLoop ) );
+	Q_strncpyz( s_backgroundLoop, loop, sizeof( s_backgroundLoop ) );
 
 	if(!issame)
 	{
@@ -2207,9 +2206,11 @@ static ALCdevice *alCaptureDevice;
 static cvar_t *s_alCapture;
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN64)
+#define ALDRIVER_DEFAULT "OpenAL64.dll"
+#elif defined(_WIN32)
 #define ALDRIVER_DEFAULT "OpenAL32.dll"
-#elif defined(MACOS_X)
+#elif defined(__APPLE__)
 #define ALDRIVER_DEFAULT "/System/Library/Frameworks/OpenAL.framework/OpenAL"
 #elif defined(__OpenBSD__)
 #define ALDRIVER_DEFAULT "libopenal.so"
@@ -2237,8 +2238,7 @@ void S_AL_StopAllSounds( void )
 S_AL_Respatialize
 =================
 */
-static
-void S_AL_Respatialize( int entityNum, const vec3_t origin, vec3_t axis[3], int inwater )
+static void S_AL_Respatialize( int entityNum, const vec3_t origin, vec3_t axis[3], int inwater )
 {
 	float		orientation[6];
 	vec3_t	sorigin;
@@ -2310,7 +2310,7 @@ void S_AL_Update( void )
 	}
 	if(s_alDopplerSpeed->modified)
 	{
-		qalDopplerVelocity(s_alDopplerSpeed->value);
+		qalSpeedOfSound(s_alDopplerSpeed->value);
 		s_alDopplerSpeed->modified = qfalse;
 	}
 
@@ -2444,8 +2444,7 @@ static void S_AL_SoundInfo(void)
 S_AL_Shutdown
 =================
 */
-static
-void S_AL_Shutdown( void )
+static void S_AL_Shutdown( void )
 {
 	// Shut down everything
 	int i;
@@ -2507,7 +2506,7 @@ qboolean S_AL_Init( soundInterface_t *si )
 	s_alGain = Cvar_Get( "s_alGain", "1.0", CVAR_ARCHIVE );
 	s_alSources = Cvar_Get( "s_alSources", "96", CVAR_ARCHIVE );
 	s_alDopplerFactor = Cvar_Get( "s_alDopplerFactor", "1.0", CVAR_ARCHIVE );
-	s_alDopplerSpeed = Cvar_Get( "s_alDopplerSpeed", "2200", CVAR_ARCHIVE );
+	s_alDopplerSpeed = Cvar_Get( "s_alDopplerSpeed", "9000", CVAR_ARCHIVE );
 	s_alMinDistance = Cvar_Get( "s_alMinDistance", "120", CVAR_CHEAT );
 	s_alMaxDistance = Cvar_Get("s_alMaxDistance", "1024", CVAR_CHEAT);
 	s_alRolloff = Cvar_Get( "s_alRolloff", "2", CVAR_CHEAT);
@@ -2518,8 +2517,7 @@ qboolean S_AL_Init( soundInterface_t *si )
 	s_alInputDevice = Cvar_Get( "s_alInputDevice", "", CVAR_ARCHIVE | CVAR_LATCH );
 	s_alDevice = Cvar_Get("s_alDevice", "", CVAR_ARCHIVE | CVAR_LATCH);
 
-
-	xmpspeed = 48000; // leilei - force it to 48000 which is the native mixing rate post-ac'97
+	// xmpspeed = 48000; // leilei - force it to 48000 which is the native mixing rate post-ac'97
 
 	// Load QAL
 	if( !QAL_Init( s_alDriver->string ) )
@@ -2627,7 +2625,7 @@ qboolean S_AL_Init( soundInterface_t *si )
 	// Set up OpenAL parameters (doppler, etc)
 	qalDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
 	qalDopplerFactor( s_alDopplerFactor->value );
-	qalDopplerVelocity( s_alDopplerSpeed->value );
+	qalSpeedOfSound( s_alDopplerSpeed->value );
 
 #ifdef USE_VOIP
 	// !!! FIXME: some of these alcCaptureOpenDevice() values should be cvars.
@@ -2685,16 +2683,12 @@ qboolean S_AL_Init( soundInterface_t *si )
 
 			s_alAvailableInputDevices = Cvar_Get("s_alAvailableInputDevices", inputdevicenames, CVAR_ROM | CVAR_NORESTART);
 
-			// !!! FIXME: 8000Hz is what Speex narrowband mode needs, but we
-			// !!! FIXME:  should probably open the capture device after
-			// !!! FIXME:  initializing Speex so we can change to wideband
-			// !!! FIXME:  if we like.
 			Com_Printf("OpenAL default capture device is '%s'\n", defaultinputdevice ? defaultinputdevice : "none");
-			alCaptureDevice = qalcCaptureOpenDevice(inputdevice, 8000, AL_FORMAT_MONO16, 4096);
+			alCaptureDevice = qalcCaptureOpenDevice(inputdevice, 48000, AL_FORMAT_MONO16, VOIP_MAX_PACKET_SAMPLES*4);
 			if( !alCaptureDevice && inputdevice )
 			{
 				Com_Printf( "Failed to open OpenAL Input device '%s', trying default.\n", inputdevice );
-				alCaptureDevice = qalcCaptureOpenDevice(NULL, 8000, AL_FORMAT_MONO16, 4096);
+				alCaptureDevice = qalcCaptureOpenDevice(NULL, 48000, AL_FORMAT_MONO16, VOIP_MAX_PACKET_SAMPLES*4);
 			}
 			Com_Printf( "OpenAL capture device %s.\n",
 				    (alCaptureDevice == NULL) ? "failed to open" : "opened");
@@ -2730,7 +2724,6 @@ qboolean S_AL_Init( soundInterface_t *si )
 	si->StopCapture = S_AL_StopCapture;
 	si->MasterGain = S_AL_MasterGain;
 #endif
-
 	return qtrue;
 #else
 	return qfalse;

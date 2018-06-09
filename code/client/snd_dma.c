@@ -207,7 +207,7 @@ void S_ChannelSetup( void ) {
 	channel_t *p, *q;
 
 	// clear all the sounds so they don't
-	Com_Memset( s_channels, 0, sizeof( s_channels ) );
+	memset( s_channels, 0, sizeof( s_channels ) );
 
 	p = s_channels;;
 	q = p + MAX_CHANNELS;
@@ -307,7 +307,7 @@ static sfx_t *S_FindName( const char *name ) {
 	}
 	
 	sfx = &s_knownSfx[i];
-	Com_Memset (sfx, 0, sizeof(*sfx));
+	memset (sfx, 0, sizeof(*sfx));
 	strcpy (sfx->soundName, name);
 
 	sfx->next = sfxHash[hash];
@@ -402,8 +402,8 @@ void S_Base_BeginRegistration( void ) {
 	if (s_numSfx == 0) {
 		SND_setup();
 
-		Com_Memset(s_knownSfx, '\0', sizeof(s_knownSfx));
-		Com_Memset(sfxHash, '\0', sizeof(sfx_t *) * LOOP_HASH);
+		memset(s_knownSfx, '\0', sizeof(s_knownSfx));
+		memset(sfxHash, '\0', sizeof(sfx_t *) * LOOP_HASH);
 
 		S_Base_RegisterSound("sound/misc/silence.wav", qfalse);		// changed to a sound in baseoa
 	}
@@ -429,8 +429,6 @@ Used for spatializing s_channels
 */
 void S_SpatializeOrigin (vec3_t origin, int master_vol, int *left_vol, int *right_vol)
 {
-    vec_t		dot;
-    vec_t		dist;
     vec_t		lscale, rscale, scale;
     vec3_t		source_vec;
     vec3_t		vec;
@@ -440,15 +438,17 @@ void S_SpatializeOrigin (vec3_t origin, int master_vol, int *left_vol, int *righ
 	// calculate stereo seperation and distance attenuation
 	VectorSubtract(origin, listener_origin, source_vec);
 
-	dist = VectorNormalize(source_vec);
+	float dist = VectorNormalize(source_vec);
 	dist -= SOUND_FULLVOLUME;
 	if (dist < 0)
 		dist = 0;			// close enough to be at full volume
 	dist *= dist_mult;		// different attenuation levels
 	
-	VectorRotate( source_vec, listener_axis, vec );
+	//VectorRotate( source_vec, listener_axis, vec );
+	//vec[0] = DotProduct( source_vec, listener_axis[0] );
+	vec[1] = DotProduct( source_vec, listener_axis[1] );
+	//vec[2] = DotProduct( source_vec, listener_axis[2] );
 
-	dot = -vec[1];
 
 	if (dma.channels == 1)
 	{ // no attenuation = no spatialization
@@ -457,8 +457,8 @@ void S_SpatializeOrigin (vec3_t origin, int master_vol, int *left_vol, int *righ
 	}
 	else
 	{
-		rscale = 0.5 * (1.0 + dot);
-		lscale = 0.5 * (1.0 - dot);
+		rscale = 0.5 * (1.0 - vec[1]);
+		lscale = 0.5 * (1.0 + vec[1]);
 		if ( rscale < 0 ) {
 			rscale = 0;
 		}
@@ -698,13 +698,13 @@ void S_Base_ClearSoundBuffer( void ) {
 		return;
 
 	// stop looping sounds
-	Com_Memset(loopSounds, 0, MAX_GENTITIES*sizeof(loopSound_t));
-	Com_Memset(loop_channels, 0, MAX_CHANNELS*sizeof(channel_t));
+	memset(loopSounds, 0, MAX_GENTITIES*sizeof(loopSound_t));
+	memset(loop_channels, 0, MAX_CHANNELS*sizeof(channel_t));
 	numLoopChannels = 0;
 
 	S_ChannelSetup();
 
-	Com_Memset(s_rawend, '\0', sizeof (s_rawend));
+	memset(s_rawend, '\0', sizeof (s_rawend));
 
 	if (dma.samplebits == 8)
 		clear = 0x80;
@@ -713,7 +713,7 @@ void S_Base_ClearSoundBuffer( void ) {
 
 	SNDDMA_BeginPainting ();
 	if (dma.buffer)
-		Com_Memset(dma.buffer, clear, dma.samples * dma.samplebits/8);
+		memset(dma.buffer, clear, dma.samples * dma.samplebits/8);
 	SNDDMA_Submit ();
 }
 
@@ -1257,8 +1257,9 @@ void S_GetSoundtime(void)
 
 	if( CL_VideoRecording( ) )
 	{
-		float fps = MIN(cl_aviFrameRate->value, 1000.0f);
-		float frameDuration = MAX(dma.speed / fps, 1.0f) + clc.aviSoundFrameRemainder;
+		float fps = cl_aviFrameRate->value < 1000.0f ? cl_aviFrameRate->value : 1000.0f;
+		float tmp = dma.speed / fps;
+		float frameDuration = (tmp > 1.0f ? tmp : 1.0f) + clc.aviSoundFrameRemainder;
 
 		int msec = (int)frameDuration;
 		s_soundtime += msec;
@@ -1592,7 +1593,7 @@ qboolean S_Base_Init( soundInterface_t *si ) {
 		s_soundMuted = 1;
 //		s_numSfx = 0;
 
-		Com_Memset(sfxHash, 0, sizeof(sfx_t *)*LOOP_HASH);
+		memset(sfxHash, 0, sizeof(sfx_t *)*LOOP_HASH);
 
 		s_soundtime = 0;
 		s_paintedtime = 0;

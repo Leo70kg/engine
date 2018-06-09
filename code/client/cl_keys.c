@@ -39,10 +39,9 @@ qboolean	chat_team;
 
 int			chat_playerNum;
 
-
 qboolean	key_overstrikeMode;
 
-int				anykeydown;
+int			anykeydown;
 qkey_t		keys[MAX_KEYS];
 
 
@@ -105,39 +104,6 @@ keyname_t keynames[] =
 
 	{"MWHEELUP",	K_MWHEELUP },
 	{"MWHEELDOWN",	K_MWHEELDOWN },
-
-	{"JOY1", K_JOY1},
-	{"JOY2", K_JOY2},
-	{"JOY3", K_JOY3},
-	{"JOY4", K_JOY4},
-	{"JOY5", K_JOY5},
-	{"JOY6", K_JOY6},
-	{"JOY7", K_JOY7},
-	{"JOY8", K_JOY8},
-	{"JOY9", K_JOY9},
-	{"JOY10", K_JOY10},
-	{"JOY11", K_JOY11},
-	{"JOY12", K_JOY12},
-	{"JOY13", K_JOY13},
-	{"JOY14", K_JOY14},
-	{"JOY15", K_JOY15},
-	{"JOY16", K_JOY16},
-	{"JOY17", K_JOY17},
-	{"JOY18", K_JOY18},
-	{"JOY19", K_JOY19},
-	{"JOY20", K_JOY20},
-	{"JOY21", K_JOY21},
-	{"JOY22", K_JOY22},
-	{"JOY23", K_JOY23},
-	{"JOY24", K_JOY24},
-	{"JOY25", K_JOY25},
-	{"JOY26", K_JOY26},
-	{"JOY27", K_JOY27},
-	{"JOY28", K_JOY28},
-	{"JOY29", K_JOY29},
-	{"JOY30", K_JOY30},
-	{"JOY31", K_JOY31},
-	{"JOY32", K_JOY32},
 
 	{"AUX1", K_AUX1},
 	{"AUX2", K_AUX2},
@@ -305,12 +271,11 @@ EDIT FIELDS
 ===================
 Field_Draw
 
-Handles horizontal scrolling and cursor blinking
-x, y, and width are in pixels
+Handles horizontal scrolling and cursor blinking x, y, and width are in pixels
 ===================
 */
-void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, qboolean showCursor,
-		qboolean noColorEscape ) {
+void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, qboolean showCursor, qboolean noColorEscape )
+{
 	int		len;
 	int		drawLen;
 	int		prestep;
@@ -343,7 +308,7 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, q
 		Com_Error( ERR_DROP, "drawLen >= MAX_STRING_CHARS" );
 	}
 
-	Com_Memcpy( str, edit->buffer + prestep, drawLen );
+	memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
 
 	// draw it
@@ -767,15 +732,10 @@ void Key_SetOverstrikeMode( qboolean state ) {
 }
 
 
-/*
-===================
-Key_IsDown
-===================
-*/
-qboolean Key_IsDown( int keynum ) {
-	if ( keynum < 0 || keynum >= MAX_KEYS ) {
+qboolean Key_IsDown( int keynum )
+{
+	if ( keynum < 0 || keynum >= MAX_KEYS )
 		return qfalse;
-	}
 
 	return keys[keynum].down;
 }
@@ -813,7 +773,8 @@ int Key_StringToKeynum( char *str ) {
 	}
 
 	// scan for a text match
-	for ( kn=keynames ; kn->name ; kn++ ) {
+	for ( kn=keynames ; kn->name ; kn++ )
+    {
 		if ( !Q_stricmp( str,kn->name ) )
 			return kn->keynum;
 	}
@@ -850,7 +811,8 @@ char *Key_KeynumToString( int keynum ) {
 	}
 
 	// check for a key string
-	for ( kn=keynames ; kn->name ; kn++ ) {
+	for ( kn=keynames ; kn->name ; kn++ )
+    {
 		if (keynum == kn->keynum) {
 			return kn->name;
 		}
@@ -870,12 +832,8 @@ char *Key_KeynumToString( int keynum ) {
 }
 
 
-/*
-===================
-Key_SetBinding
-===================
-*/
-void Key_SetBinding( int keynum, const char *binding ) {
+void Key_SetBinding( int keynum, const char *binding )
+{
 	if ( keynum < 0 || keynum >= MAX_KEYS ) {
 		return;
 	}
@@ -1018,17 +976,18 @@ Key_WriteBindings
 Writes lines containing "bind key value"
 ============
 */
-void Key_WriteBindings( fileHandle_t f ) {
+void Key_WriteBindings( fileHandle_t f )
+{
 	int		i;
 
 	FS_Printf (f, "unbindall\n" );
 
-	for (i=0 ; i<MAX_KEYS ; i++) {
-		if (keys[i].binding && keys[i].binding[0] ) {
+	for (i=0 ; i<MAX_KEYS ; i++)
+    {
+		if (keys[i].binding && keys[i].binding[0] )
+        {
 			FS_Printf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), keys[i].binding);
-
 		}
-
 	}
 }
 
@@ -1042,7 +1001,8 @@ Key_Bindlist_f
 void Key_Bindlist_f( void ) {
 	int		i;
 
-	for ( i = 0 ; i < MAX_KEYS ; i++ ) {
+	for ( i = 0 ; i < MAX_KEYS ; i++ )
+    {
 		if ( keys[i].binding && keys[i].binding[0] ) {
 			Com_Printf( "%s \"%s\"\n", Key_KeynumToString(i), keys[i].binding );
 		}
@@ -1105,19 +1065,16 @@ static void Key_CompleteBind( char *args, int argNum )
 	}
 }
 
-/*
-===================
-CL_InitKeyCommands
-===================
-*/
-void CL_InitKeyCommands( void ) {
+
+void CL_InitKeyCommands( void )
+{
 	// register our functions
-	Cmd_AddCommand ("bind",Key_Bind_f);
-	Cmd_SetCommandCompletionFunc( "bind", Key_CompleteBind );
-	Cmd_AddCommand ("unbind",Key_Unbind_f);
-	Cmd_SetCommandCompletionFunc( "unbind", Key_CompleteUnbind );
-	Cmd_AddCommand ("unbindall",Key_Unbindall_f);
-	Cmd_AddCommand ("bindlist",Key_Bindlist_f);
+	Cmd_AddCommand ("bind", Key_Bind_f);
+	Cmd_SetCommandCompletionFunc("bind", Key_CompleteBind);
+	Cmd_AddCommand ("unbind", Key_Unbind_f);
+	Cmd_SetCommandCompletionFunc("unbind", Key_CompleteUnbind );
+	Cmd_AddCommand ("unbindall", Key_Unbindall_f);
+	Cmd_AddCommand ("bindlist", Key_Bindlist_f);
 }
 
 /*
@@ -1127,7 +1084,8 @@ CL_BindUICommand
 Returns qtrue if bind command should be executed while user interface is shown
 ===================
 */
-static qboolean CL_BindUICommand( const char *cmd ) {
+static qboolean CL_BindUICommand( const char *cmd )
+{
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE )
 		return qfalse;
 
@@ -1198,22 +1156,19 @@ void CL_ParseBinding( int key, qboolean down, unsigned time )
 
 /*
 ===================
-CL_KeyDownEvent
-
-Called by CL_KeyEvent to handle a keypress
+CL_KeyDownEvent: Called by CL_KeyEvent to handle a keypress
 ===================
 */
-void CL_KeyDownEvent( int key, unsigned time )
+void CL_KeyDownEvent( int key, unsigned int time )
 {
 	keys[key].down = qtrue;
 	keys[key].repeats++;
-	if( keys[key].repeats == 1 && key != K_SCROLLOCK && key != K_KP_NUMLOCK && key != K_CAPSLOCK )
+	if( keys[key].repeats == 1 )
 		anykeydown++;
 
 	if( keys[K_ALT].down && key == K_ENTER )
 	{
-		Cvar_SetValue( "r_fullscreen",
-			!Cvar_VariableIntegerValue( "r_fullscreen" ) );
+		Cvar_SetValue("r_fullscreen", !Cvar_VariableIntegerValue( "r_fullscreen" ) );
 		return;
 	}
 
@@ -1221,44 +1176,49 @@ void CL_KeyDownEvent( int key, unsigned time )
 	if( key == K_CONSOLE || ( keys[K_SHIFT].down && key == K_ESCAPE ) )
 	{
 		Con_SetFrac(cl_consoleHeight->value);
-		if (key == K_CONSOLE) {
+		if (key == K_CONSOLE)
+        {
 			if (keys[K_ALT].down)
 				Con_SetFrac(1.0f);
 			else if (keys[K_SHIFT].down)
 				Con_SetFrac(.25f);
 		}
-		Con_ToggleConsole_f ();
+		Con_ToggleConsole_f();
 		Key_ClearStates ();
 		return;
 	}
 
 
 	// keys can still be used for bound actions
-	if ( ( key < 128 || key == K_MOUSE1 ) &&
-		( clc.demoplaying || clc.state == CA_CINEMATIC ) && Key_GetCatcher( ) == 0 ) {
-
-		if (Cvar_VariableValue ("com_cameraMode") == 0) {
+	if ( ( key < 128 || key == K_MOUSE1 ) && ( clc.demoplaying || clc.state == CA_CINEMATIC ) && Key_GetCatcher( ) == 0 )
+    {
+		if (Cvar_VariableValue ("com_cameraMode") == 0)
+        {
 			Cvar_Set ("nextdemo","");
 			key = K_ESCAPE;
 		}
 	}
 
 	// escape is always handled special
-	if ( key == K_ESCAPE ) {
-		if ( Key_GetCatcher( ) & KEYCATCH_MESSAGE ) {
+	if ( key == K_ESCAPE )
+    {
+		if ( Key_GetCatcher( ) & KEYCATCH_MESSAGE )
+        {
 			// clear message mode
 			Message_Key( key );
 			return;
 		}
 
 		// escape always gets out of CGAME stuff
-		if (Key_GetCatcher( ) & KEYCATCH_CGAME) {
+		if (Key_GetCatcher( ) & KEYCATCH_CGAME)
+        {
 			Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CGAME );
 			VM_Call (cgvm, CG_EVENT_HANDLING, CGAME_EVENT_NONE);
 			return;
 		}
 
-		if ( !( Key_GetCatcher( ) & KEYCATCH_UI ) ) {
+		if ( !( Key_GetCatcher( ) & KEYCATCH_UI ) )
+        {
 			if ( clc.state == CA_ACTIVE && !clc.demoplaying ) {
 				VM_Call( uivm, UI_SET_ACTIVE_MENU, UIMENU_INGAME );
 			}
@@ -1306,8 +1266,7 @@ void CL_KeyUpEvent( int key, unsigned time )
 {
 	keys[key].repeats = 0;
 	keys[key].down = qfalse;
-	if (key != K_SCROLLOCK && key != K_KP_NUMLOCK && key != K_CAPSLOCK)
-		anykeydown--;
+	anykeydown--;
 
 	if (anykeydown < 0) {
 		anykeydown = 0;
@@ -1334,12 +1293,11 @@ void CL_KeyUpEvent( int key, unsigned time )
 
 /*
 ===================
-CL_KeyEvent
-
-Called by the system for both key up and key down events
+CL_KeyEvent: Called by the system for both key up and key down events
 ===================
 */
-void CL_KeyEvent (int key, qboolean down, unsigned time) {
+void CL_KeyEvent (int key, qboolean down, unsigned int time)
+{
 	if( down )
 		CL_KeyDownEvent( key, time );
 	else
@@ -1380,24 +1338,18 @@ void CL_CharEvent( int key ) {
 }
 
 
-/*
-===================
-Key_ClearStates
-===================
-*/
+
 void Key_ClearStates (void)
 {
-	int		i;
+	int	i;
 
 	anykeydown = 0;
 
-	for ( i=0 ; i < MAX_KEYS ; i++ ) {
-		if (i == K_SCROLLOCK || i == K_KP_NUMLOCK || i == K_CAPSLOCK)
-			continue;
-
-		if ( keys[i].down ) {
+	for(i=0; i < MAX_KEYS; i++)
+    {
+		if ( keys[i].down )
+        {
 			CL_KeyEvent( i, qfalse, 0 );
-
 		}
 		keys[i].down = 0;
 		keys[i].repeats = 0;
@@ -1406,21 +1358,14 @@ void Key_ClearStates (void)
 
 static int keyCatchers = 0;
 
-/*
-====================
-Key_GetCatcher
-====================
-*/
-int Key_GetCatcher( void ) {
+int Key_GetCatcher( void )
+{
 	return keyCatchers;
 }
 
-/*
-====================
-Key_SetCatcher
-====================
-*/
-void Key_SetCatcher( int catcher ) {
+
+void Key_SetCatcher( int catcher )
+{
 	// If the catcher state is changing, clear all key states
 	if( catcher != keyCatchers )
 		Key_ClearStates( );
@@ -1436,16 +1381,14 @@ static int	consoleSaveBufferSize = 0;
 
 /*
 ================
-CL_LoadConsoleHistory
-
-Load the console history from cl_consoleHistory
+CL_LoadConsoleHistory: Load the console history from cl_consoleHistory
 ================
 */
 void CL_LoadConsoleHistory( void )
 {
-	char					*token, *text_p;
-	int						i, numChars, numLines = 0;
-	fileHandle_t	f;
+	char *token, *text_p;
+	int	i, numChars, numLines = 0;
+	fileHandle_t f;
 
 	consoleSaveBufferSize = FS_FOpenFileRead( CONSOLE_HISTORY_FILE, &f, qfalse );
 	if( !f )
@@ -1454,8 +1397,7 @@ void CL_LoadConsoleHistory( void )
 		return;
 	}
 
-	if( consoleSaveBufferSize <= MAX_CONSOLE_SAVE_BUFFER &&
-			FS_Read( consoleSaveBuffer, consoleSaveBufferSize, f ) == consoleSaveBufferSize )
+	if( consoleSaveBufferSize <= MAX_CONSOLE_SAVE_BUFFER && FS_Read( consoleSaveBuffer, consoleSaveBufferSize, f ) == consoleSaveBufferSize )
 	{
 		text_p = consoleSaveBuffer;
 
@@ -1481,8 +1423,7 @@ void CL_LoadConsoleHistory( void )
 				Com_DPrintf( S_COLOR_YELLOW "WARNING: probable corrupt history\n" );
 				break;
 			}
-			Com_Memcpy( historyEditLines[ i ].buffer,
-					text_p, numChars );
+			memcpy( historyEditLines[ i ].buffer, text_p, numChars );
 			historyEditLines[ i ].buffer[ numChars ] = '\0';
 			text_p += numChars;
 

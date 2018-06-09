@@ -50,7 +50,7 @@ QVM files
 ========================================================================
 */
 
-#define	VM_MAGIC			0x12721444
+#define	VM_MAGIC        0x12721444
 #define	VM_MAGIC_VER2	0x12721445
 typedef struct {
 	int		vmMagic;
@@ -294,8 +294,8 @@ typedef struct {
 	int			numLODs;
 	int			ofsLODs;
 
-        int                     numTags;
-        int                     ofsTags;
+    int         numTags;
+    int         ofsTags;
 
 	int			ofsEnd;				// end of file
 } mdrHeader_t;
@@ -451,8 +451,8 @@ typedef struct {
 	vec3_t		xyz;
 	float		st[2];
 	float		lightmap[2];
-	vec3_t		normal;
-	byte		color[4];
+	vec3_t      normal;
+	unsigned char color[4];
 } drawVert_t;
 
 #define drawVert_t_cleared(x) drawVert_t (x) = {{0, 0, 0}, {0, 0}, {0, 0}, {0, 0, 0}, {0, 0, 0, 0}}

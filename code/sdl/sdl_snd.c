@@ -23,14 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef USE_LOCAL_HEADERS
-#	include "SDL.h"
-#else
-#	include <SDL.h>
-#endif
 
-#include "../qcommon/q_shared.h"
 #include "../client/snd_local.h"
+#include "glimp.h"
 
 qboolean snd_inited = qfalse;
 
@@ -45,7 +40,7 @@ static int dmapos = 0;
 static int dmasize = 0;
 
 // leilei - setting correct speed for xmp
-extern int xmpspeed;
+//extern int xmpspeed;
 
 /*
 ===============
@@ -140,7 +135,6 @@ SNDDMA_Init
 */
 qboolean SNDDMA_Init(void)
 {
-	char drivername[128];
 	SDL_AudioSpec desired;
 	SDL_AudioSpec obtained;
 	int tmp;
@@ -160,7 +154,7 @@ qboolean SNDDMA_Init(void)
 
 	if (!SDL_WasInit(SDL_INIT_AUDIO))
 	{
-		if (SDL_Init(SDL_INIT_AUDIO) == -1)
+		if (SDL_Init(SDL_INIT_AUDIO) != 0)
 		{
 			Com_Printf( "FAILED (%s)\n", SDL_GetError( ) );
 			return qfalse;
@@ -169,9 +163,7 @@ qboolean SNDDMA_Init(void)
 
 	Com_Printf( "OK\n" );
 
-	if (SDL_AudioDriverName(drivername, sizeof (drivername)) == NULL)
-		strcpy(drivername, "(UNKNOWN)");
-	Com_Printf("SDL audio driver is \"%s\".\n", drivername);
+	Com_Printf( "SDL audio driver is \"%s\".\n", SDL_GetCurrentAudioDriver( ) );
 
 	memset(&desired, '\0', sizeof (desired));
 	memset(&obtained, '\0', sizeof (obtained));
@@ -184,7 +176,7 @@ qboolean SNDDMA_Init(void)
 	if(!desired.freq) desired.freq = 22050;
 	desired.format = ((tmp == 16) ? AUDIO_S16SYS : AUDIO_U8);
 
-	xmpspeed = desired.freq; // leilei
+	//xmpspeed = desired.freq; // leilei
 
 	// I dunno if this is the best idea, but I'll give it a try...
 	//  should probably check a cvar for this...

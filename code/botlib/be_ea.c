@@ -416,19 +416,15 @@ void EA_View(int client, vec3_t viewangles)
 void EA_EndRegular(int client, float thinktime)
 {
 } //end of the function EA_EndRegular
-//===========================================================================
-//
-// Parameter:			-
-// Returns:				-
-// Changes Globals:		-
-//===========================================================================
+
+
 void EA_GetInput(int client, float thinktime, bot_input_t *input)
 {
 	bot_input_t *bi;
 
 	bi = &botinputs[client];
 	bi->thinktime = thinktime;
-	Com_Memcpy(input, bi, sizeof(bot_input_t));
+	memcpy(input, bi, sizeof(bot_input_t));
 } //end of the function EA_GetInput
 //===========================================================================
 //

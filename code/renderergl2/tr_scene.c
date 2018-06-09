@@ -145,14 +145,8 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 		poly->numVerts = numVerts;
 		poly->verts = &backEndData->polyVerts[r_numpolyverts];
 		
-		Com_Memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
+		memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
 
-		if ( glConfig.hardwareType == GLHW_RAGEPRO ) {
-			poly->verts->modulate[0] = 255;
-			poly->verts->modulate[1] = 255;
-			poly->verts->modulate[2] = 255;
-			poly->verts->modulate[3] = 255;
-		}
 		// done.
 		r_numpolys++;
 		r_numpolyverts += numVerts;
@@ -250,10 +244,7 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	if ( intensity <= 0 ) {
 		return;
 	}
-	// these cards don't have the correct blend mode
-	if ( glConfig.hardwareType == GLHW_RIVA128 || glConfig.hardwareType == GLHW_PERMEDIA2 ) {
-		return;
-	}
+
 	dl = &backEndData->dlights[r_numdlights++];
 	VectorCopy (org, dl->origin);
 	dl->radius = intensity;
@@ -286,7 +277,7 @@ void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, flo
 
 void RE_BeginScene(const refdef_t *fd)
 {
-	Com_Memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
+	memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
 
 	tr.refdef.x = fd->x;
 	tr.refdef.y = fd->y;
@@ -329,37 +320,30 @@ void RE_BeginScene(const refdef_t *fd)
 
 	VectorCopy(tr.sunDirection, tr.refdef.sunDir);
 	if ( (tr.refdef.rdflags & RDF_NOWORLDMODEL) || !(r_depthPrepass->value) ){
-		tr.refdef.colorScale = 1.0f;
 		VectorSet(tr.refdef.sunCol, 0, 0, 0);
 		VectorSet(tr.refdef.sunAmbCol, 0, 0, 0);
 	}
 	else
 	{
-		tr.refdef.colorScale = r_forceSun->integer ? r_forceSunMapLightScale->value : tr.mapLightScale;
+		float scale = (1 << r_mapOverBrightBits->integer) / 255.0f;
+
+		if (r_forceSun->integer)
+			VectorScale(tr.sunLight, scale * r_forceSunLightScale->value, tr.refdef.sunCol);
+		else
+			VectorScale(tr.sunLight, scale, tr.refdef.sunCol);
 
 		if (r_sunlightMode->integer == 1)
 		{
-			tr.refdef.sunCol[0] =
-			tr.refdef.sunCol[1] =
-			tr.refdef.sunCol[2] = 1.0f;
-
 			tr.refdef.sunAmbCol[0] =
 			tr.refdef.sunAmbCol[1] =
 			tr.refdef.sunAmbCol[2] = r_forceSun->integer ? r_forceSunAmbientScale->value : tr.sunShadowScale;
 		}
 		else
 		{
-			float scale = pow(2, r_mapOverBrightBits->integer - tr.overbrightBits - 8);
 			if (r_forceSun->integer)
-			{
-				VectorScale(tr.sunLight, scale * r_forceSunLightScale->value,   tr.refdef.sunCol);
 				VectorScale(tr.sunLight, scale * r_forceSunAmbientScale->value, tr.refdef.sunAmbCol);
-			}
 			else
-			{
-				VectorScale(tr.sunLight, scale,                     tr.refdef.sunCol);
 				VectorScale(tr.sunLight, scale * tr.sunShadowScale, tr.refdef.sunAmbCol);
-			}
 		}
 	}
 
@@ -407,7 +391,7 @@ void RE_BeginScene(const refdef_t *fd)
 
 	// derived info
 
-	tr.refdef.floatTime = tr.refdef.time * 0.001f;
+	tr.refdef.floatTime = tr.refdef.time * 0.001;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
 	tr.refdef.drawSurfs = backEndData->drawSurfs;
@@ -427,8 +411,7 @@ void RE_BeginScene(const refdef_t *fd)
 	// turn off dynamic lighting globally by clearing all the
 	// dlights if it needs to be disabled or if vertex lighting is enabled
 	if ( r_dynamiclight->integer == 0 ||
-		 r_vertexLight->integer == 1 ||
-		 glConfig.hardwareType == GLHW_PERMEDIA2 ) {
+		 r_vertexLight->integer == 1 ) {
 		tr.refdef.num_dlights = 0;
 	}
 
@@ -464,18 +447,13 @@ to handle mirrors,
 */
 void RE_RenderScene( const refdef_t *fd ) {
 	viewParms_t		parms;
-	int				startTime;
 
 	if ( !tr.registered ) {
 		return;
 	}
-	GLimp_LogComment( "====== RE_RenderScene =====\n" );
 
-	if ( r_norefresh->integer ) {
-		return;
-	}
-
-	startTime = ri.Milliseconds();
+	qboolean	customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
+	int startTime = ri.Milliseconds();
 
 	if (!tr.world && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
 		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
@@ -484,24 +462,49 @@ void RE_RenderScene( const refdef_t *fd ) {
 	RE_BeginScene(fd);
 
 	// SmileTheory: playing with shadow mapping
-	if (!( fd->rdflags & RDF_NOWORLDMODEL ) && tr.refdef.num_dlights && r_dlightMode->integer >= 2)
+	if (customscrn && tr.refdef.num_dlights && r_dlightMode->integer >= 2)
 	{
 		R_RenderDlightCubemaps(fd);
 	}
 
 	/* playing with more shadows */
-	if(glRefConfig.framebufferObject && !( fd->rdflags & RDF_NOWORLDMODEL ) && r_shadows->integer == 4)
+	if(glRefConfig.framebufferObject && customscrn && r_shadows->integer == 4)
 	{
 		R_RenderPshadowMaps(fd);
 	}
 
+    /* //////////////////////////////////////////////////////////////////
 	// playing with even more shadows
 	if(glRefConfig.framebufferObject && r_sunlightMode->integer && !( fd->rdflags & RDF_NOWORLDMODEL ) && (r_forceSun->integer || tr.sunShadows))
 	{
-		R_RenderSunShadowMaps(fd, 0);
-		R_RenderSunShadowMaps(fd, 1);
-		R_RenderSunShadowMaps(fd, 2);
+		if (r_shadowCascadeZFar->integer != 0)
+		{
+			R_RenderSunShadowMaps(fd, 0);
+			R_RenderSunShadowMaps(fd, 1);
+			R_RenderSunShadowMaps(fd, 2);
+		}
+		else
+		{
+			Mat4Zero(tr.refdef.sunShadowMvp[0]);
+			Mat4Zero(tr.refdef.sunShadowMvp[1]);
+			Mat4Zero(tr.refdef.sunShadowMvp[2]);
+		}
+
+		// only rerender last cascade if sun has changed position
+		if (r_forceSun->integer == 2 || !VectorCompare(tr.refdef.sunDir, tr.lastCascadeSunDirection))
+		{
+			VectorCopy(tr.refdef.sunDir, tr.lastCascadeSunDirection);
+			R_RenderSunShadowMaps(fd, 3);
+			Mat4Copy(tr.refdef.sunShadowMvp[3], tr.lastCascadeSunMvp);
+		}
+		else
+		{
+			Mat4Copy(tr.lastCascadeSunMvp, tr.refdef.sunShadowMvp[3]);
+		}
 	}
+    ///////////////////////////////////////////////////////////////////
+    */ 
+
 
 	// playing with cube maps
 	// this is where dynamic cubemaps would be rendered
@@ -524,7 +527,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 	// The refdef takes 0-at-the-top y coordinates, so
 	// convert to GL's 0-at-the-bottom space
 	//
-	Com_Memset( &parms, 0, sizeof( parms ) );
+	memset( &parms, 0, sizeof( parms ) );
 	parms.viewportX = tr.refdef.x;
 	parms.viewportY = glConfig.vidHeight - ( tr.refdef.y + tr.refdef.height );
 	parms.viewportWidth = tr.refdef.width;
@@ -533,8 +536,34 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	parms.fovX = tr.refdef.fov_x;
 	parms.fovY = tr.refdef.fov_y;
+
+	// leilei - widescreen
+	// recalculate fov according to widescreen parameters
+	if (customscrn) // don't affect interface refdefs
+	{
+		// figure out our zoom or changed fov magnitiude from cg_fov and cg_zoomfov
+		//float zoomfov = tr.refdef.fov_x / 90;
+		// find aspect to immediately match our vidwidth for perfect match with resized screens...
+		//float erspact = tr.refdef.width / tr.refdef.height;
+		//float aspact = glConfig.vidWidth / glConfig.vidHeight;
+
 	
-	parms.stereoFrame = tr.refdef.stereoFrame;
+		// try not to recalculate fov of ui and hud elements
+		//if (((tr.refdef.fov_x /  tr.refdef.fov_y) > 1.3) && (tr.refdef.width > 320) && (tr.refdef.height > 240))
+		//if (((tr.refdef.fov_x /  tr.refdef.fov_y) > 1.3) && (tr.refdef.width > (320 * refdefscalex)) && (tr.refdef.height > (240 * refdefscaley)))
+		float x_div_y = tr.refdef.fov_x / tr.refdef.fov_y;
+
+		if ((x_div_y > 1.3) && (tr.refdef.width / tr.refdef.height == glConfig.vidWidth / glConfig.vidHeight))
+		{
+			// undo vert-
+			parms.fovY *= x_div_y * (73.739792 / 90.0);
+			
+			// recalculate the fov
+			parms.fovX = atan( tan(parms.fovY * (M_PI / 360.0f)) * glConfig.vidWidth / glConfig.vidHeight ) * (360.0f / M_PI);
+			parms.fovY = atan( tan(parms.fovX * (M_PI / 360.0f)) * glConfig.vidHeight / glConfig.vidWidth ) * (360.0f / M_PI);
+		}
+	}
+	// leilei - end
 
 	VectorCopy( fd->vieworg, parms.or.origin );
 	VectorCopy( fd->viewaxis[0], parms.or.axis[0] );
@@ -543,14 +572,14 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	VectorCopy( fd->vieworg, parms.pvsOrigin );
 
-	if(!( fd->rdflags & RDF_NOWORLDMODEL ) && r_depthPrepass->value && ((r_forceSun->integer) || tr.sunShadows))
+	if(customscrn && r_depthPrepass->value && ((r_forceSun->integer) || tr.sunShadows))
 	{
 		parms.flags = VPF_USESUNLIGHT;
 	}
 
 	R_RenderView( &parms );
 
-	if(!( fd->rdflags & RDF_NOWORLDMODEL ))
+	if(customscrn)
 		R_AddPostProcessCmd();
 
 	RE_EndScene();

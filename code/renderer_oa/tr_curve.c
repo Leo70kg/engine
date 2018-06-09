@@ -20,30 +20,27 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#include "tr_local.h"
-
 /*
 
 This file does all of the processing necessary to turn a raw grid of points
 read from the map file into a srfGridMesh_t ready for rendering.
 
-The level of detail solution is direction independent, based only on subdivided
-distance from the true curve.
+The level of detail solution is direction independent,
+based only on subdivided distance from the true curve.
 
 Only a single entry point:
 
-srfGridMesh_t *R_SubdividePatchToGrid( int width, int height,
-								drawVert_t points[MAX_PATCH_SIZE*MAX_PATCH_SIZE] ) {
+srfGridMesh_t *R_SubdividePatchToGrid( int width, int height, drawVert_t points[MAX_PATCH_SIZE*MAX_PATCH_SIZE] )
 
 */
 
+#include "tr_local.h"
 
-/*
-============
-LerpDrawVert
-============
-*/
-static void LerpDrawVert( drawVert_t *a, drawVert_t *b, drawVert_t *out ) {
+#define PATCH_STITCHING
+
+
+static void LerpDrawVert( drawVert_t *a, drawVert_t *b, drawVert_t *out )
+{
 	out->xyz[0] = 0.5f * (a->xyz[0] + b->xyz[0]);
 	out->xyz[1] = 0.5f * (a->xyz[1] + b->xyz[1]);
 	out->xyz[2] = 0.5f * (a->xyz[2] + b->xyz[2]);
@@ -65,40 +62,48 @@ static void LerpDrawVert( drawVert_t *a, drawVert_t *b, drawVert_t *out ) {
 Transpose
 ============
 */
-static void Transpose( int width, int height, drawVert_t ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE] ) {
-	int		i, j;
+static void Transpose( int width, int height, drawVert_t ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE] )
+{
+	int	i, j;
 	drawVert_t	temp;
 
-	if ( width > height ) {
-		for ( i = 0 ; i < height ; i++ ) {
-			for ( j = i + 1 ; j < width ; j++ ) {
-				if ( j < height ) {
+	if ( width > height )
+		for ( i = 0 ; i < height ; i++ )
+        {
+			for ( j = i + 1 ; j < width ; j++ )
+            {
+				if ( j < height )
+                {
 					// swap the value
 					temp = ctrl[j][i];
 					ctrl[j][i] = ctrl[i][j];
 					ctrl[i][j] = temp;
-				} else {
+				}
+                else
+                {
 					// just copy
 					ctrl[j][i] = ctrl[i][j];
 				}
 			}
 		}
-	} else {
-		for ( i = 0 ; i < width ; i++ ) {
-			for ( j = i + 1 ; j < height ; j++ ) {
-				if ( j < width ) {
+    else
+		for ( i = 0 ; i < width ; i++ )
+        {
+			for ( j = i + 1 ; j < height ; j++ )
+            {
+				if ( j < width )
+                {
 					// swap the value
 					temp = ctrl[i][j];
 					ctrl[i][j] = ctrl[j][i];
 					ctrl[j][i] = temp;
-				} else {
+				}else
+                {
 					// just copy
 					ctrl[i][j] = ctrl[j][i];
 				}
 			}
 		}
-	}
-
 }
 
 
@@ -120,35 +125,31 @@ static void MakeMeshNormals( int width, int height, drawVert_t ctrl[MAX_GRID_SIZ
 	drawVert_t	*dv;
 	vec3_t		around[8], temp;
 	qboolean	good[8];
-	qboolean	wrapWidth, wrapHeight;
+	qboolean	wrapWidth = qfalse, wrapHeight= qfalse;
 	float		len;
-static	int	neighbors[8][2] = {
-	{0,1}, {1,1}, {1,0}, {1,-1}, {0,-1}, {-1,-1}, {-1,0}, {-1,1}
-	};
+    static	int	neighbors[8][2] = {	{0,1}, {1,1}, {1,0}, {1,-1}, {0,-1}, {-1,-1}, {-1,0}, {-1,1} };
 
-	wrapWidth = qfalse;
-	for ( i = 0 ; i < height ; i++ ) {
+	for ( i = 0 ; i < height ; i++ )
+    {
 		VectorSubtract( ctrl[i][0].xyz, ctrl[i][width-1].xyz, delta );
 		len = VectorLengthSquared( delta );
-		if ( len > 1.0 ) {
+		if ( len > 1.0 )
 			break;
-		}
 	}
-	if ( i == height ) {
+	if ( i == height )
 		wrapWidth = qtrue;
-	}
 
-	wrapHeight = qfalse;
-	for ( i = 0 ; i < width ; i++ ) {
+
+	for ( i = 0 ; i < width ; i++ )
+    {
 		VectorSubtract( ctrl[0][i].xyz, ctrl[height-1][i].xyz, delta );
 		len = VectorLengthSquared( delta );
-		if ( len > 1.0 ) {
+		if ( len > 1.0 )
 			break;
-		}
 	}
-	if ( i == width) {
+	if ( i == width)
 		wrapHeight = qtrue;
-	}
+
 
 
 	for ( i = 0 ; i < width ; i++ ) {
@@ -218,13 +219,15 @@ static	int	neighbors[8][2] = {
 InvertCtrl
 ============
 */
-static void InvertCtrl( int width, int height, drawVert_t ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE] ) {
-	int		i, j;
-	drawVert_t	temp;
+static void InvertCtrl( int width, int height, drawVert_t ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE] )
+{
+	int	i, j;
 
-	for ( i = 0 ; i < height ; i++ ) {
-		for ( j = 0 ; j < width/2 ; j++ ) {
-			temp = ctrl[i][j];
+	for ( i = 0 ; i < height ; i++ )
+    {
+		for ( j = 0 ; j < width/2 ; j++ )
+        {
+			drawVert_t temp = ctrl[i][j];
 			ctrl[i][j] = ctrl[i][width-1-j];
 			ctrl[i][width-1-j] = temp;
 		}
@@ -232,25 +235,18 @@ static void InvertCtrl( int width, int height, drawVert_t ctrl[MAX_GRID_SIZE][MA
 }
 
 
-/*
-=================
-InvertErrorTable
-=================
-*/
-static void InvertErrorTable( float errorTable[2][MAX_GRID_SIZE], int width, int height ) {
-	int		i;
-	float	copy[2][MAX_GRID_SIZE];
+static void InvertErrorTable(float errorTable[2][MAX_GRID_SIZE], int width, int height )
+{
+	int	i;
+	float copy[2][MAX_GRID_SIZE];
 
-	Com_Memcpy( copy, errorTable, sizeof( copy ) );
+	memcpy( copy, errorTable, sizeof( copy ) );
 
-	for ( i = 0 ; i < width ; i++ ) {
+	for ( i = 0 ; i < width ; i++ )
 		errorTable[1][i] = copy[0][i];	//[width-1-i];
-	}
 
-	for ( i = 0 ; i < height ; i++ ) {
+	for ( i = 0 ; i < height ; i++ )
 		errorTable[0][i] = copy[1][height-1-i];
-	}
-
 }
 
 /*
@@ -260,7 +256,7 @@ PutPointsOnCurve
 */
 static void PutPointsOnCurve( drawVert_t	ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE], 
 							 int width, int height ) {
-	int			i, j;
+	int	i, j;
 	drawVert_t	prev, next;
 
 	for ( i = 0 ; i < width ; i++ ) {
@@ -281,39 +277,35 @@ static void PutPointsOnCurve( drawVert_t	ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE],
 	}
 }
 
-/*
-=================
-R_CreateSurfaceGridMesh
-=================
-*/
-srfGridMesh_t *R_CreateSurfaceGridMesh(int width, int height,
-								drawVert_t ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE], float errorTable[2][MAX_GRID_SIZE] ) {
-	int i, j, size;
+
+static srfGridMesh_t *R_CreateSurfaceGridMesh(int width, int height, drawVert_t ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE], float errorTable[2][MAX_GRID_SIZE] )
+{
+	int i, j;
 	drawVert_t	*vert;
 	vec3_t		tmpVec;
 	srfGridMesh_t *grid;
 
 	// copy the results out to a grid
-	size = (width * height - 1) * sizeof( drawVert_t ) + sizeof( *grid );
+	int size = (width * height - 1) * sizeof( drawVert_t ) + sizeof( *grid );
 
 #ifdef PATCH_STITCHING
 	grid = /*ri.Hunk_Alloc*/ ri.Malloc( size );
-	Com_Memset(grid, 0, size);
+	memset(grid, 0, size);
 
 	grid->widthLodError = /*ri.Hunk_Alloc*/ ri.Malloc( width * 4 );
-	Com_Memcpy( grid->widthLodError, errorTable[0], width * 4 );
+	memcpy( grid->widthLodError, errorTable[0], width * 4 );
 
 	grid->heightLodError = /*ri.Hunk_Alloc*/ ri.Malloc( height * 4 );
-	Com_Memcpy( grid->heightLodError, errorTable[1], height * 4 );
+	memcpy( grid->heightLodError, errorTable[1], height * 4 );
 #else
 	grid = ri.Hunk_Alloc( size );
-	Com_Memset(grid, 0, size);
+	memset(grid, 0, size);
 
 	grid->widthLodError = ri.Hunk_Alloc( width * 4 );
-	Com_Memcpy( grid->widthLodError, errorTable[0], width * 4 );
+	memcpy( grid->widthLodError, errorTable[0], width * 4 );
 
 	grid->heightLodError = ri.Hunk_Alloc( height * 4 );
-	Com_Memcpy( grid->heightLodError, errorTable[1], height * 4 );
+	memcpy( grid->heightLodError, errorTable[1], height * 4 );
 #endif
 
 	grid->width = width;
@@ -340,24 +332,11 @@ srfGridMesh_t *R_CreateSurfaceGridMesh(int width, int height,
 	return grid;
 }
 
-/*
-=================
-R_FreeSurfaceGridMesh
-=================
-*/
-void R_FreeSurfaceGridMesh( srfGridMesh_t *grid ) {
-	ri.Free(grid->widthLodError);
-	ri.Free(grid->heightLodError);
-	ri.Free(grid);
-}
 
-/*
-=================
-R_SubdividePatchToGrid
-=================
-*/
-srfGridMesh_t *R_SubdividePatchToGrid( int width, int height,
-								drawVert_t points[MAX_PATCH_SIZE*MAX_PATCH_SIZE] ) {
+
+
+srfGridMesh_t *R_SubdividePatchToGrid( int width, int height, drawVert_t points[MAX_PATCH_SIZE*MAX_PATCH_SIZE] )
+{
 	int			i, j, k, l;
 	drawVert_t_cleared( prev );
 	drawVert_t_cleared( next );
@@ -497,9 +476,7 @@ srfGridMesh_t *R_SubdividePatchToGrid( int width, int height,
 	}
 
 #if 1
-	// flip for longest tristrips as an optimization
-	// the results should be visually identical with or
-	// without this step
+	// flip for longest tristrips as an optimization the results should be visually identical with or without this step
 	if ( height > width ) {
 		Transpose( width, height, ctrl );
 		InvertErrorTable( errorTable, width, height );
@@ -570,28 +547,26 @@ srfGridMesh_t *R_GridInsertColumn( srfGridMesh_t *grid, int column, int row, vec
 	return grid;
 }
 
-/*
-===============
-R_GridInsertRow
-===============
-*/
-srfGridMesh_t *R_GridInsertRow( srfGridMesh_t *grid, int row, int column, vec3_t point, float loderror ) {
+
+
+srfGridMesh_t *R_GridInsertRow( srfGridMesh_t *grid, int row, int column, vec3_t point, float loderror )
+{
 	int i, j;
-	int width, height, oldheight;
+	int width = grid->width, height= grid->height + 1, oldheight = 0;
 	drawVert_t ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE];
 	float errorTable[2][MAX_GRID_SIZE];
-	float lodRadius;
 	vec3_t lodOrigin;
 
-	oldheight = 0;
-	width = grid->width;
-	height = grid->height + 1;
-	if (height > MAX_GRID_SIZE)
+
+    if (height > MAX_GRID_SIZE)
 		return NULL;
-	for (i = 0; i < height; i++) {
-		if (i == row) {
+	for (i = 0; i < height; i++)
+    {
+		if (i == row)
+        {
 			//insert new row
-			for (j = 0; j < grid->width; j++) {
+			for (j = 0; j < grid->width; j++)
+            {
 				LerpDrawVert( &grid->verts[(i-1) * grid->width + j], &grid->verts[i * grid->width + j], &ctrl[i][j] );
 				if (j == column)
 					VectorCopy(point, ctrl[i][j].xyz);
@@ -600,12 +575,15 @@ srfGridMesh_t *R_GridInsertRow( srfGridMesh_t *grid, int row, int column, vec3_t
 			continue;
 		}
 		errorTable[1][i] = grid->heightLodError[oldheight];
-		for (j = 0; j < grid->width; j++) {
+		for (j = 0; j < grid->width; j++)
+        {
 			ctrl[i][j] = grid->verts[oldheight * grid->width + j];
 		}
 		oldheight++;
 	}
-	for (j = 0; j < grid->width; j++) {
+
+	for (j = 0; j < grid->width; j++)
+    {
 		errorTable[0][j] = grid->widthLodError[j];
 	}
 	// put all the aproximating points on the curve
@@ -614,7 +592,7 @@ srfGridMesh_t *R_GridInsertRow( srfGridMesh_t *grid, int row, int column, vec3_t
 	MakeMeshNormals( width, height, ctrl );
 
 	VectorCopy(grid->lodOrigin, lodOrigin);
-	lodRadius = grid->lodRadius;
+	float lodRadius = grid->lodRadius;
 	// free the old grid
 	R_FreeSurfaceGridMesh(grid);
 	// create a new grid
@@ -622,4 +600,12 @@ srfGridMesh_t *R_GridInsertRow( srfGridMesh_t *grid, int row, int column, vec3_t
 	grid->lodRadius = lodRadius;
 	VectorCopy(lodOrigin, grid->lodOrigin);
 	return grid;
+}
+
+
+void R_FreeSurfaceGridMesh( srfGridMesh_t *grid )
+{
+	ri.Free(grid->widthLodError);
+	ri.Free(grid->heightLodError);
+	ri.Free(grid);
 }

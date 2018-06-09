@@ -82,12 +82,9 @@ void	CM_FloodAreaConnections (void);
 ===============================================================================
 */
 
-/*
-=================
-CMod_LoadShaders
-=================
-*/
-void CMod_LoadShaders( lump_t *l ) {
+
+void CMod_LoadShaders( lump_t *l )
+{
 	dshader_t	*in, *out;
 	int			i, count;
 
@@ -103,10 +100,11 @@ void CMod_LoadShaders( lump_t *l ) {
 	cm.shaders = Hunk_Alloc( count * sizeof( *cm.shaders ), h_high );
 	cm.numShaders = count;
 
-	Com_Memcpy( cm.shaders, in, count * sizeof( *cm.shaders ) );
+	memcpy( cm.shaders, in, count * sizeof( *cm.shaders ) );
 
 	out = cm.shaders;
-	for ( i=0 ; i<count ; i++, in++, out++ ) {
+	for ( i=0 ; i<count ; i++, in++, out++ )
+    {
 		out->contentFlags = LittleLong( out->contentFlags );
 		out->surfaceFlags = LittleLong( out->surfaceFlags );
 	}
@@ -443,24 +441,22 @@ CMod_LoadEntityString
 void CMod_LoadEntityString( lump_t *l ) {
 	cm.entityString = Hunk_Alloc( l->filelen, h_high );
 	cm.numEntityChars = l->filelen;
-	Com_Memcpy (cm.entityString, cmod_base + l->fileofs, l->filelen);
+	memcpy(cm.entityString, cmod_base + l->fileofs, l->filelen);
 }
 
-/*
-=================
-CMod_LoadVisibility
-=================
-*/
+
 #define	VIS_HEADER	8
-void CMod_LoadVisibility( lump_t *l ) {
-	int		len;
-	byte	*buf;
+void CMod_LoadVisibility( lump_t *l )
+{
+	int	len;
+	unsigned char *buf;
 
     len = l->filelen;
-	if ( !len ) {
+	if ( !len )
+    {
 		cm.clusterBytes = ( cm.numClusters + 31 ) & ~31;
 		cm.visibility = Hunk_Alloc( cm.clusterBytes, h_high );
-		Com_Memset( cm.visibility, 255, cm.clusterBytes );
+		memset( cm.visibility, 255, cm.clusterBytes );
 		return;
 	}
 	buf = cmod_base + l->fileofs;
@@ -469,7 +465,7 @@ void CMod_LoadVisibility( lump_t *l ) {
 	cm.visibility = Hunk_Alloc( len, h_high );
 	cm.numClusters = LittleLong( ((int *)buf)[0] );
 	cm.clusterBytes = LittleLong( ((int *)buf)[1] );
-	Com_Memcpy (cm.visibility, buf + VIS_HEADER, len - VIS_HEADER );
+	memcpy(cm.visibility, buf + VIS_HEADER, len - VIS_HEADER );
 }
 
 //==================================================================
@@ -593,7 +589,7 @@ void CM_LoadMap( const char *name, qboolean clientload, int *checksum ) {
 	}
 
 	// free old stuff
-	Com_Memset( &cm, 0, sizeof( cm ) );
+	memset( &cm, 0, sizeof( cm ) );
 	CM_ClearLevelPatches();
 
 	if ( !name[0] ) {
@@ -665,8 +661,9 @@ void CM_LoadMap( const char *name, qboolean clientload, int *checksum ) {
 CM_ClearMap
 ==================
 */
-void CM_ClearMap( void ) {
-	Com_Memset( &cm, 0, sizeof( cm ) );
+void CM_ClearMap( void )
+{
+	memset( &cm, 0, sizeof( cm ) );
 	CM_ClearLevelPatches();
 }
 
@@ -715,7 +712,8 @@ int		CM_NumInlineModels( void ) {
 	return cm.numSubModels;
 }
 
-char	*CM_EntityString( void ) {
+char* CM_EntityString( void )
+{
 	return cm.entityString;
 }
 

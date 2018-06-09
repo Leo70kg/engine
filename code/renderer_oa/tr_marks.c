@@ -22,10 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_marks.c -- polygon projection on the world polygons
 
 #include "tr_local.h"
-//#include "assert.h"
 
 #define MAX_VERTS_ON_POLY		64
-
 #define MARKER_OFFSET			0	// 1
 
 /*
@@ -39,8 +37,8 @@ Out must have space for two more vertexes than in
 #define	SIDE_BACK	1
 #define	SIDE_ON		2
 static void R_ChopPolyBehindPlane( int numInPoints, vec3_t inPoints[MAX_VERTS_ON_POLY],
-								   int *numOutPoints, vec3_t outPoints[MAX_VERTS_ON_POLY], 
-							vec3_t normal, vec_t dist, vec_t epsilon) {
+		int *numOutPoints, vec3_t outPoints[MAX_VERTS_ON_POLY], vec3_t normal, vec_t dist, vec_t epsilon)
+{
 	float		dists[MAX_VERTS_ON_POLY+4] = { 0 };
 	int			sides[MAX_VERTS_ON_POLY+4] = { 0 };
 	int			counts[3];
@@ -58,7 +56,8 @@ static void R_ChopPolyBehindPlane( int numInPoints, vec3_t inPoints[MAX_VERTS_ON
 	counts[0] = counts[1] = counts[2] = 0;
 
 	// determine sides for each point
-	for ( i = 0 ; i < numInPoints ; i++ ) {
+	for ( i = 0 ; i < numInPoints ; i++ )
+    {
 		dot = DotProduct( inPoints[i], normal );
 		dot -= dist;
 		dists[i] = dot;
@@ -76,12 +75,13 @@ static void R_ChopPolyBehindPlane( int numInPoints, vec3_t inPoints[MAX_VERTS_ON
 
 	*numOutPoints = 0;
 
-	if ( !counts[0] ) {
+	if ( !counts[0] )
 		return;
-	}
-	if ( !counts[1] ) {
+    
+	if ( !counts[1] ) 
+    {
 		*numOutPoints = numInPoints;
-		Com_Memcpy( outPoints, inPoints, numInPoints * sizeof(vec3_t) );
+		memcpy( outPoints, inPoints, numInPoints * sizeof(vec3_t) );
 		return;
 	}
 
@@ -131,28 +131,34 @@ R_BoxSurfaces_r
 
 =================
 */
-void R_BoxSurfaces_r(mnode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t **list, int listsize, int *listlength, vec3_t dir) {
-
-	int			s, c;
-	msurface_t	*surf, **mark;
+static void R_BoxSurfaces_r(mnode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t **list, int listsize, int *listlength, vec3_t dir)
+{
+	int	s;
+	msurface_t* surf;
 
 	// do the tail recursion in a loop
-	while ( node->contents == -1 ) {
+	while ( node->contents == -1 )
+    {
 		s = BoxOnPlaneSide( mins, maxs, node->plane );
-		if (s == 1) {
+		if (s == 1)
+        {
 			node = node->children[0];
-		} else if (s == 2) {
+		} else if (s == 2)
+        {
 			node = node->children[1];
-		} else {
+		}
+        else
+        {
 			R_BoxSurfaces_r(node->children[0], mins, maxs, list, listsize, listlength, dir);
 			node = node->children[1];
 		}
 	}
 
 	// add the individual surfaces
-	mark = node->firstmarksurface;
-	c = node->nummarksurfaces;
-	while (c--) {
+	msurface_t** mark = node->firstmarksurface;
+	int c = node->nummarksurfaces;
+	while (c--)
+    {
 		//
 		if (*listlength >= listsize) break;
 		//
@@ -163,22 +169,27 @@ void R_BoxSurfaces_r(mnode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t **li
 			surf->viewCount = tr.viewCount;
 		}
 		// extra check for surfaces to avoid list overflows
-		else if (*(surf->data) == SF_FACE) {
+		else if (*(surf->data) == SF_FACE)
+        {
 			// the face plane should go through the box
 			s = BoxOnPlaneSide( mins, maxs, &(( srfSurfaceFace_t * ) surf->data)->plane );
-			if (s == 1 || s == 2) {
+			if (s == 1 || s == 2)
+            {
 				surf->viewCount = tr.viewCount;
-			} else if (DotProduct((( srfSurfaceFace_t * ) surf->data)->plane.normal, dir) > -0.5) {
-			// don't add faces that make sharp angles with the projection direction
+			}
+            else if (DotProduct((( srfSurfaceFace_t * ) surf->data)->plane.normal, dir) > -0.5)
+            {
+			    // don't add faces that make sharp angles with the projection direction
 				surf->viewCount = tr.viewCount;
 			}
 		}
-		else if (*(surfaceType_t *) (surf->data) != SF_GRID &&
-			 *(surfaceType_t *) (surf->data) != SF_TRIANGLES)
+		else if (*(surfaceType_t *) (surf->data) != SF_GRID && (*(surfaceType_t *) (surf->data) != SF_TRIANGLES) )
 			surf->viewCount = tr.viewCount;
-		// check the viewCount because the surface may have
+		
+        // check the viewCount because the surface may have
 		// already been added if it spans multiple leafs
-		if (surf->viewCount != tr.viewCount) {
+		if (surf->viewCount != tr.viewCount)
+        {
 			surf->viewCount = tr.viewCount;
 			list[*listlength] = (surfaceType_t *) surf->data;
 			(*listlength)++;
@@ -193,35 +204,36 @@ R_AddMarkFragments
 
 =================
 */
-void R_AddMarkFragments(int numClipPoints, vec3_t clipPoints[2][MAX_VERTS_ON_POLY],
+static void R_AddMarkFragments(int numClipPoints, vec3_t clipPoints[2][MAX_VERTS_ON_POLY],
 				   int numPlanes, vec3_t *normals, float *dists,
 				   int maxPoints, vec3_t pointBuffer,
 				   int maxFragments, markFragment_t *fragmentBuffer,
 				   int *returnedPoints, int *returnedFragments,
 				   vec3_t mins, vec3_t maxs) {
-	int pingPong, i;
+	int pingPong=0, i;
 	markFragment_t	*mf;
 
 	// chop the surface by all the bounding planes of the to be projected polygon
-	pingPong = 0;
 
-	for ( i = 0 ; i < numPlanes ; i++ ) {
+	for ( i = 0 ; i < numPlanes ; i++ )
+    {
 
 		R_ChopPolyBehindPlane( numClipPoints, clipPoints[pingPong],
 						   &numClipPoints, clipPoints[!pingPong],
 							normals[i], dists[i], 0.5 );
 		pingPong ^= 1;
-		if ( numClipPoints == 0 ) {
+		if ( numClipPoints == 0 )
+        {
 			break;
 		}
 	}
 	// completely clipped away?
-	if ( numClipPoints == 0 ) {
+	if ( numClipPoints == 0 )
 		return;
-	}
 
 	// add this fragment to the returned list
-	if ( numClipPoints + (*returnedPoints) > maxPoints ) {
+	if ( numClipPoints + (*returnedPoints) > maxPoints )
+    {
 		return;	// not enough space for this polygon
 	}
 	/*
@@ -240,7 +252,7 @@ void R_AddMarkFragments(int numClipPoints, vec3_t clipPoints[2][MAX_VERTS_ON_POL
 	mf = fragmentBuffer + (*returnedFragments);
 	mf->firstPoint = (*returnedPoints);
 	mf->numPoints = numClipPoints;
-	Com_Memcpy( pointBuffer + (*returnedPoints) * 3, clipPoints[pingPong], numClipPoints * sizeof(vec3_t) );
+	memcpy( pointBuffer + (*returnedPoints) * 3, clipPoints[pingPong], numClipPoints * sizeof(vec3_t) );
 
 	(*returnedPoints) += numClipPoints;
 	(*returnedFragments)++;

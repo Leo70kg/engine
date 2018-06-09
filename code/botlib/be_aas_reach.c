@@ -326,7 +326,7 @@ int AAS_BestReachableFromJumpPadArea(vec3_t origin, vec3_t mins, vec3_t maxs)
 		//botimport.Print(PRT_MESSAGE, "found a trigger_push with velocity %f %f %f\n", velocity[0], velocity[1], velocity[2]);
 		//
 		VectorSet(cmdmove, 0, 0, 0);
-		Com_Memset(&move, 0, sizeof(aas_clientmove_t));
+		memset(&move, 0, sizeof(aas_clientmove_t));
 		AAS_ClientMovementHitBBox(&move, -1, areastart, PRESENCE_NORMAL, qfalse,
 								velocity, cmdmove, 0, 30, 0.1f, bboxmins, bboxmaxs, bot_visualizejumppads);
 		if (move.frames < 30)
@@ -506,7 +506,7 @@ aas_lreachability_t *AAS_AllocReachability(void)
 //===========================================================================
 void AAS_FreeReachability(aas_lreachability_t *lreach)
 {
-	Com_Memset(lreach, 0, sizeof(aas_lreachability_t));
+	memset(lreach, 0, sizeof(aas_lreachability_t));
 
 	lreach->next = nextreachability;
 	nextreachability = lreach;
@@ -938,7 +938,7 @@ int AAS_Reachability_EqualFloorHeight(int area1num, int area2num)
 	bestheight = 99999;
 	bestlength = 0;
 	foundreach = qfalse;
-	Com_Memset(&lr, 0, sizeof(aas_lreachability_t)); //make the compiler happy
+	memset(&lr, 0, sizeof(aas_lreachability_t)); //make the compiler happy
 	//
 	//check if the areas have ground faces with a common edge
 	//if existing use the lowest common edge for a reachability link
@@ -2108,7 +2108,7 @@ int AAS_Reachability_Jump(int area1num, int area2num)
 	int stopevent, areas[10], numareas;
 	float phys_jumpvel, maxjumpdistance, maxjumpheight, height, bestdist, speed;
 	vec_t *v1, *v2, *v3, *v4;
-	vec3_t beststart, beststart2, bestend, bestend2;
+	vec3_t beststart = {0}, beststart2 = {0}, bestend = {0}, bestend2 = {0};
 	vec3_t teststart, testend, dir, velocity, cmdmove, up = {0, 0, 1}, sidewards;
 	aas_area_t *area1, *area2;
 	aas_face_t *face1, *face2;
@@ -2141,8 +2141,6 @@ int AAS_Reachability_Jump(int area1num, int area2num)
 	if (area2->mins[2] > area1->maxs[2] + maxjumpheight) return qfalse;
 	//
 	bestdist = 999999;
-	memset(&beststart2, 0, sizeof(beststart2));
-	memset(&bestend2,0,sizeof(bestend2));
 	//
 	for (i = 0; i < area1->numfaces; i++)
 	{
@@ -3154,7 +3152,7 @@ aas_lreachability_t *AAS_FindFaceReachabilities(vec3_t *facepoints, int numpoint
 	int facenum, edgenum, bestfacenum;
 	float *v1, *v2, *v3, *v4;
 	float bestdist, speed, hordist, dist;
-	vec3_t beststart, beststart2, bestend, bestend2, tmp, hordir, testpoint;
+	vec3_t beststart = {0}, beststart2 = {0}, bestend = {0}, bestend2 = {0}, tmp, hordir, testpoint;
 	aas_lreachability_t *lreach, *lreachabilities;
 	aas_area_t *area;
 	aas_face_t *face;
@@ -3165,8 +3163,6 @@ aas_lreachability_t *AAS_FindFaceReachabilities(vec3_t *facepoints, int numpoint
 	lreachabilities = NULL;
 	bestfacenum = 0;
 	bestfaceplane = NULL;
-	memset(&beststart2, 0, sizeof(beststart2));
-	memset(&bestend2, 0 , sizeof(bestend2));
 	//
 	for (i = 1; i < aasworld.numareas; i++)
 	{
@@ -3617,7 +3613,7 @@ void AAS_Reachability_JumpPad(void)
 			VectorSet(cmdmove, 0, 0, 0);
 			//VectorCopy(velocity, cmdmove);
 			//cmdmove[2] = 0;
-			Com_Memset(&move, 0, sizeof(aas_clientmove_t));
+			memset(&move, 0, sizeof(aas_clientmove_t));
 			area2num = 0;
 			for (i = 0; i < 20; i++)
 			{

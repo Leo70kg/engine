@@ -366,15 +366,13 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 	int s, t;
 	int firstVertex = tess.numVertexes;
 	//int firstIndex = tess.numIndexes;
-	int minIndex = tess.minIndex;
-	int maxIndex = tess.maxIndex;
 	vec4_t color;
 
 	//tess.numVertexes = 0;
 	//tess.numIndexes = 0;
 	tess.firstIndex = tess.numIndexes;
 	
-	GL_Bind( image );
+	GL_BindToTMU( image, TB_COLORMAP );
 	GL_Cull( CT_TWO_SIDED );
 
 	for ( t = mins[1]+HALF_SKY_SUBDIVISIONS; t <= maxs[1]+HALF_SKY_SUBDIVISIONS; t++ )
@@ -386,8 +384,8 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 			tess.xyz[tess.numVertexes][2] = s_skyPoints[t][s][2];
 			tess.xyz[tess.numVertexes][3] = 1.0;
 
-			tess.texCoords[tess.numVertexes][0][0] = s_skyTexCoords[t][s][0];
-			tess.texCoords[tess.numVertexes][0][1] = s_skyTexCoords[t][s][1];
+			tess.texCoords[tess.numVertexes][0] = s_skyTexCoords[t][s][0];
+			tess.texCoords[tess.numVertexes][1] = s_skyTexCoords[t][s][1];
 
 			tess.numVertexes++;
 
@@ -417,11 +415,8 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 		}
 	}
 
-	tess.minIndex = firstVertex;
-	tess.maxIndex = tess.numVertexes;
-
 	// FIXME: A lot of this can probably be removed for speed, and refactored into a more convenient function
-	RB_UpdateVBOs(ATTR_POSITION | ATTR_TEXCOORD);
+	RB_UpdateTessVao(ATTR_POSITION | ATTR_TEXCOORD);
 /*
 	{
 		shaderProgram_t *sp = &tr.textureColorShader;
@@ -442,14 +437,13 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 		shaderProgram_t *sp = &tr.lightallShader[0];
 		vec4_t vector;
 
-		GLSL_VertexAttribsState(ATTR_POSITION | ATTR_TEXCOORD);
 		GLSL_BindProgram(sp);
 		
 		GLSL_SetUniformMat4(sp, UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
 		
 		color[0] = 
 		color[1] = 
-		color[2] = (r_softOverbright->integer ? 1.0 : tr.identityLight) * backEnd.refdef.colorScale;
+		color[2] =
 		color[3] = 1.0f;
 		GLSL_SetUniformVec4(sp, UNIFORM_BASECOLOR, color);
 
@@ -464,9 +458,11 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 
 		VectorSet4(vector, 0.0, 0.0, 0.0, 0.0);
 		GLSL_SetUniformVec4(sp, UNIFORM_DIFFUSETEXOFFTURB, vector);
+
+		GLSL_SetUniformInt(sp, UNIFORM_ALPHATEST, 0);
 	}
 
-	R_DrawElementsVBO(tess.numIndexes - tess.firstIndex, tess.firstIndex, tess.minIndex, tess.maxIndex);
+	R_DrawElements(tess.numIndexes - tess.firstIndex, tess.firstIndex);
 
 	//qglDrawElements(GL_TRIANGLES, tess.numIndexes - tess.firstIndex, GL_INDEX_TYPE, BUFFER_OFFSET(tess.firstIndex * sizeof(glIndex_t)));
 	
@@ -476,8 +472,6 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 	tess.numIndexes = tess.firstIndex;
 	tess.numVertexes = firstVertex;
 	tess.firstIndex = 0;
-	tess.minIndex = minIndex;
-	tess.maxIndex = maxIndex;
 }
 
 static void DrawSkyBox( shader_t *shader )
@@ -487,7 +481,7 @@ static void DrawSkyBox( shader_t *shader )
 	sky_min = 0;
 	sky_max = 1;
 
-	Com_Memset( s_skyTexCoords, 0, sizeof( s_skyTexCoords ) );
+	memset( s_skyTexCoords, 0, sizeof( s_skyTexCoords ) );
 
 	for (i=0 ; i<6 ; i++)
 	{
@@ -564,8 +558,8 @@ static void FillCloudySkySide( const int mins[2], const int maxs[2], qboolean ad
 		for ( s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++ )
 		{
 			VectorAdd( s_skyPoints[t][s], backEnd.viewParms.or.origin, tess.xyz[tess.numVertexes] );
-			tess.texCoords[tess.numVertexes][0][0] = s_skyTexCoords[t][s][0];
-			tess.texCoords[tess.numVertexes][0][1] = s_skyTexCoords[t][s][1];
+			tess.texCoords[tess.numVertexes][0] = s_skyTexCoords[t][s][0];
+			tess.texCoords[tess.numVertexes][1] = s_skyTexCoords[t][s][1];
 
 			tess.numVertexes++;
 
@@ -649,10 +643,10 @@ static void FillCloudBox( const shader_t *shader, int stage )
 			continue;
 		}
 
-		sky_mins_subd[0] = ri.ftol(sky_mins[0][i] * HALF_SKY_SUBDIVISIONS);
-		sky_mins_subd[1] = ri.ftol(sky_mins[1][i] * HALF_SKY_SUBDIVISIONS);
-		sky_maxs_subd[0] = ri.ftol(sky_maxs[0][i] * HALF_SKY_SUBDIVISIONS);
-		sky_maxs_subd[1] = ri.ftol(sky_maxs[1][i] * HALF_SKY_SUBDIVISIONS);
+		sky_mins_subd[0] = sky_mins[0][i] * HALF_SKY_SUBDIVISIONS;
+		sky_mins_subd[1] = sky_mins[1][i] * HALF_SKY_SUBDIVISIONS;
+		sky_maxs_subd[0] = sky_maxs[0][i] * HALF_SKY_SUBDIVISIONS;
+		sky_maxs_subd[1] = sky_maxs[1][i] * HALF_SKY_SUBDIVISIONS;
 
 		if ( sky_mins_subd[0] < -HALF_SKY_SUBDIVISIONS ) 
 			sky_mins_subd[0] = -HALF_SKY_SUBDIVISIONS;
@@ -776,16 +770,18 @@ void R_InitSkyTexCoords( float heightCloud )
 				v[2] += radiusWorld;
 
 				// compute vector from world origin to intersection point 'v'
-				VectorNormalize( v );
+				FastNormalize1f( v );
 
-				sRad = Q_acos( v[0] );
-				tRad = Q_acos( v[1] );
+				sRad = acos( v[0] );
+				tRad = acos( v[1] );
 
 				s_cloudTexCoords[i][t][s][0] = sRad;
 				s_cloudTexCoords[i][t][s][1] = tRad;
 			}
 		}
 	}
+
+    ri.Printf(PRINT_ALL, "...R_InitSkyTexCoords()...\n");
 }
 
 //======================================================================================
@@ -872,6 +868,7 @@ void RB_StageIteratorSky( void ) {
 		mat4_t oldmodelview;
 		
 		GL_State( 0 );
+		GL_Cull( CT_FRONT_SIDED );
 		//qglTranslatef (backEnd.viewParms.or.origin[0], backEnd.viewParms.or.origin[1], backEnd.viewParms.or.origin[2]);
 
 		{

@@ -164,16 +164,14 @@ static int LAN_AddServer(int source, const char *name, const char *address) {
 	return -1;
 }
 
-/*
-====================
-LAN_RemoveServer
-====================
-*/
-static void LAN_RemoveServer(int source, const char *addr) {
+
+static void LAN_RemoveServer(int source, const char *addr)
+{
 	int *count, i;
 	serverInfo_t *servers = NULL;
 	count = NULL;
-	switch (source) {
+	switch (source)
+    {
 		case AS_LOCAL :
 			count = &cls.numlocalservers;
 			servers = &cls.localServers[0];
@@ -188,14 +186,15 @@ static void LAN_RemoveServer(int source, const char *addr) {
 			servers = &cls.favoriteServers[0];
 			break;
 	}
-	if (servers) {
+	if (servers)
+    {
 		netadr_t comp;
 		NET_StringToAdr( addr, &comp, NA_UNSPEC );
 		for (i = 0; i < *count; i++) {
 			if (NET_CompareAdr( comp, servers[i].adr)) {
 				int j = i;
 				while (j < *count - 1) {
-					Com_Memcpy(&servers[j], &servers[j+1], sizeof(servers[j]));
+					memcpy(&servers[j], &servers[j+1], sizeof(servers[j]));
 					j++;
 				}
 				(*count)--;
@@ -257,16 +256,14 @@ static void LAN_GetServerAddressString( int source, int n, char *buf, int buflen
 	buf[0] = '\0';
 }
 
-/*
-====================
-LAN_GetServerInfo
-====================
-*/
-static void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
+
+static void LAN_GetServerInfo( int source, int n, char *buf, int buflen )
+{
 	char info[MAX_STRING_CHARS];
 	serverInfo_t *server = NULL;
 	info[0] = '\0';
-	switch (source) {
+	switch (source)
+    {
 		case AS_LOCAL :
 			if (n >= 0 && n < MAX_OTHER_SERVERS) {
 				server = &cls.localServers[n];
@@ -622,11 +619,7 @@ static void Key_GetBindingBuf( int keynum, char *buf, int buflen ) {
 	}
 }
 
-/*
-====================
-CLUI_GetCDKey
-====================
-*/
+
 static void CLUI_GetCDKey( char *buf, int buflen ) {
 #ifndef STANDALONE
 	cvar_t	*fs;
@@ -644,11 +637,6 @@ static void CLUI_GetCDKey( char *buf, int buflen ) {
 }
 
 
-/*
-====================
-CLUI_SetCDKey
-====================
-*/
 #ifndef STANDALONE
 static void CLUI_SetCDKey( char *buf ) {
 	cvar_t	*fs;
@@ -673,7 +661,7 @@ GetConfigString
 */
 static int GetConfigString(int index, char *buf, int size)
 {
-	int		offset;
+	int	offset;
 
 	if (index < 0 || index >= MAX_CONFIGSTRINGS)
 		return qfalse;
@@ -691,12 +679,9 @@ static int GetConfigString(int index, char *buf, int size)
 	return qtrue;
 }
 
-/*
-====================
-FloatAsInt
-====================
-*/
-static int FloatAsInt( float f ) {
+
+static int FloatAsInt( float f )
+{
 	floatint_t fi;
 	fi.f = f;
 	return fi.i;
@@ -704,401 +689,391 @@ static int FloatAsInt( float f ) {
 
 /*
 ====================
-CL_UISystemCalls
-
-The ui module is making a system call
+CL_UISystemCalls, The ui module is making a system call
 ====================
 */
-intptr_t CL_UISystemCalls( intptr_t *args ) {
-	switch( args[0] ) {
-	case UI_ERROR:
-		Com_Error( ERR_DROP, "%s", (const char*)VMA(1) );
-		return 0;
-
-	case UI_PRINT:
-		Com_Printf( "%s", (const char*)VMA(1) );
-		return 0;
-
-	case UI_MILLISECONDS:
-		return Sys_Milliseconds();
-
-	case UI_CVAR_REGISTER:
-		Cvar_Register( VMA(1), VMA(2), VMA(3), args[4] ); 
-		return 0;
-
-	case UI_CVAR_UPDATE:
-		Cvar_Update( VMA(1) );
-		return 0;
-
-	case UI_CVAR_SET:
-		Cvar_SetSafe( VMA(1), VMA(2) );
-		return 0;
-
-	case UI_CVAR_VARIABLEVALUE:
-		return FloatAsInt( Cvar_VariableValue( VMA(1) ) );
-
-	case UI_CVAR_VARIABLESTRINGBUFFER:
-		Cvar_VariableStringBuffer( VMA(1), VMA(2), args[3] );
-		return 0;
-
-	case UI_CVAR_SETVALUE:
-		Cvar_SetValueSafe( VMA(1), VMF(2) );
-		return 0;
-
-	case UI_CVAR_RESET:
-		Cvar_Reset( VMA(1) );
-		return 0;
-
-	case UI_CVAR_CREATE:
-		Cvar_Register( NULL, VMA(1), VMA(2), args[3] );
-		return 0;
-
-	case UI_CVAR_INFOSTRINGBUFFER:
-		Cvar_InfoStringBuffer( args[1], VMA(2), args[3] );
-		return 0;
-
-	case UI_ARGC:
-		return Cmd_Argc();
-
-	case UI_ARGV:
-		Cmd_ArgvBuffer( args[1], VMA(2), args[3] );
-		return 0;
-
-	case UI_CMD_EXECUTETEXT:
-		if(args[1] == EXEC_NOW
-		&& (!strncmp(VMA(2), "snd_restart", 11)
-		|| !strncmp(VMA(2), "vid_restart", 11)
-		|| !strncmp(VMA(2), "quit", 5)))
-		{
-			Com_Printf (S_COLOR_YELLOW "turning EXEC_NOW '%.11s' into EXEC_INSERT\n", (const char*)VMA(2));
-			args[1] = EXEC_INSERT;
-		}
-		Cbuf_ExecuteText( args[1], VMA(2) );
-		return 0;
-
-	case UI_FS_FOPENFILE:
-		return FS_FOpenFileByMode( VMA(1), VMA(2), args[3] );
-
-	case UI_FS_READ:
-		FS_Read2( VMA(1), args[2], args[3] );
-		return 0;
-
-	case UI_FS_WRITE:
-		FS_Write( VMA(1), args[2], args[3] );
-		return 0;
-
-	case UI_FS_FCLOSEFILE:
-		FS_FCloseFile( args[1] );
-		return 0;
-
-	case UI_FS_GETFILELIST:
-		return FS_GetFileList( VMA(1), VMA(2), VMA(3), args[4] );
-
-	case UI_FS_SEEK:
-		return FS_Seek( args[1], args[2], args[3] );
-	
-	case UI_R_REGISTERMODEL:
-		return re.RegisterModel( VMA(1) );
-
-	case UI_R_REGISTERSKIN:
-		return re.RegisterSkin( VMA(1) );
-
-	case UI_R_REGISTERSHADERNOMIP:
-		return re.RegisterShaderNoMip( VMA(1) );
-
-	case UI_R_CLEARSCENE:
-		re.ClearScene();
-		return 0;
-
-	case UI_R_ADDREFENTITYTOSCENE:
-		re.AddRefEntityToScene( VMA(1) );
-		return 0;
+intptr_t CL_UISystemCalls(intptr_t *args)
+{
+	switch( args[0] )
+    {
+        case UI_ERROR:
+            Com_Error( ERR_DROP, "%s", (char*) VM_ArgPtr( args[1]) );
+            return 0;
+
+        case UI_PRINT:
+            Com_Printf( "%s", (char*) (VM_ArgPtr( args[1]) ) );
+            return 0;
+
+        case UI_MILLISECONDS:
+            return Sys_Milliseconds();
+
+        case UI_CVAR_REGISTER:
+            Cvar_Register( VM_ArgPtr(args[1]) , VM_ArgPtr(args[2]) , VM_ArgPtr(args[3]) , args[4]); 
+            return 0;
+
+        case UI_CVAR_UPDATE:
+            Cvar_Update( VM_ArgPtr( args[1]));
+            return 0;
+
+        case UI_CVAR_SET:
+            Cvar_SetSafe( VM_ArgPtr( args[1]), VM_ArgPtr(args[2]) );
+            return 0;
+
+        case UI_CVAR_VARIABLEVALUE:
+            return FloatAsInt( Cvar_VariableValue( VM_ArgPtr( args[1])) );
+
+        case UI_CVAR_VARIABLESTRINGBUFFER:
+            Cvar_VariableStringBuffer( VM_ArgPtr( args[1]), VM_ArgPtr(args[2]), args[3] );
+            return 0;
+
+        case UI_CVAR_SETVALUE:
+            Cvar_SetValueSafe( VM_ArgPtr( args[1]), _vmf(args[2]) );
+            return 0;
+
+        case UI_CVAR_RESET:
+            Cvar_Reset( VM_ArgPtr( args[1]) );
+            return 0;
+
+        case UI_CVAR_CREATE:
+            Cvar_Register( NULL, VM_ArgPtr( args[1]), VM_ArgPtr(args[2]), args[3] );
+            return 0;
+
+        case UI_CVAR_INFOSTRINGBUFFER:
+            Cvar_InfoStringBuffer( args[1], VM_ArgPtr(args[2]), args[3] );
+            return 0;
+
+        case UI_ARGC:
+            return Cmd_Argc();
+
+        case UI_ARGV:
+            Cmd_ArgvBuffer( args[1], VM_ArgPtr(args[2]), args[3] );
+            return 0;
+
+        case UI_CMD_EXECUTETEXT:
+            if(args[1] == EXEC_NOW &&  (!strncmp(VMA(2), "snd_restart", 11) || !strncmp(VMA(2), "vid_restart", 11) || !strncmp(VMA(2), "quit", 5)) )
+            {
+                Com_Printf (S_COLOR_YELLOW "turning EXEC_NOW '%.11s' into EXEC_INSERT\n", (const char*)VM_ArgPtr(args[2]) );
+                args[1] = EXEC_INSERT;
+            }
+            Cbuf_ExecuteText( args[1], VM_ArgPtr(args[2]) );
+            return 0;
+
+        case UI_FS_FOPENFILE:
+            return FS_FOpenFileByMode(VM_ArgPtr( args[1]), VM_ArgPtr(args[2]) , args[3] );
+
+        case UI_FS_READ:
+            FS_Read2( VM_ArgPtr(args[1]), args[2], args[3] );
+            return 0;
 
-	case UI_R_ADDPOLYTOSCENE:
-		re.AddPolyToScene( args[1], args[2], VMA(3), 1 );
-		return 0;
+        case UI_FS_WRITE:
+            FS_Write( VM_ArgPtr(args[1]), args[2], args[3] );
+            return 0;
+
+        case UI_FS_FCLOSEFILE:
+            FS_FCloseFile( args[1] );
+            return 0;
+
+        case UI_FS_GETFILELIST:
+            return FS_GetFileList( VM_ArgPtr(args[1]), VM_ArgPtr(args[2]), VM_ArgPtr(args[3]), args[4] );
+
+        case UI_FS_SEEK:
+            return FS_Seek( args[1], args[2], args[3] );
+        
+        case UI_R_REGISTERMODEL:
+            return re.RegisterModel( VM_ArgPtr( args[1]) );
+
+        case UI_R_REGISTERSKIN:
+            return re.RegisterSkin( VM_ArgPtr( args[1]) );
 
-	case UI_R_ADDLIGHTTOSCENE:
-		re.AddLightToScene( VMA(1), VMF(2), VMF(3), VMF(4), VMF(5) );
-		return 0;
+        case UI_R_REGISTERSHADERNOMIP:
+            return re.RegisterShaderNoMip( VM_ArgPtr( args[1]) );
+
+        case UI_R_CLEARSCENE:
+            re.ClearScene();
+            return 0;
+
+        case UI_R_ADDREFENTITYTOSCENE:
+            re.AddRefEntityToScene( VM_ArgPtr( args[1]) );
+            return 0;
 
-	case UI_R_RENDERSCENE:
-		re.RenderScene( VMA(1) );
-		return 0;
+        case UI_R_ADDPOLYTOSCENE:
+            re.AddPolyToScene( args[1], args[2], VM_ArgPtr(args[3]), 1 );
+            return 0;
 
-	case UI_R_SETCOLOR:
-		re.SetColor( VMA(1) );
-		return 0;
+        case UI_R_ADDLIGHTTOSCENE:
+            re.AddLightToScene( VM_ArgPtr( args[1]), _vmf(args[2]), _vmf(args[3]) , _vmf(args[4]) , _vmf(args[5]));
+            return 0;
 
-	case UI_R_DRAWSTRETCHPIC:
-		re.DrawStretchPic( VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), args[9] );
-		return 0;
+        case UI_R_RENDERSCENE:
+            re.RenderScene( VM_ArgPtr( args[1]) );
+            return 0;
 
-  case UI_R_MODELBOUNDS:
-		re.ModelBounds( args[1], VMA(2), VMA(3) );
-		return 0;
+        case UI_R_SETCOLOR:
+            re.SetColor( VM_ArgPtr( args[1]) );
+            return 0;
 
-	case UI_UPDATESCREEN:
-		SCR_UpdateScreen();
-		return 0;
+        case UI_R_DRAWSTRETCHPIC:
+            re.DrawStretchPic(_vmf(args[1]), _vmf(args[2]), _vmf(args[3]), _vmf(args[4]), _vmf(args[5]), _vmf(args[6]), _vmf(args[7]), _vmf(args[8]), args[9] );
+            return 0;
 
-	case UI_CM_LERPTAG:
-		re.LerpTag( VMA(1), args[2], args[3], args[4], VMF(5), VMA(6) );
-		return 0;
+      case UI_R_MODELBOUNDS:
+            re.ModelBounds( args[1], VM_ArgPtr(args[2]), VM_ArgPtr(args[3]) );
+            return 0;
 
-	case UI_S_REGISTERSOUND:
-		return S_RegisterSound( VMA(1), args[2] );
+        case UI_UPDATESCREEN:
+            SCR_UpdateScreen();
+            return 0;
 
-	case UI_S_STARTLOCALSOUND:
-		S_StartLocalSound( args[1], args[2] );
-		return 0;
+        case UI_CM_LERPTAG:
+            re.LerpTag( VM_ArgPtr(args[1]), args[2], args[3], args[4], _vmf(args[5]), VM_ArgPtr(args[6]) );
+            return 0;
 
-	case UI_KEY_KEYNUMTOSTRINGBUF:
-		Key_KeynumToStringBuf( args[1], VMA(2), args[3] );
-		return 0;
+        case UI_S_REGISTERSOUND:
+            return S_RegisterSound( VM_ArgPtr(args[1]), args[2] );
 
-	case UI_KEY_GETBINDINGBUF:
-		Key_GetBindingBuf( args[1], VMA(2), args[3] );
-		return 0;
+        case UI_S_STARTLOCALSOUND:
+            S_StartLocalSound( args[1], args[2] );
+            return 0;
 
-	case UI_KEY_SETBINDING:
-		Key_SetBinding( args[1], VMA(2) );
-		return 0;
+        case UI_KEY_KEYNUMTOSTRINGBUF:
+            Key_KeynumToStringBuf(args[1], VM_ArgPtr(args[2]), args[3]);
+            return 0;
 
-	case UI_KEY_ISDOWN:
-		return Key_IsDown( args[1] );
+        case UI_KEY_GETBINDINGBUF:
+            Key_GetBindingBuf( args[1], VM_ArgPtr(args[2]), args[3] );
+            return 0;
 
-	case UI_KEY_GETOVERSTRIKEMODE:
-		return Key_GetOverstrikeMode();
+        case UI_KEY_SETBINDING:
+            Key_SetBinding( args[1], VM_ArgPtr(args[2]));
+            return 0;
 
-	case UI_KEY_SETOVERSTRIKEMODE:
-		Key_SetOverstrikeMode( args[1] );
-		return 0;
+        case UI_KEY_ISDOWN:
+            return Key_IsDown( args[1] );
 
-	case UI_KEY_CLEARSTATES:
-		Key_ClearStates();
-		return 0;
+        case UI_KEY_GETOVERSTRIKEMODE:
+            return Key_GetOverstrikeMode();
 
-	case UI_KEY_GETCATCHER:
-		return Key_GetCatcher();
+        case UI_KEY_SETOVERSTRIKEMODE:
+            Key_SetOverstrikeMode( args[1] );
+            return 0;
 
-	case UI_KEY_SETCATCHER:
-		// Don't allow the ui module to close the console
-		Key_SetCatcher( args[1] | ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) );
-		return 0;
+        case UI_KEY_CLEARSTATES:
+            Key_ClearStates();
+            return 0;
 
-	case UI_GETCLIPBOARDDATA:
-		CL_GetClipboardData( VMA(1), args[2] );
-		return 0;
+        case UI_KEY_GETCATCHER:
+            return Key_GetCatcher();
 
-	case UI_GETCLIENTSTATE:
-		GetClientState( VMA(1) );
-		return 0;		
+        case UI_KEY_SETCATCHER:
+            // Don't allow the ui module to close the console
+            Key_SetCatcher( args[1] | ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) );
+            return 0;
 
-	case UI_GETGLCONFIG:
-		CL_GetGlconfig( VMA(1) );
-		return 0;
+        case UI_GETCLIPBOARDDATA:
+            CL_GetClipboardData( VM_ArgPtr(args[1]), args[2] );
+            return 0;
 
-	case UI_GETCONFIGSTRING:
-		return GetConfigString( args[1], VMA(2), args[3] );
+        case UI_GETCLIENTSTATE:
+            GetClientState( VM_ArgPtr(args[1]) );
+            return 0;		
 
-	case UI_LAN_LOADCACHEDSERVERS:
-		LAN_LoadCachedServers();
-		return 0;
+        case UI_GETGLCONFIG:
+            CL_GetGlconfig( VM_ArgPtr(args[1]) );
+            return 0;
 
-	case UI_LAN_SAVECACHEDSERVERS:
-		LAN_SaveServersToCache();
-		return 0;
+        case UI_GETCONFIGSTRING:
+            return GetConfigString( args[1], VM_ArgPtr(args[2]), args[3] );
 
-	case UI_LAN_ADDSERVER:
-		return LAN_AddServer(args[1], VMA(2), VMA(3));
+        case UI_LAN_LOADCACHEDSERVERS:
+            LAN_LoadCachedServers();
+            return 0;
 
-	case UI_LAN_REMOVESERVER:
-		LAN_RemoveServer(args[1], VMA(2));
-		return 0;
+        case UI_LAN_SAVECACHEDSERVERS:
+            LAN_SaveServersToCache();
+            return 0;
 
-	case UI_LAN_GETPINGQUEUECOUNT:
-		return LAN_GetPingQueueCount();
+        case UI_LAN_ADDSERVER:
+            return LAN_AddServer(args[1], VM_ArgPtr(args[2]), VM_ArgPtr(args[3]));
 
-	case UI_LAN_CLEARPING:
-		LAN_ClearPing( args[1] );
-		return 0;
+        case UI_LAN_REMOVESERVER:
+            LAN_RemoveServer(args[1], VM_ArgPtr(args[2]));
+            return 0;
 
-	case UI_LAN_GETPING:
-		LAN_GetPing( args[1], VMA(2), args[3], VMA(4) );
-		return 0;
+        case UI_LAN_GETPINGQUEUECOUNT:
+            return LAN_GetPingQueueCount();
 
-	case UI_LAN_GETPINGINFO:
-		LAN_GetPingInfo( args[1], VMA(2), args[3] );
-		return 0;
+        case UI_LAN_CLEARPING:
+            LAN_ClearPing( args[1] );
+            return 0;
 
-	case UI_LAN_GETSERVERCOUNT:
-		return LAN_GetServerCount(args[1]);
+        case UI_LAN_GETPING:
+            LAN_GetPing( args[1], VM_ArgPtr(args[2]), args[3], VM_ArgPtr(args[4]) );
+            return 0;
 
-	case UI_LAN_GETSERVERADDRESSSTRING:
-		LAN_GetServerAddressString( args[1], args[2], VMA(3), args[4] );
-		return 0;
+        case UI_LAN_GETPINGINFO:
+            LAN_GetPingInfo( args[1], VM_ArgPtr(args[2]), args[3] );
+            return 0;
 
-	case UI_LAN_GETSERVERINFO:
-		LAN_GetServerInfo( args[1], args[2], VMA(3), args[4] );
-		return 0;
+        case UI_LAN_GETSERVERCOUNT:
+            return LAN_GetServerCount(args[1]);
 
-	case UI_LAN_GETSERVERPING:
-		return LAN_GetServerPing( args[1], args[2] );
+        case UI_LAN_GETSERVERADDRESSSTRING:
+            LAN_GetServerAddressString( args[1], args[2], VM_ArgPtr(args[3]), args[4] );
+            return 0;
 
-	case UI_LAN_MARKSERVERVISIBLE:
-		LAN_MarkServerVisible( args[1], args[2], args[3] );
-		return 0;
+        case UI_LAN_GETSERVERINFO:
+            LAN_GetServerInfo( args[1], args[2], VM_ArgPtr(args[3]), args[4] );
+            return 0;
 
-	case UI_LAN_SERVERISVISIBLE:
-		return LAN_ServerIsVisible( args[1], args[2] );
+        case UI_LAN_GETSERVERPING:
+            return LAN_GetServerPing( args[1], args[2] );
 
-	case UI_LAN_UPDATEVISIBLEPINGS:
-		return LAN_UpdateVisiblePings( args[1] );
+        case UI_LAN_MARKSERVERVISIBLE:
+            LAN_MarkServerVisible( args[1], args[2], args[3] );
+            return 0;
 
-	case UI_LAN_RESETPINGS:
-		LAN_ResetPings( args[1] );
-		return 0;
+        case UI_LAN_SERVERISVISIBLE:
+            return LAN_ServerIsVisible( args[1], args[2] );
 
-	case UI_LAN_SERVERSTATUS:
-		return LAN_GetServerStatus( VMA(1), VMA(2), args[3] );
+        case UI_LAN_UPDATEVISIBLEPINGS:
+            return LAN_UpdateVisiblePings( args[1] );
 
-	case UI_LAN_COMPARESERVERS:
-		return LAN_CompareServers( args[1], args[2], args[3], args[4], args[5] );
+        case UI_LAN_RESETPINGS:
+            LAN_ResetPings( args[1] );
+            return 0;
 
-	case UI_MEMORY_REMAINING:
-		return Hunk_MemoryRemaining();
+        case UI_LAN_SERVERSTATUS:
+            return LAN_GetServerStatus( VM_ArgPtr(args[1]), VM_ArgPtr(args[2]), args[3] );
 
-	case UI_GET_CDKEY:
-		CLUI_GetCDKey( VMA(1), args[2] );
-		return 0;
+        case UI_LAN_COMPARESERVERS:
+            return LAN_CompareServers( args[1], args[2], args[3], args[4], args[5] );
 
-	case UI_SET_CDKEY:
+        case UI_MEMORY_REMAINING:
+            return Hunk_MemoryRemaining();
+
+        case UI_GET_CDKEY:
+            CLUI_GetCDKey( VM_ArgPtr(args[1]), args[2] );
+            return 0;
+
+        case UI_SET_CDKEY:
 #ifndef STANDALONE
-		CLUI_SetCDKey( VMA(1) );
+            CLUI_SetCDKey( VM_ArgPtr(args[1]) );
 #endif
-		return 0;
-	
-	case UI_SET_PBCLSTATUS:
-		return 0;	
+            return 0;
+        
+        case UI_SET_PBCLSTATUS:
+            return 0;	
 
-	case UI_R_REGISTERFONT:
-		re.RegisterFont( VMA(1), args[2], VMA(3));
-		return 0;
+        case UI_R_REGISTERFONT:
+            re.RegisterFont( VM_ArgPtr(args[1]), args[2], VM_ArgPtr(args[3]));
+            return 0;
 
-	case UI_MEMSET:
-		Com_Memset( VMA(1), args[2], args[3] );
-		return 0;
+        case UI_MEMSET:
+            memset( VM_ArgPtr(args[1]), args[2], args[3] );
+            return 0;
 
-	case UI_MEMCPY:
-		Com_Memcpy( VMA(1), VMA(2), args[3] );
-		return 0;
+        case UI_MEMCPY:
+            memcpy( VM_ArgPtr(args[1]), VM_ArgPtr(args[2]), args[3] );
+            return 0;
 
-	case UI_STRNCPY:
-		strncpy( VMA(1), VMA(2), args[3] );
-		return args[1];
+        case UI_STRNCPY:
+            strncpy(VM_ArgPtr(args[1]), VM_ArgPtr(args[2]), args[3]);
+            return args[1];
 
-	case UI_SIN:
-		return FloatAsInt( sin( VMF(1) ) );
+        case UI_SIN:
+            return FloatAsInt( sin( _vmf(args[1]) ) );
 
-	case UI_COS:
-		return FloatAsInt( cos( VMF(1) ) );
+        case UI_COS:
+            return FloatAsInt( cos( _vmf(args[1]) ) );
 
-	case UI_ATAN2:
-		return FloatAsInt( atan2( VMF(1), VMF(2) ) );
+        case UI_ATAN2:
+            return FloatAsInt( atan2( _vmf(args[1]), _vmf(args[2]) ) );
 
-	case UI_SQRT:
-		return FloatAsInt( sqrt( VMF(1) ) );
+        case UI_SQRT:
+            return FloatAsInt( sqrt( _vmf(args[1]) ) );
 
-	case UI_FLOOR:
-		return FloatAsInt( floor( VMF(1) ) );
+        case UI_FLOOR:
+            return FloatAsInt( floor( _vmf(args[1]) ) );
 
-	case UI_CEIL:
-		return FloatAsInt( ceil( VMF(1) ) );
+        case UI_CEIL:
+            return FloatAsInt( ceil( _vmf(args[1]) ) );
 
-	case UI_PC_ADD_GLOBAL_DEFINE:
-		return botlib_export->PC_AddGlobalDefine( VMA(1) );
-	case UI_PC_LOAD_SOURCE:
-		return botlib_export->PC_LoadSourceHandle( VMA(1) );
-	case UI_PC_FREE_SOURCE:
-		return botlib_export->PC_FreeSourceHandle( args[1] );
-	case UI_PC_READ_TOKEN:
-		return botlib_export->PC_ReadTokenHandle( args[1], VMA(2) );
-	case UI_PC_SOURCE_FILE_AND_LINE:
-		return botlib_export->PC_SourceFileAndLine( args[1], VMA(2), VMA(3) );
+        case UI_PC_ADD_GLOBAL_DEFINE:
+            return botlib_export->PC_AddGlobalDefine( VM_ArgPtr(args[1]) );
+        case UI_PC_LOAD_SOURCE:
+            return botlib_export->PC_LoadSourceHandle( VM_ArgPtr(args[1]) );
+        case UI_PC_FREE_SOURCE:
+            return botlib_export->PC_FreeSourceHandle( args[1] );
+        case UI_PC_READ_TOKEN:
+            return botlib_export->PC_ReadTokenHandle( args[1], VM_ArgPtr(args[2]) );
+        case UI_PC_SOURCE_FILE_AND_LINE:
+            return botlib_export->PC_SourceFileAndLine( args[1], VM_ArgPtr(args[2]), VM_ArgPtr(args[3]));
 
-	case UI_S_STOPBACKGROUNDTRACK:
-		S_StopBackgroundTrack();
-		return 0;
-	case UI_S_STARTBACKGROUNDTRACK:
-		S_StartBackgroundTrack( VMA(1), VMA(2));
-		return 0;
+        case UI_S_STOPBACKGROUNDTRACK:
+            S_StopBackgroundTrack();
+            return 0;
+        case UI_S_STARTBACKGROUNDTRACK:
+            S_StartBackgroundTrack(VM_ArgPtr(args[1]), VM_ArgPtr(args[2]));
+            return 0;
 
-	case UI_REAL_TIME:
-		return Com_RealTime( VMA(1) );
+        case UI_REAL_TIME:
+            return Com_RealTime( VM_ArgPtr(args[1]) );
 
-	case UI_CIN_PLAYCINEMATIC:
-	  Com_DPrintf("UI_CIN_PlayCinematic\n");
-	  return CIN_PlayCinematic(VMA(1), args[2], args[3], args[4], args[5], args[6]);
+        case UI_CIN_PLAYCINEMATIC:
+          Com_DPrintf("UI_CIN_PlayCinematic\n");
+          return CIN_PlayCinematic(VM_ArgPtr(args[1]), args[2], args[3], args[4], args[5], args[6]);
 
-	case UI_CIN_STOPCINEMATIC:
-	  return CIN_StopCinematic(args[1]);
+        case UI_CIN_STOPCINEMATIC:
+          return CIN_StopCinematic(args[1]);
 
-	case UI_CIN_RUNCINEMATIC:
-	  return CIN_RunCinematic(args[1]);
+        case UI_CIN_RUNCINEMATIC:
+          return CIN_RunCinematic(args[1]);
 
-	case UI_CIN_DRAWCINEMATIC:
-	  CIN_DrawCinematic(args[1]);
-	  return 0;
+        case UI_CIN_DRAWCINEMATIC:
+          CIN_DrawCinematic(args[1]);
+          return 0;
 
-	case UI_CIN_SETEXTENTS:
-	  CIN_SetExtents(args[1], args[2], args[3], args[4], args[5]);
-	  return 0;
+        case UI_CIN_SETEXTENTS:
+          CIN_SetExtents(args[1], args[2], args[3], args[4], args[5]);
+          return 0;
 
-	case UI_R_REMAP_SHADER:
-		re.RemapShader( VMA(1), VMA(2), VMA(3) );
-		return 0;
+        case UI_R_REMAP_SHADER:
+            re.RemapShader( VM_ArgPtr(args[1]), VM_ArgPtr(args[2]), VM_ArgPtr(args[3]) );
+            return 0;
 
-	case UI_VERIFY_CDKEY:
-		return CL_CDKeyValidate(VMA(1), VMA(2));
-		
-	default:
-		Com_Error( ERR_DROP, "Bad UI system trap: %ld", (long int) args[0] );
+        case UI_VERIFY_CDKEY:
+            return CL_CDKeyValidate(VM_ArgPtr(args[1]), VM_ArgPtr(args[2]));
+            
+        default:
+            Com_Error( ERR_DROP, "Bad UI system trap: %ld", (long int) args[0] );
 
 	}
 
 	return 0;
 }
 
-/*
-====================
-CL_ShutdownUI
-====================
-*/
-void CL_ShutdownUI( void ) {
+
+void CL_ShutdownUI( void )
+{
 	Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_UI );
 	cls.uiStarted = qfalse;
-	if ( !uivm ) {
+	if ( !uivm )
 		return;
-	}
+
 	VM_Call( uivm, UI_SHUTDOWN );
 	VM_Free( uivm );
 	uivm = NULL;
 }
 
-/*
-====================
-CL_InitUI
-====================
-*/
+
 #define UI_OLD_API_VERSION	4
 
-void CL_InitUI( void ) {
-	int		v;
-	vmInterpret_t		interpret;
-
+void CL_InitUI( void )
+{
+	int	v;
+	
 	// load the dll or bytecode
-	interpret = Cvar_VariableValue("vm_ui");
+	vmInterpret_t interpret = Cvar_VariableValue("vm_ui");
 	if(cl_connectedToPureServer)
 	{
 		// if sv_pure is set we only allow qvms to be loaded
@@ -1106,19 +1081,20 @@ void CL_InitUI( void ) {
 			interpret = VMI_COMPILED;
 	}
 
-	uivm = VM_Create( "ui", CL_UISystemCalls, interpret );
-	if ( !uivm ) {
+	uivm = VM_Create("ui", CL_UISystemCalls, interpret);
+	if ( !uivm )
 		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
-	}
 
 	// sanity check
 	v = VM_Call( uivm, UI_GETAPIVERSION );
-	if (v == UI_OLD_API_VERSION) {
-//		Com_Printf(S_COLOR_YELLOW "WARNING: loading old Quake III Arena User Interface version %d\n", v );
+	if (v == UI_OLD_API_VERSION)
+    {
+		Com_Printf(S_COLOR_YELLOW "WARNING: loading old Quake III Arena User Interface version %d\n", v );
 		// init for this gamestate
 		VM_Call( uivm, UI_INIT, (clc.state >= CA_AUTHORIZING && clc.state < CA_ACTIVE));
 	}
-	else if (v != UI_API_VERSION) {
+	else if (v != UI_API_VERSION)
+    {
 		// Free uivm now, so UI_SHUTDOWN doesn't get called later.
 		VM_Free( uivm );
 		uivm = NULL;

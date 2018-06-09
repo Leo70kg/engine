@@ -107,7 +107,7 @@ R_ClearFlares
 void R_ClearFlares( void ) {
 	int		i;
 
-	Com_Memset( r_flareStructs, 0, sizeof( r_flareStructs ) );
+	memset( r_flareStructs, 0, sizeof( r_flareStructs ) );
 	r_activeFlares = NULL;
 	r_inactiveFlares = NULL;
 
@@ -454,14 +454,11 @@ when occluded by something in the main view, and portal flares that should
 extend past the portal edge will be overwritten.
 ==================
 */
-void RB_RenderFlares (void) {
+void RB_RenderFlares (void)
+{
 	flare_t		*f;
 	flare_t		**prev;
 	qboolean	draw;
-
-	if ( !r_flares->integer ) {
-		return;
-	}
 
 	if(r_flareCoeff->modified)
 	{

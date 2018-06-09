@@ -34,7 +34,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define	REFENTITYNUM_WORLD	((1<<REFENTITYNUM_BITS) - 1)
 
 // renderfx flags
-#define	RF_MINLIGHT		0x0001		// allways have some light (viewmodel, some items)
+#define	RF_MINLIGHT         0x0001		// allways have some light (viewmodel, some items)
 #define	RF_THIRD_PERSON		0x0002		// don't draw through eyes, only mirrors (player bodies, chat sprites)
 #define	RF_FIRST_PERSON		0x0004		// only draw through eyes (view weapon, damage blood blob)
 #define	RF_DEPTHHACK		0x0008		// for view weapon Z crunching
@@ -44,8 +44,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 						// projection matrix won't be hacked to reduce the stereo separation as
 						// is done for the gun.
 
-#define	RF_NOSHADOW		0x0040		// don't add stencil shadows
-
+#define	RF_NOSHADOW         0x0040		// don't add stencil shadows
 #define RF_LIGHTING_ORIGIN	0x0080		// use refEntity->lightingOrigin instead of refEntity->origin
 						// for lighting.  This allows entities to sink into the floor
 						// with their origin going solid, and allows all parts of a
@@ -53,6 +52,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define	RF_SHADOW_PLANE		0x0100		// use refEntity->shadowPlane
 #define	RF_WRAP_FRAMES		0x0200		// mod the model frames by the maxframes to allow continuous
+										// animation without needing to know the frame count
 
 // refdef flags
 #define RDF_NOWORLDMODEL	0x0001		// used for player configuration screen
@@ -61,7 +61,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 typedef struct {
 	vec3_t		xyz;
 	float		st[2];
-	byte		modulate[4];
+	unsigned char modulate[4];
 } polyVert_t;
 
 typedef struct poly_s {
@@ -109,20 +109,13 @@ typedef struct {
 	qhandle_t	customShader;		// use one image for the entire thing
 
 	// misc
-	byte		shaderRGBA[4];		// colors used by rgbgen entity shaders
+	unsigned char shaderRGBA[4];		// colors used by rgbgen entity shaders
 	float		shaderTexCoord[2];	// texture coordinates used by tcMod entity modifiers
 	float		shaderTime;			// subtracted from refdef time to control effect start times
 
 	// extra sprite information
 	float		radius;
 	float		rotation;
-
-	// leilei - eyes
-
-	vec3_t		eyepos[2];			// looking from
-	vec3_t		eyelook;			// looking from
-
-
 } refEntity_t;
 
 
@@ -159,9 +152,8 @@ typedef enum {
 /*
 ** glconfig_t
 **
-** Contains variables specific to the OpenGL configuration
-** being run right now.  These are constant once the OpenGL
-** subsystem is initialized.
+** Contains variables specific to the OpenGL configuration being run right now. 
+** These are constant once the OpenGL subsystem is initialized.
 */
 typedef enum {
 	TC_NONE,
@@ -171,16 +163,14 @@ typedef enum {
 
 typedef enum {
 	GLDRV_ICD,					// driver is integrated with window system
-								// WARNING: there are tests that check for
-								// > GLDRV_ICD for minidriverness, so this
-								// should always be the lowest value in this
-								// enum set
+								// WARNING: there are tests that check for > GLDRV_ICD for minidriverness,
+                                // so this should always be the lowest value in this enum set
 	GLDRV_STANDALONE,			// driver is a non-3Dfx standalone driver
 	GLDRV_VOODOO				// driver is a 3Dfx standalone driver
 } glDriverType_t;
 
 typedef enum {
-	GLHW_GENERIC,			// where everthing works the way it should
+	GLHW_GENERIC,			// where everything works the way it should
 	GLHW_3DFX_2D3D,			// Voodoo Banshee or Voodoo3, relevant since if this is
 							// the hardware type then there can NOT exist a secondary
 							// display adapter
@@ -213,13 +203,11 @@ typedef struct {
 	// normal screens should be 4/3, but wide aspect monitors may be 16/9
 	float					windowAspect;
 
-	int						displayFrequency;
-
-	// synonymous with "does rendering consume the entire screen?", therefore
-	// a Voodoo or Voodoo2 will have this set to TRUE, as will a Win32 ICD that
-	// used CDS.
-	qboolean				isFullscreen;
-	qboolean				stereoEnabled;
+	int						refresh_rate;
+    
+    // synonymous with "does rendering consume the entire screen?"
+    qboolean				isFullscreen;
+	qboolean				stereoDisabled;
 	qboolean				smpActive;		// UNUSED, present for compatibility
 
 } glconfig_t;

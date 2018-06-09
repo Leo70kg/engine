@@ -155,6 +155,7 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 	// create the texture axis
 	VectorNormalize2( dir, axis[0] );
 	PerpendicularVector( axis[1], axis[0] );
+	
 	RotatePointAroundVector( axis[2], axis[0], axis[1], orientation );
 	CrossProduct( axis[0], axis[2], axis[1] );
 
@@ -291,3 +292,6 @@ void CG_AddMarks( void ) {
 		trap_R_AddPolyToScene( mp->markShader, mp->poly.numVerts, mp->verts );
 	}
 }
+
+
+// gutted to renderer

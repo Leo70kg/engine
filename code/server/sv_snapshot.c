@@ -459,7 +459,7 @@ static void SV_BuildClientSnapshot( client_t *client ) {
 
 	// clear everything in this snapshot
 	entityNumbers.numSnapshotEntities = 0;
-	Com_Memset( frame->areabits, 0, sizeof( frame->areabits ) );
+	memset( frame->areabits, 0, sizeof( frame->areabits ) );
 
   // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=62
 	frame->num_entities = 0;
@@ -547,7 +547,7 @@ static void SV_WriteVoipToClient(client_t *cl, msg_t *msg)
 	        		if (totalbytes > (msg->maxsize - msg->cursize) / 2)
 		        		break;
 
-        			MSG_WriteByte(msg, svc_voip);
+        			MSG_WriteByte(msg, svc_voipOpus);
         			MSG_WriteShort(msg, packet->sender);
 	        		MSG_WriteByte(msg, (byte) packet->generation);
 		        	MSG_WriteLong(msg, packet->sequence);

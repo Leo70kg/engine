@@ -62,9 +62,9 @@ qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 	for (lod = MD3_MAX_LODS - 1 ; lod >= 0 ; lod--)
 	{
 		if(lod)
-			Com_sprintf(namebuf, sizeof(namebuf), "%s_%d.%s", filename, lod, fext);
+			snprintf(namebuf, sizeof(namebuf), "%s_%d.%s", filename, lod, fext);
 		else
-			Com_sprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
+			snprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
 
 		ri.FS_ReadFile( namebuf, &buf.v );
 		if(!buf.u)
@@ -344,7 +344,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 		if (i == orgLoader)
 			continue;
 
-		Com_sprintf( altName, sizeof (altName), "%s.%s", localName, modelLoaders[ i ].ext );
+		snprintf( altName, sizeof (altName), "%s.%s", localName, modelLoaders[ i ].ext );
 
 		// Load
 		hModel = modelLoaders[ i ].ModelLoader( altName, mod );
@@ -396,7 +396,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 	mod->dataSize += size;
 	mod->md3[lod] = ri.Hunk_Alloc( size, h_low );
 
-	Com_Memcpy (mod->md3[lod], buffer, LittleLong(pinmodel->ofsEnd) );
+	memcpy (mod->md3[lod], buffer, LittleLong(pinmodel->ofsEnd) );
 
     LL(mod->md3[lod]->ident);
     LL(mod->md3[lod]->version);
@@ -523,6 +523,127 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
     
 	return qtrue;
 }
+
+
+
+/*
+=============================================================
+
+UNCOMPRESSING BONES
+
+=============================================================
+*/
+
+#define MC_BITS_X (16)
+#define MC_BITS_Y (16)
+#define MC_BITS_Z (16)
+#define MC_BITS_VECT (16)
+
+#define MC_SCALE_X (1.0f/64)
+#define MC_SCALE_Y (1.0f/64)
+#define MC_SCALE_Z (1.0f/64)
+
+#define MC_MASK_X ((1<<(MC_BITS_X))-1)
+#define MC_MASK_Y ((1<<(MC_BITS_Y))-1)
+#define MC_MASK_Z ((1<<(MC_BITS_Z))-1)
+#define MC_MASK_VECT ((1<<(MC_BITS_VECT))-1)
+
+#define MC_SCALE_VECT (1.0f/(float)((1<<(MC_BITS_VECT-1))-2))
+
+#define MC_POS_X (0)
+#define MC_SHIFT_X (0)
+
+#define MC_POS_Y ((((MC_BITS_X))/8))
+#define MC_SHIFT_Y ((((MC_BITS_X)%8)))
+
+#define MC_POS_Z ((((MC_BITS_X+MC_BITS_Y))/8))
+#define MC_SHIFT_Z ((((MC_BITS_X+MC_BITS_Y)%8)))
+
+#define MC_POS_V11 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z))/8))
+#define MC_SHIFT_V11 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z)%8)))
+
+#define MC_POS_V12 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT))/8))
+#define MC_SHIFT_V12 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT)%8)))
+
+#define MC_POS_V13 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*2))/8))
+#define MC_SHIFT_V13 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*2)%8)))
+
+#define MC_POS_V21 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*3))/8))
+#define MC_SHIFT_V21 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*3)%8)))
+
+#define MC_POS_V22 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*4))/8))
+#define MC_SHIFT_V22 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*4)%8)))
+
+#define MC_POS_V23 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*5))/8))
+#define MC_SHIFT_V23 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*5)%8)))
+
+#define MC_POS_V31 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*6))/8))
+#define MC_SHIFT_V31 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*6)%8)))
+
+#define MC_POS_V32 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*7))/8))
+#define MC_SHIFT_V32 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*7)%8)))
+
+#define MC_POS_V33 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*8))/8))
+#define MC_SHIFT_V33 ((((MC_BITS_X+MC_BITS_Y+MC_BITS_Z+MC_BITS_VECT*8)%8)))
+
+void MC_UnCompress(float mat[3][4], const unsigned char* comp)
+{
+	int val;
+
+	val=(int)((unsigned short *)(comp))[0];
+	val-=1<<(MC_BITS_X-1);
+	mat[0][3]=((float)(val))*MC_SCALE_X;
+
+	val=(int)((unsigned short *)(comp))[1];
+	val-=1<<(MC_BITS_Y-1);
+	mat[1][3]=((float)(val))*MC_SCALE_Y;
+
+	val=(int)((unsigned short *)(comp))[2];
+	val-=1<<(MC_BITS_Z-1);
+	mat[2][3]=((float)(val))*MC_SCALE_Z;
+
+	val=(int)((unsigned short *)(comp))[3];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[0][0]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[4];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[0][1]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[5];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[0][2]=((float)(val))*MC_SCALE_VECT;
+
+
+	val=(int)((unsigned short *)(comp))[6];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[1][0]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[7];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[1][1]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[8];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[1][2]=((float)(val))*MC_SCALE_VECT;
+
+
+	val=(int)((unsigned short *)(comp))[9];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[2][0]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[10];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[2][1]=((float)(val))*MC_SCALE_VECT;
+
+	val=(int)((unsigned short *)(comp))[11];
+	val-=1<<(MC_BITS_VECT-1);
+	mat[2][2]=((float)(val))*MC_SCALE_VECT;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
 
 
 
@@ -966,7 +1087,7 @@ static md3Tag_t *R_GetTag( md3Header_t *mod, int frame, const char *tagName ) {
 	return NULL;
 }
 
-void R_GetAnimTag( mdrHeader_t *mod, int framenum, const char *tagName, md3Tag_t * dest) 
+md3Tag_t *R_GetAnimTag( mdrHeader_t *mod, int framenum, const char *tagName, md3Tag_t * dest) 
 {
 	int				i, j, k;
 	int				frameSize;
@@ -1001,13 +1122,11 @@ void R_GetAnimTag( mdrHeader_t *mod, int framenum, const char *tagName, md3Tag_t
 			dest->origin[1]=frame->bones[tag->boneIndex].matrix[1][3];
 			dest->origin[2]=frame->bones[tag->boneIndex].matrix[2][3];				
 
-			return;
+			return dest;
 		}
 	}
 
-	AxisClear( dest->axis );
-	VectorClear( dest->origin );
-	strcpy(dest->name,"");
+	return NULL;
 }
 
 /*
@@ -1028,34 +1147,29 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 	{
 		if(model->type == MOD_MDR)
 		{
-			start = &start_space;
-			end = &end_space;
-			R_GetAnimTag((mdrHeader_t *) model->modelData, startFrame, tagName, start);
-			R_GetAnimTag((mdrHeader_t *) model->modelData, endFrame, tagName, end);
+			start = R_GetAnimTag((mdrHeader_t *) model->modelData, startFrame, tagName, &start_space);
+			end = R_GetAnimTag((mdrHeader_t *) model->modelData, endFrame, tagName, &end_space);
 		}
 		else if( model->type == MOD_IQM ) {
 			return R_IQMLerpTag( tag, model->modelData,
 					startFrame, endFrame,
 					frac, tagName );
 		} else {
-
-			AxisClear( tag->axis );
-			VectorClear( tag->origin );
-			return qfalse;
-
+			start = end = NULL;
 		}
 	}
 	else
 	{
 		start = R_GetTag( model->md3[0], startFrame, tagName );
 		end = R_GetTag( model->md3[0], endFrame, tagName );
-		if ( !start || !end ) {
-			AxisClear( tag->axis );
-			VectorClear( tag->origin );
-			return qfalse;
-		}
 	}
-	
+
+	if ( !start || !end ) {
+		AxisClear( tag->axis );
+		VectorClear( tag->origin );
+		return qfalse;
+	}
+
 	frontLerp = frac;
 	backLerp = 1.0f - frac;
 

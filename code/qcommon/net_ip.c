@@ -63,31 +63,32 @@ static qboolean	winsockInitialized = qfalse;
 #		define _BSD_SOCKLEN_T_
 #	endif
 
-#	include <sys/socket.h>
-#	include <errno.h>
-#	include <netdb.h>
-#	include <netinet/in.h>
-#	include <arpa/inet.h>
-#	include <net/if.h>
-#	include <sys/ioctl.h>
-#	include <sys/types.h>
-#	include <sys/time.h>
-#	include <unistd.h>
-#	if !defined(__sun) && !defined(__sgi)
-#		include <ifaddrs.h>
-#	endif
+#include <sys/socket.h>
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <unistd.h>
 
-#	ifdef __sun
-#		include <sys/filio.h>
-#	endif
+#if !defined(__sun) && !defined(__sgi)
+    #include <ifaddrs.h>
+#endif
+
+#ifdef __sun
+    #include <sys/filio.h>
+#endif
 
 typedef int SOCKET;
-#	define INVALID_SOCKET		-1
-#	define SOCKET_ERROR			-1
-#	define closesocket			close
-#	define ioctlsocket			ioctl
+#define INVALID_SOCKET		-1
+#define SOCKET_ERROR			-1
+#define closesocket			close
+#define ioctlsocket			ioctl
 typedef int	ioctlarg_t;
-#	define socketError			errno
+#define socketError			errno
 
 #endif
 
@@ -235,7 +236,8 @@ static void NetadrToSockadr( netadr_t *a, struct sockaddr *s ) {
 }
 
 
-static void SockadrToNetadr( struct sockaddr *s, netadr_t *a ) {
+static void SockadrToNetadr( struct sockaddr *s, netadr_t *a )
+{
 	if (s->sa_family == AF_INET) {
 		a->type = NA_IP;
 		*(int *)&a->ip = ((struct sockaddr_in *)s)->sin_addr.s_addr;
@@ -453,9 +455,9 @@ qboolean NET_CompareBaseAdr (netadr_t a, netadr_t b)
 	return NET_CompareBaseAdrMask(a, b, -1);
 }
 
-const char	*NET_AdrToString (netadr_t a)
+const char *NET_AdrToString (netadr_t a)
 {
-	static	char	s[NET_ADDRSTRMAXLEN];
+	static char	s[NET_ADDRSTRMAXLEN];
 
 	if (a.type == NA_LOOPBACK)
 		Com_sprintf (s, sizeof(s), "loopback");
@@ -475,7 +477,7 @@ const char	*NET_AdrToString (netadr_t a)
 
 const char	*NET_AdrToStringwPort (netadr_t a)
 {
-	static	char	s[NET_ADDRSTRMAXLEN];
+	static char	s[NET_ADDRSTRMAXLEN];
 
 	if (a.type == NA_LOOPBACK)
 		Com_sprintf (s, sizeof(s), "loopback");
@@ -490,7 +492,7 @@ const char	*NET_AdrToStringwPort (netadr_t a)
 }
 
 
-qboolean	NET_CompareAdr (netadr_t a, netadr_t b)
+qboolean NET_CompareAdr (netadr_t a, netadr_t b)
 {
 	if(!NET_CompareBaseAdr(a, b))
 		return qfalse;
@@ -515,9 +517,7 @@ qboolean	NET_IsLocalAddress( netadr_t adr ) {
 
 /*
 ==================
-NET_GetPacket
-
-Receive one packet
+NET_GetPacket: Receive one packet
 ==================
 */
 qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
@@ -627,7 +627,6 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
 		}
 	}
 	
-	
 	return qfalse;
 }
 
@@ -640,8 +639,9 @@ static char socksBuf[4096];
 Sys_SendPacket
 ==================
 */
-void Sys_SendPacket( int length, const void *data, netadr_t to ) {
-	int				ret = SOCKET_ERROR;
+void Sys_SendPacket( int length, const void *data, netadr_t to )
+{
+	int	ret = SOCKET_ERROR;
 	struct sockaddr_storage	addr;
 
 	if( to.type != NA_BROADCAST && to.type != NA_IP && to.type != NA_IP6 && to.type != NA_MULTICAST6)
@@ -662,7 +662,8 @@ void Sys_SendPacket( int length, const void *data, netadr_t to ) {
 	memset(&addr, 0, sizeof(addr));
 	NetadrToSockadr( &to, (struct sockaddr *) &addr );
 
-	if( usingSocks && to.type == NA_IP ) {
+	if( usingSocks && to.type == NA_IP )
+    {
 		socksBuf[0] = 0;	// reserved
 		socksBuf[1] = 0;
 		socksBuf[2] = 0;	// fragment (not fragmented)
@@ -672,13 +673,15 @@ void Sys_SendPacket( int length, const void *data, netadr_t to ) {
 		memcpy( &socksBuf[10], data, length );
 		ret = sendto( ip_socket, socksBuf, length+10, 0, &socksRelayAddr, sizeof(socksRelayAddr) );
 	}
-	else {
+	else
+    {
 		if(addr.ss_family == AF_INET)
 			ret = sendto( ip_socket, data, length, 0, (struct sockaddr *) &addr, sizeof(struct sockaddr_in) );
 		else if(addr.ss_family == AF_INET6)
 			ret = sendto( ip6_socket, data, length, 0, (struct sockaddr *) &addr, sizeof(struct sockaddr_in6) );
 	}
-	if( ret == SOCKET_ERROR ) {
+	if( ret == SOCKET_ERROR )
+    {
 		int err = socketError;
 
 		// wouldblock is silent
@@ -1484,51 +1487,57 @@ static qboolean NET_GetCvars( void ) {
 }
 
 
-/*
-====================
-NET_Config
-====================
-*/
-void NET_Config( qboolean enableNetworking ) {
-	qboolean	modified;
+
+void NET_Config( qboolean enableNetworking )
+{
 	qboolean	stop;
 	qboolean	start;
 
 	// get any latched changes to cvars
-	modified = NET_GetCvars();
+	qboolean modified = NET_GetCvars();
 
-	if( !net_enabled->integer ) {
+	if( !net_enabled->integer )
+    {
 		enableNetworking = 0;
 	}
 
 	// if enable state is the same and no cvars were modified, we have nothing to do
-	if( enableNetworking == networkingEnabled && !modified ) {
+	if( (enableNetworking == networkingEnabled) && (modified == qfalse) )
+    {
 		return;
 	}
 
-	if( enableNetworking == networkingEnabled ) {
-		if( enableNetworking ) {
+	if( enableNetworking == networkingEnabled )
+    {
+		
+        if( enableNetworking )
+        {
 			stop = qtrue;
 			start = qtrue;
 		}
-		else {
+		else
+        {
 			stop = qfalse;
 			start = qfalse;
 		}
 	}
-	else {
-		if( enableNetworking ) {
+	else
+    {
+		if( enableNetworking )
+        {
 			stop = qfalse;
 			start = qtrue;
 		}
-		else {
+		else
+        {
 			stop = qtrue;
 			start = qfalse;
 		}
 		networkingEnabled = enableNetworking;
 	}
 
-	if( stop ) {
+	if( stop )
+    {
 		if ( ip_socket != INVALID_SOCKET ) {
 			closesocket( ip_socket );
 			ip_socket = INVALID_SOCKET;
@@ -1565,16 +1574,10 @@ void NET_Config( qboolean enableNetworking ) {
 }
 
 
-/*
-====================
-NET_Init
-====================
-*/
-void NET_Init( void ) {
+void NET_Init( void )
+{
 #ifdef _WIN32
-	int		r;
-
-	r = WSAStartup( MAKEWORD( 1, 1 ), &winsockdata );
+	int	r = WSAStartup( MAKEWORD( 1, 1 ), &winsockdata );
 	if( r ) {
 		Com_Printf( "WARNING: Winsock initialization failed, returned %d\n", r );
 		return;
@@ -1590,12 +1593,9 @@ void NET_Init( void ) {
 }
 
 
-/*
-====================
-NET_Shutdown
-====================
-*/
-void NET_Shutdown( void ) {
+
+void NET_Shutdown( void )
+{
 	if ( !networkingEnabled ) {
 		return;
 	}
@@ -1619,7 +1619,7 @@ Called from NET_Sleep which uses select() to determine which sockets have seen a
 void NET_Event(fd_set *fdr)
 {
 	byte bufData[MAX_MSGLEN + 1];
-	netadr_t from;
+	netadr_t from = {0};
 	msg_t netmsg;
 	
 	while(1)

@@ -141,14 +141,8 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 		poly->numVerts = numVerts;
 		poly->verts = &backEndData->polyVerts[r_numpolyverts];
 		
-		Com_Memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
+		memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
 
-		if ( glConfig.hardwareType == GLHW_RAGEPRO ) {
-			poly->verts->modulate[0] = 255;
-			poly->verts->modulate[1] = 255;
-			poly->verts->modulate[2] = 255;
-			poly->verts->modulate[3] = 255;
-		}
 		// done.
 		r_numpolys++;
 		r_numpolyverts += numVerts;
@@ -241,10 +235,7 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	if ( intensity <= 0 ) {
 		return;
 	}
-	// these cards don't have the correct blend mode
-	if ( glConfig.hardwareType == GLHW_RIVA128 || glConfig.hardwareType == GLHW_PERMEDIA2 ) {
-		return;
-	}
+
 	dl = &backEndData->dlights[r_numdlights++];
 	VectorCopy (org, dl->origin);
 	dl->radius = intensity;
@@ -287,24 +278,18 @@ to handle mirrors,
 */
 void RE_RenderScene( const refdef_t *fd ) {
 	viewParms_t		parms;
-	int				startTime;
 
 	if ( !tr.registered ) {
 		return;
 	}
-	GLimp_LogComment( "====== RE_RenderScene =====\n" );
+	qboolean	customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
+	int	startTime = ri.Milliseconds();
 
-	if ( r_norefresh->integer ) {
-		return;
-	}
-
-	startTime = ri.Milliseconds();
-
-	if (!tr.world && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
+	if (!tr.world && customscrn ) {
 		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
 	}
 
-	Com_Memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
+	memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
 
 	tr.refdef.x = fd->x;
 	tr.refdef.y = fd->y;
@@ -324,7 +309,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 	// copy the areamask data over and note if it has changed, which
 	// will force a reset of the visible leafs even if the view hasn't moved
 	tr.refdef.areamaskModified = qfalse;
-	if ( ! (tr.refdef.rdflags & RDF_NOWORLDMODEL) ) {
+	if ( customscrn) {
 		int		areaDiff;
 		int		i;
 
@@ -344,7 +329,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	// derived info
 
-	tr.refdef.floatTime = tr.refdef.time * 0.001f;
+	tr.refdef.floatTime = tr.refdef.time * 0.001;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
 	tr.refdef.drawSurfs = backEndData->drawSurfs;
@@ -361,8 +346,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 	// turn off dynamic lighting globally by clearing all the
 	// dlights if it needs to be disabled or if vertex lighting is enabled
 	if ( r_dynamiclight->integer == 0 ||
-		 r_vertexLight->integer == 1 ||
-		 glConfig.hardwareType == GLHW_PERMEDIA2 ) {
+		 r_vertexLight->integer == 1 ) {
 		tr.refdef.num_dlights = 0;
 	}
 
@@ -380,7 +364,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 	// The refdef takes 0-at-the-top y coordinates, so
 	// convert to GL's 0-at-the-bottom space
 	//
-	Com_Memset( &parms, 0, sizeof( parms ) );
+	memset( &parms, 0, sizeof( parms ) );
 	parms.viewportX = tr.refdef.x;
 	parms.viewportY = glConfig.vidHeight - ( tr.refdef.y + tr.refdef.height );
 	parms.viewportWidth = tr.refdef.width;
@@ -389,8 +373,34 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	parms.fovX = tr.refdef.fov_x;
 	parms.fovY = tr.refdef.fov_y;
+
+	// leilei - widescreen
+	// recalculate fov according to widescreen parameters
+	if (customscrn) // don't affect interface refdefs
+	{
+		// figure out our zoom or changed fov magnitiude from cg_fov and cg_zoomfov
+		//float zoomfov = tr.refdef.fov_x / 90;
+		// find aspect to immediately match our vidwidth for perfect match with resized screens...
+		//float erspact = tr.refdef.width / tr.refdef.height;
+		//float aspact = glConfig.vidWidth / glConfig.vidHeight;
+
 	
-	parms.stereoFrame = tr.refdef.stereoFrame;
+		// try not to recalculate fov of ui and hud elements
+		//if (((tr.refdef.fov_x /  tr.refdef.fov_y) > 1.3) && (tr.refdef.width > 320) && (tr.refdef.height > 240))
+		//if (((tr.refdef.fov_x /  tr.refdef.fov_y) > 1.3) && (tr.refdef.width > (320 * refdefscalex)) && (tr.refdef.height > (240 * refdefscaley)))
+		float x_div_y = tr.refdef.fov_x / tr.refdef.fov_y;
+
+		if ((x_div_y > 1.3) && (tr.refdef.width / tr.refdef.height == glConfig.vidWidth / glConfig.vidHeight))
+		{
+			// undo vert-
+			parms.fovY *= x_div_y * (73.739792 / 90.0);
+			
+			// recalculate the fov
+			parms.fovX = atan( tan(parms.fovY * (M_PI / 360.0f)) * glConfig.vidWidth / glConfig.vidHeight ) * (360.0f / M_PI);
+			parms.fovY = atan( tan(parms.fovX * (M_PI / 360.0f)) * glConfig.vidHeight / glConfig.vidWidth ) * (360.0f / M_PI);
+		}
+	}
+	// leilei - end
 
 	VectorCopy( fd->vieworg, parms.or.origin );
 	VectorCopy( fd->viewaxis[0], parms.or.axis[0] );

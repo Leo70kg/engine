@@ -134,7 +134,7 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 	float	totalFactor;
 
 	if ( ent->e.renderfx & RF_LIGHTING_ORIGIN ) {
-		// seperate lightOrigins are needed so an object that is
+		// separate lightOrigins are needed so an object that is
 		// sinking into the ground can still be lit, and so
 		// multi-part models can be lit identically
 		VectorCopy( ent->e.lightingOrigin, lightOrigin );
@@ -151,7 +151,7 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 		frac[i] = v - pos[i];
 		if ( pos[i] < 0 ) {
 			pos[i] = 0;
-		} else if ( pos[i] >= tr.world->lightGridBounds[i] - 1 ) {
+		} else if ( pos[i] > tr.world->lightGridBounds[i] - 1 ) {
 			pos[i] = tr.world->lightGridBounds[i] - 1;
 		}
 	}
@@ -182,6 +182,9 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 		data = gridData;
 		for ( j = 0 ; j < 3 ; j++ ) {
 			if ( i & (1<<j) ) {
+				if ( pos[j] + 1 > tr.world->lightGridBounds[j] - 1 ) {
+					break; // ignore values outside lightgrid
+				}
 				factor *= frac[j];
 				data += gridStep[j];
 			} else {
@@ -189,6 +192,9 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 			}
 		}
 
+		if ( j != 3 ) {
+			continue;
+		}
 		if ( !(data[0]+data[1]+data[2]) ) {
 			continue;	// ignore samples in walls
 		}
@@ -298,7 +304,7 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	// trace a sample point down to find ambient light
 	//
 	if ( ent->e.renderfx & RF_LIGHTING_ORIGIN ) {
-		// seperate lightOrigins are needed so an object that is
+		// separate lightOrigins are needed so an object that is
 		// sinking into the ground can still be lit, and so
 		// multi-part models can be lit identically
 		VectorCopy( ent->e.lightingOrigin, lightOrigin );
@@ -359,10 +365,12 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// save out the byte packet version
-	((byte *)&ent->ambientLightInt)[0] = ri.ftol(ent->ambientLight[0]);
-	((byte *)&ent->ambientLightInt)[1] = ri.ftol(ent->ambientLight[1]);
-	((byte *)&ent->ambientLightInt)[2] = ri.ftol(ent->ambientLight[2]);
-	((byte *)&ent->ambientLightInt)[3] = 0xff;
+    union uInt4bytes cvt;
+    cvt.uc[0] = ((unsigned char)(ent->ambientLight[0]));
+    cvt.uc[1] = ((unsigned char)(ent->ambientLight[1]));
+    cvt.uc[2] = ((unsigned char)(ent->ambientLight[2]));
+    cvt.uc[3] = 255;
+    ent->ambientLightInt = cvt.i;
 	
 	// transform the direction to local space
 	VectorNormalize( lightDir );
@@ -383,7 +391,7 @@ int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, ve
 	if ( tr.world->lightGridData == NULL )
 	  return qfalse;
 
-	Com_Memset(&ent, 0, sizeof(ent));
+	memset(&ent, 0, sizeof(ent));
 	VectorCopy( point, ent.e.origin );
 	R_SetupEntityLightingGrid( &ent );
 	VectorCopy(ent.ambientLight, ambientLight);

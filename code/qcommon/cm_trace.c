@@ -69,7 +69,8 @@ void TransposeMatrix(/*const*/ vec3_t matrix[3], vec3_t transpose[3]) { // FIXME
 CreateRotationMatrix
 ================
 */
-void CreateRotationMatrix(const vec3_t angles, vec3_t matrix[3]) {
+void CreateRotationMatrix(const vec3_t angles, vec3_t matrix[3])
+{
 	AngleVectors(angles, matrix[0], matrix[1], matrix[2]);
 	VectorInverse(matrix[1]);
 }
@@ -1159,7 +1160,7 @@ void CM_Trace( trace_t *results, const vec3_t start, const vec3_t end, vec3_t mi
 	c_traces++;				// for statistics, may be zeroed
 
 	// fill in a default trace
-	Com_Memset( &tw, 0, sizeof(tw) );
+	memset( &tw, 0, sizeof(tw) );
 	tw.trace.fraction = 1;	// assume it goes the entire distance until shown otherwise
 	VectorCopy(origin, tw.modelOrigin);
 

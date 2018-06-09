@@ -32,7 +32,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 #endif
 
-//#define	PRE_RELEASE_DEMO
 
 //============================================================================
 
@@ -98,10 +97,8 @@ int		MSG_LookaheadByte (msg_t *msg);
 void MSG_WriteDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *to );
 void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *to );
 
-void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entityState_s *to
-						   , qboolean force );
-void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to, 
-						 int number );
+void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entityState_s *to, qboolean force );
+void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to, int number );
 
 void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to );
 void MSG_ReadDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to );
@@ -159,8 +156,8 @@ typedef enum {
 typedef struct {
 	netadrtype_t	type;
 
-	byte	ip[4];
-	byte	ip6[16];
+	unsigned char	ip[4];
+	unsigned char	ip6[16];
 
 	unsigned short	port;
 	unsigned long	scope_id;	// Needed for IPv6 link-local addresses
@@ -181,7 +178,7 @@ qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b);
 qboolean	NET_IsLocalAddress (netadr_t adr);
 const char	*NET_AdrToString (netadr_t a);
 const char	*NET_AdrToStringwPort (netadr_t a);
-int		NET_StringToAdr ( const char *s, netadr_t *a, netadrtype_t family);
+int		    NET_StringToAdr ( const char *s, netadr_t *a, netadrtype_t family);
 qboolean	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, msg_t *net_message);
 void		NET_JoinMulticast6(void);
 void		NET_LeaveMulticast6(void);
@@ -193,7 +190,7 @@ void		NET_Sleep(int msec);
 
 #define MAX_DOWNLOAD_WINDOW		48	// ACK window of 48 download chunks. Cannot set this higher, or clients
 						// will overflow the reliable commands buffer
-#define MAX_DOWNLOAD_BLKSIZE		1024	// 896 byte block chunks
+#define MAX_DOWNLOAD_BLKSIZE		2048	// 896 byte block chunks
 
 #define NETCHAN_GENCHECKSUM(challenge, sequence) ((challenge) ^ ((sequence) * (challenge)))
 
@@ -216,14 +213,14 @@ typedef struct {
 	// incoming fragment assembly buffer
 	int			fragmentSequence;
 	int			fragmentLength;	
-	byte		fragmentBuffer[MAX_MSGLEN];
+	unsigned char fragmentBuffer[MAX_MSGLEN];
 
 	// outgoing fragment buffer
 	// we need to space out the sending of large fragmented messages
 	qboolean	unsentFragments;
 	int			unsentFragmentStart;
 	int			unsentLength;
-	byte		unsentBuffer[MAX_MSGLEN];
+	unsigned char	unsentBuffer[MAX_MSGLEN];
 
 	int			challenge;
 	int		lastSentTime;
@@ -263,7 +260,7 @@ PROTOCOL
 
 // maintain a list of compatible protocols for demo playing
 // NOTE: that stuff only works with two digits protocols
-extern int demo_protocols[];
+extern const int demo_protocols[];
 
 #if !defined UPDATE_SERVER_NAME && !defined STANDALONE
 #define	UPDATE_SERVER_NAME	"update.quake3arena.com"
@@ -306,7 +303,8 @@ enum svc_ops_e {
 	svc_EOF,
 
 // new commands, supported only by ioquake3 protocol but not legacy
-	svc_voip,     // not wrapped in USE_VOIP, so this value is reserved.
+	svc_voipSpeex,     // not wrapped in USE_VOIP, so this value is reserved.
+	svc_voipOpus,      //
 };
 
 
@@ -322,7 +320,8 @@ enum clc_ops_e {
 	clc_EOF,
 
 // new commands, supported only by ioquake3 protocol but not legacy
-	clc_voip,   // not wrapped in USE_VOIP, so this value is reserved.
+	clc_voipSpeex,   // not wrapped in USE_VOIP, so this value is reserved.
+	clc_voipOpus,    //
 };
 
 /*
@@ -360,8 +359,7 @@ typedef enum {
 } sharedTraps_t;
 
 void	VM_Init( void );
-vm_t	*VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), 
-				   vmInterpret_t interpret );
+vm_t	*VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), vmInterpret_t interpret );
 // module should be bare: "cgame", not "cgame.dll" or "vm/cgame.qvm"
 
 void	VM_Free( vm_t *vm );
@@ -370,7 +368,7 @@ void	VM_Forced_Unload_Start(void);
 void	VM_Forced_Unload_Done(void);
 vm_t	*VM_Restart(vm_t *vm, qboolean unpure);
 
-intptr_t		QDECL VM_Call( vm_t *vm, int callNum, ... );
+intptr_t QDECL VM_Call( vm_t *vm, int callNum, ... );
 
 void	VM_Debug( int level );
 
@@ -568,6 +566,7 @@ char	*Cvar_InfoString_Big( int bit );
 // in their flags ( CVAR_USERINFO, CVAR_SERVERINFO, CVAR_SYSTEMINFO, etc )
 void	Cvar_InfoStringBuffer( int bit, char *buff, int buffsize );
 void Cvar_CheckRange( cvar_t *cv, float minVal, float maxVal, qboolean shouldBeIntegral );
+void Cvar_SetDescription( cvar_t *var, const char *var_description );
 
 void	Cvar_Restart(qboolean unsetVM);
 void	Cvar_Restart_f( void );
@@ -736,17 +735,14 @@ void FS_Rename( const char *from, const char *to );
 void FS_Remove( const char *osPath );
 void FS_HomeRemove( const char *homePath );
 
-void	FS_FilenameCompletion( const char *dir, const char *ext,
-		qboolean stripExt, void(*callback)(const char *s), qboolean allowNonPureFilesOnDisk );
+void	FS_FilenameCompletion( const char *dir, const char *ext, qboolean stripExt, void(*callback)(const char *s), qboolean allowNonPureFilesOnDisk );
 
 const char *FS_GetCurrentGameDir(void);
 qboolean FS_Which(const char *filename, void *searchPath);
 
 /*
 ==============================================================
-
 Edit fields and command line history/completion
-
 ==============================================================
 */
 
@@ -761,10 +757,9 @@ typedef struct {
 void Field_Clear( field_t *edit );
 void Field_AutoComplete( field_t *edit );
 void Field_CompleteKeyname( void );
-void Field_CompleteFilename( const char *dir,
-		const char *ext, qboolean stripExt, qboolean allowNonPureFilesOnDisk );
-void Field_CompleteCommand( char *cmd,
-		qboolean doCommands, qboolean doCvars );
+void Field_CompleteFilename( const char *dir, const char *ext, qboolean stripExt, qboolean allowNonPureFilesOnDisk );
+void Field_CompleteCommand( char *cmd, qboolean doCommands, qboolean doCvars );
+void Field_CompletePlayerName( const char **names, int count );
 
 /*
 ==============================================================
@@ -788,7 +783,10 @@ typedef enum
   CF_3DNOW_EXT  = 1 << 4,
   CF_SSE        = 1 << 5,
   CF_SSE2       = 1 << 6,
-  CF_ALTIVEC    = 1 << 7
+  CF_SSE3       = 1 << 7,
+  CF_SSE41       = 1 << 8,
+  CF_SSE42       = 1 << 9,
+  CF_ALTIVEC    = 1 << 10
 } cpuFeatures_t;
 
 // centralized and cleaned, that's the max string you can send to a Com_Printf / Com_DPrintf (above gets truncated)
@@ -801,7 +799,6 @@ typedef enum {
 	SE_KEY,			// evValue is a key code, evValue2 is the down flag
 	SE_CHAR,		// evValue is an ascii char
 	SE_MOUSE,		// evValue and evValue2 are relative signed x / y moves
-	SE_JOYSTICK_AXIS,	// evValue is an axis number and evValue2 is the current state (-127 to 127)
 	SE_CONSOLE		// evPtr is a char*
 } sysEventType_t;
 
@@ -843,6 +840,10 @@ void		Com_StartupVariable( const char *match );
 // checks for and removes command line "+set var arg" constructs
 // if match is NULL, all set commands will be executed, otherwise
 // only a set with the exact name.  Only used during startup.
+
+qboolean		Com_PlayerNameToFieldString( char *str, int length, const char *name );
+qboolean		Com_FieldStringToPlayerName( char *name, int length, const char *rawname );
+int QDECL	Com_strCompare( const void *a, const void *b );
 
 
 extern	cvar_t	*com_developer;
@@ -986,8 +987,6 @@ void CL_CharEvent( int key );
 
 void CL_MouseEvent( int dx, int dy, int time );
 
-void CL_JoystickEvent( int axis, int value, int time );
-
 void CL_PacketEvent( netadr_t from, msg_t *msg );
 
 void CL_ConsolePrint( char *text );
@@ -1032,8 +1031,7 @@ void S_ClearSoundBuffer( void );
 
 void SCR_DebugGraph (float value);	// FIXME: move logging to common?
 
-// AVI files have the start of pixel lines 4 byte-aligned
-#define AVI_LINE_PADDING 4
+
 
 //
 // server interface
@@ -1052,6 +1050,9 @@ int SV_SendQueuedPackets(void);
 qboolean UI_GameCommand( void );
 qboolean UI_usesUniqueCDKey(void);
 
+
+
+
 /*
 ==============================================================
 
@@ -1059,8 +1060,6 @@ NON-PORTABLE SYSTEM SERVICES
 
 ==============================================================
 */
-
-#define MAX_JOYSTICK_AXIS 16
 
 void	Sys_Init (void);
 

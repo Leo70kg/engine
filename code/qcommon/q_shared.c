@@ -23,41 +23,32 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.c -- stateless support routines that are included in each code dll
 #include "q_shared.h"
 
-float Com_Clamp( float min, float max, float value ) {
+float Com_Clamp( float min, float max, float value )
+{
 	if ( value < min ) {
 		return min;
 	}
-	if ( value > max ) {
+	if (value > max) {
 		return max;
 	}
 	return value;
 }
 
 
-/*
-============
-COM_SkipPath
-============
-*/
-char *COM_SkipPath (char *pathname)
+
+char *COM_SkipPath(char *pathname)
 {
-	char	*last;
-	
-	last = pathname;
+	char *last = pathname;
 	while (*pathname)
 	{
-		if (*pathname=='/')
+		if (*pathname == '/')
 			last = pathname+1;
 		pathname++;
 	}
 	return last;
 }
 
-/*
-============
-COM_GetExtension
-============
-*/
+
 const char *COM_GetExtension( const char *name )
 {
 	const char *dot = strrchr(name, '.'), *slash;
@@ -68,16 +59,13 @@ const char *COM_GetExtension( const char *name )
 }
 
 
-/*
-============
-COM_StripExtension
-============
-*/
-void COM_StripExtension( const char *in, char *out, int destsize )
-{
-	const char *dot = strrchr(in, '.'), *slash;
 
-	if (dot && (!(slash = strrchr(in, '/')) || slash < dot))
+void COM_StripExtension(const char *in, char *out, int destsize)
+{
+	const char *dot = strrchr(in, '.');
+    const char *slash = strrchr(in, '/');
+
+	if ((dot != NULL) && (!(slash ) || slash < dot))
 		destsize = (destsize < dot-in+1 ? destsize : dot-in+1);
 
 	if ( in == out && destsize > 1 )
@@ -85,6 +73,8 @@ void COM_StripExtension( const char *in, char *out, int destsize )
 	else
 		Q_strncpyz(out, in, destsize);
 }
+
+
 
 /*
 ============
@@ -95,10 +85,8 @@ string compare the end of the strings and return qtrue if strings match
 */
 qboolean COM_CompareExtension(const char *in, const char *ext)
 {
-	int inlen, extlen;
-	
-	inlen = strlen(in);
-	extlen = strlen(ext);
+	int inlen = strlen(in);
+	int extlen = strlen(ext);
 	
 	if(extlen <= inlen)
 	{
@@ -110,6 +98,7 @@ qboolean COM_CompareExtension(const char *in, const char *ext)
 	
 	return qfalse;
 }
+
 
 /*
 ==================
@@ -128,46 +117,19 @@ void COM_DefaultExtension( char *path, int maxSize, const char *extension )
 		Q_strcat(path, maxSize, extension);
 }
 
-/*
-============================================================================
 
-					BYTE ORDER FUNCTIONS
-
-============================================================================
-*/
-/*
-// can't just use function pointers, or dll linkage can
-// mess up when qcommon is included in multiple places
-static short	(*_BigShort) (short l);
-static short	(*_LittleShort) (short l);
-static int		(*_BigLong) (int l);
-static int		(*_LittleLong) (int l);
-static qint64	(*_BigLong64) (qint64 l);
-static qint64	(*_LittleLong64) (qint64 l);
-static float	(*_BigFloat) (const float *l);
-static float	(*_LittleFloat) (const float *l);
-
-short	BigShort(short l){return _BigShort(l);}
-short	LittleShort(short l) {return _LittleShort(l);}
-int		BigLong (int l) {return _BigLong(l);}
-int		LittleLong (int l) {return _LittleLong(l);}
-qint64 	BigLong64 (qint64 l) {return _BigLong64(l);}
-qint64 	LittleLong64 (qint64 l) {return _LittleLong64(l);}
-float	BigFloat (const float *l) {return _BigFloat(l);}
-float	LittleFloat (const float *l) {return _LittleFloat(l);}
-*/
-
-void CopyShortSwap(void *dest, void *src)
+ID_INLINE void CopyShortSwap(void *dest, void *src)
 {
-	byte *to = dest, *from = src;
+	unsigned char *to = dest, *from = src;
 
 	to[0] = from[1];
 	to[1] = from[0];
 }
 
-void CopyLongSwap(void *dest, void *src)
+
+ID_INLINE void CopyLongSwap(void *dest, void *src)
 {
-	byte *to = dest, *from = src;
+	unsigned char *to = dest, *from = src;
 
 	to[0] = from[3];
 	to[1] = from[2];
@@ -175,39 +137,41 @@ void CopyLongSwap(void *dest, void *src)
 	to[3] = from[0];
 }
 
-short   ShortSwap (short l)
+ID_INLINE short ShortSwap(short int l)
 {
-	byte    b1,b2;
-
-	b1 = l&255;
-	b2 = (l>>8)&255;
+	unsigned char b1 = l & 0xFF;
+    unsigned char b2 = (l>>8) & 0xFF;
 
 	return (b1<<8) + b2;
 }
 
-short	ShortNoSwap (short l)
+
+ID_INLINE short ShortNoSwap(short l)
 {
 	return l;
 }
 
-int    LongSwap (int l)
+
+ID_INLINE int LongSwap(int l)
 {
-	byte    b1,b2,b3,b4;
+	unsigned char b1,b2,b3,b4;
 
-	b1 = l&255;
-	b2 = (l>>8)&255;
-	b3 = (l>>16)&255;
-	b4 = (l>>24)&255;
+	b1 = l & 0xff;
+	b2 = (l>>8) & 0xff;
+	b3 = (l>>16) & 0xff;
+	b4 = (l>>24) & 0xff;
 
-	return ((int)b1<<24) + ((int)b2<<16) + ((int)b3<<8) + b4;
+	return ((b1<<24) | (b2<<16) | (b3<<8) | b4 );
 }
 
-int	LongNoSwap (int l)
+
+ID_INLINE int LongNoSwap (int l)
 {
 	return l;
 }
 
-qint64 Long64Swap (qint64 ll)
+
+qint64 Long64Swap(qint64 ll)
 {
 	qint64	result;
 
@@ -223,12 +187,15 @@ qint64 Long64Swap (qint64 ll)
 	return result;
 }
 
+
 qint64 Long64NoSwap (qint64 ll)
 {
 	return ll;
 }
 
-float FloatSwap (const float *f) {
+
+float FloatSwap (const float *f)
+{
 	floatint_t out;
 
 	out.f = *f;
@@ -237,47 +204,12 @@ float FloatSwap (const float *f) {
 	return out.f;
 }
 
+
 float FloatNoSwap (const float *f)
 {
 	return *f;
 }
 
-/*
-================
-Swap_Init
-================
-*/
-/*
-void Swap_Init (void)
-{
-	byte	swaptest[2] = {1,0};
-
-// set the byte swapping variables in a portable manner	
-	if ( *(short *)swaptest == 1)
-	{
-		_BigShort = ShortSwap;
-		_LittleShort = ShortNoSwap;
-		_BigLong = LongSwap;
-		_LittleLong = LongNoSwap;
-		_BigLong64 = Long64Swap;
-		_LittleLong64 = Long64NoSwap;
-		_BigFloat = FloatSwap;
-		_LittleFloat = FloatNoSwap;
-	}
-	else
-	{
-		_BigShort = ShortNoSwap;
-		_LittleShort = ShortSwap;
-		_BigLong = LongNoSwap;
-		_LittleLong = LongSwap;
-		_BigLong64 = Long64NoSwap;
-		_LittleLong64 = Long64Swap;
-		_BigFloat = FloatNoSwap;
-		_LittleFloat = FloatSwap;
-	}
-
-}
-*/
 
 /*
 ============================================================================
@@ -367,13 +299,16 @@ static char *SkipWhitespace( char *data, qboolean *hasNewLines ) {
 	return data;
 }
 
-int COM_Compress( char *data_p ) {
-	char *in, *out;
+int COM_Compress( char *data_p )
+{
 	int c;
 	qboolean newline = qfalse, whitespace = qfalse;
 
-	in = out = data_p;
-	if (in) {
+	char* in = data_p;
+    char* out = data_p;
+
+	if (in)
+    {
 		while ((c = *in) != 0) {
 
 			// try for glsl escape sequence
@@ -443,14 +378,13 @@ int COM_Compress( char *data_p ) {
 	return out - data_p;
 }
 
-char *COM_ParseExt( char **data_p, qboolean allowLineBreaks )
-{
-	int c = 0, len;
-	qboolean hasNewLines = qfalse;
-	char *data;
 
-	data = *data_p;
-	len = 0;
+char *COM_ParseExt(char **data_p, qboolean allowLineBreaks)
+{
+	int c = 0, len = 0;
+	qboolean hasNewLines = qfalse;
+	char *data = *data_p;
+
 	com_token[0] = 0;
 	com_tokenline = 0;
 
@@ -482,20 +416,22 @@ char *COM_ParseExt( char **data_p, qboolean allowLineBreaks )
 		if ( c == '/' && data[1] == '/' && data[2]=='G' && data[3]=='L' && data[4]=='S' && data[5]=='L' )
 		{
 			data += 6;
-			c = *data; if (c==0 || *data == '\n') break;
+			c = *data;
+            if (c==0 || *data == '\n')
+                break;
 		}
 
 		// skip double slash comments
 		if ( c == '/' && data[1] == '/' )
 		{
 			data += 2;
-			while (*data && *data != '\n') {
+			while (*data && *data != '\n')
+            {
 				data++;
 			}
 		}
-		// skip /* */ comments
 		else if ( c=='/' && data[1] == '*' ) 
-		{
+		{   // skip /* */ comments
 			data += 2;
 			while ( *data && ( *data != '*' || data[1] != '/' ) ) 
 			{
@@ -567,13 +503,11 @@ char *COM_ParseExt( char **data_p, qboolean allowLineBreaks )
 COM_MatchToken
 ==================
 */
-void COM_MatchToken( char **buf_p, char *match ) {
-	char	*token;
-
-	token = COM_Parse( buf_p );
-	if ( strcmp( token, match ) ) {
+void COM_MatchToken( char **buf_p, char *match )
+{
+	char* token = COM_Parse( buf_p );
+	if ( strcmp( token, match ) )
 		Com_Error( ERR_DROP, "MatchToken: %s != %s", token, match );
-	}
 }
 
 
@@ -586,16 +520,19 @@ Skips until a matching close brace is found.
 Internal brace depths are properly skipped.
 =================
 */
-qboolean SkipBracedSection (char **program, int depth) {
-	char			*token;
-
-	do {
-		token = COM_ParseExt( program, qtrue );
-		if( token[1] == 0 ) {
-			if( token[0] == '{' ) {
+qboolean SkipBracedSection (char **program, int depth)
+{
+	do
+    {
+		char* token = COM_ParseExt( program, qtrue );
+		if( token[1] == 0 )
+        {
+			if( token[0] == '{' )
+            {
 				depth++;
 			}
-			else if( token[0] == '}' ) {
+			else if( token[0] == '}' )
+            {
 				depth--;
 			}
 		}
@@ -614,6 +551,10 @@ void SkipRestOfLine ( char **data ) {
 	int		c;
 
 	p = *data;
+
+	if ( !*p )
+		return;
+
 	while ( (c = *p++) != 0 ) {
 		if ( c == '\n' ) {
 			com_lines++;
@@ -702,6 +643,7 @@ int Com_HexStrToInt( const char *str )
 	return -1;
 }
 
+
 /*
 ============================================================================
 
@@ -737,7 +679,8 @@ int Q_isalpha( int c )
 		return ( 1 );
 	return ( 0 );
 }
-
+ 
+#ifndef Q3_VM
 qboolean Q_isanumber( const char *s )
 {
 	char *p;
@@ -750,7 +693,7 @@ qboolean Q_isanumber( const char *s )
 
 	return *p == '\0';
 }
-
+#endif
 qboolean Q_isintegral( float f )
 {
 	return (int)f == f;
@@ -775,11 +718,8 @@ int Q_vsnprintf(char *str, size_t size, const char *format, va_list ap)
 	if(retval < 0 || retval == size)
 	{
 		// Microsoft doesn't adhere to the C99 standard of vsnprintf,
-		// which states that the return value must be the number of
-		// bytes written if the output string had sufficient length.
-		//
-		// Obviously we cannot determine that value from Microsoft's
-		// implementation, so we have no choice but to return size.
+		// which states that the return value must be the number of bytes written if the output string had sufficient length.
+		// Obviously we cannot determine that value from Microsoft's implementation, so we have no choice but to return size.
 		
 		str[size - 1] = '\0';
 		return size;
@@ -790,67 +730,66 @@ int Q_vsnprintf(char *str, size_t size, const char *format, va_list ap)
 #endif
 
 /*
-=============
-Q_strncpyz
- 
-Safe strncpy that ensures a trailing zero
-=============
-*/
-void Q_strncpyz( char *dest, const char *src, int destsize ) {
-  if ( !dest ) {
-    Com_Error( ERR_FATAL, "Q_strncpyz: NULL dest" );
-  }
-	if ( !src ) {
+ * Safe strncpy that ensures a trailing zero
+ */
+ID_INLINE void Q_strncpyz( char *dest, const char *src, int destsize )
+{
+/*    
+    if( !dest )
+        Com_Error( ERR_FATAL, "Q_strncpyz: NULL dest" );
+
+	if( !src )
 		Com_Error( ERR_FATAL, "Q_strncpyz: NULL src" );
-	}
-	if ( destsize < 1 ) {
+
+	if ( destsize < 1 )
 		Com_Error(ERR_FATAL,"Q_strncpyz: destsize < 1" ); 
-	}
-
-	strncpy( dest, src, destsize-1 );
-  dest[destsize-1] = 0;
+*/
+	strncpy(dest, src, destsize-1);
+    dest[destsize-1] = 0;
 }
-                 
-int Q_stricmpn (const char *s1, const char *s2, int n) {
-	int		c1, c2;
 
-        if ( s1 == NULL ) {
-           if ( s2 == NULL )
+
+int Q_stricmpn(const char *s1, const char *s2, int n)
+{
+	int	c1, c2;
+
+    if( s1 == NULL )
+    {
+        if( s2 == NULL )
              return 0;
-           else
+        else
              return -1;
-        }
-        else if ( s2==NULL )
-          return 1;
+    }
+    else if ( s2 == NULL )
+    {
+	    return 1;
+    }
 
-
-	
-	do {
+    do
+	{
 		c1 = *s1++;
 		c2 = *s2++;
 
-		if (!n--) {
+		if (!n--)
 			return 0;		// strings are equal until end point
-		}
 		
-		if (c1 != c2) {
-			if (c1 >= 'a' && c1 <= 'z') {
-				c1 -= ('a' - 'A');
-			}
-			if (c2 >= 'a' && c2 <= 'z') {
-				c2 -= ('a' - 'A');
-			}
-			if (c1 != c2) {
-				return c1 < c2 ? -1 : 1;
-			}
-		}
-	} while (c1);
-	
-	return 0;		// strings are equal
+		if(c1 >= 'a' && c1 <= 'z')
+			c1 -= ('a' - 'A');
+			
+		if(c2 >= 'a' && c2 <= 'z')
+			c2 -= ('a' - 'A');
+		
+		if(c1 != c2) 
+			return c1 < c2 ? -1 : 1;
+
+   } while (c1);
+
+    return 0;		// strings are equal
 }
 
-int Q_strncmp (const char *s1, const char *s2, int n) {
-	int		c1, c2;
+int Q_strncmp(const char *s1, const char *s2, int n)
+{
+	int	c1, c2;
 	
 	do {
 		c1 = *s1++;
@@ -868,15 +807,23 @@ int Q_strncmp (const char *s1, const char *s2, int n) {
 	return 0;		// strings are equal
 }
 
-int Q_stricmp (const char *s1, const char *s2) {
+
+ID_INLINE int Q_stricmp(const char *s1, const char *s2)
+{
 	return (s1 && s2) ? Q_stricmpn (s1, s2, 99999) : -1;
+/*
+    #ifdef _MSC_VER
+        return stricmp(s1, s2);
+    #else
+        return strcasecmp(s1, s2);
+    #endif
+*/	
 }
 
 
-char *Q_strlwr( char *s1 ) {
-    char	*s;
-
-    s = s1;
+char *Q_strlwr( char *s1 )
+{
+    char *s = s1;
 	while ( *s ) {
 		*s = tolower(*s);
 		s++;
@@ -885,10 +832,9 @@ char *Q_strlwr( char *s1 ) {
 }
 
 char *Q_strupr( char *s1 ) {
-    char	*s;
-
-    s = s1;
-	while ( *s ) {
+    char* s = s1;
+	while( *s )
+    {
 		*s = toupper(*s);
 		s++;
 	}
@@ -897,19 +843,18 @@ char *Q_strupr( char *s1 ) {
 
 
 // never goes past bounds or leaves without a terminating 0
-void Q_strcat( char *dest, int size, const char *src ) {
-	int		l1;
-
-	l1 = strlen( dest );
-	if ( l1 >= size ) {
+void Q_strcat( char *dest, int size, const char *src )
+{
+	int	l1 = strlen( dest );
+	if( l1 >= size )
 		Com_Error( ERR_FATAL, "Q_strcat: already overflowed" );
-	}
+
 	Q_strncpyz( dest + l1, src, size - l1 );
 }
 
 /*
-* Find the first occurrence of find in s.
-*/
+ * Find the first occurrence of find in s.
+ */
 const char *Q_stristr( const char *s, const char *find)
 {
   char c, sc;
@@ -940,18 +885,18 @@ const char *Q_stristr( const char *s, const char *find)
 }
 
 
-int Q_PrintStrlen( const char *string ) {
-	int			len;
-	const char	*p;
+int Q_PrintStrlen( const char *string )
+{
+	int	len = 0;
+	const char *p = string;
 
-	if( !string ) {
+	if( !p )
 		return 0;
-	}
 
-	len = 0;
-	p = string;
-	while( *p ) {
-		if( Q_IsColorString( p ) ) {
+	while( *p )
+    {
+		if( Q_IsColorString( p ) )
+        {
 			p += 2;
 			continue;
 		}
@@ -963,18 +908,20 @@ int Q_PrintStrlen( const char *string ) {
 }
 
 
-char *Q_CleanStr( char *string ) {
-	char*	d;
-	char*	s;
+char *Q_CleanStr( char *string )
+{
+	char* d = string;
+	char* s = string;
 	int		c;
 
-	s = string;
-	d = string;
-	while ((c = *s) != 0 ) {
-		if ( Q_IsColorString( s ) ) {
+	while ((c = *s) != 0 )
+    {
+		if ( Q_IsColorString( s ) )
+        {
 			s++;
 		}		
-		else if ( c >= 0x20 && c <= 0x7E ) {
+		else if ( c >= 0x20 && c <= 0x7E )
+        {
 			*d++ = c;
 		}
 		s++;
@@ -986,9 +933,9 @@ char *Q_CleanStr( char *string ) {
 
 int Q_CountChar(const char *string, char tocount)
 {
-	int count;
+	int count = 0;
 	
-	for(count = 0; *string; string++)
+	for( ; *string; string++)
 	{
 		if(*string == tocount)
 			count++;
@@ -997,12 +944,12 @@ int Q_CountChar(const char *string, char tocount)
 	return count;
 }
 
+
 int QDECL Com_sprintf(char *dest, int size, const char *fmt, ...)
 {
-	int		len;
-	va_list		argptr;
-
-	va_start (argptr,fmt);
+	va_list	argptr;
+	int len;
+	va_start (argptr, fmt);
 	len = Q_vsnprintf(dest, size, fmt, argptr);
 	va_end (argptr);
 
@@ -1013,25 +960,20 @@ int QDECL Com_sprintf(char *dest, int size, const char *fmt, ...)
 }
 
 /*
-============
-va
-
-does a varargs printf into a temp buffer, so I don't need to have
-varargs versions of all text functions.
-============
-*/
-char	* QDECL va( char *format, ... ) {
+ * does a varargs printf into a temp buffer, so I don't need to have varargs versions of all text functions.
+ */
+char* QDECL va(char *format, ... )
+{
 	va_list		argptr;
 	static char string[2][32000]; // in case va is called by nested functions
 	static int	index = 0;
-	char		*buf;
-
-	buf = string[index & 1];
+    
+	char *buf = string[index & 1];
 	index++;
 
-	va_start (argptr, format);
-	Q_vsnprintf (buf, sizeof(*string), format, argptr);
-	va_end (argptr);
+	va_start(argptr, format);
+	Q_vsnprintf(buf, sizeof(*string), format, argptr);
+	va_end(argptr);
 
 	return buf;
 }
@@ -1266,7 +1208,7 @@ void Info_RemoveKey_Big( char *s, const char *key ) {
 
 		if (!strcmp (key, pkey) )
 		{
-			strcpy (start, s);	// remove this part
+			memmove(start, s, strlen(s) + 1); // remove this part
 			return;
 		}
 

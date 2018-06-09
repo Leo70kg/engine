@@ -94,7 +94,7 @@ void ExitLevel( void );
 BotAI_Print
 ==================
 */
-void QDECL BotAI_Print(int type, char *fmt, ...) {
+void QDECL BotAI_Print(int type, const char *fmt, ...) {
 	char str[2048];
 	va_list ap;
 
@@ -188,7 +188,10 @@ int BotAI_GetEntityState( int entityNum, entityState_t *state ) {
 	memset( state, 0, sizeof(entityState_t) );
 	if (!ent->inuse) return qfalse;
 	if (!ent->r.linked) return qfalse;
-	if (ent->r.svFlags & SVF_NOCLIENT) return qfalse;
+	if ( !(g_gametype.integer == GT_ELIMINATION || g_gametype.integer == GT_LMS ||g_instantgib.integer || g_rockets.integer || g_elimination_allgametypes.integer || g_gametype.integer==GT_CTF_ELIMINATION)
+	       && (ent->r.svFlags & SVF_NOCLIENT) ) {
+		return qfalse;
+	}
 	memcpy( state, &ent->s, sizeof(entityState_t) );
 	return qtrue;
 }
@@ -281,17 +284,20 @@ void BotReportStatus(bot_state_t *bs) {
 	char *leader, flagstatus[32];
 	//
 	ClientName(bs->client, netname, sizeof(netname));
-	if (Q_stricmp(netname, bs->teamleader) == 0) leader = "L";
-	else leader = " ";
+	if ( Q_strequal(netname, bs->teamleader) ) {
+		leader = "L";
+	}
+	else {
+		leader = " ";
+	}
 
 	strcpy(flagstatus, "  ");
-	if (gametype == GT_CTF) {
+	if (gametype == GT_CTF || gametype == GT_CTF_ELIMINATION) {
 		if (BotCTFCarryingFlag(bs)) {
 			if (BotTeam(bs) == TEAM_RED) strcpy(flagstatus, S_COLOR_RED"F ");
 			else strcpy(flagstatus, S_COLOR_BLUE"F ");
 		}
 	}
-#ifdef MISSIONPACK
 	else if (gametype == GT_1FCTF) {
 		if (Bot1FCTFCarryingFlag(bs)) {
 			if (BotTeam(bs) == TEAM_RED) strcpy(flagstatus, S_COLOR_RED"F ");
@@ -304,7 +310,6 @@ void BotReportStatus(bot_state_t *bs) {
 			else Com_sprintf(flagstatus, sizeof(flagstatus), S_COLOR_BLUE"%2d", bs->inventory[INVENTORY_BLUECUBE]);
 		}
 	}
-#endif
 
 	switch(bs->ltgtype) {
 		case LTG_TEAMHELP:
@@ -373,6 +378,16 @@ void BotReportStatus(bot_state_t *bs) {
 			BotAI_Print(PRT_MESSAGE, "%-20s%s%s: harvesting\n", netname, leader, flagstatus);
 			break;
 		}
+		case LTG_POINTA:
+		{
+			BotAI_Print(PRT_MESSAGE, "%-20s%s%s: going for point A\n", netname, leader, flagstatus);
+			break;
+		}
+		case LTG_POINTB:
+		{
+			BotAI_Print(PRT_MESSAGE, "%-20s%s%s: going for point B\n", netname, leader, flagstatus);
+			break;
+		}
 		default:
 		{
 			BotAI_Print(PRT_MESSAGE, "%-20s%s%s: roaming\n", netname, leader, flagstatus);
@@ -431,16 +446,19 @@ void BotSetInfoConfigString(bot_state_t *bs) {
 	bot_goal_t goal;
 	//
 	ClientName(bs->client, netname, sizeof(netname));
-	if (Q_stricmp(netname, bs->teamleader) == 0) leader = "L";
-	else leader = " ";
+	if ( Q_strequal(netname, bs->teamleader) ) {
+		leader = "L";
+	}
+	else {
+		leader = " ";
+	}
 
 	strcpy(carrying, "  ");
-	if (gametype == GT_CTF) {
+	if (gametype == GT_CTF || gametype == GT_CTF_ELIMINATION) {
 		if (BotCTFCarryingFlag(bs)) {
 			strcpy(carrying, "F ");
 		}
 	}
-#ifdef MISSIONPACK
 	else if (gametype == GT_1FCTF) {
 		if (Bot1FCTFCarryingFlag(bs)) {
 			strcpy(carrying, "F ");
@@ -452,7 +470,6 @@ void BotSetInfoConfigString(bot_state_t *bs) {
 			else Com_sprintf(carrying, sizeof(carrying), "%2d", bs->inventory[INVENTORY_BLUECUBE]);
 		}
 	}
-#endif
 
 	switch(bs->ltgtype) {
 		case LTG_TEAMHELP:
@@ -521,6 +538,16 @@ void BotSetInfoConfigString(bot_state_t *bs) {
 			Com_sprintf(action, sizeof(action), "harvesting");
 			break;
 		}
+		case LTG_POINTA:
+		{
+			Com_sprintf(action, sizeof(action), "going for point A");
+			break;
+		}
+		case LTG_POINTB:
+		{
+			Com_sprintf(action, sizeof(action), "going for point B");
+			break;
+		}
 		default:
 		{
 			trap_BotGetTopGoal(bs->gs, &goal);
@@ -529,11 +556,11 @@ void BotSetInfoConfigString(bot_state_t *bs) {
 			break;
 		}
 	}
-  	cs = va("l\\%s\\c\\%s\\a\\%s",
-				leader,
-				carrying,
-				action);
-  	trap_SetConfigstring (CS_BOTINFO + bs->client, cs);
+	cs = va("l\\%s\\c\\%s\\a\\%s",
+	            leader,
+	            carrying,
+	            action);
+	trap_SetConfigstring (CS_BOTINFO + bs->client, cs);
 }
 
 /*
@@ -1001,42 +1028,42 @@ int BotAI(int client, float thinktime) {
 		//remove color espace sequences from the arguments
 		RemoveColorEscapeSequences( args );
 
-		if (!Q_stricmp(buf, "cp "))
+		if (Q_strequal(buf, "cp "))
 			{ /*CenterPrintf*/ }
-		else if (!Q_stricmp(buf, "cs"))
+		else if (Q_strequal(buf, "cs"))
 			{ /*ConfigStringModified*/ }
-		else if (!Q_stricmp(buf, "print")) {
+		else if (Q_strequal(buf, "print")) {
 			//remove first and last quote from the chat message
 			memmove(args, args+1, strlen(args));
 			args[strlen(args)-1] = '\0';
 			trap_BotQueueConsoleMessage(bs->cs, CMS_NORMAL, args);
 		}
-		else if (!Q_stricmp(buf, "chat")) {
+		else if (Q_strequal(buf, "chat")) {
 			//remove first and last quote from the chat message
 			memmove(args, args+1, strlen(args));
 			args[strlen(args)-1] = '\0';
 			trap_BotQueueConsoleMessage(bs->cs, CMS_CHAT, args);
 		}
-		else if (!Q_stricmp(buf, "tchat")) {
+		else if (Q_strequal(buf, "tchat")) {
 			//remove first and last quote from the chat message
 			memmove(args, args+1, strlen(args));
 			args[strlen(args)-1] = '\0';
 			trap_BotQueueConsoleMessage(bs->cs, CMS_CHAT, args);
 		}
 #ifdef MISSIONPACK
-		else if (!Q_stricmp(buf, "vchat")) {
+		else if (Q_strequal(buf, "vchat")) {
 			BotVoiceChatCommand(bs, SAY_ALL, args);
 		}
-		else if (!Q_stricmp(buf, "vtchat")) {
+		else if (Q_strequal(buf, "vtchat")) {
 			BotVoiceChatCommand(bs, SAY_TEAM, args);
 		}
-		else if (!Q_stricmp(buf, "vtell")) {
+		else if (Q_strequal(buf, "vtell")) {
 			BotVoiceChatCommand(bs, SAY_TELL, args);
 		}
 #endif
-		else if (!Q_stricmp(buf, "scores"))
+		else if (Q_strequal(buf, "scores"))
 			{ /*FIXME: parse scores?*/ }
-		else if (!Q_stricmp(buf, "clientLevelShot"))
+		else if (Q_strequal(buf, "clientLevelShot"))
 			{ /*ignore*/ }
 	}
 	//add the delta angles to the bot's current view angles
@@ -1170,8 +1197,16 @@ int BotAISetupClient(int client, struct bot_settings_s *settings, qboolean resta
 	char filename[MAX_PATH], name[MAX_PATH], gender[MAX_PATH];
 	bot_state_t *bs;
 	int errnum;
-
-	if (!botstates[client]) botstates[client] = G_Alloc(sizeof(bot_state_t));
+	//KK-OAX Changed to Tremulous's BG_Alloc
+	if (!botstates[client]) {
+		if(!BG_CanAlloc(sizeof(bot_state_t))) {
+			//We cannot run BG_Alloc, fail nicely
+			BotAI_Print(PRT_FATAL, "BotAISetupClient: Not enough heap memory\n");
+			return qfalse;
+		}
+		botstates[client] = BG_Alloc(sizeof(bot_state_t));
+		//BG_Allow will succed or terminate
+	}
 	bs = botstates[client];
 
 	if (bs && bs->inuse) {
@@ -1280,7 +1315,7 @@ int BotAIShutdownClient(int client, qboolean restart) {
 	}
 
 	trap_BotFreeMoveState(bs->ms);
-	//free the goal state`			
+	//free the goal state
 	trap_BotFreeGoalState(bs->gs);
 	//free the chat file
 	trap_BotFreeChatState(bs->cs);
@@ -1297,6 +1332,7 @@ int BotAIShutdownClient(int client, qboolean restart) {
 	memset(bs, 0, sizeof(bot_state_t));
 	//set the inuse flag to qfalse
 	bs->inuse = qfalse;
+
 	//there's one bot less
 	numbots--;
 	//everything went ok
@@ -1382,9 +1418,7 @@ int BotAILoadMap( int restart ) {
 	return qtrue;
 }
 
-#ifdef MISSIONPACK
 void ProximityMine_Trigger( gentity_t *trigger, gentity_t *other, trace_t *trace );
-#endif
 
 /*
 ==================
@@ -1485,7 +1519,8 @@ int BotAIStartFrame(int time) {
 				trap_BotLibUpdateEntity(i, NULL);
 				continue;
 			}
-			if (ent->r.svFlags & SVF_NOCLIENT) {
+			if ( !(g_gametype.integer == GT_ELIMINATION || g_gametype.integer == GT_LMS ||g_instantgib.integer || g_rockets.integer || g_elimination_allgametypes.integer || g_gametype.integer==GT_CTF_ELIMINATION)
+				   && ent->r.svFlags & SVF_NOCLIENT) {
 				trap_BotLibUpdateEntity(i, NULL);
 				continue;
 			}
@@ -1499,7 +1534,7 @@ int BotAIStartFrame(int time) {
 				trap_BotLibUpdateEntity(i, NULL);
 				continue;
 			}
-#ifdef MISSIONPACK
+
 			// never link prox mine triggers
 			if (ent->r.contents == CONTENTS_TRIGGER) {
 				if (ent->touch == ProximityMine_Trigger) {
@@ -1507,7 +1542,7 @@ int BotAIStartFrame(int time) {
 					continue;
 				}
 			}
-#endif
+
 			//
 			memset(&state, 0, sizeof(bot_entitystate_t));
 			//

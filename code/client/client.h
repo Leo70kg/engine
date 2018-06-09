@@ -35,8 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif /* USE_CURL */
 
 #ifdef USE_VOIP
-#include "speex/speex.h"
-#include "speex/speex_preprocess.h"
+#include <opus.h>
 #endif
 
 // file full of random crap that gets used to create cl_guid
@@ -44,6 +43,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define QKEY_SIZE 2048
 
 #define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
+
 
 // snapshots are a view of the server at a given time
 typedef struct {
@@ -55,7 +55,7 @@ typedef struct {
 	int				messageNum;		// copied from netchan->incoming_sequence
 	int				deltaNum;		// messageNum the delta is from
 	int				ping;			// time from when cmdNum-1 was sent to time packet was reeceived
-	byte			areamask[MAX_MAP_AREA_BYTES];		// portalarea visibility bits
+	unsigned char	areamask[MAX_MAP_AREA_BYTES];		// portalarea visibility bits
 
 	int				cmdNum;			// the next cmdNum the server is expecting
 	playerState_t	ps;						// complete information about the current player at this time
@@ -71,17 +71,15 @@ typedef struct {
 
 /*
 =============================================================================
-
-the clientActive_t structure is wiped completely at every
-new gamestate_t, potentially several times during an established connection
-
+the clientActive_t structure is wiped completely at every new gamestate_t,
+potentially several times during an established connection
 =============================================================================
 */
 
 typedef struct {
-	int		p_cmdNumber;		// cl.cmdNumber when packet was sent
-	int		p_serverTime;		// usercmd->serverTime when packet was sent
-	int		p_realtime;			// cls.realtime when packet was sent
+	int	p_cmdNumber;		// cl.cmdNumber when packet was sent
+	int	p_serverTime;		// usercmd->serverTime when packet was sent
+	int	p_realtime;			// cls.realtime when packet was sent
 } outPacket_t;
 
 // the parseEntities array must be large enough to hold PACKET_BACKUP frames of
@@ -113,7 +111,6 @@ typedef struct {
 
 	int			mouseDx[2], mouseDy[2];	// added to by mouse events
 	int			mouseIndex;
-	int			joystickAxis[MAX_JOYSTICK_AXIS];	// set by joystick events
 
 	// cgame communicates a few values to the client system
 	int			cgameUserCmdValue;	// current weapon to add to usercmd_t
@@ -140,11 +137,10 @@ typedef struct {
 	clSnapshot_t	snapshots[PACKET_BACKUP];
 
 	entityState_t	entityBaselines[MAX_GENTITIES];	// for delta compression when not in previous frame
-
 	entityState_t	parseEntities[MAX_PARSE_ENTITIES];
 } clientActive_t;
 
-extern	clientActive_t		cl;
+extern	clientActive_t	cl;
 
 /*
 =============================================================================
@@ -160,8 +156,7 @@ demo through a file.
 
 #define MAX_TIMEDEMO_DURATIONS	4096
 
-typedef struct {
-
+typedef struct{
 	connstate_t	state;				// connection status
 
 	int			clientNum;
@@ -207,7 +202,7 @@ typedef struct {
 	CURL		*downloadCURL;
 	CURLM		*downloadCURLM;
 #endif /* USE_CURL */
-	int		sv_allowDownload;
+	int		    sv_allowDownload;
 	char		sv_dlURL[MAX_CVAR_VALUE_STRING];
 	int			downloadNumber;
 	int			downloadBlock;	// block we are waiting for
@@ -223,7 +218,7 @@ typedef struct {
 	qboolean	demoplaying;
 	qboolean	demowaiting;	// don't record until a non-delta message is received
 	qboolean	firstDemoFrameSkipped;
-	fileHandle_t	demofile;
+	fileHandle_t demofile;
 
 	int			timeDemoFrames;		// counter of rendered frames
 	int			timeDemoStart;		// cls.realtime before first frame
@@ -233,20 +228,17 @@ typedef struct {
 	int			timeDemoMaxDuration;	// maximum frame duration
 	unsigned char	timeDemoDurations[ MAX_TIMEDEMO_DURATIONS ];	// log of frame durations
 
-	float		aviVideoFrameRemainder;
-	float		aviSoundFrameRemainder;
+	float	aviVideoFrameRemainder;
+	float	aviSoundFrameRemainder;
 
 #ifdef USE_VOIP
 	qboolean voipEnabled;
-	qboolean speexInitialized;
-	int speexFrameSize;
-	int speexSampleRate;
+	qboolean voipCodecInitialized;
 
 	// incoming data...
 	// !!! FIXME: convert from parallel arrays to array of a struct.
-	SpeexBits speexDecoderBits[MAX_CLIENTS];
-	void *speexDecoder[MAX_CLIENTS];
-	byte voipIncomingGeneration[MAX_CLIENTS];
+	OpusDecoder *opusDecoder[MAX_CLIENTS];
+	unsigned char voipIncomingGeneration[MAX_CLIENTS];
 	int voipIncomingSequence[MAX_CLIENTS];
 	float voipGain[MAX_CLIENTS];
 	qboolean voipIgnore[MAX_CLIENTS];
@@ -257,14 +249,12 @@ typedef struct {
 	// then we are sending to clientnum i.
 	uint8_t voipTargets[(MAX_CLIENTS + 7) / 8];
 	uint8_t voipFlags;
-	SpeexPreprocessState *speexPreprocessor;
-	SpeexBits speexEncoderBits;
-	void *speexEncoder;
+	OpusEncoder *opusEncoder;
 	int voipOutgoingDataSize;
 	int voipOutgoingDataFrames;
 	int voipOutgoingSequence;
-	byte voipOutgoingGeneration;
-	byte voipOutgoingData[1024];
+	unsigned char voipOutgoingGeneration;
+	unsigned char voipOutgoingData[1024];
 	float voipPower;
 #endif
 
@@ -273,26 +263,23 @@ typedef struct {
 #endif
 
 	// big stuff at end of structure so most offsets are 15 bits or less
-	netchan_t	netchan;
+	netchan_t netchan;
 } clientConnection_t;
 
-extern	clientConnection_t clc;
+extern clientConnection_t clc;
 
 /*
 ==================================================================
-
-the clientStatic_t structure is never wiped, and is used even when
-no client connection is active at all
-(except when CL_Shutdown is called)
-
+The clientStatic_t structure is never wiped, and is used even when
+no client connection is active at all(except when CL_Shutdown is called)
 ==================================================================
 */
 
 typedef struct {
-	netadr_t	adr;
-	int			start;
-	int			time;
-	char		info[MAX_INFO_STRING];
+	netadr_t adr;
+	int		 start;
+	int		 time;
+	char	 info[MAX_INFO_STRING];
 } ping_t;
 
 typedef struct {
@@ -312,6 +299,7 @@ typedef struct {
 	int			g_humanplayers;
 	int			g_needpass;
 } serverInfo_t;
+
 
 typedef struct {
 	qboolean	cddialog;			// bring up the cd needed dialog next frame
@@ -336,7 +324,7 @@ typedef struct {
 	serverInfo_t  globalServers[MAX_GLOBAL_SERVERS];
 	// additional global servers
 	int			numGlobalServerAddresses;
-	netadr_t		globalServerAddresses[MAX_GLOBAL_SERVERS];
+	netadr_t	globalServerAddresses[MAX_GLOBAL_SERVERS];
 
 	int			numfavoriteservers;
 	serverInfo_t	favoriteServers[MAX_OTHER_SERVERS];
@@ -357,16 +345,16 @@ typedef struct {
 	qhandle_t	consoleShader;
 } clientStatic_t;
 
-extern	clientStatic_t		cls;
+extern	clientStatic_t cls;
 
 extern	char		cl_oldGame[MAX_QPATH];
 extern	qboolean	cl_oldGameSet;
 
 //=============================================================================
 
-extern	vm_t			*cgvm;	// interface to cgame dll or vm
-extern	vm_t			*uivm;	// interface to ui dll or vm
-extern	refexport_t		re;		// interface to refresh .dll
+extern	vm_t	*cgvm;	// interface to cgame dll or vm
+extern	vm_t	*uivm;	// interface to ui dll or vm
+extern	refexport_t	re;		// interface to refresh .dll
 
 
 //
@@ -402,17 +390,6 @@ extern	cvar_t	*m_yaw;
 extern	cvar_t	*m_forward;
 extern	cvar_t	*m_side;
 extern	cvar_t	*m_filter;
-
-extern	cvar_t	*j_pitch;
-extern	cvar_t	*j_yaw;
-extern	cvar_t	*j_forward;
-extern	cvar_t	*j_side;
-extern	cvar_t	*j_up;
-extern	cvar_t	*j_pitch_axis;
-extern	cvar_t	*j_yaw_axis;
-extern	cvar_t	*j_forward_axis;
-extern	cvar_t	*j_side_axis;
-extern	cvar_t	*j_up_axis;
 
 extern	cvar_t	*cl_timedemo;
 extern	cvar_t	*cl_aviFrameRate;
@@ -452,111 +429,113 @@ extern	cvar_t	*cl_voipGainDuringCapture;
 extern	cvar_t	*cl_voipCaptureMult;
 extern	cvar_t	*cl_voipShowMeter;
 extern	cvar_t	*cl_voip;
+
+// 20ms at 48k
+#define VOIP_MAX_FRAME_SAMPLES		( 20 * 48 )
+
+// 3 frame is 60ms of audio, the max opus will encode at once
+#define VOIP_MAX_PACKET_FRAMES		3
+#define VOIP_MAX_PACKET_SAMPLES		( VOIP_MAX_FRAME_SAMPLES * VOIP_MAX_PACKET_FRAMES )
 #endif
 
 //=================================================
 
-//
 // cl_main
-//
 
 void CL_Init (void);
 void CL_AddReliableCommand(const char *cmd, qboolean isDisconnectCmd);
 
-void CL_StartHunkUsers( qboolean rendererOnly );
-
-void CL_Disconnect_f (void);
-void CL_GetChallengePacket (void);
-void CL_Vid_Restart_f( void );
-void CL_Snd_Restart_f (void);
-void CL_StartDemoLoop( void );
-void CL_NextDemo( void );
-void CL_ReadDemoMessage( void );
+void CL_StartHunkUsers(qboolean rendererOnly);
+void CL_Disconnect_f(void);
+void CL_GetChallengePacket(void);
+void CL_Vid_Restart_f(void);
+void CL_Snd_Restart_f(void);
+void CL_StartDemoLoop(void);
+void CL_NextDemo(void);
+void CL_ReadDemoMessage(void);
 void CL_StopRecord_f(void);
 
 void CL_InitDownloads(void);
 void CL_NextDownload(void);
 
-void CL_GetPing( int n, char *buf, int buflen, int *pingtime );
-void CL_GetPingInfo( int n, char *buf, int buflen );
-void CL_ClearPing( int n );
-int CL_GetPingQueueCount( void );
+void CL_GetPing(int n, char *buf, int buflen, int *pingtime);
+void CL_GetPingInfo(int n, char *buf, int buflen);
+void CL_ClearPing(int n);
+int CL_GetPingQueueCount(void);
 
-void CL_ShutdownRef( void );
-void CL_InitRef( void );
-qboolean CL_CDKeyValidate( const char *key, const char *checksum );
-int CL_ServerStatus( char *serverAddress, char *serverStatusString, int maxLen );
+void CL_ShutdownRef(void);
+void CL_InitRef(void);
+qboolean CL_CDKeyValidate(const char *key, const char *checksum);
+int CL_ServerStatus(char *serverAddress, char *serverStatusString, int maxLen);
 
 qboolean CL_CheckPaused(void);
 
-//
+
 // cl_input
-//
 typedef struct {
-	int			down[2];		// key nums holding it down
-	unsigned	downtime;		// msec timestamp
-	unsigned	msec;			// msec down this frame if both a down and up happened
-	qboolean	active;			// current state
-	qboolean	wasPressed;		// set when down, not cleared when up
+	int             down[2];		// key nums holding it down
+	unsigned int    downtime;		// msec timestamp
+	unsigned int    msec;			// msec down this frame if both a down and up happened
+	qboolean        active;			// current state
+	qboolean        wasPressed;		// set when down, not cleared when up
 } kbutton_t;
 
 void CL_InitInput(void);
 void CL_ShutdownInput(void);
-void CL_SendCmd (void);
-void CL_ClearState (void);
-void CL_ReadPackets (void);
+void CL_SendCmd(void);
+void CL_ClearState(void);
+void CL_ReadPackets(void);
 
-void CL_WritePacket( void );
-void IN_CenterView (void);
+void CL_WritePacket(void);
+void IN_CenterView(void);
 
-void CL_VerifyCode( void );
+void CL_VerifyCode(void);
 
-float CL_KeyState (kbutton_t *key);
-int Key_StringToKeynum( char *str );
-char *Key_KeynumToString (int keynum);
+float CL_KeyState(kbutton_t *key);
+int Key_StringToKeynum(char *str);
+char *Key_KeynumToString(int keynum);
 
-//
+
 // cl_parse.c
-//
 extern int cl_connectedToPureServer;
 extern int cl_connectedToCheatServer;
 
 #ifdef USE_VOIP
-void CL_Voip_f( void );
+void CL_Voip_f(void);
 #endif
 
-void CL_SystemInfoChanged( void );
-void CL_ParseServerMessage( msg_t *msg );
+void CL_SystemInfoChanged(void);
+void CL_ParseServerMessage(msg_t *msg);
 
 //====================================================================
 
-void	CL_ServerInfoPacket( netadr_t from, msg_t *msg );
-void	CL_LocalServers_f( void );
-void	CL_GlobalServers_f( void );
-void	CL_FavoriteServers_f( void );
-void	CL_Ping_f( void );
-qboolean CL_UpdateVisiblePings_f( int source );
+void	CL_ServerInfoPacket(netadr_t from, msg_t *msg);
+void	CL_LocalServers_f(void);
+void	CL_GlobalServers_f(void);
+void	CL_FavoriteServers_f(void);
+void	CL_Ping_f(void);
+qboolean CL_UpdateVisiblePings_f(int source);
 
 
 //
 // console
 //
-void Con_DrawCharacter (int cx, int line, int num);
+void Con_DrawCharacter(int cx, int line, int num);
 
-void Con_CheckResize (void);
+void Con_CheckResize(void);
 void Con_Init(void);
 void Con_Shutdown(void);
-void Con_Clear_f (void);
-void Con_ToggleConsole_f (void);
-void Con_DrawNotify (void);
-void Con_ClearNotify (void);
-void Con_RunConsole (void);
-void Con_DrawConsole (void);
-void Con_PageUp( void );
-void Con_PageDown( void );
-void Con_Top( void );
-void Con_Bottom( void );
-void Con_Close( void );
+void Con_Clear_f(void);
+void Con_ToggleConsole_f(void);
+void Con_DrawNotify(void);
+void Con_ClearNotify(void);
+void Con_RunConsole(void);
+void Con_DrawConsole(void);
+void Con_PageUp(void);
+void Con_PageDown(void);
+void Con_Top(void);
+void Con_Bottom(void);
+void Con_Close(void);
 
 void Con_SetFrac( const float conFrac );
 
@@ -574,8 +553,7 @@ void	SCR_DebugGraph (float value);
 int		SCR_GetBigStringWidth( const char *str );	// returns in virtual 640x480 coordinates
 
 void	SCR_AdjustFrom640( float *x, float *y, float *w, float *h );
-void	SCR_FillRect( float x, float y, float width, float height, 
-					 const float *color );
+void	SCR_FillRect( float x, float y, float width, float height, const float *color );
 void	SCR_DrawPic( float x, float y, float width, float height, qhandle_t hShader );
 void	SCR_DrawNamedPic( float x, float y, float width, float height, const char *picname );
 
@@ -605,40 +583,40 @@ void CIN_CloseAllVideos(void);
 //
 // cl_cgame.c
 //
-void CL_InitCGame( void );
-void CL_ShutdownCGame( void );
-qboolean CL_GameCommand( void );
-void CL_CGameRendering( stereoFrame_t stereo );
-void CL_SetCGameTime( void );
-void CL_FirstSnapshot( void );
+void CL_InitCGame(void);
+void CL_ShutdownCGame(void);
+qboolean CL_GameCommand(void);
+void CL_CGameRendering(void);
+void CL_SetCGameTime(void);
+void CL_FirstSnapshot(void);
 void CL_ShaderStateChanged(void);
 
 //
 // cl_ui.c
 //
-void CL_InitUI( void );
-void CL_ShutdownUI( void );
-int Key_GetCatcher( void );
-void Key_SetCatcher( int catcher );
-void LAN_LoadCachedServers( void );
-void LAN_SaveServersToCache( void );
+void CL_InitUI(void);
+void CL_ShutdownUI(void);
+int Key_GetCatcher(void);
+void Key_SetCatcher(int catcher);
+void LAN_LoadCachedServers(void);
+void LAN_SaveServersToCache(void);
 
 
 //
 // cl_net_chan.c
 //
-void CL_Netchan_Transmit( netchan_t *chan, msg_t* msg);	//int length, const byte *data );
-qboolean CL_Netchan_Process( netchan_t *chan, msg_t *msg );
+void CL_Netchan_Transmit(netchan_t *chan, msg_t* msg);	//int length, const byte *data );
+qboolean CL_Netchan_Process(netchan_t *chan, msg_t *msg);
 
 //
 // cl_avi.c
 //
-qboolean CL_OpenAVIForWriting( const char *filename );
-void CL_TakeVideoFrame( void );
-void CL_WriteAVIVideoFrame( const byte *imageBuffer, int size );
-void CL_WriteAVIAudioFrame( const byte *pcmBuffer, int size );
-qboolean CL_CloseAVI( void );
-qboolean CL_VideoRecording( void );
+qboolean CL_OpenAVIForWriting(const char *filename);
+void CL_TakeVideoFrame(void);
+void CL_WriteAVIVideoFrame(const unsigned char *imageBuffer, int size);
+void CL_WriteAVIAudioFrame(const unsigned char *pcmBuffer, int size);
+qboolean CL_CloseAVI(void);
+qboolean CL_VideoRecording(void);
 
 //
 // cl_main.c

@@ -74,7 +74,10 @@ static OPUS_INLINE float tansig_approx(float x)
     if (!(x<8))
         return 1;
     if (!(x>-8))
+	{
         return -1;
+	}
+
 	if (x<0)
 	{
 	   x=-x;

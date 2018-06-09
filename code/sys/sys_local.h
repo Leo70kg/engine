@@ -23,22 +23,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 
-// Require a minimum version of SDL
-#define MINSDL_MAJOR 1
-#define MINSDL_MINOR 2
-#define MINSDL_PATCH 10
-
-// Input subsystem
-void IN_Init( void );
-void IN_Frame( qboolean in_com_frame );	// youurayy input lag fix
-void IN_Shutdown( void );
-void IN_Restart( void );
-
 // Console
 void CON_Shutdown( void );
 void CON_Init( void );
 char *CON_Input( void );
 void CON_Print( const char *message );
+qboolean IsStdinATTY( void );
 
 unsigned int CON_LogSize( void );
 unsigned int CON_LogWrite( const char *in );

@@ -24,14 +24,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __Q_PLATFORM_H
 
 // this is for determining if we have an asm version of a C function
-#define idx64 0
-
 #ifdef Q3_VM
 
 #define id386 0
 #define idppc 0
 #define idppc_altivec 0
-#define idsparc 0
 
 #else
 
@@ -61,13 +58,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define idppc_altivec 0
 #endif
 
-#if defined(__sparc__) && !defined(C_ONLY)
-#define idsparc 1
-#else
-#define idsparc 0
 #endif
 
-#endif
 
 #ifndef __ASM_I386__ // don't include the C bits if included from qasm.h
 
@@ -126,8 +118,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #if defined( _M_IX86 ) || defined( __i386__ )
 #define ARCH_STRING "x86"
-#elif defined _M_ALPHA
-#define ARCH_STRING "AXP"
 #endif
 
 #define Q3_LITTLE_ENDIAN
@@ -169,50 +159,29 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 //================================================================= LINUX ===
 
-#if defined(__linux__) || defined(__FreeBSD_kernel__)
+#if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__GNU__)
 
 #include <endian.h>
 
 #if defined(__linux__)
 #define OS_STRING "linux"
-#else
+#elif defined(__FreeBSD_kernel__)
 #define OS_STRING "kFreeBSD"
+#else
+#define OS_STRING "GNU"
 #endif
 
 #define ID_INLINE inline
 
 #define PATH_SEP '/'
 
-#if defined __i386__
-#define ARCH_STRING "x86"
-#elif defined __x86_64__
+#if !defined(ARCH_STRING)
+# error ARCH_STRING should be defined by the Makefile
+#endif
+
+#if defined __x86_64__
 #undef idx64
 #define idx64 1
-#define ARCH_STRING "x86_64"
-#elif defined __powerpc64__
-#define ARCH_STRING "ppc64"
-#elif defined __powerpc__
-#define ARCH_STRING "ppc"
-#elif defined __s390__
-#define ARCH_STRING "s390"
-#elif defined __s390x__
-#define ARCH_STRING "s390x"
-#elif defined __ia64__
-#define ARCH_STRING "ia64"
-#elif defined __alpha__
-#define ARCH_STRING "alpha"
-#elif defined __sparc__
-#define ARCH_STRING "sparc"
-#elif defined __arm__
-#define ARCH_STRING "arm"
-#elif defined __cris__
-#define ARCH_STRING "cris"
-#elif defined __hppa__
-#define ARCH_STRING "hppa"
-#elif defined __mips__
-#define ARCH_STRING "mips"
-#elif defined __sh__
-#define ARCH_STRING "sh"
 #endif
 
 #if __FLOAT_WORD_ORDER == __BIG_ENDIAN
@@ -267,49 +236,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #endif
 
-//================================================================= SUNOS ===
-
-#ifdef __sun
-
-#include <stdint.h>
-#include <sys/byteorder.h>
-
-#define OS_STRING "solaris"
-#define ID_INLINE inline
-#define PATH_SEP '/'
-
-#ifdef __i386__
-#define ARCH_STRING "x86"
-#elif defined __sparc
-#define ARCH_STRING "sparc"
-#endif
-
-#if defined( _BIG_ENDIAN )
-#define Q3_BIG_ENDIAN
-#elif defined( _LITTLE_ENDIAN )
-#define Q3_LITTLE_ENDIAN
-#endif
-
-#define DLL_EXT ".so"
-
-#endif
-
-//================================================================== IRIX ===
-
-#ifdef __sgi
-
-#define OS_STRING "irix"
-#define ID_INLINE __inline
-#define PATH_SEP '/'
-
-#define ARCH_STRING "mips"
-
-#define Q3_BIG_ENDIAN // SGI's MIPS are always big endian
-
-#define DLL_EXT ".so"
-
-#endif
-
 //================================================================== Q3VM ===
 
 #ifdef Q3_VM
@@ -352,7 +278,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 void CopyShortSwap (void *dest, void *src);
 void CopyLongSwap (void *dest, void *src);
 short ShortSwap (short l);
-int LongSwap (int l);
+int LongSwap(int l);
 float FloatSwap (const float *f);
 
 #if defined( Q3_BIG_ENDIAN ) && defined( Q3_LITTLE_ENDIAN )
@@ -362,7 +288,7 @@ float FloatSwap (const float *f);
 #define CopyLittleShort(dest, src) CopyShortSwap(dest, src)
 #define CopyLittleLong(dest, src) CopyLongSwap(dest, src)
 #define LittleShort(x) ShortSwap(x)
-#define LittleLong(x) LongSwap(x)
+#define LittleLong(x)  LongSwap(x)
 #define LittleFloat(x) FloatSwap(&x)
 #define BigShort
 #define BigLong
@@ -370,8 +296,8 @@ float FloatSwap (const float *f);
 
 #elif defined( Q3_LITTLE_ENDIAN )
 
-#define CopyLittleShort(dest, src) Com_Memcpy(dest, src, 2)
-#define CopyLittleLong(dest, src) Com_Memcpy(dest, src, 4)
+#define CopyLittleShort(dest, src) memcpy(dest, src, 2)
+#define CopyLittleLong(dest, src)  memcpy(dest, src, 4)
 #define LittleShort
 #define LittleLong
 #define LittleFloat

@@ -20,16 +20,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-/* This is based on the Adaptive Huffman algorithm described in Sayood's Data
- * Compression book.  The ranks are not actually stored, but implicitly defined
+/* This is based on the Adaptive Huffman algorithm described in Sayood's Data Compression book. 
+ * The ranks are not actually stored, but implicitly defined
  * by the location of a node within a doubly-linked list */
 
 #include "q_shared.h"
 #include "qcommon.h"
 
-static int			bloc = 0;
+static int	bloc = 0;
 
-void	Huff_putBit( int bit, byte *fout, int *offset) {
+void Huff_putBit( int bit, byte *fout, int *offset) {
 	bloc = *offset;
 	if ((bloc&7) == 0) {
 		fout[(bloc>>3)] = 0;
@@ -331,7 +331,9 @@ void Huff_offsetTransmit (huff_t *huff, int ch, byte *fout, int *offset) {
 	*offset = bloc;
 }
 
-void Huff_Decompress(msg_t *mbuf, int offset) {
+
+void Huff_Decompress(msg_t *mbuf, int offset)
+{
 	int			ch, cch, i, j, size;
 	byte		seq[65536];
 	byte*		buffer;
@@ -344,7 +346,7 @@ void Huff_Decompress(msg_t *mbuf, int offset) {
 		return;
 	}
 
-	Com_Memset(&huff, 0, sizeof(huff_t));
+	memset(&huff, 0, sizeof(huff_t));
 	// Initialize the tree & list with the NYT node 
 	huff.tree = huff.lhead = huff.ltail = huff.loc[NYT] = &(huff.nodeList[huff.blocNode++]);
 	huff.tree->symbol = NYT;
@@ -380,7 +382,7 @@ void Huff_Decompress(msg_t *mbuf, int offset) {
 		Huff_addRef(&huff, (byte)ch);								/* Increment node */
 	}
 	mbuf->cursize = cch + offset;
-	Com_Memcpy(mbuf->data + offset, seq, cch);
+	memcpy(mbuf->data + offset, seq, cch);
 }
 
 extern 	int oldsize;
@@ -398,7 +400,7 @@ void Huff_Compress(msg_t *mbuf, int offset) {
 		return;
 	}
 
-	Com_Memset(&huff, 0, sizeof(huff_t));
+	memset(&huff, 0, sizeof(huff_t));
 	// Add the NYT (not yet transmitted) node into the tree/list */
 	huff.tree = huff.lhead = huff.loc[NYT] =  &(huff.nodeList[huff.blocNode++]);
 	huff.tree->symbol = NYT;
@@ -420,13 +422,13 @@ void Huff_Compress(msg_t *mbuf, int offset) {
 	bloc += 8;												// next byte
 
 	mbuf->cursize = (bloc>>3) + offset;
-	Com_Memcpy(mbuf->data+offset, seq, (bloc>>3));
+	memcpy(mbuf->data+offset, seq, (bloc>>3));
 }
 
 void Huff_Init(huffman_t *huff) {
 
-	Com_Memset(&huff->compressor, 0, sizeof(huff_t));
-	Com_Memset(&huff->decompressor, 0, sizeof(huff_t));
+	memset(&huff->compressor, 0, sizeof(huff_t));
+	memset(&huff->decompressor, 0, sizeof(huff_t));
 
 	// Initialize the tree & list with the NYT node 
 	huff->decompressor.tree = huff->decompressor.lhead = huff->decompressor.ltail = huff->decompressor.loc[NYT] = &(huff->decompressor.nodeList[huff->decompressor.blocNode++]);

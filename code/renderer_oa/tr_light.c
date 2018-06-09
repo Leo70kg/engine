@@ -39,17 +39,19 @@ Used by both the front end (for DlightBmodel) and
 the back end (before doing the lighting calculation)
 ===============
 */
-void R_TransformDlights( int count, dlight_t *dl, orientationr_t *or) {
-	int		i;
-	vec3_t	temp;
-
-	for ( i = 0 ; i < count ; i++, dl++ ) {
+void R_TransformDlights( int count, dlight_t *dl, orientationr_t *or)
+{
+	int	i;
+	for ( i = 0 ; i < count ; i++, dl++ )
+    {
+        vec3_t	temp;
 		VectorSubtract( dl->origin, or->origin, temp );
 		dl->transformed[0] = DotProduct( temp, or->axis[0] );
 		dl->transformed[1] = DotProduct( temp, or->axis[1] );
 		dl->transformed[2] = DotProduct( temp, or->axis[2] );
 	}
 }
+
 
 /*
 =============
@@ -58,31 +60,30 @@ R_DlightBmodel
 Determine which dynamic lights may effect this bmodel
 =============
 */
-void R_DlightBmodel( bmodel_t *bmodel ) {
-	int			i, j;
-	dlight_t	*dl;
-	int			mask;
-	msurface_t	*surf;
-
+void R_DlightBmodel( bmodel_t *bmodel )
+{
+	int	i, j;
+	int	mask = 0;
+	
 	// transform all the lights
 	R_TransformDlights( tr.refdef.num_dlights, tr.refdef.dlights, &tr.or );
 
-	mask = 0;
-	for ( i=0 ; i<tr.refdef.num_dlights ; i++ ) {
-		dl = &tr.refdef.dlights[i];
+    for ( i=0 ; i<tr.refdef.num_dlights ; i++ )
+    {
+		dlight_t* dl = &tr.refdef.dlights[i];
 
 		// see if the point is close enough to the bounds to matter
-		for ( j = 0 ; j < 3 ; j++ ) {
-			if ( dl->transformed[j] - bmodel->bounds[1][j] > dl->radius ) {
+		for( j = 0 ; j < 3 ; j++ )
+        {
+			if ( dl->transformed[j] - bmodel->bounds[1][j] > dl->radius )
 				break;
-			}
-			if ( bmodel->bounds[0][j] - dl->transformed[j] > dl->radius ) {
+
+			if ( bmodel->bounds[0][j] - dl->transformed[j] > dl->radius )
 				break;
-			}
 		}
-		if ( j < 3 ) {
+
+		if ( j < 3 )
 			continue;
-		}
 
 		// we need to check this light
 		mask |= 1 << i;
@@ -91,14 +92,20 @@ void R_DlightBmodel( bmodel_t *bmodel ) {
 	tr.currentEntity->needDlights = (mask != 0);
 
 	// set the dlight bits in all the surfaces
-	for ( i = 0 ; i < bmodel->numSurfaces ; i++ ) {
-		surf = bmodel->firstSurface + i;
+	for ( i = 0 ; i < bmodel->numSurfaces ; i++ )
+    {
+		msurface_t* surf = bmodel->firstSurface + i;
 
-		if ( *surf->data == SF_FACE ) {
+		if ( *surf->data == SF_FACE )
+        {
 			((srfSurfaceFace_t *)surf->data)->dlightBits = mask;
-		} else if ( *surf->data == SF_GRID ) {
+		}
+        else if ( *surf->data == SF_GRID )
+        {
 			((srfGridMesh_t *)surf->data)->dlightBits = mask;
-		} else if ( *surf->data == SF_TRIANGLES ) {
+		}
+        else if ( *surf->data == SF_TRIANGLES )
+        {
 			((srfTriangles_t *)surf->data)->dlightBits = mask;
 		}
 	}
@@ -113,9 +120,9 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-extern	cvar_t	*r_ambientScale;
-extern	cvar_t	*r_directedScale;
-extern	cvar_t	*r_debugLight;
+static cvar_t* r_ambientScale;
+static cvar_t* r_directedScale;
+static cvar_t* r_debugLight;
 
 /*
 =================
@@ -133,8 +140,6 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 	int		gridStep[3];
 	vec3_t	direction;
 	float	totalFactor;
-
-
 
 
 	if ( ent->e.renderfx & RF_LIGHTING_ORIGIN ) {
@@ -297,11 +302,11 @@ static void LogLight( trRefEntity_t *ent ) {
 =================
 R_SetupEntityLighting
 
-Calculates all the lighting values that will be used
-by the Calc_* functions
+Calculates all the lighting values that will be used by the Calc_* functions
 =================
 */
-void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
+void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent )
+{
 	int				i;
 	dlight_t		*dl;
 	float			power;
@@ -386,10 +391,12 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// save out the byte packet version
-	((byte *)&ent->ambientLightInt)[0] = ri.ftol(ent->ambientLight[0]);
-	((byte *)&ent->ambientLightInt)[1] = ri.ftol(ent->ambientLight[1]);
-	((byte *)&ent->ambientLightInt)[2] = ri.ftol(ent->ambientLight[2]);
-	((byte *)&ent->ambientLightInt)[3] = 0xff;
+    union uInt4bytes cvt;
+    cvt.uc[0] = ((unsigned char)(ent->ambientLight[0]));
+    cvt.uc[1] = ((unsigned char)(ent->ambientLight[1]));
+    cvt.uc[2] = ((unsigned char)(ent->ambientLight[2]));
+    cvt.uc[3] = 255;
+    ent->ambientLightInt = cvt.i;
 	
 	// transform the direction to local space
 	VectorNormalize( lightDir );
@@ -410,7 +417,7 @@ int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, ve
 	if ( tr.world->lightGridData == NULL )
 	  return qfalse;
 
-	Com_Memset(&ent, 0, sizeof(ent));
+	memset(&ent, 0, sizeof(ent));
 	VectorCopy( point, ent.e.origin );
 	R_SetupEntityLightingGrid( &ent );
 	VectorCopy(ent.ambientLight, ambientLight);
@@ -418,4 +425,12 @@ int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, ve
 	VectorCopy(ent.lightDir, lightDir);
 
 	return qtrue;
+}
+
+
+void R_InitDLight(void)
+{
+    r_ambientScale = ri.Cvar_Get( "r_ambientScale", "1", CVAR_CHEAT);
+    r_directedScale = ri.Cvar_Get( "r_directedScale", "1", CVAR_CHEAT);
+    r_debugLight = ri.Cvar_Get( "r_debuglight", "0", CVAR_TEMP);
 }

@@ -39,7 +39,8 @@ Used by both the front end (for DlightBmodel) and
 the back end (before doing the lighting calculation)
 ===============
 */
-void R_TransformDlights( int count, dlight_t *dl, orientationr_t *or) {
+void R_TransformDlights( int count, dlight_t *dl, orientationr_t *or)
+{
 	int		i;
 	vec3_t	temp;
 
@@ -58,21 +59,22 @@ R_DlightBmodel
 Determine which dynamic lights may effect this bmodel
 =============
 */
-void R_DlightBmodel( bmodel_t *bmodel ) {
+void R_DlightBmodel( bmodel_t *bmodel )
+{
 	int			i, j;
-	dlight_t	*dl;
-	int			mask;
-	msurface_t	*surf;
-
+	int			mask = 0;
+	
 	// transform all the lights
 	R_TransformDlights( tr.refdef.num_dlights, tr.refdef.dlights, &tr.or );
 
-	mask = 0;
-	for ( i=0 ; i<tr.refdef.num_dlights ; i++ ) {
-		dl = &tr.refdef.dlights[i];
+
+	for ( i=0 ; i<tr.refdef.num_dlights ; i++ )
+    {
+		dlight_t* dl = &tr.refdef.dlights[i];
 
 		// see if the point is close enough to the bounds to matter
-		for ( j = 0 ; j < 3 ; j++ ) {
+		for ( j = 0 ; j < 3 ; j++ )
+        {
 			if ( dl->transformed[j] - bmodel->bounds[1][j] > dl->radius ) {
 				break;
 			}
@@ -91,15 +93,15 @@ void R_DlightBmodel( bmodel_t *bmodel ) {
 	tr.currentEntity->needDlights = (mask != 0);
 
 	// set the dlight bits in all the surfaces
-	for ( i = 0 ; i < bmodel->numSurfaces ; i++ ) {
-		surf = tr.world->surfaces + bmodel->firstSurface + i;
+	for ( i = 0 ; i < bmodel->numSurfaces ; i++ )
+    {
+		msurface_t* surf = tr.world->surfaces + bmodel->firstSurface + i;
 
 		switch(*surf->data)
 		{
 			case SF_FACE:
 			case SF_GRID:
 			case SF_TRIANGLES:
-			case SF_VBO_MESH:
 				((srfBspSurface_t *)surf->data)->dlightBits = mask;
 				break;
 
@@ -139,7 +141,7 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent, world_t *world ) {
 	float	totalFactor;
 
 	if ( ent->e.renderfx & RF_LIGHTING_ORIGIN ) {
-		// seperate lightOrigins are needed so an object that is
+		// separate lightOrigins are needed so an object that is
 		// sinking into the ground can still be lit, and so
 		// multi-part models can be lit identically
 		VectorCopy( ent->e.lightingOrigin, lightOrigin );
@@ -156,7 +158,7 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent, world_t *world ) {
 		frac[i] = v - pos[i];
 		if ( pos[i] < 0 ) {
 			pos[i] = 0;
-		} else if ( pos[i] >= world->lightGridBounds[i] - 1 ) {
+		} else if ( pos[i] > world->lightGridBounds[i] - 1 ) {
 			pos[i] = world->lightGridBounds[i] - 1;
 		}
 	}
@@ -180,18 +182,15 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent, world_t *world ) {
 		byte	*data;
 		int		lat, lng;
 		vec3_t	normal;
-		qboolean ignore;
 		#if idppc
 		float d0, d1, d2, d3, d4, d5;
 		#endif
 		factor = 1.0;
 		data = gridData;
-		ignore = qfalse;
 		for ( j = 0 ; j < 3 ; j++ ) {
 			if ( i & (1<<j) ) {
-				if ((pos[j] + 1) >= world->lightGridBounds[j] - 1)
-				{
-					ignore = qtrue; // ignore values outside lightgrid
+				if ( pos[j] + 1 > world->lightGridBounds[j] - 1 ) {
+					break; // ignore values outside lightgrid
 				}
 				factor *= frac[j];
 				data += gridStep[j];
@@ -200,13 +199,14 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent, world_t *world ) {
 			}
 		}
 
-		if ( ignore )
+		if ( j != 3 ) {
 			continue;
+		}
 
-		if (world->hdrLightGrid)
+		if (world->lightGrid16)
 		{
-			float *hdrData = world->hdrLightGrid + (int)(data - world->lightGridData) / 8 * 6;
-			if (!(hdrData[0]+hdrData[1]+hdrData[2]+hdrData[3]+hdrData[4]+hdrData[5]) ) {
+			uint16_t *data16 = world->lightGrid16 + (int)(data - world->lightGridData) / 8 * 6;
+			if (!(data16[0]+data16[1]+data16[2]+data16[3]+data16[4]+data16[5])) {
 				continue;	// ignore samples in walls
 			}
 		}
@@ -229,18 +229,18 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent, world_t *world ) {
 		ent->directedLight[1] += factor * d4;
 		ent->directedLight[2] += factor * d5;
 		#else
-		if (world->hdrLightGrid)
+		if (world->lightGrid16)
 		{
 			// FIXME: this is hideous
-			float *hdrData = world->hdrLightGrid + (int)(data - world->lightGridData) / 8 * 6;
+			uint16_t *data16 = world->lightGrid16 + (int)(data - world->lightGridData) / 8 * 6;
 
-			ent->ambientLight[0] += factor * hdrData[0];
-			ent->ambientLight[1] += factor * hdrData[1];
-			ent->ambientLight[2] += factor * hdrData[2];
+			ent->ambientLight[0] += factor * data16[0] / 257.0f;
+			ent->ambientLight[1] += factor * data16[1] / 257.0f;
+			ent->ambientLight[2] += factor * data16[2] / 257.0f;
 
-			ent->directedLight[0] += factor * hdrData[3];
-			ent->directedLight[1] += factor * hdrData[4];
-			ent->directedLight[2] += factor * hdrData[5];
+			ent->directedLight[0] += factor * data16[3] / 257.0f;
+			ent->directedLight[1] += factor * data16[4] / 257.0f;
+			ent->directedLight[2] += factor * data16[5] / 257.0f;
 		}
 		else
 		{
@@ -338,7 +338,7 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	// trace a sample point down to find ambient light
 	//
 	if ( ent->e.renderfx & RF_LIGHTING_ORIGIN ) {
-		// seperate lightOrigins are needed so an object that is
+		// separate lightOrigins are needed so an object that is
 		// sinking into the ground can still be lit, and so
 		// multi-part models can be lit identically
 		VectorCopy( ent->e.lightingOrigin, lightOrigin );
@@ -359,7 +359,7 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// bonus items and view weapons have a fixed minimum add
-	if ( !r_hdr->integer /* ent->e.renderfx & RF_MINLIGHT */ ) {
+	if ( 1 /* ent->e.renderfx & RF_MINLIGHT */ ) {
 		// give everything a minimum light add
 		ent->ambientLight[0] += tr.identityLight * 32;
 		ent->ambientLight[1] += tr.identityLight * 32;
@@ -387,25 +387,53 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 		VectorMA( lightDir, d, dir, lightDir );
 	}
 
-	// clamp ambient
-	if ( !r_hdr->integer )
+	// clamp lights
+	// FIXME: old renderer clamps (ambient + NL * directed) per vertex
+	//        check if that's worth implementing
 	{
-		for ( i = 0 ; i < 3 ; i++ ) {
-			if ( ent->ambientLight[i] > tr.identityLightByte ) {
-				ent->ambientLight[i] = tr.identityLightByte;
-			}
+		float r, g, b, max;
+
+		r = ent->ambientLight[0];
+		g = ent->ambientLight[1];
+		b = ent->ambientLight[2];
+
+		max = MAX(MAX(r, g), b);
+
+		if (max > 255.0f)
+		{
+			max = 255.0f / max;
+			ent->ambientLight[0] *= max;
+			ent->ambientLight[1] *= max;
+			ent->ambientLight[2] *= max;
+		}
+
+		r = ent->directedLight[0];
+		g = ent->directedLight[1];
+		b = ent->directedLight[2];
+
+		max = MAX(MAX(r, g), b);
+
+		if (max > 255.0f)
+		{
+			max = 255.0f / max;
+			ent->directedLight[0] *= max;
+			ent->directedLight[1] *= max;
+			ent->directedLight[2] *= max;
 		}
 	}
+
 
 	if ( r_debugLight->integer ) {
 		LogLight( ent );
 	}
 
 	// save out the byte packet version
-	((byte *)&ent->ambientLightInt)[0] = ri.ftol(ent->ambientLight[0]);
-	((byte *)&ent->ambientLightInt)[1] = ri.ftol(ent->ambientLight[1]);
-	((byte *)&ent->ambientLightInt)[2] = ri.ftol(ent->ambientLight[2]);
-	((byte *)&ent->ambientLightInt)[3] = 0xff;
+    union uInt4bytes cvt;
+    cvt.uc[0] = ((unsigned char)(ent->ambientLight[0]));
+    cvt.uc[1] = ((unsigned char)(ent->ambientLight[1]));
+    cvt.uc[2] = ((unsigned char)(ent->ambientLight[2]));
+    cvt.uc[3] = 255;
+    ent->ambientLightInt = cvt.i;
 	
 	// transform the direction to local space
 	VectorNormalize( lightDir );
@@ -428,7 +456,7 @@ int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, ve
 	if ( tr.world->lightGridData == NULL )
 	  return qfalse;
 
-	Com_Memset(&ent, 0, sizeof(ent));
+	memset(&ent, 0, sizeof(ent));
 	VectorCopy( point, ent.e.origin );
 	R_SetupEntityLightingGrid( &ent, tr.world );
 	VectorCopy(ent.ambientLight, ambientLight);
@@ -446,7 +474,7 @@ int R_LightDirForPoint( vec3_t point, vec3_t lightDir, vec3_t normal, world_t *w
 	if ( world->lightGridData == NULL )
 	  return qfalse;
 
-	Com_Memset(&ent, 0, sizeof(ent));
+	memset(&ent, 0, sizeof(ent));
 	VectorCopy( point, ent.e.origin );
 	R_SetupEntityLightingGrid( &ent, world );
 
@@ -473,7 +501,7 @@ int R_CubemapForPoint( vec3_t point )
 			vec3_t diff;
 			vec_t length;
 
-			VectorSubtract(point, tr.cubemapOrigins[i], diff);
+			VectorSubtract(point, tr.cubemaps[i].origin, diff);
 			length = DotProduct(diff, diff);
 
 			if (shortest > length)

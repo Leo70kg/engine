@@ -161,22 +161,15 @@ int AAS_PointContents(vec3_t point)
 {
 	return botimport.PointContents(point);
 } //end of the function AAS_PointContents
-//===========================================================================
-//
-// Parameter:				-
-// Returns:					-
-// Changes Globals:		-
-//===========================================================================
-qboolean AAS_EntityCollision(int entnum,
-					vec3_t start, vec3_t boxmins, vec3_t boxmaxs, vec3_t end,
-								int contentmask, bsp_trace_t *trace)
+
+qboolean AAS_EntityCollision(int entnum, vec3_t start, vec3_t boxmins, vec3_t boxmaxs, vec3_t end, int contentmask, bsp_trace_t *trace)
 {
 	bsp_trace_t enttrace;
 
 	botimport.EntityTrace(&enttrace, start, boxmins, boxmaxs, end, entnum, contentmask);
 	if (enttrace.fraction < trace->fraction)
 	{
-		Com_Memcpy(trace, &enttrace, sizeof(bsp_trace_t));
+		memcpy(trace, &enttrace, sizeof(bsp_trace_t));
 		return qtrue;
 	} //end if
 	return qfalse;
@@ -466,21 +459,16 @@ void AAS_DumpBSPData(void)
 	bspworld.entdatasize = 0;
 	//
 	bspworld.loaded = qfalse;
-	Com_Memset( &bspworld, 0, sizeof(bspworld) );
+	memset( &bspworld, 0, sizeof(bspworld) );
 } //end of the function AAS_DumpBSPData
-//===========================================================================
-// load a .bsp file
-//
-// Parameter:				-
-// Returns:					-
-// Changes Globals:		-
-//===========================================================================
+
+
 int AAS_LoadBSPFile(void)
 {
 	AAS_DumpBSPData();
 	bspworld.entdatasize = strlen(botimport.BSPEntityData()) + 1;
 	bspworld.dentdata = (char *) GetClearedHunkMemory(bspworld.entdatasize);
-	Com_Memcpy(bspworld.dentdata, botimport.BSPEntityData(), bspworld.entdatasize);
+	memcpy(bspworld.dentdata, botimport.BSPEntityData(), bspworld.entdatasize);
 	AAS_ParseBSPEntities();
 	bspworld.loaded = qtrue;
 	return BLERR_NOERROR;

@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef USE_VOIP
 cvar_t *sv_voip;
+cvar_t *sv_voipProtocol;
 #endif
 
 serverStatic_t	svs;				// persistant server info
@@ -445,14 +446,16 @@ static leakyBucket_t *SVC_BucketForAddress( netadr_t address, int burst, int per
 				bucket->next->prev = bucket->prev;
 			}
 
-			Com_Memset( bucket, 0, sizeof( leakyBucket_t ) );
+			memset( bucket, 0, sizeof( leakyBucket_t ) );
 		}
 
-		if ( bucket->type == NA_BAD ) {
+		if ( bucket->type == NA_BAD )
+        {
 			bucket->type = address.type;
-			switch ( address.type ) {
-				case NA_IP:  Com_Memcpy( bucket->ipv._4, address.ip, 4 );   break;
-				case NA_IP6: Com_Memcpy( bucket->ipv._6, address.ip6, 16 ); break;
+			switch(address.type)
+            {
+				case NA_IP:  memcpy( bucket->ipv._4, address.ip, 4 );   break;
+				case NA_IP6: memcpy( bucket->ipv._6, address.ip6, 16 ); break;
 				default: break;
 			}
 
@@ -489,7 +492,7 @@ qboolean SVC_RateLimit( leakyBucket_t *bucket, int burst, int period ) {
 		int expired = interval / period;
 		int expiredRemainder = interval % period;
 
-		if ( expired > bucket->burst ) {
+		if ( expired > bucket->burst || interval < 0 ) {
 			bucket->burst = 0;
 			bucket->lastTime = now;
 		} else {
@@ -667,8 +670,8 @@ void SVC_Info( netadr_t from ) {
 	Info_SetValueForKey(infostring, "g_needpass", va("%d", Cvar_VariableIntegerValue("g_needpass")));
 
 #ifdef USE_VOIP
-	if (sv_voip->integer) {
-		Info_SetValueForKey( infostring, "voip", va("%i", sv_voip->integer ) );
+	if (sv_voipProtocol->string && *sv_voipProtocol->string) {
+		Info_SetValueForKey( infostring, "voip", sv_voipProtocol->string );
 	}
 #endif
 
@@ -829,13 +832,15 @@ static void SV_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 SV_PacketEvent
 =================
 */
-void SV_PacketEvent( netadr_t from, msg_t *msg ) {
+void SV_PacketEvent( netadr_t from, msg_t *msg )
+{
 	int			i;
 	client_t	*cl;
 	int			qport;
 
 	// check for connectionless packet (0xffffffff) first
-	if ( msg->cursize >= 4 && *(int *)msg->data == -1) {
+	if ( msg->cursize >= 4 && *(int *)msg->data == -1)
+    {
 		SV_ConnectionlessPacket( from, msg );
 		return;
 	}
@@ -847,18 +852,18 @@ void SV_PacketEvent( netadr_t from, msg_t *msg ) {
 	qport = MSG_ReadShort( msg ) & 0xffff;
 
 	// find which client the message is from
-	for (i=0, cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++) {
-		if (cl->state == CS_FREE) {
+	for (i=0, cl=svs.clients ; i < sv_maxclients->integer ; i++, cl++)
+    {
+		if (cl->state == CS_FREE)
 			continue;
-		}
-		if ( !NET_CompareBaseAdr( from, cl->netchan.remoteAddress ) ) {
+
+		if ( !NET_CompareBaseAdr( from, cl->netchan.remoteAddress ) )
 			continue;
-		}
-		// it is possible to have multiple clients from a single IP
-		// address, so they are differentiated by the qport variable
-		if (cl->netchan.qport != qport) {
+
+		// it is possible to have multiple clients from a single IP address, so they are differentiated by the qport variable
+		if (cl->netchan.qport != qport)
 			continue;
-		}
+
 
 		// the IP port can't be used to differentiate them, because
 		// some address translating routers periodically change UDP
@@ -1051,7 +1056,8 @@ Player movement occurs as a result of packet events, which
 happen before SV_Frame is called
 ==================
 */
-void SV_Frame( int msec ) {
+void SV_Frame( int msec )
+{
 	int		frameMsec;
 	int		startTime;
 

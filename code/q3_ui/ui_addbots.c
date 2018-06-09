@@ -32,14 +32,14 @@ ADD BOTS MENU
 #include "ui_local.h"
 
 
-#define ART_BACK0			"menu/art/back_0"
-#define ART_BACK1			"menu/art/back_1"	
-#define ART_FIGHT0			"menu/art/accept_0"
-#define ART_FIGHT1			"menu/art/accept_1"
-#define ART_BACKGROUND		"menu/art/addbotframe"
-#define ART_ARROWS			"menu/art/arrows_vert_0"
-#define ART_ARROWUP			"menu/art/arrows_vert_top"
-#define ART_ARROWDOWN		"menu/art/arrows_vert_bot"
+#define ART_BACK0			"menu/" MENU_ART_DIR "/back_0"
+#define ART_BACK1			"menu/" MENU_ART_DIR "/back_1"
+#define ART_FIGHT0			"menu/" MENU_ART_DIR "/accept_0"
+#define ART_FIGHT1			"menu/" MENU_ART_DIR "/accept_1"
+#define ART_BACKGROUND		"menu/" MENU_ART_DIR "/addbotframe"
+#define ART_ARROWS			"menu/" MENU_ART_DIR "/arrows_vert_0"
+#define ART_ARROWUP			"menu/" MENU_ART_DIR "/arrows_vert_top"
+#define ART_ARROWDOWN		"menu/" MENU_ART_DIR "/arrows_vert_bot"
 
 #define ID_BACK				10
 #define ID_GO				11
@@ -333,7 +333,7 @@ static void UI_AddBotsMenu_Init( void ) {
 	addBotsMenuInfo.team.generic.y			= y;
 	addBotsMenuInfo.team.generic.name		= "Team: ";
 	addBotsMenuInfo.team.generic.id			= ID_TEAM;
-	if( gametype >= GT_TEAM ) {
+	if( gametype >= GT_TEAM && gametype!=GT_LMS  && gametype!=GT_POSSESSION) {
 		addBotsMenuInfo.team.itemnames		= teamNames2;
 	}
 	else {

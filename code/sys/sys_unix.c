@@ -39,7 +39,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <fenv.h>
 #include <sys/wait.h>
 
-qboolean stdinIsATTY;
+static qboolean stdinIsATTY;
 
 // Used to determine where to store user-specific files
 static char homePath[ MAX_OSPATH ] = { 0 };
@@ -49,7 +49,15 @@ static char homeXdg[ MAX_OSPATH ] = { 0 };
 /* Contains the classic home path. Typically $HOME/.openarena */
 static char homeClassic[ MAX_OSPATH ] = { 0 };
 
-static const char* getHome(void) {
+
+qboolean IsStdinATTY(void)
+{
+    return stdinIsATTY;
+}
+
+
+static const char* getHome(void)
+{
 	return getenv("HOME");
 }
 
@@ -58,7 +66,8 @@ static const char* getHome(void) {
  * @param dest Buffer to concatenate "openarea" to.
  * @param n Size of buffer
  */
-static void Sys_ConcatXdgHomepathName(char* dest, size_t n) {
+static void Sys_ConcatXdgHomepathName(char* dest, size_t n)
+{
 	if(com_homepath->string[0])
 		Q_strcat(dest, n, com_homepath->string);
 	else
@@ -73,27 +82,35 @@ static void Sys_ConcatXdgHomepathName(char* dest, size_t n) {
  * @param dest Buffer to place the value into
  * @param n Size of buffer
  */
-static void Sys_SetXdgDataHomePath(char* dest, size_t n) {
+static void Sys_SetXdgDataHomePath(char* dest, size_t n)
+{
 	const char* xdgDataPath = getenv("XDG_DATA_HOME");
 	dest[0] = '\0';
-	if (xdgDataPath) {
+    
+	if (xdgDataPath != NULL)
+    {
 		Com_sprintf(dest, n, "%s/", xdgDataPath);
 		FS_CreatePath(dest);
 		Sys_ConcatXdgHomepathName(dest, n);
 		return;
 	}
-	const char* homeFolder = getHome();
-	if (homeFolder) {
-		Com_sprintf(dest, n, "%s/.local/share/", homeFolder);
-		FS_CreatePath(dest);
-		Sys_ConcatXdgHomepathName(dest, n);
-	}
+    else
+    {
+        const char* homeFolder = getHome();
+        if (homeFolder != NULL)
+        {
+            Com_sprintf(dest, n, "%s/.local/share/", homeFolder);
+            FS_CreatePath(dest);
+            Sys_ConcatXdgHomepathName(dest, n);
+        }
+    }
 }
 
 /**
  * Sets the global variables homeClassic and home Xdg.
  */
-static void Sys_SetHomePaths( void ) {
+static void Sys_SetHomePaths( void )
+{
 	Sys_SetXdgDataHomePath(homeXdg, sizeof(homeXdg));
 	const char* p = getHome();
 	Com_sprintf(homeClassic, sizeof(homeClassic), "%s%c", p, PATH_SEP);
@@ -105,7 +122,8 @@ static void Sys_SetHomePaths( void ) {
  * @param path The path to the file.
  * @return True if it is a confirmed symbolic link, false otherwise.
  */
-static qboolean Sys_IsSymbolic(const char* path) {
+static qboolean Sys_IsSymbolic(const char* path)
+{
 	struct stat buf;
 	int errCode = lstat(path, &buf);
 	return (errCode == 0);
@@ -116,7 +134,8 @@ static qboolean Sys_IsSymbolic(const char* path) {
  * @param path Path to the file
  * @return True if it is a directory and false otherwise.
  */
-static qboolean Sys_IsDir(const char* path) {
+static qboolean Sys_IsDir(const char* path)
+{
 	struct stat buf;
 	int errCode = stat(path, &buf);
 	if (errCode != 0) {
@@ -130,14 +149,18 @@ static qboolean Sys_IsDir(const char* path) {
  * Otherwise: Do nothing.
  * @param path Path to the symlink.
  */
-static void Sys_RemoveInvalidSymlinkToDir(const char* path) {
-	if (Sys_IsSymbolic(path) && !Sys_IsDir(path)) {
+static void Sys_RemoveInvalidSymlinkToDir(const char* path)
+{
+	if (Sys_IsSymbolic(path) && !Sys_IsDir(path))
+    {
 		//If the file is symbolic but does not a dir then it must either be invalid or point to something not a dir.
 		unlink(path);
 	}
 }
 
-static void CreateXDGPathAndMisc( void ) {
+
+static void CreateXDGPathAndMisc( void )
+{
 	Sys_SetHomePaths();
 	Sys_RemoveInvalidSymlinkToDir(homeXdg);
 	Sys_RemoveInvalidSymlinkToDir(homeClassic);
@@ -175,23 +198,19 @@ static void CreateXDGPathAndMisc( void ) {
 	}
 }
 
-/*
-==================
-Sys_DefaultHomePath
-==================
-*/
+
 const char *Sys_DefaultHomePath(void)
 {
-	char *p;
 
 	if( !*homePath && com_homepath != NULL )
 	{
-		if( ( p = getenv( "HOME" ) ) != NULL )
+        char *p = getenv( "HOME" );
+
+		if( p != NULL )
 		{
 			Com_sprintf(homePath, sizeof(homePath), "%s%c", p, PATH_SEP);
 #ifdef MACOS_X
-			Q_strcat(homePath, sizeof(homePath),
-				"Library/Application Support/");
+			Q_strcat(homePath, sizeof(homePath), "Library/Application Support/");
 
 			if(com_homepath->string[0])
 				Q_strcat(homePath, sizeof(homePath), com_homepath->string);
@@ -203,9 +222,9 @@ const char *Sys_DefaultHomePath(void)
 #endif
 		}
 	}
-
 	return homePath;
 }
+
 
 /*
 ================
@@ -215,15 +234,18 @@ Sys_Milliseconds
 /* base time in seconds, that's our origin
    timeval:tv_sec is an int:
    assuming this wraps every 0x7fffffff - ~68 years since the Epoch (1970) - we're safe till 2038 */
-unsigned long sys_timeBase = 0;
+
 /* current time in ms, using sys_timeBase as origin
    NOTE: sys_timeBase*1000 + curtime -> ms since the Epoch
      0x7fffffff ms - ~24 days
    although timeval:tv_usec is an int, I'm not sure wether it is actually used as an unsigned int
      (which would affect the wrap period) */
-int curtime;
+
+
+
 int Sys_Milliseconds (void)
 {
+    static unsigned long int sys_timeBase = 0;
 	struct timeval tp;
 
 	gettimeofday(&tp, NULL);
@@ -234,7 +256,7 @@ int Sys_Milliseconds (void)
 		return tp.tv_usec/1000;
 	}
 
-	curtime = (tp.tv_sec - sys_timeBase)*1000 + tp.tv_usec/1000;
+	int curtime = (tp.tv_sec - sys_timeBase)*1000 + tp.tv_usec/1000;
 
 	return curtime;
 }
@@ -246,13 +268,13 @@ Sys_RandomBytes
 */
 qboolean Sys_RandomBytes( byte *string, int len )
 {
-	FILE *fp;
-
-	fp = fopen( "/dev/urandom", "r" );
+	FILE *fp = fopen( "/dev/urandom", "r" );
 	if( !fp )
 		return qfalse;
 
-	if( fread( string, sizeof( byte ), len, fp ) != len )
+	setvbuf( fp, NULL, _IONBF, 0 ); // don't buffer reads from /dev/urandom
+
+	if( fread( string, sizeof(unsigned char), len, fp ) != len )
 	{
 		fclose( fp );
 		return qfalse;
@@ -269,22 +291,12 @@ Sys_GetCurrentUser
 */
 char *Sys_GetCurrentUser( void )
 {
-	struct passwd *p;
+	struct passwd *p = getpwuid( getuid() );
 
-	if ( (p = getpwuid( getuid() )) == NULL ) {
+	if ( p  == NULL )
 		return "player";
-	}
+    
 	return p->pw_name;
-}
-
-/*
-==================
-Sys_GetClipboardData
-==================
-*/
-char *Sys_GetClipboardData(void)
-{
-	return NULL;
 }
 
 #define MEM_THRESHOLD 96*1024*1024
@@ -296,7 +308,7 @@ Sys_LowPhysicalMemory
 TODO
 ==================
 */
-qboolean Sys_LowPhysicalMemory( void )
+qboolean Sys_LowPhysicalMemory(void)
 {
 	return qfalse;
 }
@@ -306,19 +318,15 @@ qboolean Sys_LowPhysicalMemory( void )
 Sys_Basename
 ==================
 */
-const char *Sys_Basename( char *path )
+const char *Sys_Basename(char *path)
 {
-	return basename( path );
+	return basename(path);
 }
 
-/*
-==================
-Sys_Dirname
-==================
-*/
+
 const char *Sys_Dirname( char *path )
 {
-	return dirname( path );
+	return dirname(path);
 }
 
 /*
@@ -326,7 +334,8 @@ const char *Sys_Dirname( char *path )
 Sys_FOpen
 ==============
 */
-FILE *Sys_FOpen( const char *ospath, const char *mode ) {
+FILE *Sys_FOpen( const char *ospath, const char *mode )
+{
 	struct stat buf;
 
 	// check if path exists and is a directory
@@ -356,38 +365,32 @@ qboolean Sys_Mkdir( const char *path )
 Sys_Mkfifo
 ==================
 */
-FILE *Sys_Mkfifo( const char *ospath )
+FILE *Sys_Mkfifo(const char *ospath)
 {
-	FILE	*fifo;
-	int	result;
-	int	fn;
 	struct	stat buf;
 
 	// if file already exists AND is a pipefile, remove it
 	if( !stat( ospath, &buf ) && S_ISFIFO( buf.st_mode ) )
 		FS_Remove( ospath );
 
-	result = mkfifo( ospath, 0600 );
+	int result = mkfifo( ospath, 0600 );
 	if( result != 0 )
 		return NULL;
 
-	fifo = fopen( ospath, "w+" );
+	FILE* fifo = fopen( ospath, "w+" );
 	if( fifo )
 	{
-		fn = fileno( fifo );
+		int fn = fileno( fifo );
 		fcntl( fn, F_SETFL, O_NONBLOCK );
 	}
 
 	return fifo;
 }
 
-/*
-==================
-Sys_Cwd
-==================
-*/
+
 char *Sys_Cwd( void )
 {
+    Com_Printf(" Sys_Cwd()\n");
 	static char cwd[MAX_OSPATH];
 
 	char *result = getcwd( cwd, sizeof( cwd ) - 1 );
@@ -416,9 +419,9 @@ Sys_ListFilteredFiles
 */
 void Sys_ListFilteredFiles( const char *basedir, char *subdirs, char *filter, char **list, int *numfiles )
 {
-	char          search[MAX_OSPATH], newsubdirs[MAX_OSPATH];
-	char          filename[MAX_OSPATH];
-	DIR           *fdir;
+	char search[MAX_OSPATH], newsubdirs[MAX_OSPATH];
+	char filename[MAX_OSPATH];
+	DIR *fdir;
 	struct dirent *d;
 	struct stat   st;
 
@@ -437,7 +440,8 @@ void Sys_ListFilteredFiles( const char *basedir, char *subdirs, char *filter, ch
 		return;
 	}
 
-	while ((d = readdir(fdir)) != NULL) {
+	while ((d = readdir(fdir)) != NULL)
+    {
 		Com_sprintf(filename, sizeof(filename), "%s/%s", search, d->d_name);
 		if (stat(filename, &st) == -1)
 			continue;
@@ -466,27 +470,22 @@ void Sys_ListFilteredFiles( const char *basedir, char *subdirs, char *filter, ch
 	closedir(fdir);
 }
 
-/*
-==================
-Sys_ListFiles
-==================
-*/
+
+
 char **Sys_ListFiles( const char *directory, const char *extension, char *filter, int *numfiles, qboolean wantsubs )
 {
 	struct dirent *d;
 	DIR           *fdir;
 	qboolean      dironly = wantsubs;
 	char          search[MAX_OSPATH];
-	int           nfiles;
 	char          **listCopy;
 	char          *list[MAX_FOUND_FILES];
 	int           i;
 	struct stat   st;
+	int nfiles = 0;
 
-	int           extLen;
-
-	if (filter) {
-
+	if (filter != NULL)
+    {
 		nfiles = 0;
 		Sys_ListFilteredFiles( directory, "", filter, list, &nfiles );
 
@@ -505,37 +504,38 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 		return listCopy;
 	}
 
-	if ( !extension)
+	if ( extension == NULL)
 		extension = "";
 
-	if ( extension[0] == '/' && extension[1] == 0 ) {
+	if ( extension[0] == '/' && extension[1] == 0 )
+    {
 		extension = "";
 		dironly = qtrue;
 	}
 
-	extLen = strlen( extension );
+    int extLen = strlen( extension );
 
 	// search
 	nfiles = 0;
 
-	if ((fdir = opendir(directory)) == NULL) {
+	if ((fdir = opendir(directory)) == NULL)
+    {
 		*numfiles = 0;
 		return NULL;
 	}
 
-	while ((d = readdir(fdir)) != NULL) {
+	while ((d = readdir(fdir)) != NULL)
+    {
 		Com_sprintf(search, sizeof(search), "%s/%s", directory, d->d_name);
 		if (stat(search, &st) == -1)
 			continue;
-		if ((dironly && !(st.st_mode & S_IFDIR)) ||
-			(!dironly && (st.st_mode & S_IFDIR)))
+		if ((dironly && !(st.st_mode & S_IFDIR)) || (!dironly && (st.st_mode & S_IFDIR)))
 			continue;
 
-		if (*extension) {
-			if ( strlen( d->d_name ) < extLen ||
-				Q_stricmp(
-					d->d_name + strlen( d->d_name ) - extLen,
-					extension ) ) {
+		if (*extension)
+        {
+			if ( strlen( d->d_name ) < extLen || Q_stricmp( d->d_name + strlen( d->d_name ) - extLen, extension ) )
+            {
 				continue; // didn't match
 			}
 		}
@@ -553,18 +553,21 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 	// return a copy of the list
 	*numfiles = nfiles;
 
-	if ( !nfiles ) {
+	if( !nfiles )
+    {
 		return NULL;
 	}
 
 	listCopy = Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ) );
-	for ( i = 0 ; i < nfiles ; i++ ) {
+	for ( i = 0 ; i < nfiles ; i++ )
+    {
 		listCopy[i] = list[i];
 	}
 	listCopy[i] = NULL;
 
 	return listCopy;
 }
+
 
 /*
 ==================
@@ -575,15 +578,16 @@ void Sys_FreeFileList( char **list )
 {
 	int i;
 
-	if ( !list ) {
+	if ( !list )
 		return;
+
+    
+	for ( i = 0 ; list[i] != NULL ; i++ )
+    {
+		Z_Free( (void *)list[i] ); //
 	}
 
-	for ( i = 0 ; list[i] ; i++ ) {
-		Z_Free( list[i] );
-	}
-
-	Z_Free( list );
+	Z_Free( (void *)list );
 }
 
 /*
@@ -700,7 +704,7 @@ Sys_ClearExecBuffer
 static void Sys_ClearExecBuffer( void )
 {
 	execBufferPointer = execBuffer;
-	Com_Memset( execArgv, 0, sizeof( execArgv ) );
+	memset( execArgv, 0, sizeof( execArgv ) );
 	execArgc = 0;
 }
 
@@ -723,11 +727,7 @@ static void Sys_AppendToExecBuffer( const char *text )
 	execBufferPointer += length;
 }
 
-/*
-==============
-Sys_Exec
-==============
-*/
+
 static int Sys_Exec( void )
 {
 	pid_t pid = fork( );
@@ -858,6 +858,7 @@ dialogResult_t Sys_Dialog( dialogType_t type, const char *message, const char *t
 	qboolean                tried[ NUM_DIALOG_PROGRAMS ] = { qfalse };
 	dialogCommandBuilder_t  commands[ NUM_DIALOG_PROGRAMS ] = { NULL };
 	dialogCommandType_t     preferredCommandType = NONE;
+	int                     i;
 
 	commands[ ZENITY ] = &Sys_ZenityCommand;
 	commands[ KDIALOG ] = &Sys_KdialogCommand;
@@ -869,50 +870,37 @@ dialogResult_t Sys_Dialog( dialogType_t type, const char *message, const char *t
 	else if( !Q_stricmp( session, "kde" ) )
 		preferredCommandType = KDIALOG;
 
-	while( 1 )
+	for( i = NONE + 1; i < NUM_DIALOG_PROGRAMS; i++ )
 	{
-		int i;
+		if( preferredCommandType != NONE && preferredCommandType != i )
+			continue;
 
-		for( i = NONE + 1; i < NUM_DIALOG_PROGRAMS; i++ )
+		if( !tried[ i ] )
 		{
-			if( preferredCommandType != NONE && preferredCommandType != i )
-				continue;
+			int exitCode;
 
-			if( !tried[ i ] )
+			commands[ i ]( type, message, title );
+			exitCode = Sys_Exec( );
+
+			if( exitCode >= 0 )
 			{
-				int exitCode;
-
-				commands[ i ]( type, message, title );
-				exitCode = Sys_Exec( );
-
-				if( exitCode >= 0 )
+				switch( type )
 				{
-					switch( type )
-					{
-						case DT_YES_NO:    return exitCode ? DR_NO : DR_YES;
-						case DT_OK_CANCEL: return exitCode ? DR_CANCEL : DR_OK;
-						default:           return DR_OK;
-					}
-				}
-
-				tried[ i ] = qtrue;
-
-				// The preference failed, so start again in order
-				if( preferredCommandType != NONE )
-				{
-					preferredCommandType = NONE;
-					break;
+					case DT_YES_NO:    return exitCode ? DR_NO : DR_YES;
+					case DT_OK_CANCEL: return exitCode ? DR_CANCEL : DR_OK;
+					default:           return DR_OK;
 				}
 			}
-		}
 
-		for( i = NONE + 1; i < NUM_DIALOG_PROGRAMS; i++ )
-		{
-			if( !tried[ i ] )
-				continue;
-		}
+			tried[ i ] = qtrue;
 
-		break;
+			// The preference failed, so start again in order
+			if( preferredCommandType != NONE )
+			{
+				preferredCommandType = NONE;
+				i = NONE + 1;
+			}
+		}
 	}
 
 	Com_DPrintf( S_COLOR_YELLOW "WARNING: failed to show a dialog\n" );
@@ -920,43 +908,12 @@ dialogResult_t Sys_Dialog( dialogType_t type, const char *message, const char *t
 }
 #endif
 
-/*
-==============
-Sys_GLimpSafeInit
 
-Unix specific "safe" GL implementation initialisation
-==============
-*/
-void Sys_GLimpSafeInit( void )
-{
-	// NOP
-}
+
 
 /*
-==============
-Sys_GLimpInit
-
-Unix specific GL implementation initialisation
-==============
-*/
-void Sys_GLimpInit( void )
-{
-	// NOP
-}
-
-void Sys_SetFloatEnv(void)
-{
-	// rounding toward nearest
-	fesetround(FE_TONEAREST);
-}
-
-/*
-==============
-Sys_PlatformInit
-
-Unix specific initialisation
-==============
-*/
+ * Sys_PlatformInit: Unix specific initialisation
+ */
 void Sys_PlatformInit( void )
 {
 	const char* term = getenv( "TERM" );
@@ -964,23 +921,15 @@ void Sys_PlatformInit( void )
 	signal( SIGHUP, Sys_SigHandler );
 	signal( SIGQUIT, Sys_SigHandler );
 	signal( SIGTRAP, Sys_SigHandler );
-	signal( SIGIOT, Sys_SigHandler );
+	signal( SIGABRT, Sys_SigHandler );
 	signal( SIGBUS, Sys_SigHandler );
 
-	stdinIsATTY = isatty( STDIN_FILENO ) &&
-		!( term && ( !strcmp( term, "raw" ) || !strcmp( term, "dumb" ) ) );
+	// rounding toward nearest
+	fesetround(FE_TONEAREST);
+
+	stdinIsATTY = isatty( STDIN_FILENO ) &&	!( term && ( !strcmp( term, "raw" ) || !strcmp( term, "dumb" ) ) );
 }
 
-/*
-==============
-Sys_PlatformExit
-
-Unix specific deinitialisation
-==============
-*/
-void Sys_PlatformExit( void )
-{
-}
 
 /*
 ==============

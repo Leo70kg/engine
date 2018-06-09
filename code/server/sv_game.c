@@ -29,10 +29,9 @@ botlib_export_t	*botlib_export;
 
 // these functions must be used instead of pointer arithmetic, because
 // the game allocates gentities with private information after the server shared part
-int	SV_NumForGentity( sharedEntity_t *ent ) {
-	int		num;
-
-	num = ( (byte *)ent - (byte *)sv.gentities ) / sv.gentitySize;
+int	SV_NumForGentity( sharedEntity_t *ent )
+{
+	int	num = ( (byte *)ent - (byte *)sv.gentities ) / sv.gentitySize;
 
 	return num;
 }
@@ -289,7 +288,8 @@ SV_GameSystemCalls
 The module is making a system call
 ====================
 */
-intptr_t SV_GameSystemCalls( intptr_t *args ) {
+intptr_t SV_GameSystemCalls( intptr_t *args )
+{
 	switch( args[0] ) {
 	case G_PRINT:
 		Com_Printf( "%s", (const char*)VMA(1) );
@@ -426,7 +426,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 	case G_REAL_TIME:
 		return Com_RealTime( VMA(1) );
 	case G_SNAPVECTOR:
-		Q_SnapVector(VMA(1));
+		qsnapvectorsse(VMA(1));
 		return 0;
 
 		//====================================
@@ -795,11 +795,11 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		return botlib_export->ai.GeneticParentsAndChildSelection(args[1], VMA(2), VMA(3), VMA(4), VMA(5));
 
 	case TRAP_MEMSET:
-		Com_Memset( VMA(1), args[2], args[3] );
+		memset( VMA(1), args[2], args[3] );
 		return 0;
 
 	case TRAP_MEMCPY:
-		Com_Memcpy( VMA(1), VMA(2), args[3] );
+		memcpy( VMA(1), VMA(2), args[3] );
 		return 0;
 
 	case TRAP_STRNCPY:

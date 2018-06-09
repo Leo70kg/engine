@@ -27,45 +27,57 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define C2 0.2241438680420134
 #define C3 -0.1294095225512604
 
-static void daub4(float b[], unsigned long n, int isign)
+static void daub4(float* b, unsigned long n, int isign)
 {
 	float wksp[4097] = { 0.0f };
-	float *a=b;
 
-	unsigned long nh,nh1,i,j;
+	unsigned long i,j;
 
-	if (n < 4) return;
-
-	nh1=(nh=n >> 1)+1;
-	if (isign >= 0) {
-		for (i=1,j=1;j<=n-3;j+=2,i++) {
-			wksp[i]	   = C0*a[j-1]+C1*a[j]+C2*a[j+1]+C3*a[j+2];
-			wksp[i+nh] = C3*a[j-1]-C2*a[j]+C1*a[j+1]-C0*a[j+2];
+	if (n < 4)
+		return;
+	
+	unsigned long nh = n >> 1;
+	unsigned long nh1 = nh + 1;
+	if (isign >= 0)
+	{
+		for (i=1,j=0;j<n-3;j+=2,i++)
+		{
+			wksp[i]	   = C0*b[j]+C1*b[j+1]+C2*b[j+2]+C3*b[j+3];
+			wksp[i+nh] = C3*b[j]-C2*b[j+1]+C1*b[j+2]-C0*b[j+3];
 		}
-		wksp[i   ] = C0*a[n-2]+C1*a[n-1]+C2*a[0]+C3*a[1];
-		wksp[i+nh] = C3*a[n-2]-C2*a[n-1]+C1*a[0]-C0*a[1];
-	} else {
-		wksp[1] = C2*a[nh-1]+C1*a[n-1]+C0*a[0]+C3*a[nh1-1];
-		wksp[2] = C3*a[nh-1]-C0*a[n-1]+C1*a[0]-C2*a[nh1-1];
-		for (i=1,j=3;i<nh;i++) {
-			wksp[j++] = C2*a[i-1]+C1*a[i+nh-1]+C0*a[i]+C3*a[i+nh1-1];
-			wksp[j++] = C3*a[i-1]-C0*a[i+nh-1]+C1*a[i]-C2*a[i+nh1-1];
+		wksp[i   ] = C0*b[n-2]+C1*b[n-1]+C2*b[0]+C3*b[1];
+		wksp[i+nh] = C3*b[n-2]-C2*b[n-1]+C1*b[0]-C0*b[1];
+	}
+	else
+	{
+		wksp[1] = C2*b[nh-1]+C1*b[n-1]+C0*b[0]+C3*b[nh1-1];
+		wksp[2] = C3*b[nh-1]-C0*b[n-1]+C1*b[0]-C2*b[nh1-1];
+		
+		for (i=0,j=3;i<nh-1;i++)
+		{
+			wksp[j++] = C2*b[i]+C1*b[i+nh]+C0*b[i+1]+C3*b[i+nh1];
+			wksp[j++] = C3*b[i]-C0*b[i+nh]+C1*b[i+1]-C2*b[i+nh1];
 		}
 	}
-	for (i=1;i<=n;i++) {
-		a[i-1]=wksp[i];
-	}
+	
+	for (i=0; i<n; i++)
+		b[i] = wksp[i+1];
+
 }
 
-static void wt1(float a[], unsigned long n, int isign)
+static void wt1(float* a, unsigned long n, int isign)
 {
 	unsigned long nn;
 	int inverseStartLength = n/4;
 	if (n < inverseStartLength) return;
 	if (isign >= 0) {
-		for (nn=n;nn>=inverseStartLength;nn>>=1) daub4(a,nn,isign);
-	} else {
-		for (nn=inverseStartLength;nn<=n;nn<<=1) daub4(a,nn,isign);
+		for (nn=n;nn>=inverseStartLength;nn>>=1)
+			daub4(a,nn,isign);
+	}
+	else
+	{
+		for (nn=inverseStartLength;nn<=n;nn<<=1)
+			daub4(a,nn,isign);
 	}
 }
 
@@ -81,9 +93,11 @@ static unsigned char numBits[] = {
    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
 };
 
-byte MuLawEncode(short s) {
+
+unsigned char MuLawEncode(short s)
+{
 	unsigned long adjusted;
-	byte sign, exponent, mantissa;
+	unsigned char sign, exponent, mantissa;
 
 	sign = (s<0)?0:0x80;
 
@@ -119,7 +133,7 @@ void NXPutc(NXStream *stream, char out) {
 
 
 void encodeWavelet( sfx_t *sfx, short *packets) {
-	float	wksp[4097], temp;
+	float	wksp[4097] = {0}, temp;
 	int		i, samples, size;
 	sndBuffer		*newchunk, *chunk;
 	byte			*out;
@@ -169,7 +183,7 @@ void encodeWavelet( sfx_t *sfx, short *packets) {
 }
 
 void decodeWavelet(sndBuffer *chunk, short *to) {
-	float			wksp[4097];
+	float			wksp[4097] = {0};
 	int				i;
 	byte			*out;
 

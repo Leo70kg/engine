@@ -162,30 +162,26 @@ int AAS_UpdateEntity(int entnum, bot_entitystate_t *state)
 	} //end if
 	return BLERR_NOERROR;
 } //end of the function AAS_UpdateEntity
-//===========================================================================
-//
-// Parameter:			-
-// Returns:				-
-// Changes Globals:		-
-//===========================================================================
+
 void AAS_EntityInfo(int entnum, aas_entityinfo_t *info)
 {
 	if (!aasworld.initialized)
 	{
 		botimport.Print(PRT_FATAL, "AAS_EntityInfo: aasworld not initialized\n");
-		Com_Memset(info, 0, sizeof(aas_entityinfo_t));
+		memset(info, 0, sizeof(aas_entityinfo_t));
 		return;
 	} //end if
 
 	if (entnum < 0 || entnum >= aasworld.maxentities)
 	{
 		botimport.Print(PRT_FATAL, "AAS_EntityInfo: entnum %d out of range\n", entnum);
-		Com_Memset(info, 0, sizeof(aas_entityinfo_t));
+		memset(info, 0, sizeof(aas_entityinfo_t));
 		return;
 	} //end if
 
-	Com_Memcpy(info, &aasworld.entities[entnum].i, sizeof(aas_entityinfo_t));
-} //end of the function AAS_EntityInfo
+	memcpy(info, &aasworld.entities[entnum].i, sizeof(aas_entityinfo_t));
+} 
+
 //===========================================================================
 //
 // Parameter:				-

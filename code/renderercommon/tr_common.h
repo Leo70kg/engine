@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../qcommon/q_shared.h"
 #include "../renderercommon/tr_public.h"
-#include "qgl.h"
+
 
 typedef enum
 {
@@ -43,15 +43,14 @@ typedef enum
 	IMGFLAG_NO_COMPRESSION = 0x0010,
 	IMGFLAG_NOLIGHTSCALE   = 0x0020,
 	IMGFLAG_CLAMPTOEDGE    = 0x0040,
-	IMGFLAG_SRGB           = 0x0080,
-	IMGFLAG_GENNORMALMAP   = 0x0100,
+	IMGFLAG_GENNORMALMAP   = 0x0080,
 } imgFlags_t;
 
 typedef struct image_s {
 	char		imgName[MAX_QPATH];		// game path, including extension
 	int			width, height;				// source image
 	int			uploadWidth, uploadHeight;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
-	GLuint		texnum;					// gl texture binding
+	unsigned int texnum;					// gl texture binding
 
 	int			frameUsed;			// for texture usage in frame statistics
 
@@ -62,11 +61,6 @@ typedef struct image_s {
 	imgFlags_t  flags;
 
 	struct image_s*	next;
-
-	qboolean			maptexture;	// leilei - map texture listing hack
-
-	float				loadTime;	// leilei - time taken loading image
-	float				procTime;	// leilei - time taken processing image/uploading to vram
 } image_t;
 
 // any change in the LIGHTMAP_* defines here MUST be reflected in
@@ -76,62 +70,27 @@ typedef struct image_s {
 #define LIGHTMAP_WHITEIMAGE -2
 #define LIGHTMAP_NONE       -1
 
-extern	refimport_t		ri;
-extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
+// outside of TR since it shouldn't be cleared during ref re-init
+extern refimport_t ri;
+extern glconfig_t glConfig;	
 
 // These variables should live inside glConfig but can't because of
 // compatibility issues to the original ID vms.  If you release a stand-alone
 // game and your mod uses tr_types.h from this build you can safely move them
 // to the glconfig_t struct.
-extern qboolean  textureFilterAnisotropic;
-extern int       maxAnisotropy;
-extern float     displayAspect;
 
-//
-// cvars
-//
-extern cvar_t *r_stencilbits;			// number of desired stencil bits
-extern cvar_t *r_depthbits;			// number of desired depth bits
-extern cvar_t *r_colorbits;			// number of desired color bits, only relevant for fullscreen
-extern cvar_t *r_texturebits;			// number of desired texture bits
-extern cvar_t *r_ext_multisample;
-										// 0 = use framebuffer depth
-										// 16 = use 16-bit textures
-										// 32 = use 32-bit textures
-										// all else = error
 
-extern cvar_t *r_mode;				// video mode
-extern cvar_t *r_noborder;
-extern cvar_t *r_fullscreen;
-extern cvar_t *r_ignorehwgamma;		// overrides hardware gamma capabilities
-extern cvar_t *r_drawBuffer;
-extern cvar_t *r_swapInterval;
-
-extern cvar_t *r_allowExtensions;				// global enable/disable of OpenGL extensions
-extern cvar_t *r_ext_compressed_textures;		// these control use of specific extensions
-extern cvar_t *r_ext_multitexture;
-extern cvar_t *r_ext_compiled_vertex_array;
-extern cvar_t *r_ext_texture_env_add;
-
-extern cvar_t *r_ext_texture_filter_anisotropic;
-extern cvar_t *r_ext_max_anisotropy;
-
-extern cvar_t *r_stereoEnabled;
-
-extern	cvar_t	*r_saveFontData;
-
-qboolean	R_GetModeInfo( int *width, int *height, float *windowAspect, int mode );
 
 float R_NoiseGet4f( float x, float y, float z, float t );
 void  R_NoiseInit( void );
 
-image_t     *R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags );
-image_t *R_CreateImage( const char *name, byte *pic, int width, int height, imgType_t type, imgFlags_t flags, int internalFormat );
+image_t *R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags );
+image_t *R_CreateImage(const char *name, unsigned char* pic, int width, int height, imgType_t type, imgFlags_t flags, int internalFormat);
 
 void R_IssuePendingRenderCommands( void );
-qhandle_t		 RE_RegisterShaderLightMap( const char *name, int lightmapIndex );
-qhandle_t		 RE_RegisterShader( const char *name );
-qhandle_t		 RE_RegisterShaderNoMip( const char *name );
+qhandle_t RE_RegisterShaderLightMap( const char *name, int lightmapIndex );
+qhandle_t RE_RegisterShader( const char *name );
+qhandle_t RE_RegisterShaderNoMip( const char *name );
 qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_t *image, qboolean mipRawImage);
 
 // font stuff
@@ -140,23 +99,34 @@ void R_DoneFreeType( void );
 void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
 /*
-====================================================================
+=============================================================
 
-IMPLEMENTATION SPECIFIC FUNCTIONS
+IMAGE LOADERS
 
-====================================================================
+=============================================================
 */
 
-void		GLimp_Init( void );
-void		GLimp_Shutdown( void );
-void		GLimp_EndFrame( void );
+void R_LoadBMP( const char *name, byte **pic, int *width, int *height );
+void R_LoadJPG( const char *name, byte **pic, int *width, int *height );
+void R_LoadPCX( const char *name, byte **pic, int *width, int *height );
+void R_LoadPNG( const char *name, byte **pic, int *width, int *height );
+void R_LoadTGA( const char *name, byte **pic, int *width, int *height );
 
-void		GLimp_LogComment( char *comment );
-void		GLimp_Minimize(void);
+// subroutines
+void PointRotateAroundVector(float* dst, const float* dir, const float* p, const float degrees);
+void FastNormalize1f(float v[3]);
+char *getExtension( const char *name );
+char *SkipPath(char *pathname);
+void stripExtension(const char *in, char *out, int destsize);
 
-void		GLimp_SetGamma( unsigned char red[256],
-		unsigned char green[256],
-		unsigned char blue[256] );
+// note: vector forward are NOT assumed to be nornalized,
+// unit: nornalized of forward,
+// right: perpendicular of forward 
+void MakePerpVectors(const float forward[3], float unit[3], float right[3]);
+float MakeTwoPerpVectors(float forward[3], float right[3], float up[3]);
+
+unsigned int ColorBytes4 (float r, float g, float b, float a);
+
 
 
 #endif

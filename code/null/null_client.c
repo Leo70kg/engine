@@ -71,8 +71,7 @@ void CL_ForwardCommandToServer( const char *string ) {
 void CL_ConsolePrint( char *txt ) {
 }
 
-void CL_JoystickEvent( int axis, int value, int time ) {
-}
+
 
 void CL_InitKeyCommands( void ) {
 }

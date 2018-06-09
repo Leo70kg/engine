@@ -144,7 +144,7 @@ qboolean R_LoadIQM( model_t *mod, void *buffer, int filesize, const char *mod_na
 	unsigned short		*framedata;
 	char			*str;
 	int			i, j;
-	float			jointInvMats[IQM_MAX_JOINTS * 12];
+	float			jointInvMats[IQM_MAX_JOINTS * 12] = {0.0f};
 	float			*mat, *matInv;
 	size_t			size, joint_names;
 	iqmData_t		*iqmData;
@@ -547,9 +547,9 @@ qboolean R_LoadIQM( model_t *mod, void *buffer, int filesize, const char *mod_na
 		}
 		else
 		{
-			Com_Memcpy( mat, baseFrame,    sizeof(baseFrame)    );
+			memcpy( mat, baseFrame,    sizeof(baseFrame)    );
 			mat += 12;
-			Com_Memcpy( matInv, invBaseFrame, sizeof(invBaseFrame) );
+			memcpy( matInv, invBaseFrame, sizeof(invBaseFrame) );
 			matInv += 12;
 		}
 	}
@@ -605,7 +605,7 @@ qboolean R_LoadIQM( model_t *mod, void *buffer, int filesize, const char *mod_na
 				Matrix34Multiply( iqmData->jointMats + 12 * pose->parent,
 						  mat1, mat2 );
 			} else {
-				Com_Memcpy( mat2, mat1, sizeof(mat1) );
+				memcpy( mat2, mat1, sizeof(mat1) );
 			}
 			
 			Matrix34Multiply( mat2, jointInvMats + 12 * j, mat );
@@ -642,22 +642,22 @@ qboolean R_LoadIQM( model_t *mod, void *buffer, int filesize, const char *mod_na
 
 		switch( vertexarray->type ) {
 		case IQM_POSITION:
-			Com_Memcpy( iqmData->positions,
+			memcpy( iqmData->positions,
 				    (byte *)header + vertexarray->offset,
 				    n * sizeof(float) );
 			break;
 		case IQM_NORMAL:
-			Com_Memcpy( iqmData->normals,
+			memcpy( iqmData->normals,
 				    (byte *)header + vertexarray->offset,
 				    n * sizeof(float) );
 			break;
 		case IQM_TANGENT:
-			Com_Memcpy( iqmData->tangents,
+			memcpy( iqmData->tangents,
 				    (byte *)header + vertexarray->offset,
 				    n * sizeof(float) );
 			break;
 		case IQM_TEXCOORD:
-			Com_Memcpy( iqmData->texcoords,
+			memcpy( iqmData->texcoords,
 				    (byte *)header + vertexarray->offset,
 				    n * sizeof(float) );
 			break;
@@ -668,24 +668,24 @@ qboolean R_LoadIQM( model_t *mod, void *buffer, int filesize, const char *mod_na
 					iqmData->blendIndexes[j] = (byte)data[j];
 				}
 			} else {
-				Com_Memcpy( iqmData->blendIndexes,
+				memcpy( iqmData->blendIndexes,
 						(byte *)header + vertexarray->offset,
 						n * sizeof(byte) );
 			}
 			break;
 		case IQM_BLENDWEIGHTS:
 			if( blendWeightsType == IQM_FLOAT ) {
-				Com_Memcpy( iqmData->blendWeights.f,
+				memcpy( iqmData->blendWeights.f,
 						(byte *)header + vertexarray->offset,
 						n * sizeof(float) );
 			} else {
-				Com_Memcpy( iqmData->blendWeights.b,
+				memcpy( iqmData->blendWeights.b,
 						(byte *)header + vertexarray->offset,
 						n * sizeof(byte) );
 			}
 			break;
 		case IQM_COLOR:
-			Com_Memcpy( iqmData->colors,
+			memcpy( iqmData->colors,
 				    (byte *)header + vertexarray->offset,
 				    n * sizeof(byte) );
 			break;
@@ -713,7 +713,7 @@ qboolean R_LoadIQM( model_t *mod, void *buffer, int filesize, const char *mod_na
 		char *name = (char *)header + header->ofs_text +
 			joint->name;
 		int len = strlen( name ) + 1;
-		Com_Memcpy( str, name, len );
+		memcpy( str, name, len );
 		str += len;
 	}
 
@@ -903,9 +903,9 @@ void R_AddIQMSurfaces( trRefEntity_t *ent ) {
 
 			for(j = 0; j < skin->numSurfaces; j++)
 			{
-				if (!strcmp(skin->surfaces[j]->name, surface->name))
+				if (!strcmp(skin->surfaces[j].name, surface->name))
 				{
-					shader = skin->surfaces[j]->shader;
+					shader = skin->surfaces[j].shader;
 					break;
 				}
 			}
@@ -953,7 +953,7 @@ static void ComputePoseMats( iqmData_t *data, int frame, int oldframe,
 				Matrix34Multiply( mat + 12 * *joint,
 						  identityMatrix, mat + 12*i );
 			} else {
-				Com_Memcpy( mat + 12*i, identityMatrix, 12 * sizeof(float) );
+				memcpy( mat + 12*i, identityMatrix, 12 * sizeof(float) );
 			}
 		}
 		return;
@@ -966,7 +966,7 @@ static void ComputePoseMats( iqmData_t *data, int frame, int oldframe,
 				Matrix34Multiply( mat + 12 * *joint,
 						  mat1 + 12*i, mat + 12*i );
 			} else {
-				Com_Memcpy( mat + 12*i, mat1 + 12*i, 12 * sizeof(float) );
+				memcpy( mat + 12*i, mat1 + 12*i, 12 * sizeof(float) );
 			}
 		}
 	} else  {
@@ -1000,7 +1000,7 @@ static void ComputeJointMats( iqmData_t *data, int frame, int oldframe,
 		float outmat[12];
 		mat1 = mat + 12 * i;
 
-		Com_Memcpy(outmat, mat1, sizeof(outmat));
+		memcpy(outmat, mat1, sizeof(outmat));
 
 		Matrix34Multiply_OnlySetOrigin( outmat, data->jointMats + 12 * i, mat1 );
 	}
@@ -1067,11 +1067,11 @@ void RB_IQMSurfaceAnim( surfaceType_t *surface ) {
 
 		if ( data->num_poses == 0 || numWeights == 0 ) {
 			// no blend joint, use identity matrix.
-			Com_Memcpy( vtxMat, identityMatrix, 12 * sizeof (float) );
+			memcpy( vtxMat, identityMatrix, 12 * sizeof (float) );
 		} else {
 			// compute the vertex matrix by blending the up to
 			// four blend weights
-			Com_Memset( vtxMat, 0, 12 * sizeof (float) );
+			memset( vtxMat, 0, 12 * sizeof (float) );
 			for( j = 0; j < numWeights; j++ ) {
 				for( k = 0; k < 12; k++ ) {
 					vtxMat[k] += blendWeights[j] * jointMats[12*data->blendIndexes[4*vtx + j] + k];

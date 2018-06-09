@@ -1307,14 +1307,14 @@ void AAS_UpdateAreaRoutingCache(aas_routingcache_t *areacache)
 	//
 	aasworld.frameroutingupdates++;
 	//clear the routing update fields
-//	Com_Memset(aasworld.areaupdate, 0, aasworld.numareas * sizeof(aas_routingupdate_t));
+//	memset(aasworld.areaupdate, 0, aasworld.numareas * sizeof(aas_routingupdate_t));
 	//
 	badtravelflags = ~areacache->travelflags;
 	//
 	clusterareanum = AAS_ClusterAreaNum(areacache->cluster, areacache->areanum);
 	if (clusterareanum >= numreachabilityareas) return;
 	//
-	Com_Memset(startareatraveltimes, 0, sizeof(startareatraveltimes));
+	memset(startareatraveltimes, 0, sizeof(startareatraveltimes));
 	//
 	curupdate = &aasworld.areaupdate[clusterareanum];
 	curupdate->areanum = areacache->areanum;
@@ -1459,7 +1459,7 @@ void AAS_UpdatePortalRoutingCache(aas_routingcache_t *portalcache)
 	numportalcacheupdates++;
 #endif //ROUTING_DEBUG
 	//clear the routing update fields
-//	Com_Memset(aasworld.portalupdate, 0, (aasworld.numportals+1) * sizeof(aas_routingupdate_t));
+//	memset(aasworld.portalupdate, 0, (aasworld.numportals+1) * sizeof(aas_routingupdate_t));
 	//
 	curupdate = &aasworld.portalupdate[aasworld.numportals];
 	curupdate->cluster = portalcache->cluster;
@@ -1770,10 +1770,8 @@ int AAS_AreaRouteToGoalArea(int areanum, vec3_t origin, int goalareanum, int tra
 //===========================================================================
 int AAS_AreaTravelTimeToGoalArea(int areanum, vec3_t origin, int goalareanum, int travelflags)
 {
-	int traveltime, reachnum;
+	int traveltime, reachnum = 0;
 
-	traveltime = 0;
-	reachnum = 0;
 	if (AAS_AreaRouteToGoalArea(areanum, origin, goalareanum, travelflags, &traveltime, &reachnum))
 	{
 		return traveltime;
@@ -1788,10 +1786,8 @@ int AAS_AreaTravelTimeToGoalArea(int areanum, vec3_t origin, int goalareanum, in
 //===========================================================================
 int AAS_AreaReachabilityToGoalArea(int areanum, vec3_t origin, int goalareanum, int travelflags)
 {
-	int traveltime, reachnum;
+	int traveltime, reachnum = 0;
 
-	traveltime = 0;
-	reachnum = 0;
 	if (AAS_AreaRouteToGoalArea(areanum, origin, goalareanum, travelflags, &traveltime, &reachnum))
 	{
 		return reachnum;
@@ -1928,15 +1924,15 @@ void AAS_ReachabilityFromNum(int num, struct aas_reachability_s *reach)
 {
 	if (!aasworld.initialized)
 	{
-		Com_Memset(reach, 0, sizeof(aas_reachability_t));
+		memset(reach, 0, sizeof(aas_reachability_t));
 		return;
 	} //end if
 	if (num < 0 || num >= aasworld.reachabilitysize)
 	{
-		Com_Memset(reach, 0, sizeof(aas_reachability_t));
+		memset(reach, 0, sizeof(aas_reachability_t));
 		return;
 	} //end if
-	Com_Memcpy(reach, &aasworld.reachability[num], sizeof(aas_reachability_t));;
+	memcpy(reach, &aasworld.reachability[num], sizeof(aas_reachability_t));;
 } //end of the function AAS_ReachabilityFromNum
 //===========================================================================
 //
@@ -2103,7 +2099,7 @@ int AAS_NearestHideArea(int srcnum, vec3_t origin, int areanum, int enemynum, ve
 	} //end if
 	else
 	{
-		Com_Memset(hidetraveltimes, 0, aasworld.numareas * sizeof(unsigned short int));
+		memset(hidetraveltimes, 0, aasworld.numareas * sizeof(unsigned short int));
 	} //end else
 	besttraveltime = 0;
 	bestarea = 0;

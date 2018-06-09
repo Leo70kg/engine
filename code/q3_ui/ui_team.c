@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "ui_local.h"
 
 
-#define TEAMMAIN_FRAME	"menu/art/cut_frame"
+#define TEAMMAIN_FRAME	"menu/" MENU_ART_DIR "/cut_frame"
 
 #define ID_JOINRED		100
 #define ID_JOINBLUE		101
@@ -46,6 +46,16 @@ typedef struct
 } teammain_t;
 
 static teammain_t	s_teammain;
+
+// bk001204 - unused
+//static menuframework_s	s_teammain_menu;
+//static menuaction_s		s_teammain_orders;
+//static menuaction_s		s_teammain_voice;
+//static menuaction_s		s_teammain_joinred;
+//static menuaction_s		s_teammain_joinblue;
+//static menuaction_s		s_teammain_joingame;
+//static menuaction_s		s_teammain_spectate;
+
 
 /*
 ===============
@@ -159,6 +169,8 @@ void TeamMain_MenuInit( void ) {
 	switch( gametype ) {
 	case GT_SINGLE_PLAYER:
 	case GT_FFA:
+	case GT_LMS:
+	case GT_POSSESSION:
 	case GT_TOURNAMENT:
 		s_teammain.joinred.generic.flags  |= QMF_GRAYED;
 		s_teammain.joinblue.generic.flags |= QMF_GRAYED;
@@ -167,7 +179,9 @@ void TeamMain_MenuInit( void ) {
 	default:
 	case GT_TEAM:
 	case GT_CTF:
-		s_teammain.joingame.generic.flags |= QMF_GRAYED;
+	case GT_ELIMINATION:
+	case GT_CTF_ELIMINATION:
+		s_teammain.joingame.string           = "AUTO JOIN GAME";
 		break;
 	}
 

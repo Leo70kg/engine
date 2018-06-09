@@ -35,21 +35,13 @@ extern qboolean loadCamera(const char *name);
 extern void startCamera(int time);
 extern qboolean getCameraInfo(int time, vec3_t *origin, vec3_t *angles);
 
-/*
-====================
-CL_GetGameState
-====================
-*/
-void CL_GetGameState( gameState_t *gs ) {
+void CL_GetGameState( gameState_t *gs )
+{
 	*gs = cl.gameState;
 }
 
-/*
-====================
-CL_GetGlconfig
-====================
-*/
-void CL_GetGlconfig( glconfig_t *glconfig ) {
+void CL_GetGlconfig( glconfig_t *glconfig )
+{
 	*glconfig = cls.glconfig;
 }
 
@@ -114,14 +106,11 @@ void	CL_GetCurrentSnapshotNumber( int *snapshotNumber, int *serverTime ) {
 	*serverTime = cl.snap.serverTime;
 }
 
-/*
-====================
-CL_GetSnapshot
-====================
-*/
-qboolean	CL_GetSnapshot( int snapshotNumber, snapshot_t *snapshot ) {
-	clSnapshot_t	*clSnap;
-	int				i, count;
+
+qboolean CL_GetSnapshot( int snapshotNumber, snapshot_t *snapshot )
+{
+	clSnapshot_t *clSnap;
+	int	i, count;
 
 	if ( snapshotNumber > cl.snap.messageNum ) {
 		Com_Error( ERR_DROP, "CL_GetSnapshot: snapshotNumber > cl.snapshot.messageNum" );
@@ -149,7 +138,7 @@ qboolean	CL_GetSnapshot( int snapshotNumber, snapshot_t *snapshot ) {
 	snapshot->serverCommandSequence = clSnap->serverCommandNum;
 	snapshot->ping = clSnap->ping;
 	snapshot->serverTime = clSnap->serverTime;
-	Com_Memcpy( snapshot->areamask, clSnap->areamask, sizeof( snapshot->areamask ) );
+	memcpy( snapshot->areamask, clSnap->areamask, sizeof( snapshot->areamask ) );
 	snapshot->ps = clSnap->ps;
 	count = clSnap->numEntities;
 	if ( count > MAX_ENTITIES_IN_SNAPSHOT ) {
@@ -214,7 +203,7 @@ void CL_ConfigstringModified( void ) {
 	// build the new gameState_t
 	oldGs = cl.gameState;
 
-	Com_Memset( &cl.gameState, 0, sizeof( cl.gameState ) );
+	memset( &cl.gameState, 0, sizeof( cl.gameState ) );
 
 	// leave the first 0 for uninitialized strings
 	cl.gameState.dataCount = 1;
@@ -237,7 +226,7 @@ void CL_ConfigstringModified( void ) {
 
 		// append it to the gameState string buffer
 		cl.gameState.stringOffsets[ i ] = cl.gameState.dataCount;
-		Com_Memcpy( cl.gameState.stringData + cl.gameState.dataCount, dup, len + 1 );
+		memcpy( cl.gameState.stringData + cl.gameState.dataCount, dup, len + 1 );
 		cl.gameState.dataCount += len + 1;
 	}
 
@@ -251,12 +240,11 @@ void CL_ConfigstringModified( void ) {
 
 /*
 ===================
-CL_GetServerCommand
-
-Set up argc/argv for the given command
+CL_GetServerCommand: Set up argc/argv for the given command
 ===================
 */
-qboolean CL_GetServerCommand( int serverCommandNumber ) {
+qboolean CL_GetServerCommand( int serverCommandNumber )
+{
 	char	*s;
 	char	*cmd;
 	static char bigConfigString[BIG_INFO_STRING];
@@ -334,7 +322,7 @@ rescan:
 		Con_ClearNotify();
 		// reparse the string, because Con_ClearNotify() may have done another Cmd_TokenizeString()
 		Cmd_TokenizeString( s );
-		Com_Memset( cl.cmds, 0, sizeof( cl.cmds ) );
+		memset( cl.cmds, 0, sizeof( cl.cmds ) );
 		return qtrue;
 	}
 
@@ -377,13 +365,9 @@ void CL_CM_LoadMap( const char *mapname ) {
 	CM_LoadMap( mapname, qtrue, &checksum );
 }
 
-/*
-====================
-CL_ShutdonwCGame
 
-====================
-*/
-void CL_ShutdownCGame( void ) {
+void CL_ShutdownCGame( void )
+{
 	Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CGAME );
 	cls.cgameStarted = qfalse;
 	if ( !cgvm ) {
@@ -612,10 +596,10 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 
 
 	case CG_MEMSET:
-		Com_Memset( VMA(1), args[2], args[3] );
+		memset( VMA(1), args[2], args[3] );
 		return 0;
 	case CG_MEMCPY:
-		Com_Memcpy( VMA(1), VMA(2), args[3] );
+		memcpy( VMA(1), VMA(2), args[3] );
 		return 0;
 	case CG_STRNCPY:
 		strncpy( VMA(1), VMA(2), args[3] );
@@ -633,11 +617,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	case CG_CEIL:
 		return FloatAsInt( ceil( VMF(1) ) );
 	case CG_ACOS:
-		return FloatAsInt( Q_acos( VMF(1) ) );
-	case CG_R_LFX_PARTICLEEFFECT:
-		re.LFX_ParticleEffect( args[1], VMA(2), VMA(3));
-		return 0;
-
+		return FloatAsInt( acos( VMF(1) ) );
 	case CG_PC_ADD_GLOBAL_DEFINE:
 		return botlib_export->PC_AddGlobalDefine( VMA(1) );
 	case CG_PC_LOAD_SOURCE:
@@ -656,7 +636,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	case CG_REAL_TIME:
 		return Com_RealTime( VMA(1) );
 	case CG_SNAPVECTOR:
-		Q_SnapVector(VMA(1));
+		qsnapvectorsse(VMA(1));
 		return 0;
 
 	case CG_CIN_PLAYCINEMATIC:
@@ -706,16 +686,15 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 
 /*
 ====================
-CL_InitCGame
-
-Should only be called by CL_StartHunkUsers
+CL_InitCGame: Should only be called by CL_StartHunkUsers
 ====================
 */
-void CL_InitCGame( void ) {
-	const char			*info;
-	const char			*mapname;
-	int					t1, t2;
-	vmInterpret_t		interpret;
+void CL_InitCGame( void )
+{
+	const char	*info;
+	const char	*mapname;
+	int			t1, t2;
+	vmInterpret_t interpret;
 
 	t1 = Sys_Milliseconds();
 
@@ -736,7 +715,7 @@ void CL_InitCGame( void ) {
 			interpret = VMI_COMPILED;
 	}
 
-	cgvm = VM_Create( "cgame", CL_CgameSystemCalls, interpret );
+	cgvm = VM_Create("cgame", CL_CgameSystemCalls, interpret);
 	if ( !cgvm ) {
 		Com_Error( ERR_DROP, "VM_Create on cgame failed" );
 	}
@@ -774,29 +753,19 @@ void CL_InitCGame( void ) {
 
 
 /*
-====================
-CL_GameCommand
-
-See if the current console command is claimed by the cgame
-====================
-*/
-qboolean CL_GameCommand( void ) {
-	if ( !cgvm ) {
+ * CL_GameCommand: See if the current console command is claimed by the cgame
+ */
+qboolean CL_GameCommand( void )
+{
+	if ( !cgvm )
 		return qfalse;
-	}
 
 	return VM_Call( cgvm, CG_CONSOLE_COMMAND );
 }
 
-
-
-/*
-=====================
-CL_CGameRendering
-=====================
-*/
-void CL_CGameRendering( stereoFrame_t stereo ) {
-	VM_Call( cgvm, CG_DRAW_ACTIVE_FRAME, cl.serverTime, stereo, clc.demoplaying );
+void CL_CGameRendering(void)
+{
+	VM_Call( cgvm, CG_DRAW_ACTIVE_FRAME, cl.serverTime, 0, clc.demoplaying );
 	VM_Debug( 0 );
 }
 
@@ -908,41 +877,31 @@ void CL_FirstSnapshot( void ) {
 #endif
 
 #ifdef USE_VOIP
-	if (!clc.speexInitialized) {
+	if (!clc.voipCodecInitialized) {
 		int i;
-		speex_bits_init(&clc.speexEncoderBits);
-		speex_bits_reset(&clc.speexEncoderBits);
+		int error;
 
-		clc.speexEncoder = speex_encoder_init(&speex_nb_mode);
+		clc.opusEncoder = opus_encoder_create(48000, 1, OPUS_APPLICATION_VOIP, &error);
 
-		speex_encoder_ctl(clc.speexEncoder, SPEEX_GET_FRAME_SIZE,
-		                  &clc.speexFrameSize);
-		speex_encoder_ctl(clc.speexEncoder, SPEEX_GET_SAMPLING_RATE,
-		                  &clc.speexSampleRate);
-
-		clc.speexPreprocessor = speex_preprocess_state_init(clc.speexFrameSize,
-		                                                  clc.speexSampleRate);
-
-		i = 1;
-		speex_preprocess_ctl(clc.speexPreprocessor,
-		                     SPEEX_PREPROCESS_SET_DENOISE, &i);
-
-		i = 1;
-		speex_preprocess_ctl(clc.speexPreprocessor,
-		                     SPEEX_PREPROCESS_SET_AGC, &i);
+		if ( error ) {
+			Com_DPrintf("VoIP: Error opus_encoder_create %d\n", error);
+			return;
+		}
 
 		for (i = 0; i < MAX_CLIENTS; i++) {
-			speex_bits_init(&clc.speexDecoderBits[i]);
-			speex_bits_reset(&clc.speexDecoderBits[i]);
-			clc.speexDecoder[i] = speex_decoder_init(&speex_nb_mode);
+			clc.opusDecoder[i] = opus_decoder_create(48000, 1, &error);
+			if ( error ) {
+				Com_DPrintf("VoIP: Error opus_decoder_create(%d) %d\n", i, error);
+				return;
+			}
 			clc.voipIgnore[i] = qfalse;
 			clc.voipGain[i] = 1.0f;
 		}
-		clc.speexInitialized = qtrue;
+		clc.voipCodecInitialized = qtrue;
 		clc.voipMuteAll = qfalse;
 		Cmd_AddCommand ("voip", CL_Voip_f);
 		Cvar_Set("cl_voipSendTarget", "spatial");
-		Com_Memset(clc.voipTargets, ~0, sizeof(clc.voipTargets));
+		memset(clc.voipTargets, ~0, sizeof(clc.voipTargets));
 	}
 #endif
 }
@@ -952,7 +911,8 @@ void CL_FirstSnapshot( void ) {
 CL_SetCGameTime
 ==================
 */
-void CL_SetCGameTime( void ) {
+void CL_SetCGameTime( void )
+{
 	// getting a valid frame message ends the connection process
 	if ( clc.state != CA_ACTIVE ) {
 		if ( clc.state != CA_PRIMED ) {

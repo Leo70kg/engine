@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "tr_local.h"
 
+extern	shaderCommands_t	tess;
 
 /*
 
@@ -151,7 +152,8 @@ triangleFromEdge[ v1 ][ v2 ]
   }
 =================
 */
-void RB_ShadowTessEnd( void ) {
+void RB_ShadowTessEnd( void )
+{
 	int		i;
 	int		numTris;
 	vec3_t	lightDir;
@@ -174,7 +176,7 @@ void RB_ShadowTessEnd( void ) {
 	}
 
 	// decide which triangles face the light
-	Com_Memset( numEdgeDefs, 0, 4 * tess.numVertexes );
+	memset( numEdgeDefs, 0, 4 * tess.numVertexes );
 
 	numTris = tess.numIndexes / 3;
 	for ( i = 0 ; i < numTris ; i++ ) {

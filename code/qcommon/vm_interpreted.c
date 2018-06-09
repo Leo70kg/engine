@@ -150,9 +150,7 @@ char *VM_Indent( vm_t *vm ) {
 }
 
 void VM_StackTrace( vm_t *vm, int programCounter, int programStack ) {
-	int		count;
-
-	count = 0;
+	int	count = 0;
 	do {
 		Com_Printf( "%s\n", VM_ValueToSymbol( vm, programCounter ) );
 		programStack =  *(int *)&vm->dataBase[programStack+4];
@@ -315,7 +313,8 @@ locals from sp
 
 #define	DEBUGSTR va("%s%i", VM_Indent(vm), opStackOfs)
 
-int	VM_CallInterpreted( vm_t *vm, int *args ) {
+int	VM_CallInterpreted( vm_t *vm, int *args )
+{
 	byte		stack[OPSTACK_SIZE + 15];
 	register int		*opStack;
 	register uint8_t 	opStackOfs;
@@ -877,7 +876,7 @@ nextInstruction2:
 			((float *) opStack)[opStackOfs] = (float) opStack[opStackOfs];
 			goto nextInstruction;
 		case OP_CVFI:
-			opStack[opStackOfs] = Q_ftol(((float *) opStack)[opStackOfs]);
+			opStack[opStackOfs] = (int)(((float *) opStack)[opStackOfs]);
 			goto nextInstruction;
 		case OP_SEX8:
 			opStack[opStackOfs] = (signed char) opStack[opStackOfs];

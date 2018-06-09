@@ -391,7 +391,7 @@ static void DrawSkyBox( shader_t *shader )
 	sky_min = 0;
 	sky_max = 1;
 
-	Com_Memset( s_skyTexCoords, 0, sizeof( s_skyTexCoords ) );
+	memset( s_skyTexCoords, 0, sizeof( s_skyTexCoords ) );
 
 	for (i=0 ; i<6 ; i++)
 	{
@@ -553,11 +553,11 @@ static void FillCloudBox( const shader_t *shader, int stage )
 			continue;
 		}
 
-		sky_mins_subd[0] = ri.ftol(sky_mins[0][i] * HALF_SKY_SUBDIVISIONS);
-		sky_mins_subd[1] = ri.ftol(sky_mins[1][i] * HALF_SKY_SUBDIVISIONS);
-		sky_maxs_subd[0] = ri.ftol(sky_maxs[0][i] * HALF_SKY_SUBDIVISIONS);
-		sky_maxs_subd[1] = ri.ftol(sky_maxs[1][i] * HALF_SKY_SUBDIVISIONS);
-
+		sky_mins_subd[0] = sky_mins[0][i] * HALF_SKY_SUBDIVISIONS;
+		sky_mins_subd[1] = sky_mins[1][i] * HALF_SKY_SUBDIVISIONS;
+		sky_maxs_subd[0] = sky_maxs[0][i] * HALF_SKY_SUBDIVISIONS;
+		sky_maxs_subd[1] = sky_maxs[1][i] * HALF_SKY_SUBDIVISIONS;
+        
 		if ( sky_mins_subd[0] < -HALF_SKY_SUBDIVISIONS ) 
 			sky_mins_subd[0] = -HALF_SKY_SUBDIVISIONS;
 		else if ( sky_mins_subd[0] > HALF_SKY_SUBDIVISIONS ) 
@@ -679,10 +679,10 @@ void R_InitSkyTexCoords( float heightCloud )
 				v[2] += radiusWorld;
 
 				// compute vector from world origin to intersection point 'v'
-				VectorNormalize( v );
+				FastNormalize1f( v );
 
-				sRad = Q_acos( v[0] );
-				tRad = Q_acos( v[1] );
+				sRad = acos( v[0] );
+				tRad = acos( v[1] );
 
 				s_cloudTexCoords[i][t][s][0] = sRad;
 				s_cloudTexCoords[i][t][s][1] = tRad;
@@ -769,6 +769,7 @@ void RB_StageIteratorSky( void ) {
 		
 		qglPushMatrix ();
 		GL_State( 0 );
+		GL_Cull( CT_FRONT_SIDED );
 		qglTranslatef (backEnd.viewParms.or.origin[0], backEnd.viewParms.or.origin[1], backEnd.viewParms.or.origin[2]);
 
 		DrawSkyBox( tess.shader );

@@ -108,6 +108,7 @@ doinclude(Tokenrow *trp)
 	return;
 syntax:
 	error(ERROR, "Syntax error in #include");
+	return;
 }
 
 /*
