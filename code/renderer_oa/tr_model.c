@@ -1057,38 +1057,7 @@ void R_Modellist_f( void )
 
 qhandle_t RE_RegisterModel( const char *name )
 {
-	if (!Q_strncmp( name, "models/player", 13))
-    {
-        if (r_suggestiveThemes->integer == 0)
-        {			// safe models that will ship, much needed option of modesty
-            qhandle_t  eh;
-            char	narm[ MAX_QPATH ];
-            COM_StripExtension( name, narm, MAX_QPATH );
-
-            eh = RE_RegisterModelReal( va("%s_safe", narm) );
-            if (!eh)	
-                eh = RE_RegisterModelReal( name );
-                    // TODO: Free the previous _safe qhandle 
-            return eh;
-        }
-        else if (r_suggestiveThemes->integer > 1)
-        {		// lewd models, won't ship, but adding support anyway so normal 
-                                    // models aren't replaced with lewd
-            qhandle_t  eh;
-            char	narm[ MAX_QPATH ];
-            COM_StripExtension( name, narm, MAX_QPATH );
-
-            eh = RE_RegisterModelReal( va("%s_lewd", narm) );
-            if (!eh)	
-                eh = RE_RegisterModelReal( name );
-                    // TODO: Free the previous _lewd qhandle 
-            return eh;
-        }
-        else
-            return RE_RegisterModelReal( name );
-	}
-	else
-	    return RE_RegisterModelReal( name );	// OK!!!
+	return RE_RegisterModelReal( name );	// OK!!!
 }
 
 

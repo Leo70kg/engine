@@ -36,8 +36,6 @@ cvar_t	*r_railWidth;
 cvar_t	*r_railCoreWidth;
 cvar_t	*r_railSegmentLength;
 
-cvar_t	*r_ignoreFastPath;
-
 cvar_t	*r_verbose;
 cvar_t	*r_ignore;
 
@@ -90,7 +88,6 @@ cvar_t	*r_colorMipLevels;
 cvar_t	*r_picmip;
 cvar_t	*r_iconmip;
 cvar_t	*r_iconBits;
-cvar_t	*r_lightmapBits;
 cvar_t	*r_showtris;
 cvar_t	*r_showsky;
 cvar_t	*r_finish;
@@ -145,54 +142,6 @@ cvar_t	*r_flaresDlightScale;
 cvar_t	*r_modelshader;		// Leilei
 
 cvar_t	*r_ntsc;		// Leilei - ntsc / composite signals
-
-cvar_t	*r_retroAA;		// Leilei - old console AA
-cvar_t	*r_anime;		// Leilei - anime filter
-cvar_t	*r_palletize;		// Leilei - palletization
-cvar_t	*r_leidebug;		// Leilei - debug
-cvar_t	*r_leidebugeye;		// Leilei - eye debug
-
-cvar_t	*r_suggestiveThemes;		// leilei - mature content control
-static cvar_t* r_ignorehwgamma;		// overrides hardware gamma capabilities
-
-
-typedef struct vidmode_s {
-	const char *description;
-	int width, height;
-	float pixelAspect;		// pixel width / height
-} vidmode_t;
-
-static const vidmode_t r_vidModes[] = {
-	{ "Mode  0: 320x240",		320,	240,	1 },
-	{ "Mode  1: 400x300",		400,	300,	1 },
-	{ "Mode  2: 512x384",		512,	384,	1 },
-	{ "Mode  3: 640x480 (480p)",	640,	480,	1 },
-	{ "Mode  4: 800x600",		800,	600,	1 },
-	{ "Mode  5: 960x720",		960,	720,	1 },
-	{ "Mode  6: 1024x768",		1024,	768,	1 },
-	{ "Mode  7: 1152x864",		1152,	864,	1 },
-	{ "Mode  8: 1280x1024",		1280,	1024,	1 },
-	{ "Mode  9: 1600x1200",		1600,	1200,	1 },
-	{ "Mode 10: 2048x1536",		2048,	1536,	1 },
-	{ "Mode 11: 856x480",		856,	480,	1 },		// Q3 MODES END HERE AND EXTENDED MODES BEGIN
-	{ "Mode 12: 1280x720 (720p)",	1280,	720,	1 },
-	{ "Mode 13: 1280x768",		1280,	768,	1 },
-	{ "Mode 14: 1280x800",		1280,	800,	1 },
-	{ "Mode 15: 1280x960",		1280,	960,	1 },
-	{ "Mode 16: 1360x768",		1360,	768,	1 },
-	{ "Mode 17: 1366x768",		1366,	768,	1 }, // yes there are some out there on that extra 6
-	{ "Mode 18: 1360x1024",		1360,	1024,	1 },
-	{ "Mode 19: 1400x1050",		1400,	1050,	1 },
-	{ "Mode 20: 1400x900",		1400,	900,	1 },
-	{ "Mode 21: 1600x900",		1600,	900,	1 },
-	{ "Mode 22: 1680x1050",		1680,	1050,	1 },
-	{ "Mode 23: 1920x1080 (1080p)",	1920,	1080,	1 },
-	{ "Mode 24: 1920x1200",		1920,	1200,	1 },
-	{ "Mode 25: 1920x1440",		1920,	1440,	1 },
-	{ "Mode 26: 2560x1600",		2560,	1600,	1 },
-	{ "Mode 27: 3840x2160 (4K)",	3840,	2160,	1 }
-};
-static const int s_numVidModes = ARRAY_LEN( r_vidModes );
 
 
 static void GL_SetDefaultState(void)
@@ -356,7 +305,7 @@ static void InitOpenGL(void)
     glConfig.hardwareType = GLHW_GENERIC;
 
     // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
-    glConfig.deviceSupportsGamma = (!r_ignorehwgamma->integer) ;
+    glConfig.deviceSupportsGamma = qtrue;
 
     // get our config strings
     Q_strncpyz( glConfig.vendor_string, (char *) qglGetString(GL_VENDOR), sizeof( glConfig.vendor_string ) );
@@ -389,19 +338,6 @@ static void InitOpenGL(void)
     // print info
 	GfxInfo_f();
 }
-
-static void R_ModeList_f( void )
-{
-	int i;
-
-	ri.Printf( PRINT_ALL, "\n" );
-	for ( i = 0; i < s_numVidModes; i++ )
-    {
-		ri.Printf( PRINT_ALL, "%s\n", r_vidModes[i].description );
-	}
-	ri.Printf( PRINT_ALL, "\n" );
-}
-
 
 
 /*
@@ -932,7 +868,6 @@ static void R_Register( void )
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	//r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
 	r_subdivisions = ri.Cvar_Get ("r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH);
-	r_ignoreFastPath = ri.Cvar_Get( "r_ignoreFastPath", "1", CVAR_ARCHIVE | CVAR_LATCH );
 
 	//
 	// temporary latched variables that can only change over a restart
@@ -1036,20 +971,9 @@ static void R_Register( void )
 
 	r_ntsc = ri.Cvar_Get( "r_ntsc", "0" , CVAR_ARCHIVE | CVAR_LATCH);			// leilei - ntsc filter
 
-	r_retroAA = ri.Cvar_Get( "r_retroAA", "0" , CVAR_ARCHIVE | CVAR_LATCH);
-
-	r_suggestiveThemes = ri.Cvar_Get( "r_suggestiveThemes", "1" , CVAR_ARCHIVE | CVAR_LATCH);
-
-	r_anime = ri.Cvar_Get( "r_anime", "0" , CVAR_ARCHIVE | CVAR_LATCH);
-	r_palletize = ri.Cvar_Get( "r_palletize", "0" , CVAR_ARCHIVE | CVAR_LATCH);
-	r_leidebug = ri.Cvar_Get( "r_leidebug", "0" , CVAR_CHEAT);
-	r_leidebugeye = ri.Cvar_Get( "r_leidebugeye", "0" , CVAR_CHEAT);
-
 	r_iconmip = ri.Cvar_Get ("r_iconmip", "0", CVAR_ARCHIVE | CVAR_LATCH );		// leilei - icon mip
 	r_iconBits = ri.Cvar_Get ("r_iconBits", "0", CVAR_ARCHIVE | CVAR_LATCH );	// leilei - icon bits
 
-	r_lightmapBits = ri.Cvar_Get ("r_lightmapBits", "0", CVAR_ARCHIVE | CVAR_LATCH );	// leilei - lightmap color bits
-	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 
 	// make sure all the commands added here are also
 	// removed in R_Shutdown
@@ -1057,8 +981,7 @@ static void R_Register( void )
 	ri.Cmd_AddCommand( "shaderlist", R_ShaderList_f );
 	ri.Cmd_AddCommand( "skinlist", R_SkinList_f );
 	ri.Cmd_AddCommand( "modellist", R_Modellist_f );
-	ri.Cmd_AddCommand( "modelist", R_ModeList_f );
-	ri.Cmd_AddCommand( "imagelistmaponly", R_ImageListMapOnly_f );
+	//ri.Cmd_AddCommand( "imagelistmaponly", R_ImageListMapOnly_f );
 	ri.Cmd_AddCommand( "screenshot", R_ScreenShot_f );
 	ri.Cmd_AddCommand( "screenshotJPEG", R_ScreenShotJPEG_f );
 	ri.Cmd_AddCommand( "gfxinfo", GfxInfo_f );
@@ -1351,7 +1274,6 @@ void RE_Shutdown( qboolean destroyWindow )
 	ri.Cmd_RemoveCommand("skinlist");
 	ri.Cmd_RemoveCommand("gfxinfo");
 	ri.Cmd_RemoveCommand("minimize");
-	ri.Cmd_RemoveCommand("modelist");
 	ri.Cmd_RemoveCommand("shaderstate");
 
 	if ( tr.registered )

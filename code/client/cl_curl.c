@@ -20,7 +20,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#ifdef USE_CURL
 #include "client.h"
 
 
@@ -228,4 +227,3 @@ void CL_cURL_PerformDownload(void)
 
 	CL_NextDownload();
 }
-#endif /* USE_CURL */

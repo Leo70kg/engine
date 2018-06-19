@@ -33,8 +33,9 @@ typedef enum
 	RSERR_UNKNOWN
 } rserr_t;
 
-extern cvar_t *in_nograb;
-cvar_t* r_fullscreen;
+static cvar_t* r_fullscreen;
+static cvar_t* r_availableModes;
+
 
 SDL_Window *SDL_window = NULL;
 static SDL_GLContext SDL_glContext = NULL;
@@ -53,8 +54,63 @@ static cvar_t* r_colorbits;
 static cvar_t* r_depthbits;
 
 static cvar_t* r_displayIndex;
+static cvar_t* r_displayRefresh;
 
 
+// not used cvar, keep it for backward compatibility
+static cvar_t* r_stereoSeparation;
+
+
+
+typedef struct vidmode_s {
+	const char *description;
+	int width, height;
+	float pixelAspect;		// pixel width / height
+} vidmode_t;
+
+static const vidmode_t r_vidModes[] = {
+	{ "Mode  0: 320x240",		320,	240,	1 },
+	{ "Mode  1: 400x300",		400,	300,	1 },
+	{ "Mode  2: 512x384",		512,	384,	1 },
+	{ "Mode  3: 640x480 (480p)",	640,	480,	1 },
+	{ "Mode  4: 800x600",		800,	600,	1 },
+	{ "Mode  5: 960x720",		960,	720,	1 },
+	{ "Mode  6: 1024x768",		1024,	768,	1 },
+	{ "Mode  7: 1152x864",		1152,	864,	1 },
+	{ "Mode  8: 1280x1024",		1280,	1024,	1 },
+	{ "Mode  9: 1600x1200",		1600,	1200,	1 },
+	{ "Mode 10: 2048x1536",		2048,	1536,	1 },
+	{ "Mode 11: 856x480",		856,	480,	1 },		// Q3 MODES END HERE AND EXTENDED MODES BEGIN
+	{ "Mode 12: 1280x720 (720p)",	1280,	720,	1 },
+	{ "Mode 13: 1280x768",		1280,	768,	1 },
+	{ "Mode 14: 1280x800",		1280,	800,	1 },
+	{ "Mode 15: 1280x960",		1280,	960,	1 },
+	{ "Mode 16: 1360x768",		1360,	768,	1 },
+	{ "Mode 17: 1366x768",		1366,	768,	1 }, // yes there are some out there on that extra 6
+	{ "Mode 18: 1360x1024",		1360,	1024,	1 },
+	{ "Mode 19: 1400x1050",		1400,	1050,	1 },
+	{ "Mode 20: 1400x900",		1400,	900,	1 },
+	{ "Mode 21: 1600x900",		1600,	900,	1 },
+	{ "Mode 22: 1680x1050",		1680,	1050,	1 },
+	{ "Mode 23: 1920x1080 (1080p)",	1920,	1080,	1 },
+	{ "Mode 24: 1920x1200",		1920,	1200,	1 },
+	{ "Mode 25: 1920x1440",		1920,	1440,	1 },
+	{ "Mode 26: 2560x1600",		2560,	1600,	1 },
+	{ "Mode 27: 3840x2160 (4K)",	3840,	2160,	1 }
+};
+static const int s_numVidModes = ARRAY_LEN( r_vidModes );
+
+static void R_ModeList_f( void )
+{
+	int i;
+
+	Com_Printf( "\n" );
+	for ( i = 0; i < s_numVidModes; i++ )
+    {
+		Com_Printf("%s\n", r_vidModes[i].description );
+	}
+	Com_Printf( "\n" );
+}
 
 
 #define SWAP_INTERVAL   0
@@ -99,6 +155,8 @@ void GLimp_DestroyWindow(void)
 {
     SDL_DestroyWindow( SDL_window );
     SDL_window = NULL;
+
+    Cmd_RemoveCommand( "modelist" );
 }
 
 
@@ -118,11 +176,7 @@ qboolean GLimp_ExtensionSupported(const char* fun)
     return qfalse;
 }
 
-/*
-===============
-GLimp_DetectAvailableModes
-===============
-*/
+
 static void GLimp_DetectAvailableModes(void)
 {
 	int i, j;
@@ -174,7 +228,7 @@ static void GLimp_DetectAvailableModes(void)
 		// Only list resolution once.
 		for( j = 0; j < numModes; j++ )
 		{
-			if( mode.w == modes[ j ].w && mode.h == modes[ j ].h )
+			if( (mode.w == modes[ j ].w) && (mode.h == modes[ j ].h) )
 				break;
 		}
 
@@ -243,7 +297,8 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 
 	//Let SDL_GetDisplayMode handle this
 	SDL_Init(SDL_INIT_VIDEO);
-	Com_Printf("SDL_GetNumVideoDisplays(): %i", SDL_GetNumVideoDisplays());
+	Com_Printf("SDL_GetNumVideoDisplays(): %d\n", SDL_GetNumVideoDisplays());
+	
 	int display_mode_count = SDL_GetNumDisplayModes(display_in_use);
 	if (display_mode_count < 1)
 	{
@@ -302,6 +357,8 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 		glConfig->vidWidth = r_customwidth->integer;
 		glConfig->vidHeight = r_customheight->integer;
 		glConfig->windowAspect = glConfig->vidWidth / (float)glConfig->vidHeight;
+        glConfig->refresh_rate = r_displayRefresh->integer;
+
 	}
 	else if(mode > 0)
 	{
@@ -463,14 +520,6 @@ static qboolean GLimp_CreateWindowAndSetMode(int mode, qboolean fullscreen, glco
 		Com_Printf(" SDL using driver \"%s\"\n", driverName );
 	}
  
-	if (fullscreen && in_nograb->integer )
-	{
-		Com_Printf("Fullscreen not allowed with in_nograb 1\n");
-		Cvar_Set( "r_fullscreen", "0" );
-		r_fullscreen->modified = qfalse;
-		fullscreen = qfalse;
-	}
-	
 	err = GLimp_SetMode(mode, fullscreen, glConfig ,gl3Core);
 	switch ( err )
 	{
@@ -516,15 +565,14 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 	r_depthbits = Cvar_Get( "r_depthbits", "24", CVAR_ARCHIVE | CVAR_LATCH );
 
 	r_displayIndex = Cvar_Get( "r_displayIndex", "0", CVAR_ARCHIVE | CVAR_LATCH );
+	r_displayRefresh = Cvar_Get( "r_displayRefresh", "60", CVAR_LATCH );
+	Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );
 
-
-
-	in_nograb = Cvar_Get( "in_nograb", "0", CVAR_ARCHIVE );
-
+	r_stereoSeparation = Cvar_Get( "r_stereoSeparation", "64", CVAR_ARCHIVE );
 
 	if( Cvar_VariableIntegerValue( "com_abnormalExit" ) )
 	{
-		Cvar_Set( "r_mode", "0"); // R_MODE_FALLBACK
+		Cvar_Set( "r_mode", "3"); // R_MODE_FALLBACK
 		Cvar_Set( "r_fullscreen", "0" );
 		Cvar_Set( "com_abnormalExit", "0" );
 	}
@@ -554,6 +602,9 @@ success:
 
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	IN_Init();
+
+	r_availableModes = Cvar_Get("r_availableModes", "", CVAR_ROM);
+
     Com_Printf("\n-------- Glimp_Init() finished! --------\n");
 }
 

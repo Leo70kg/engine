@@ -3686,81 +3686,6 @@ SHADER OPTIMIZATION AND FOGGING
 ========================================================================================
 */
 
-/*
-===================
-ComputeStageIteratorFunc
-
-See if we can use on of the simple fastpath stage functions,
-otherwise set to the generic stage function
-===================
-*/
-static void ComputeStageIteratorFunc( void )
-{
-    shader.optimalStageIteratorFunc = RB_StageIteratorGeneric;
-
-	// see if this should go into the sky path
-	if( shader.isSky )
-	{
-		shader.optimalStageIteratorFunc = RB_StageIteratorSky;
-		return;
-	}
-
-	if ( r_ignoreFastPath->integer )
-	{
-		return;
-	}
-
-	//
-	// see if this can go into the vertex lit fast path
-	//
-	if ( shader.numUnfoggedPasses == 1 )
-	{
-		if ( stages[0].rgbGen == CGEN_LIGHTING_DIFFUSE || stages[0].rgbGen == CGEN_LIGHTING_UNIFORM || stages[0].rgbGen == CGEN_LIGHTING_DYNAMIC)
-		{
-			if ( stages[0].alphaGen == AGEN_IDENTITY )
-			{
-				if ( stages[0].bundle[0].tcGen == TCGEN_TEXTURE )
-				{
-					if ( !shader.polygonOffset )
-					{
-						if ( !shader.multitextureEnv )
-						{
-							if ( !shader.numDeforms )
-							{
-								shader.optimalStageIteratorFunc = RB_StageIteratorVertexLitTexture;
-								return;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	//
-	// see if this can go into an optimized LM, multitextured path
-	//
-
-	if ( shader.numUnfoggedPasses == 1 )
-	{
-		if ( ( stages[0].rgbGen == CGEN_IDENTITY ) && ( stages[0].alphaGen == AGEN_IDENTITY ) )
-		{
-			if ( stages[0].bundle[0].tcGen == TCGEN_TEXTURE && stages[0].bundle[1].tcGen == TCGEN_LIGHTMAP )
-			{
-				if ( !shader.polygonOffset )
-				{
-					if ( !shader.numDeforms )
-					{
-						if ( shader.multitextureEnv )
-						{
-							shader.optimalStageIteratorFunc = RB_StageIteratorLightmappedMultitexture;
-						}
-					}
-				}
-			}
-		}
-	}
-}
 
 typedef struct {
 	int		blendA;
@@ -4258,7 +4183,17 @@ static shader_t *FinishShader( void )
 		shader.sort = SS_FOG;
 
 	// determine which stage iterator function is appropriate
-	ComputeStageIteratorFunc();
+	// ComputeStageIteratorFunc();
+    // See if we can use on of the simple fastpath stage functions,
+    // otherwise set to the generic stage function
+    
+    shader.optimalStageIteratorFunc = RB_StageIteratorGeneric;
+
+	// see if this should go into the sky path
+	if( shader.isSky )
+	{
+		shader.optimalStageIteratorFunc = RB_StageIteratorSky;
+	}
 
 	return GeneratePermanentShader();
 }
@@ -4395,8 +4330,6 @@ TODO:	if r_detailTextures 2, try to move the detail texture before the lightmap 
 
 ===============
 */
-
-static int sugthem;
 
 
 shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRawImage )
@@ -4645,36 +4578,10 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 // leilei - rather stupid way to do a cel wrapper to work for all textures
 shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImage )
 {
-	shader_t *ahsh;	
-
 	// load real shader first?
 	shader_t* sh = R_FindShaderReal(name, lightmapIndex, mipRawImage);
-	if (!Q_strncmp( name, "models/player", 13) )
-    {	// restrict to players; speedup
-		if (r_suggestiveThemes->integer < 1)	// find safe textures/shaders if available
-		{
-			sugthem = 1;
-			ahsh = R_FindShaderReal(va("%s_safe", name), lightmapIndex, mipRawImage);
-			if ( ahsh->defaultShader )
-			    return sh;
-			else
-                return ahsh;
-		}
-		else if (r_suggestiveThemes->integer > 1)	// find lewd textures/shaders if available
-		{
-			sugthem = 2;
-			ahsh = R_FindShaderReal(va("%s_lewd", name), lightmapIndex, mipRawImage);
-			if ( ahsh->defaultShader )
-		        return sh;
-			else
-			    return ahsh;
-		}
-		else	// if just normally suggestive or an otherwise normal shader, default
-		    return sh;
-	}
-	else
-        return sh;
 
+    return sh;
 }
 
 

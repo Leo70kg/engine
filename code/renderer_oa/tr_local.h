@@ -1129,7 +1129,6 @@ extern	cvar_t	*r_uiFullScreen;				// ui is running fullscreen
 extern	cvar_t	*r_logFile;						// number of frames to emit GL logs
 extern	cvar_t	*r_showtris;					// enables wireframe rendering of the world
 extern	cvar_t	*r_showsky;						// forces sky in front of all surfaces
-extern	cvar_t	*r_shownormals;					// draws wireframe normals
 extern	cvar_t	*r_clear;						// force screen clear every frame
 
 extern	cvar_t	*r_shadows;						// controls shadows: 0 = none, 1 = blur, 2 = stencil, 3 = black planar projection
@@ -1173,20 +1172,8 @@ extern cvar_t	*r_modelshader;	// Leilei - new model shading
 extern cvar_t	*r_ntsc;	// Leilei - ntsc
 
 
-extern cvar_t	*r_retroAA;	// Leilei - old console anti aliasing
-
-extern cvar_t	*r_suggestiveThemes;	// Leilei - mature content
-
-
-extern cvar_t	*r_anime;	// Leilei - anime filter
-//extern cvar_t	*r_palletize;	// Leilei - anime filter
-extern cvar_t	*r_leidebug;	// Leilei - debug only!
-extern cvar_t	*r_leidebugeye;	// Leilei - debug only!
-
 extern	cvar_t	*r_iconmip;	// leilei - icon mip - picmip for 2d icons
 extern	cvar_t	*r_iconBits;	// leilei - icon color depth for 2d icons
-
-extern	cvar_t	*r_lightmapBits;	// leilei - lightmap color depth
 
 extern	cvar_t	*r_texdump;	// leilei - texture dumping
 

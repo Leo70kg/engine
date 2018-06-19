@@ -1283,9 +1283,9 @@ void RB_EndSurface( void ) {
 	if ( r_showtris->integer ) {
 		DrawTris (input);
 	}
-	if ( r_shownormals->integer ) {
-		DrawNormals (input);
-	}
+#if R_SHOWNORMALS
+	DrawNormals (input);
+#endif
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;
 

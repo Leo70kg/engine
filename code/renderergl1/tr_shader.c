@@ -1682,83 +1682,6 @@ SHADER OPTIMIZATION AND FOGGING
 ========================================================================================
 */
 
-/*
-===================
-ComputeStageIteratorFunc
-
-See if we can use on of the simple fastpath stage functions,
-otherwise set to the generic stage function
-===================
-*/
-static void ComputeStageIteratorFunc( void )
-{
-	shader.optimalStageIteratorFunc = RB_StageIteratorGeneric;
-
-	//
-	// see if this should go into the sky path
-	//
-	if ( shader.isSky )
-	{
-		shader.optimalStageIteratorFunc = RB_StageIteratorSky;
-		return;
-	}
-
-	if ( r_ignoreFastPath->integer )
-	{
-		return;
-	}
-
-	//
-	// see if this can go into the vertex lit fast path
-	//
-	if ( shader.numUnfoggedPasses == 1 )
-	{
-		if ( stages[0].rgbGen == CGEN_LIGHTING_DIFFUSE )
-		{
-			if ( stages[0].alphaGen == AGEN_IDENTITY )
-			{
-				if ( stages[0].bundle[0].tcGen == TCGEN_TEXTURE )
-				{
-					if ( !shader.polygonOffset )
-					{
-						if ( !shader.multitextureEnv )
-						{
-							if ( !shader.numDeforms )
-							{
-								shader.optimalStageIteratorFunc = RB_StageIteratorVertexLitTexture;
-								return;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	//
-	// see if this can go into an optimized LM, multitextured path
-	//
-	if ( shader.numUnfoggedPasses == 1 )
-	{
-		if ( ( stages[0].rgbGen == CGEN_IDENTITY ) && ( stages[0].alphaGen == AGEN_IDENTITY ) )
-		{
-			if ( stages[0].bundle[0].tcGen == TCGEN_TEXTURE && 
-				stages[0].bundle[1].tcGen == TCGEN_LIGHTMAP )
-			{
-				if ( !shader.polygonOffset )
-				{
-					if ( !shader.numDeforms )
-					{
-						if ( shader.multitextureEnv )
-						{
-							shader.optimalStageIteratorFunc = RB_StageIteratorLightmappedMultitexture;
-						}
-					}
-				}
-			}
-		}
-	}
-}
 
 typedef struct {
 	int		blendA;
@@ -2370,7 +2293,16 @@ static shader_t *FinishShader( void ) {
 		shader.sort = SS_FOG;
 
 	// determine which stage iterator function is appropriate
-	ComputeStageIteratorFunc();
+	shader.optimalStageIteratorFunc = RB_StageIteratorGeneric;
+
+	//
+	// see if this should go into the sky path
+	//
+	if ( shader.isSky )
+	{
+		shader.optimalStageIteratorFunc = RB_StageIteratorSky;
+		return;
+	}
 
 	return GeneratePermanentShader();
 }

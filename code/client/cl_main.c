@@ -1207,9 +1207,8 @@ void CL_ShutdownAll(qboolean shutdownRef)
 	if(clc.demorecording)
 		CL_StopRecord_f();
 
-#ifdef USE_CURL
 	CL_cURL_Shutdown();
-#endif
+	
 	// clear sounds
 	S_DisableSounds();
 	// shutdown CGame
@@ -2069,9 +2068,9 @@ CL_DownloadsComplete
 Called when all downloading has been completed
 =================
 */
-void CL_DownloadsComplete( void ) {
+void CL_DownloadsComplete( void )
+{
 
-#ifdef USE_CURL
 	// if we downloaded with cURL
 	if(clc.cURLUsed) { 
 		clc.cURLUsed = qfalse;
@@ -2086,7 +2085,6 @@ void CL_DownloadsComplete( void ) {
 			return;
 		}
 	}
-#endif
 
 	// if we downloaded files we need to restart the file system
 	if (clc.downloadRestart) {
@@ -2213,7 +2211,7 @@ void CL_NextDownload(void)
 			*s++ = 0;
 		else
 			s = localName + strlen(localName); // point at the nul byte
-#ifdef USE_CURL
+		
 		if(!(cl_allowDownload->integer & DLF_NO_REDIRECT)) {
 			if(clc.sv_allowDownload & DLF_NO_REDIRECT) {
 				Com_Printf("WARNING: server does not "
@@ -2242,7 +2240,8 @@ void CL_NextDownload(void)
 				"configuration (cl_allowDownload is %d)\n",
 				cl_allowDownload->integer);
 		}
-#endif /* USE_CURL */
+
+
 		if(!useCURL) {
 			if((cl_allowDownload->integer & DLF_NO_UDP)) {
 				Com_Error(ERR_DROP, "UDP Downloads are "
@@ -2908,7 +2907,6 @@ void CL_Frame ( int msec )
 		return;
 	}
 
-#ifdef USE_CURL
 	if(clc.downloadCURLM)
     {
 		CL_cURL_PerformDownload();
@@ -2925,7 +2923,6 @@ void CL_Frame ( int msec )
 			return;
 		}
 	}
-#endif
 
 	if( cls.cddialog )
     {

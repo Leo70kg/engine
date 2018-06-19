@@ -1,7 +1,7 @@
 # OpenArena Engine 
 This project is a fork of OpenArena with specific changes to the client and server.
 
-## Building ##
+## Building on Linux##
 
 If you are on Ubuntu or Debian, the easiest way to compile this is to install the build dependencies.
 
@@ -12,15 +12,69 @@ $ cd engine
 $ make
 ```
 
-You may want to change a few things in Makefile.local.  Other than installing
-the build dependencies, you shouldn't need to do anything else.  By default it
-builds a modular renderer so you need the binary + *.so or *.dll files in the
-same directory to run it.
+## Building on Windows ##
 
-# OpenArena gamecode 
+Refer to [the build instructions on ioquake3 website][ioq3-build].
+
+To build 64-bit binaries, follow these instructions:
+
+1. Install msys2 from https://msys2.github.io/ , following the instructions there.
+2. Start "MinGW 64-bit" from the Start Menu, NOTE: NOT MSYS2.
+3. Install mingw-w64-x86\_64, make, git tools:
+```sh
+pacman -S mingw-w64-x86_64-gcc make git
+```
+4. Grab latest openarena source code from github and compile. Note that in msys2, your drives are linked as folders in the root directory: C:\ is /c/, D:\ is /d/, and so on.
+
+```sh
+git clone https://github.com/suijingfeng/engine.git
+cd engine
+make ARCH=x86_64
+```
+5. Find the executables and dlls in build/release-mingw64-x86\_64 . 
+
+
+
+## RUN ##
+First, download the map packages from http://openarena.ws/download.php
+[baseoa-download]: http://openarena.ws/download.php
+Second, extract the data files on ~/.OpenArena/ (linux) or C:\Users\youname\AppData\Roaming\OpenArena\ (windows)
+
+
+```sh
+$ cd /build/release-linux-x86_64/
+$ ./openarena.x86_64
+```
+
+By default it load renderer\_openarena\_x86\_64.so (if build in linux).
+
+## Switching renderers ##
+
+
+This feature is enabled by default. If you wish to disable it, set USE\_RENDERER\_DLOPEN=0 in Makefile, 
+this allow for build modular renderers and to select the renderer at runtime rather than compiling in one into the binary.
+When you start OpenArena, you can pass the name of the dynamic library to load. 
+
+Example:
+
+```sh
+# Enable renderergl2:
+$ ./openarena.x86_64 +set cl_renderer opengl2
+
+# Enable the renderergl1:
+$ ./openarena.x86_64 +set cl_renderer opengl1
+
+# Enable the default OpenArena renderer:
+# This renderer module is similiar to the renderergl1 code.
+$ ./openarena.x86_64 +set cl_renderer openarena
+```
+
+
+# OpenArena gamecode
 
 ## Description ##
-In mod form it is referred as OpenArenaExpanded (OAX).
+It's non engine part of OA, includes game, cgame and ui.
+In mod form it is referred as OAX. 
 
 ## Loading native dll(.so) ##
 
@@ -38,44 +92,8 @@ The development board on the OpenArena forum: http://openarena.ws/board/index.ph
 In particular the Open Arena Expanded topic: http://openarena.ws/board/index.php?topic=1908.0
 
 
-## Development ##
-
-```sh
-# Get this project or sign up on github and fork it
-$ git clone git://github.com/OpenArena/engine.git
-$ cd engine
-
-# Create a reference to the upstream project
-$ git remote add upstream git://github.com/ioquake/ioq3.git
-
-# View changes in this project compared to ioquake3
-$ git fetch upstream
-$ git diff upstream/master
-```
-
-## Switching renderers ##
-
-
-This feature is disabled by default.  If you wish to enable it, set USE_RENDERER_DLOPEN=1 in Makefile, 
-this allow for build modular renderers and to select the renderer at runtime rather than compiling in one into the binary.
-When you start OpenArena, you can pass the name of the dynamic library to load. 
-
-Example:
-
-```sh
-# Enable renderergl2:
-$ ./openarena.x86_64 +set cl_renderer opengl2
-
-# Enable the default OpenArena renderer:
-# This is similiar with the renderergl1 code.
-$ ./openarena.x86_64 +set cl_renderer openarena
-
-# Enable the renderergl1:
-$ ./openarena.x86_64 +set cl_renderer opengl1
-
-```
 
 ## Status ##
 
-* Initial testing on Ubuntu16.04 and Ubuntu18.04
+* Initial testing on Ubuntu16.04 and Ubuntu18.04, Win7 and Win10
 

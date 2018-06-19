@@ -279,7 +279,7 @@ static	void R_LoadLightmaps( lump_t *l, lump_t *surfs ) {
 	if (r_hdr->integer)
 	{
 		// Check for the first hdr lightmap, if it exists, use GL_RGBA16 for textures.
-		char filename[MAX_QPATH];
+		char filename[MAX_QPATH*2];
 
 		snprintf(filename, sizeof(filename), "maps/%s/lm_0000.hdr", s_worldData.baseName);
 		if (ri.FS_FileExists(filename))
@@ -317,7 +317,7 @@ static	void R_LoadLightmaps( lump_t *l, lump_t *surfs ) {
 
 		// if (tr.worldLightmapping)
 		{
-			char filename[MAX_QPATH];
+			char filename[MAX_QPATH*2];
 			byte *hdrLightmap = NULL;
 			int size = 0;
 
@@ -1723,7 +1723,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 	// load hdr vertex colors
 	if (r_hdr->integer)
 	{
-		char filename[MAX_QPATH];
+		char filename[MAX_QPATH*2];
 		int size;
 
 		snprintf( filename, sizeof( filename ), "maps/%s/vertlight.raw", s_worldData.baseName);
@@ -2207,7 +2207,7 @@ void R_LoadLightGrid( lump_t *l ) {
 	// load hdr lightgrid
 	if (r_hdr->integer)
 	{
-		char filename[MAX_QPATH];
+		char filename[MAX_QPATH*2];
 		float *hdrLightGrid;
 		int size;
 
@@ -2628,10 +2628,10 @@ void R_LoadCubemaps(void)
 
 	for (i = 0; i < tr.numCubemaps; i++)
 	{
-		char filename[MAX_QPATH];
+		char filename[MAX_QPATH*2];
 		cubemap_t *cubemap = &tr.cubemaps[i];
 
-		snprintf(filename, MAX_QPATH, "cubemaps/%s/%03d.dds", tr.world->baseName, i);
+		snprintf(filename, sizeof(filename), "cubemaps/%s/%03d.dds", tr.world->baseName, i);
 
 		cubemap->image = R_FindImageFile(filename, IMGTYPE_COLORALPHA, flags);
 	}

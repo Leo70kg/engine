@@ -718,20 +718,6 @@ dialogResult_t Sys_Dialog( dialogType_t type, const char *message, const char *t
 
 /*
 ==============
-Sys_GLimpInit
-
-Windows specific GL implementation initialisation
-==============
-*/
-
-
-#ifndef DEDICATED
-#ifdef USE_CONSOLE_WINDOW
-//void Sys_CreateConsole( void );
-#endif
-#endif
-/*
-==============
 Sys_PlatformInit
 
 Windows specific initialisation

@@ -33,7 +33,7 @@ ifndef BUILD_RENDERER_OPENGL2
 endif
 
 ifndef USE_RENDERER_DLOPEN
-USE_RENDERER_DLOPEN=1
+USE_RENDERER_DLOPEN=0
 endif
 
 BASEGAME=baseoa
@@ -582,141 +582,8 @@ ifdef MINGW
 
 else # ifdef MINGW
 
-#############################################################################
-# SETUP AND BUILD -- FREEBSD
-#############################################################################
 
-ifeq ($(PLATFORM),freebsd)
 
-  # flags
-  BASE_CFLAGS = $(shell env MACHINE_ARCH=$(ARCH) make -f /dev/null -VCFLAGS) \
-	-Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -DUSE_ICON -DMAP_ANONYMOUS=MAP_ANON
-  CLIENT_CFLAGS += $(SDL_CFLAGS)
-  HAVE_VM_COMPILED = true
-
-  OPTIMIZEVM = -O3 -funroll-loops -fomit-frame-pointer
-  OPTIMIZE = $(OPTIMIZEVM) -ffast-math
-
-  SHLIBEXT=so
-  SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
-
-  THREAD_LIBS=-lpthread
-  # don't need -ldl (FreeBSD)
-  LIBS=-lm
-
-  CLIENT_LIBS =
-
-  CLIENT_LIBS += $(SDL_LIBS)
-  RENDERER_LIBS = $(SDL_LIBS) -lGL
-
-  # optional features/libraries
-  ifeq ($(USE_OPENAL),1)
-	ifeq ($(USE_OPENAL_DLOPEN),1)
-	  CLIENT_LIBS += $(THREAD_LIBS) $(OPENAL_LIBS)
-	endif
-  endif
-
-  ifeq ($(USE_CURL),1)
-	CLIENT_CFLAGS += $(CURL_CFLAGS)
-	CLIENT_LIBS += $(CURL_LIBS)
-  endif
-
-  # cross-compiling tweaks
-  ifeq ($(ARCH),x86)
-	ifeq ($(CROSS_COMPILING),1)
-	  BASE_CFLAGS += -m32
-	endif
-  endif
-  ifeq ($(ARCH),x86_64)
-	ifeq ($(CROSS_COMPILING),1)
-	  BASE_CFLAGS += -m64
-	endif
-  endif
-else # ifeq freebsd
-
-#############################################################################
-# SETUP AND BUILD -- OPENBSD
-#############################################################################
-
-ifeq ($(PLATFORM),openbsd)
-
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
-	-pipe -DUSE_ICON -DMAP_ANONYMOUS=MAP_ANON
-  CLIENT_CFLAGS += $(SDL_CFLAGS)
-
-  OPTIMIZEVM = -O3
-  OPTIMIZE = $(OPTIMIZEVM) -ffast-math
-
-  ifeq ($(ARCH),x86_64)
-	OPTIMIZEVM = -O3
-	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
-	HAVE_VM_COMPILED = true
-  else
-  ifeq ($(ARCH),x86)
-	OPTIMIZEVM = -O3 -march=i586
-	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
-	HAVE_VM_COMPILED=true
-  else
-  ifeq ($(ARCH),ppc)
-	BASE_CFLAGS += -maltivec
-	HAVE_VM_COMPILED=true
-  endif
-  ifeq ($(ARCH),ppc64)
-	BASE_CFLAGS += -maltivec
-	HAVE_VM_COMPILED=true
-  endif
-endif
-
-endif
-
-  # no shm_open on OpenBSD
-  USE_MUMBLE=0
-
-  SHLIBEXT=so
-  SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
-
-  THREAD_LIBS=-lpthread
-  LIBS=-lm
-
-  CLIENT_LIBS =
-
-  CLIENT_LIBS += $(SDL_LIBS)
-  RENDERER_LIBS = $(SDL_LIBS) -lGL
-
-  ifeq ($(USE_OPENAL),1)
-	ifneq ($(USE_OPENAL_DLOPEN),1)
-	  CLIENT_LIBS += $(THREAD_LIBS) $(OPENAL_LIBS)
-	endif
-  endif
-
-  ifeq ($(USE_CURL),1)
-	CLIENT_CFLAGS += $(CURL_CFLAGS)
-	CLIENT_LIBS += $(CURL_LIBS)
-  endif
-else # ifeq openbsd
-
-#############################################################################
-# SETUP AND BUILD -- NETBSD
-#############################################################################
-
-ifeq ($(PLATFORM),netbsd)
-
-  LIBS=-lm
-  SHLIBEXT=so
-  SHLIBCFLAGS=-fPIC
-  SHLIBLDFLAGS=-shared $(LDFLAGS)
-  THREAD_LIBS=-lpthread
-
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes
-
-  ifeq ($(ARCH),x86)
-	HAVE_VM_COMPILED=true
-  endif
-
-  BUILD_CLIENT = 0
-else # ifeq netbsd
 
 
 #############################################################################
@@ -732,9 +599,8 @@ else # ifeq netbsd
 endif #Linux
 endif #darwin
 endif #MINGW
-endif #FreeBSD
-endif #OpenBSD
-endif #NetBSD
+
+
 
 
 ifndef CC

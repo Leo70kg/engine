@@ -307,23 +307,6 @@ static void IN_ActivateMouse( void )
 		IN_GobbleMotionEvents( );
 	}
 
-	// in_nograb makes no sense in fullscreen mode
-	if( Cvar_VariableIntegerValue("r_fullscreen") )
-	{
-		if( in_nograb->modified || !mouseActive )
-		{
-			if( in_nograb->integer ) {
-				SDL_SetRelativeMouseMode( SDL_FALSE );
-				SDL_SetWindowGrab( SDL_window, SDL_FALSE );
-			} else {
-				SDL_SetRelativeMouseMode( SDL_TRUE );
-				SDL_SetWindowGrab( SDL_window, SDL_TRUE );
-			}
-
-			in_nograb->modified = qfalse;
-		}
-	}
-
 	mouseActive = qtrue;
 }
 
@@ -335,8 +318,7 @@ static void IN_DeactivateMouse(void)
 
 	// Always show the cursor when the mouse is disabled,
 	// but not when fullscreen
-	if( !Cvar_VariableIntegerValue("r_fullscreen") )
-		SDL_ShowCursor( 1 );
+	// SDL_ShowCursor( 1 );
 
 	if( !mouseAvailable )
 		return;
@@ -578,6 +560,7 @@ void IN_Init(void)
 	}
 
 	in_keyboardDebug = Cvar_Get("in_keyboardDebug", "0", CVAR_ARCHIVE);
+	in_nograb = Cvar_Get( "in_nograb", "0", CVAR_ARCHIVE );
 
 	// mouse variables
 	in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE );

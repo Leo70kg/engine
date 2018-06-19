@@ -500,17 +500,6 @@ static void Upload32( unsigned *data, int width, int height, qboolean mipmap, qb
 	}
 
 
-	// leilei - icon picmip for certain 2d graphics elements that get wasted in lower resolutions, saving vram
-	// leilei - lightmap color bits, for saving vram/tex cache
-	if (lightMap)
-    {
-		if (r_lightmapBits->integer)
-        {
-			forceBits = r_lightmapBits->integer;
-			force32upload = 0;
-		}
-	}
-
 	// clamp to minimum size
 	if (scaled_width < 1)
     {
@@ -541,26 +530,6 @@ static void Upload32( unsigned *data, int width, int height, qboolean mipmap, qb
 	if(lightMap)
 	{
 		internalFormat = GL_RGB;
-
-        // leilei - lightmap color bits, for saving vram/tex cache
-		if (r_lightmapBits->integer)
-        {
-			forceBits = r_lightmapBits->integer;
-			force32upload = 0;
-
-            if ( forceBits == 16)
-            {
-                internalFormat = GL_RGB5;
-            }
-            else if ( forceBits == 32)
-            {
-                internalFormat = GL_RGB8;
-            }
-            else
-            {
-                internalFormat = GL_RGB;
-            }
-		}
 	}
 	else
 	{
@@ -1173,13 +1142,11 @@ image_t *R_CreateImage(const char *name, unsigned char* pic, int width, int heig
 
 /*
 ===============
-R_ImageListMapOnly_f
-
 	This version is used to make life easier to see which map textures are used
 	and also provide a bunch of lame zip commands to modularize maps better
 	(i.e. packing only used stuff by the *good* maps for releases)
 ===============
-*/
+
 void R_ImageListMapOnly_f( void )
 {
 	int i;
@@ -1204,7 +1171,7 @@ void R_ImageListMapOnly_f( void )
 		}
 	}
 }
-
+*/
 
 void R_ImageList_f( void )
 {

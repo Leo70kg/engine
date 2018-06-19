@@ -24,8 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 glconfig_t  glConfig;
-qboolean    textureFilterAnisotropic = qfalse;
-int         maxAnisotropy = 0;
+
 
 glstate_t	glState;
 
@@ -39,18 +38,14 @@ cvar_t	*r_railWidth;
 cvar_t	*r_railCoreWidth;
 cvar_t	*r_railSegmentLength;
 
-cvar_t	*r_ignoreFastPath;
 
 cvar_t	*r_verbose;
 cvar_t	*r_ignore;
-
-cvar_t  *r_displayRefresh;
 
 cvar_t	*r_detailTextures;
 
 cvar_t	*r_znear;
 cvar_t	*r_zproj;
-cvar_t	*r_stereoSeparation;
 
 cvar_t	*r_skipBackEnd;
 
@@ -67,7 +62,6 @@ cvar_t	*r_dlightBacks;
 cvar_t	*r_lodbias;
 cvar_t	*r_lodscale;
 
-cvar_t	*r_norefresh;
 cvar_t	*r_drawentities;
 cvar_t	*r_drawworld;
 cvar_t	*r_speeds;
@@ -138,7 +132,6 @@ cvar_t	*r_maxpolys;
 int		max_polys;
 cvar_t	*r_maxpolyverts;
 int		max_polyverts;
-static cvar_t* r_ignorehwgamma;		// overrides hardware gamma capabilities
 /*
 ** InitOpenGL
 **
@@ -182,7 +175,7 @@ static void InitOpenGL( void )
         glConfig.hardwareType = GLHW_GENERIC;
 
         // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
-        glConfig.deviceSupportsGamma = (!r_ignorehwgamma->integer) ;
+        glConfig.deviceSupportsGamma = qtrue ;
 
         // get our config strings
         Q_strncpyz( glConfig.vendor_string, (char *) qglGetString (GL_VENDOR), sizeof( glConfig.vendor_string ) );
@@ -932,15 +925,12 @@ void R_Register( void )
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
 	r_subdivisions = ri.Cvar_Get ("r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH);
-	r_ignoreFastPath = ri.Cvar_Get( "r_ignoreFastPath", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_greyscale = ri.Cvar_Get("r_greyscale", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	ri.Cvar_CheckRange(r_greyscale, 0, 1, qfalse);
 
 	//
 	// temporary latched variables that can only change over a restart
 	//
-	r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "0", CVAR_LATCH );
-	ri.Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );
 	r_fullbright = ri.Cvar_Get ("r_fullbright", "0", CVAR_LATCH|CVAR_CHEAT );
 	r_mapOverBrightBits = ri.Cvar_Get ("r_mapOverBrightBits", "2", CVAR_LATCH );
 	r_intensity = ri.Cvar_Get ("r_intensity", "1", CVAR_LATCH );
@@ -955,7 +945,6 @@ void R_Register( void )
 	r_znear = ri.Cvar_Get( "r_znear", "4", CVAR_CHEAT );
 	ri.Cvar_CheckRange( r_znear, 0.001f, 200, qfalse );
 	r_zproj = ri.Cvar_Get( "r_zproj", "64", CVAR_ARCHIVE );
-	r_stereoSeparation = ri.Cvar_Get( "r_stereoSeparation", "64", CVAR_ARCHIVE );
 	r_ignoreGLErrors = ri.Cvar_Get( "r_ignoreGLErrors", "1", CVAR_ARCHIVE );
 	r_fastsky = ri.Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE );
 	r_inGameVideo = ri.Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE );
@@ -999,7 +988,6 @@ void R_Register( void )
 
 	r_measureOverdraw = ri.Cvar_Get( "r_measureOverdraw", "0", CVAR_CHEAT );
 	r_lodscale = ri.Cvar_Get( "r_lodscale", "5", CVAR_CHEAT );
-	r_norefresh = ri.Cvar_Get ("r_norefresh", "0", CVAR_CHEAT);
 	r_drawentities = ri.Cvar_Get ("r_drawentities", "1", CVAR_CHEAT );
 	r_ignore = ri.Cvar_Get( "r_ignore", "1", CVAR_CHEAT );
 	r_nocull = ri.Cvar_Get ("r_nocull", "0", CVAR_CHEAT);
@@ -1027,7 +1015,6 @@ void R_Register( void )
 
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", MAX_POLYS), 0);
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
-	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	// make sure all the commands added here are also
 	// removed in R_Shutdown
 	ri.Cmd_AddCommand( "imagelist", R_ImageList_f );
@@ -1149,7 +1136,6 @@ void RE_Shutdown( qboolean destroyWindow ) {
 	ri.Cmd_RemoveCommand( "shaderlist" );
 	ri.Cmd_RemoveCommand( "skinlist" );
 	ri.Cmd_RemoveCommand( "modellist" );
-	ri.Cmd_RemoveCommand( "modelist" );
 	ri.Cmd_RemoveCommand( "screenshot" );
 	ri.Cmd_RemoveCommand( "screenshotJPEG" );
 	ri.Cmd_RemoveCommand( "gfxinfo" );
