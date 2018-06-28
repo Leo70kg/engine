@@ -994,17 +994,14 @@ static void R_DebugGraphics( void )
 
 void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum)
 {
-	float	xmin, xmax, ymin, ymax;
-	float	width, height;
+	float ymax = zProj * tan(dest->fovY * (M_PI / 360.0f));
+	float ymin = -ymax;
 
-	ymax = zProj * tan(dest->fovY * M_PI / 360.0f);
-	ymin = -ymax;
+	float xmax = zProj * tan(dest->fovX * (M_PI / 360.0f));
+	float xmin = -xmax;
 
-	xmax = zProj * tan(dest->fovX * M_PI / 360.0f);
-	xmin = -xmax;
-
-	width = xmax - xmin;
-	height = ymax - ymin;
+	float width = xmax - xmin;
+	float height = ymax - ymin;
 	
 	dest->projectionMatrix[0] = 2 * zProj / width;
 	dest->projectionMatrix[4] = 0;

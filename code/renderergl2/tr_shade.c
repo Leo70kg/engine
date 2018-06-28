@@ -61,7 +61,8 @@ R_BindAnimatedImageToTMU
 
 =================
 */
-static void R_BindAnimatedImageToTMU( textureBundle_t *bundle, int tmu ) {
+static void R_BindAnimatedImageToTMU( textureBundle_t *bundle, int tmu )
+{
 	int64_t index;
 
 	if ( bundle->isVideoMap ) {
@@ -102,7 +103,8 @@ DrawTris
 Draws triangle outlines for debugging
 ================
 */
-static void DrawTris (shaderCommands_t *input) {
+static void DrawTris (shaderCommands_t *input)
+{
 	GL_BindToTMU( tr.whiteImage, TB_COLORMAP );
 
 	GL_State( GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE );
@@ -126,16 +128,7 @@ static void DrawTris (shaderCommands_t *input) {
 }
 
 
-/*
-================
-DrawNormals
 
-Draws vertex normals for debugging
-================
-*/
-static void DrawNormals (shaderCommands_t *input) {
-	//FIXME: implement this
-}
 
 /*
 ==============
@@ -198,7 +191,8 @@ static void ComputeTexMods( shaderStage_t *pStage, int bundleNum, float *outMatr
 
 	outOffTurb[0] = 0.0f; outOffTurb[1] = 0.0f; outOffTurb[2] = 0.0f; outOffTurb[3] = 0.0f;
 
-	for ( tm = 0; tm < bundle->numTexMods ; tm++ ) {
+	for ( tm = 0; tm < bundle->numTexMods ; tm++ )
+    {
 		switch ( bundle->texMods[tm].type )
 		{
 			
@@ -284,10 +278,9 @@ static void ComputeDeformValues(int *deformGen, vec5_t deformParams)
 	*deformGen = DGEN_NONE;
 	if(!ShaderRequiresCPUDeforms(tess.shader))
 	{
-		deformStage_t  *ds;
 
 		// only support the first one
-		ds = &tess.shader->deforms[0];
+		deformStage_t* ds = &tess.shader->deforms[0];
 
 		switch (ds->deformation)
 		{
@@ -332,21 +325,20 @@ static void ProjectDlightTexture( void ) {
 
 	ComputeDeformValues(&deformGen, deformParams);
 
-	for ( l = 0 ; l < backEnd.refdef.num_dlights ; l++ ) {
-		dlight_t	*dl;
-		shaderProgram_t *sp;
+	for ( l = 0 ; l < backEnd.refdef.num_dlights ; l++ )
+    {
 		vec4_t vector;
 
 		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
 			continue;	// this surface definitely doesn't have any of this light
 		}
 
-		dl = &backEnd.refdef.dlights[l];
+		dlight_t* dl = &backEnd.refdef.dlights[l];
 		VectorCopy( dl->transformed, origin );
 		radius = dl->radius;
 		scale = 1.0f / radius;
 
-		sp = &tr.dlightShader[deformGen == DGEN_NONE ? 0 : 1];
+		shaderProgram_t* sp = &tr.dlightShader[deformGen == DGEN_NONE ? 0 : 1];
 
 		backEnd.pc.c_dlightDraws++;
 
@@ -1600,7 +1592,11 @@ void RB_EndSurface( void ) {
 	}
     
 #if R_SHOWNORMALS
-	DrawNormals (input);
+    //Draws vertex normals for debugging
+    DrawNormals (shaderCommands_t *input)
+    {
+	    //FIXME: implement this
+    }
 #endif
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;

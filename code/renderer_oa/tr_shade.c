@@ -718,13 +718,6 @@ static void ComputeColors( shaderStage_t *pStage )
 		case CGEN_ONE_MINUS_ENTITY:
 			RB_CalcColorFromOneMinusEntity( ( unsigned char * ) tess.svars.colors );
 			break;
-		case CGEN_LIGHTING_DIFFUSE_SPECULAR:		// leilei - specular hack
-			RB_CalcNormal( ( unsigned char * ) tess.svars.colors );
-			break;
-            // leilei - debug normals, or use the normals as a color for a lighting shader
-			//RB_CalcDiffuseColor_Specular( ( unsigned char * ) tess.svars.colors );
-            printf("RB_CalcDiffuseColor_Specular\n");
-			break;
 	}
 
 	//

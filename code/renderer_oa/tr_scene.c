@@ -97,13 +97,13 @@ void R_AddPolygonSurfaces( void )
 
 void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts, int numPolys )
 {
-	srfPoly_t	*poly;
-	int			i, j;
-	int			fogIndex;
-	fog_t		*fog;
-	vec3_t		bounds[2];
 
-	if ( !tr.registered ) {
+	int	j;
+	int	fogIndex;
+
+
+	if ( !tr.registered )
+    {
 		return;
 	}
 
@@ -112,19 +112,21 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 		return;
 	}
 
-	for ( j = 0; j < numPolys; j++ ) {
-		if ( r_numpolyverts + numVerts > max_polyverts || r_numpolys >= max_polys ) {
-      /*
-      NOTE TTimo this was initially a PRINT_WARNING
-      but it happens a lot with high fighting scenes and particles
-      since we don't plan on changing the const and making for room for those effects
-      simply cut this message to developer only
-      */
+	for ( j = 0; j < numPolys; j++ )
+    {
+		if ( (r_numpolyverts + numVerts > max_polyverts) || (r_numpolys >= max_polys) )
+        {
+          /*
+          NOTE TTimo this was initially a PRINT_WARNING
+          but it happens a lot with high fighting scenes and particles
+          since we don't plan on changing the const and making for room for those effects
+          simply cut this message to developer only
+          */
 			ri.Printf( PRINT_DEVELOPER, "WARNING: RE_AddPolyToScene: r_max_polys or r_max_polyverts reached\n");
 			return;
 		}
 
-		poly = &backEndData->polys[r_numpolys];
+		srfPoly_t* poly = &backEndData->polys[r_numpolys];
 		poly->surfaceType = SF_POLY;
 		poly->hShader = hShader;
 		poly->numVerts = numVerts;
@@ -137,34 +139,45 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 		r_numpolyverts += numVerts;
 
 		// if no world is loaded
-		if ( tr.world == NULL ) {
+		if ( tr.world == NULL )
+        {
 			fogIndex = 0;
 		}
-		// see if it is in a fog volume
-		else if ( tr.world->numfogs == 1 ) {
+		else if ( tr.world->numfogs == 1 )
+        {
+            // see if it is in a fog volume
 			fogIndex = 0;
-		} else {
+		}
+        else
+        {
 			// find which fog volume the poly is in
+            vec3_t bounds[2];
 			VectorCopy( poly->verts[0].xyz, bounds[0] );
 			VectorCopy( poly->verts[0].xyz, bounds[1] );
-			for ( i = 1 ; i < poly->numVerts ; i++ ) {
+		    
+            int i;
+            for (i = 1; i < poly->numVerts; i++ )
+            {
 				AddPointToBounds( poly->verts[i].xyz, bounds[0], bounds[1] );
 			}
-			for ( fogIndex = 1 ; fogIndex < tr.world->numfogs ; fogIndex++ ) {
-				fog = &tr.world->fogs[fogIndex]; 
-				if ( bounds[1][0] >= fog->bounds[0][0]
-					&& bounds[1][1] >= fog->bounds[0][1]
-					&& bounds[1][2] >= fog->bounds[0][2]
-					&& bounds[0][0] <= fog->bounds[1][0]
-					&& bounds[0][1] <= fog->bounds[1][1]
-					&& bounds[0][2] <= fog->bounds[1][2] ) {
+
+			for ( fogIndex = 1 ; fogIndex < tr.world->numfogs ; fogIndex++ )
+            {
+				fog_t* fog = &tr.world->fogs[fogIndex]; 
+				if( (bounds[1][0] >= fog->bounds[0][0]) && (bounds[1][1] >= fog->bounds[0][1]) && 
+                    (bounds[1][2] >= fog->bounds[0][2]) && (bounds[0][0] <= fog->bounds[1][0]) &&
+                    (bounds[0][1] <= fog->bounds[1][1]) && (bounds[0][2] <= fog->bounds[1][2]) )
+                {
 					break;
 				}
 			}
-			if ( fogIndex == tr.world->numfogs ) {
+
+			if( fogIndex == tr.world->numfogs )
+            {
 				fogIndex = 0;
 			}
 		}
+
 		poly->fogIndex = fogIndex;
 	}
 }

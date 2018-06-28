@@ -277,7 +277,7 @@ static void DrawTris (shaderCommands_t *input) {
 	qglDepthRange( 0, 1 );
 }
 
-
+#if R_SHOWNORMALS
 /*
 ================
 DrawNormals
@@ -304,7 +304,7 @@ static void DrawNormals (shaderCommands_t *input) {
 
 	qglDepthRange( 0, 1 );
 }
-
+#endif
 /*
 ==============
 RB_BeginSurface
@@ -573,7 +573,7 @@ ComputeColors
 */
 static void ComputeColors( shaderStage_t *pStage )
 {
-	int		i;
+	int	i;
 
 	//
 	// rgbGen
@@ -636,9 +636,7 @@ static void ComputeColors( shaderStage_t *pStage )
 			break;
 		case CGEN_FOG:
 			{
-				fog_t		*fog;
-
-				fog = tr.world->fogs + tess.fogNum;
+				fog_t* fog = tr.world->fogs + tess.fogNum;
 
 				for ( i = 0; i < tess.numVertexes; i++ ) {
 					* ( int * )&tess.svars.colors[i] = fog->colorInt;
@@ -957,14 +955,7 @@ void RB_StageIteratorGeneric( void )
 
 	RB_DeformTessGeometry();
 
-	//
-	// log this call
-	//
-	if ( r_logFile->integer ) 
-	{
-		// don't just call LogComment, or we will get
-		// a call to va() every frame!
-	}
+
 
 	//
 	// set face culling appropriately
@@ -1073,14 +1064,6 @@ void RB_StageIteratorVertexLitTexture( void )
 	//
 	RB_CalcDiffuseColor( tess.svars.colors );
 
-	//
-	// log this call
-	//
-	if ( r_logFile->integer ) 
-	{
-		// don't just call LogComment, or we will get
-		// a call to va() every frame!
-	}
 
 	//
 	// set face culling appropriately
@@ -1140,14 +1123,6 @@ void RB_StageIteratorLightmappedMultitexture( void ) {
 
 	input = &tess;
 	shader = input->shader;
-
-	//
-	// log this call
-	//
-	if ( r_logFile->integer ) {
-		// don't just call LogComment, or we will get
-		// a call to va() every frame!
-	}
 
 	//
 	// set face culling appropriately

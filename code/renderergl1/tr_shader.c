@@ -2301,7 +2301,6 @@ static shader_t *FinishShader( void ) {
 	if ( shader.isSky )
 	{
 		shader.optimalStageIteratorFunc = RB_StageIteratorSky;
-		return;
 	}
 
 	return GeneratePermanentShader();
