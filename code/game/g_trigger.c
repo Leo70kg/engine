@@ -52,14 +52,11 @@ void multi_trigger( gentity_t *ent, gentity_t *activator )
 	}
 
 	if ( activator->client ) {
-		if ( ( ent->spawnflags & 1 ) &&
-		        activator->client->sess.sessionTeam != TEAM_RED ) {
+		if( (ent->spawnflags & 1) && (activator->client->sess.sessionTeam != TEAM_RED) )
+            return;
+	
+		if( (ent->spawnflags & 2) && (activator->client->sess.sessionTeam != TEAM_BLUE) )
 			return;
-		}
-		if ( ( ent->spawnflags & 2 ) &&
-		        activator->client->sess.sessionTeam != TEAM_BLUE ) {
-			return;
-		}
 	}
 
 	G_UseTargets (ent, ent->activator);
@@ -489,5 +486,3 @@ void SP_func_timer( gentity_t *self )
 
 	self->r.svFlags = SVF_NOCLIENT;
 }
-
-

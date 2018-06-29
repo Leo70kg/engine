@@ -113,7 +113,7 @@ static void R_ModeList_f( void )
 }
 
 
-#define SWAP_INTERVAL   0
+
 
 
 /*
@@ -156,7 +156,7 @@ void GLimp_DestroyWindow(void)
     SDL_DestroyWindow( SDL_window );
     SDL_window = NULL;
 
-    Cmd_RemoveCommand( "modelist" );
+    Cmd_RemoveCommand("modelist");
 }
 
 
@@ -468,7 +468,7 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 		}
 	}
 
-
+    #define SWAP_INTERVAL   0
 	if( SDL_GL_SetSwapInterval( SWAP_INTERVAL ) == -1 )
 	{
 		Com_Printf("SDL_GL_SetSwapInterval failed: %s\n", SDL_GetError( ) );
@@ -604,7 +604,9 @@ success:
 	IN_Init();
 
 	r_availableModes = Cvar_Get("r_availableModes", "", CVAR_ROM);
-
+    
+    Cmd_AddCommand( "modelist", R_ModeList_f );
+    
     Com_Printf("\n-------- Glimp_Init() finished! --------\n");
 }
 

@@ -148,7 +148,7 @@ void G_InitSessionData( gclient_t *client, char *userinfo ) {
 	}
 
 	sess->spectatorState = SPECTATOR_FREE;
-	 AddTournamentQueue(client);
+	AddTournamentQueue(client);
 
 	G_WriteClientSessionData( client );
 }
@@ -162,7 +162,7 @@ G_InitWorldSession
 */
 void G_InitWorldSession( void ) {
 	char	s[MAX_STRING_CHARS];
-	int			gt;
+	int		gt;
 
 	trap_Cvar_VariableStringBuffer( "session", s, sizeof(s) );
 	gt = atoi( s );
@@ -171,7 +171,7 @@ void G_InitWorldSession( void ) {
 	// client sessions
 	if ( g_gametype.integer != gt ) {
 		level.newSession = qtrue;
-                G_Printf( "Gametype changed, clearing session data.\n" );
+        G_Printf( "Gametype changed, clearing session data.\n" );
 	}
 }
 

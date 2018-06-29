@@ -1140,38 +1140,6 @@ image_t *R_CreateImage(const char *name, unsigned char* pic, int width, int heig
 }
 
 
-/*
-===============
-	This version is used to make life easier to see which map textures are used
-	and also provide a bunch of lame zip commands to modularize maps better
-	(i.e. packing only used stuff by the *good* maps for releases)
-===============
-
-void R_ImageListMapOnly_f( void )
-{
-	int i;
-
-	for ( i = 0; i < tr.numImages; i++ )
-	{
-		image_t *image = tr.images[i];
-		char *zipcommand = "zip -9";
-		char localName[ MAX_QPATH ];
-		int estSize = image->uploadHeight * image->uploadWidth;
-
-		
-		// mipmap adds about 50%
-		if (image->flags & IMGFLAG_MIPMAP)
-			estSize += estSize / 2;
-
-        
-        if ( !strncmp( image->imgName, "textures", 8 ) )
-        {
-            COM_StripExtension( image->imgName, localName, MAX_QPATH );
-            ri.Printf(PRINT_ALL, "%s pak1-map-mapname.pk3 %s.*\n", zipcommand, localName);
-		}
-	}
-}
-*/
 
 void R_ImageList_f( void )
 {

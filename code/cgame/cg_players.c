@@ -1433,7 +1433,7 @@ static void CG_SwingAngles(float destination, float swingTolerance, float clampT
 			*swinging = qfalse;
 		}
 		*angle = AngleMod(*angle + move);
-	} else if (swing < 0) {
+	} else {
 		move = cg.frametime * scale * -speed;
 		if (move <= swing) {
 			move = swing;
@@ -1489,8 +1489,6 @@ Handles seperate torso motion
   if < 45 degrees, also show in torso
 ===============
  */
-
-vec3_t eyeat;
 
 static void CG_PlayerAngles(centity_t *cent, vec3_t legs[3], vec3_t torso[3], vec3_t head[3]) {
 	vec3_t legsAngles, torsoAngles, headAngles;

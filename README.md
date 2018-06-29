@@ -1,9 +1,10 @@
 # OpenArena Engine 
 This project is a fork of OpenArena with specific changes to the client and server.
 
-## Building on Linux##
+## Building on Ubuntu or Debian Linux##
 
-If you are on Ubuntu or Debian, the easiest way to compile this is to install the build dependencies.
+
+Install the build dependencies.
 
 ```sh
 $ sudo apt-get install libcurl4-gnutls-dev libgl1-mesa-dev libsdl2-dev libopus-dev libopusfile-dev libogg-dev zlib1g-dev libvorbis-dev libopenal-dev libjpeg-dev libfreetype6-dev libxmp-dev
@@ -12,9 +13,7 @@ $ cd engine
 $ make
 ```
 
-## Building on Windows ##
-
-Refer to [the build instructions on ioquake3 website][ioq3-build].
+## Building on Windows 7 or 10 ##
 
 To build 64-bit binaries, follow these instructions:
 
@@ -36,8 +35,7 @@ make ARCH=x86_64
 
 
 ## RUN ##
-First, download the map packages from http://openarena.ws/download.php
-[baseoa-download]: http://openarena.ws/download.php
+First, download the map packages from [baseoa-download]: http://openarena.ws/download.php
 Second, extract the data files on ~/.OpenArena/ (linux) or C:\Users\youname\AppData\Roaming\OpenArena\ (windows)
 
 
@@ -96,4 +94,9 @@ In particular the Open Arena Expanded topic: http://openarena.ws/board/index.php
 ## Status ##
 
 * Initial testing on Ubuntu16.04 and Ubuntu18.04, Win7 and Win10
+
+
+## License ##
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 

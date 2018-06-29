@@ -1119,7 +1119,6 @@ extern	cvar_t	*r_finish;
 extern	cvar_t	*r_offsetFactor;
 extern	cvar_t	*r_offsetUnits;
 
-extern	cvar_t	*r_fullbright;					// avoid lightmap pass
 extern	cvar_t	*r_lightmap;					// render lightmaps only
 extern	cvar_t	*r_vertexLight;					// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;				// ui is running fullscreen
@@ -1439,7 +1438,6 @@ void RE_TakeVideoFrame( int width, int height, unsigned char *captureBuffer, uns
 void    GL_TextureMode( const char *string );
 int		R_SumOfUsedImages( void );
 image_t *R_CreateImage( const char *name, unsigned char *pic, int width, int height, imgType_t type, imgFlags_t flags, int internalFormat );
-void	R_ImageListMapOnly_f( void ); // leilei - stuff hack
 void	R_ImageList_f( void );
 void	R_InitImages( void );
 void    R_InitSkins( void );

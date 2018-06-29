@@ -908,7 +908,7 @@ void Team_DD_makeA2team( gentity_t *target, int team )
 	//gentity_t		*it_ent;
 	Team_DD_RemovePointAgfx();
 	it = NULL;
-	if(team == TEAM_NONE) {
+	if((team == TEAM_NONE) || !target) {
 		return;
 	}
 	else if(team == TEAM_RED) {
@@ -939,7 +939,7 @@ static void Team_DD_makeB2team( gentity_t *target, int team )
 
 	Team_DD_RemovePointBgfx();
 	it = NULL;
-	if(team == TEAM_NONE) {
+	if((team == TEAM_NONE) || !target) {
 		return;
 	}
 	if(team == TEAM_RED) {
@@ -1067,7 +1067,7 @@ void Team_ReturnFlag( int team )
 	}
 	else {
 		PrintMsg(NULL, "The %s flag has returned!\n", TeamName(team));
-		if (g_gametype.integer == GT_CTF_ELIMINATION) {
+		if (g_gametype.integer == GT_CTF) {
 			G_LogPrintf( "CTF: %i %i %i: The %s flag was returned!\n", -1, team, 2, TeamName(team) );
 		}
 		else if(g_gametype.integer == GT_CTF_ELIMINATION) {
@@ -1280,7 +1280,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team )
 	gclient_t	*cl = other->client;
 	int			enemy_flag;
 
-	if( g_gametype.integer == GT_1FCTF || g_gametype.integer == GT_POSSESSION ) {
+	if( (g_gametype.integer == GT_1FCTF) || (g_gametype.integer == GT_POSSESSION) ) {
 		enemy_flag = PW_NEUTRALFLAG;
 	}
 	else {
@@ -1297,10 +1297,13 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team )
 			          cl->pers.netname, TeamName(team));
 			AddScore(other, ent->r.currentOrigin, CTF_RECOVERY_BONUS);
 			if(g_gametype.integer == GT_CTF) {
-				G_LogPrintf( "CTF: %i %i %i: %s returned the %s flag!\n", cl->ps.clientNum, team, 2, cl->pers.netname, TeamName(team) );
+				G_LogPrintf( "CTF: %i %i %i: %s returned the %s flag!\n",
+                    cl->ps.clientNum, team, 2, cl->pers.netname, TeamName(team) );
 			}
 			else if(g_gametype.integer == GT_CTF_ELIMINATION) {
-				G_LogPrintf( "CTF_ELIMINATION: %i %i %i %i: %s returned the %s flag!\n", level.roundNumber, cl->ps.clientNum, team, 2, cl->pers.netname, TeamName(team) );
+				G_LogPrintf( "CTF_ELIMINATION: %i %i %i %i: %s returned the %s flag!\n",
+                level.roundNumber, cl->ps.clientNum, team, 2, 
+                cl->pers.netname, TeamName(team) );
 			}
 			other->client->pers.teamState.flagrecovery++;
 			other->client->pers.teamState.lastreturnedflag = level.time;
@@ -1364,11 +1367,12 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team )
 			continue;
 		}
 
-		if (player->client->sess.sessionTeam !=
-		        cl->sess.sessionTeam) {
+		if (player->client->sess.sessionTeam != cl->sess.sessionTeam)
+        {
 			player->client->pers.teamState.lasthurtcarrier = -5;
 		}
-		else if (player->client->sess.sessionTeam == cl->sess.sessionTeam) {
+		else
+        {
 			if (player != other) {
 				AddScore(player, ent->r.currentOrigin, CTF_TEAM_BONUS);
 			}
@@ -1933,7 +1937,7 @@ void TeamplayInfoMessage( gentity_t *ent )
 	// figure out what client should be on the display
 	// we are limited to 8, but we want to use the top eight players
 	// but in client order (so they don't keep changing position on the overlay)
-	for (i = 0, cnt = 0; i < g_maxclients.integer && cnt < TEAM_MAXOVERLAY; i++) {
+	for (i = 0, cnt = 0; i<g_maxclients.integer && i < MAX_CLIENTS && cnt < TEAM_MAXOVERLAY; i++) {
 		player = g_entities + level.sortedClients[i];
 		if (player->inuse && player->client->sess.sessionTeam == team ) {
 			clients[cnt++] = level.sortedClients[i];
@@ -1947,20 +1951,24 @@ void TeamplayInfoMessage( gentity_t *ent )
 	string[0] = 0;
 	stringlength = 0;
 
-	for (i = 0, cnt = 0; i < g_maxclients.integer && cnt < TEAM_MAXOVERLAY; i++) {
+	for (i = 0, cnt = 0; (i < g_maxclients.integer) && (i < MAX_GENTITIES) && (cnt < TEAM_MAXOVERLAY); i++)
+    {
 		player = g_entities + i;
 		if (player->inuse && player->client->sess.sessionTeam == team ) {
 
 			h = player->client->ps.stats[STAT_HEALTH];
 			a = player->client->ps.stats[STAT_ARMOR];
 			w = player->client->ps.weapon;
-			if(player->client->isEliminated) {
+			if(player->client->isEliminated)
+            {
 				h = 0;
 				a = 0;
 				w = 0;
 			}
-			if (h < 0) h = 0;
-			if (a < 0) a = 0;
+			if (h < 0)
+                h = 0;
+			if (a < 0)
+                a = 0;
 
 			Com_sprintf (entry, sizeof(entry),
 			             " %i %i %i %i %i %i",
@@ -1995,7 +2003,9 @@ void CheckTeamStatus(void)
 				continue;
 			}
 
-			if (ent->inuse && (ent->client->sess.sessionTeam == TEAM_RED ||	ent->client->sess.sessionTeam == TEAM_BLUE)) {
+			if (ent->inuse && ( (ent->client->sess.sessionTeam == TEAM_RED) ||
+                        (ent->client->sess.sessionTeam == TEAM_BLUE) ))
+            {
 				loc = Team_GetLocation( ent );
 				if (loc)
 					ent->client->pers.teamState.location = loc->health;

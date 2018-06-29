@@ -262,11 +262,6 @@ static shader_t *ShaderForShaderNum( int shaderNum, int lightmapNum )
 	}
 	dsh = &s_worldData.shaders[ _shaderNum ];
 
-	if ( r_fullbright->integer )
-    {
-		lightmapNum = LIGHTMAP_WHITEIMAGE;
-	}
-
 	shader = R_FindShader( dsh->shader, lightmapNum, qtrue );
 
 	// if the shader had errors, just use default shader
