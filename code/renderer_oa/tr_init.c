@@ -312,8 +312,6 @@ static void InitOpenGL(void)
     
     // manually create extension list if using OpenGL 3
 
-
-
     Q_strncpyz( glConfig.extensions_string, (char *)qglGetString(GL_EXTENSIONS), sizeof( glConfig.extensions_string ) );
 
 

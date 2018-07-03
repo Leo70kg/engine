@@ -572,19 +572,6 @@ static void Upload32( unsigned *data, int width, int height, qboolean mipmap, qb
             {
                 internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; // leilei - this was missing
             }
-            else 
-            if ( r_texturebits->integer == 16 || forceBits == 16)
-            {
-                internalFormat = GL_RGBA4;
-            }
-            else if ( r_texturebits->integer == 15 || forceBits == 15)
-            {
-                internalFormat = GL_RGB5_A1;
-            }
-            else if ( r_texturebits->integer == 12 || forceBits == 12)
-            {
-                internalFormat = GL_RGBA4;
-            }
             else if ( r_texturebits->integer == 32 || forceBits == 32)
             {
                 internalFormat = GL_RGBA8;
@@ -1449,7 +1436,7 @@ void R_InitImages(void)
 	memset(hashTable, 0, sizeof(hashTable));
 	// build brightness translation tables
 	
-    r_texturebits = ri.Cvar_Get( "r_texturebits", "0", CVAR_ARCHIVE | CVAR_LATCH );
+    r_texturebits = ri.Cvar_Get( "r_texturebits", "32", CVAR_ARCHIVE | CVAR_LATCH );
     ri.Printf( PRINT_ALL, "texture bits: %d\n", r_texturebits->integer );
 
     r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
