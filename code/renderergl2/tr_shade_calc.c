@@ -184,7 +184,7 @@ void RB_CalcDeformNormals( deformStage_t *ds ) {
 			tess.shaderTime * ds->deformationWave.frequency );
 		fNormal[ 2 ] += ds->deformationWave.amplitude * scale;
 
-		VectorNormalizeFast( fNormal );
+		FastNormalize1f( fNormal );
 
 		R_VaoPackNormal(normal, fNormal);
 	}

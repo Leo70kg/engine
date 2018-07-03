@@ -167,12 +167,12 @@ Wiggle the normals for wavy environment mapping
 */
 void RB_CalcDeformNormals( deformStage_t *ds ) {
 	int i;
-	float	scale;
 	float	*xyz = ( float * ) tess.xyz;
 	float	*normal = ( float * ) tess.normal;
 
-	for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 ) {
-		scale = 0.98f;
+	for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 ) 
+    {
+		float scale = 0.98f;
 		scale = R_NoiseGet4f( xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
 			tess.shaderTime * ds->deformationWave.frequency );
 		normal[ 0 ] += ds->deformationWave.amplitude * scale;
@@ -187,7 +187,7 @@ void RB_CalcDeformNormals( deformStage_t *ds ) {
 			tess.shaderTime * ds->deformationWave.frequency );
 		normal[ 2 ] += ds->deformationWave.amplitude * scale;
 
-		VectorNormalizeFast( normal );
+		FastNormalize1f( normal );
 	}
 }
 
@@ -882,7 +882,6 @@ void RB_CalcEnvironmentTexCoords( float *st )
 	int			i;
 	float		*v, *normal;
 	vec3_t		viewer, reflected;
-	float		d;
 
 	v = tess.xyz[0];
 	normal = tess.normal[0];
@@ -890,9 +889,9 @@ void RB_CalcEnvironmentTexCoords( float *st )
 	for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) 
 	{
 		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-		VectorNormalizeFast (viewer);
+		FastNormalize1f(viewer);
 
-		d = DotProduct (normal, viewer);
+		float d = DotProduct (normal, viewer);
 
 		reflected[0] = normal[0]*2*d - viewer[0];
 		reflected[1] = normal[1]*2*d - viewer[1];
@@ -1031,7 +1030,7 @@ void RB_CalcSpecularAlpha( unsigned char *alphas ) {
 	for (i = 0 ; i < numVertexes ; i++, v += 4, normal += 4, alphas += 4) {
 
 		VectorSubtract( lightOrigin, v, lightDir );
-		VectorNormalizeFast( lightDir );
+		FastNormalize1f( lightDir );
 
 		// calculate the specular color
 		float d = DotProduct (normal, lightDir);

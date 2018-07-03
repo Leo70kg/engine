@@ -41,8 +41,6 @@ SDL_Window *SDL_window = NULL;
 static SDL_GLContext SDL_glContext = NULL;
 
 
-static SDL_DisplayMode sdlDispMode;
-
 
 static cvar_t* r_allowResize; // make window resizable
 static cvar_t* r_customwidth;
@@ -53,14 +51,13 @@ static cvar_t* r_stencilbits;
 static cvar_t* r_colorbits;
 static cvar_t* r_depthbits;
 
-static cvar_t* r_displayIndex;
+
 static cvar_t* r_displayRefresh;
 
 
 // not used cvar, keep it for backward compatibility
 static cvar_t* r_stereoSeparation;
-
-
+static cvar_t* r_displayIndex;
 
 typedef struct vidmode_s {
 	const char *description;
@@ -111,8 +108,6 @@ static void R_ModeList_f( void )
 	}
 	Com_Printf( "\n" );
 }
-
-
 
 
 
@@ -268,6 +263,7 @@ GLimp_SetMode
 static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qboolean coreContext)
 {
 	static int display_in_use = 0; /* Only using first display */
+    static SDL_DisplayMode sdlDispMode;
 	int samples = 0;
 	SDL_Surface *icon = NULL;
 	Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
@@ -358,15 +354,13 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 		glConfig->vidHeight = r_customheight->integer;
 		glConfig->windowAspect = glConfig->vidWidth / (float)glConfig->vidHeight;
         glConfig->refresh_rate = r_displayRefresh->integer;
-
 	}
-	else if(mode > 0)
+	else if((mode > 0) && (mode < s_numVidModes))
 	{
-        SDL_GetDisplayMode(display_in_use, mode, &sdlDispMode);
-        
-        glConfig->vidWidth = sdlDispMode.w;
-        glConfig->vidHeight = sdlDispMode.h;
-        glConfig->windowAspect = (float)glConfig->vidWidth / (float)glConfig->vidHeight;
+
+        glConfig->vidWidth = r_vidModes[mode].width;
+        glConfig->vidHeight = r_vidModes[mode].height;
+        glConfig->windowAspect = (float)glConfig->vidWidth * r_vidModes[mode].pixelAspect / (float)glConfig->vidHeight;
         glConfig->refresh_rate = sdlDispMode.refresh_rate;
     }
 
@@ -449,8 +443,8 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 		{
 			Com_Printf("SDL_GL_CreateContext failed: %s\n", SDL_GetError());
 			Com_Printf("Reverting to default context\n");
-
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profileMask);
+			
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profileMask);
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, majorVersion);
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minorVersion);
 		}
@@ -502,40 +496,6 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 }
 
 
-static qboolean GLimp_CreateWindowAndSetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qboolean gl3Core)
-{
-	rserr_t err;
-
-	if (!SDL_WasInit(SDL_INIT_VIDEO))
-	{
-		const char *driverName;
-
-		if (SDL_Init(SDL_INIT_VIDEO) != 0)
-		{
-			Com_Printf("SDL_Init( SDL_INIT_VIDEO ) FAILED (%s)\n", SDL_GetError());
-			return qfalse;
-		}
-
-		driverName = SDL_GetCurrentVideoDriver( );
-		Com_Printf(" SDL using driver \"%s\"\n", driverName );
-	}
- 
-	err = GLimp_SetMode(mode, fullscreen, glConfig ,gl3Core);
-	switch ( err )
-	{
-		case RSERR_INVALID_FULLSCREEN:
-			Com_Printf("...WARNING: fullscreen unavailable in this mode\n" );
-			return qfalse;
-		case RSERR_INVALID_MODE:
-			Com_Printf("...WARNING: could not set the given mode \n");
-			return qfalse;
-		default:
-			break;
-	}
-
-	return qtrue;
-}
-
 
 #define R_MODE_FALLBACK 3 // 640 * 480
 
@@ -579,33 +539,49 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 
 
 	// Create the window and set up the context
-	if(GLimp_CreateWindowAndSetMode(r_mode->integer, r_fullscreen->integer, glConfig, coreContext))
-		goto success;
-
-
-	// Finally, try the default screen resolution
-	if( r_mode->integer != R_MODE_FALLBACK )
+    
+	if (!SDL_WasInit(SDL_INIT_VIDEO))
 	{
-		Com_Printf("Setting r_mode %d failed, falling back on r_mode %d\n", r_mode->integer, R_MODE_FALLBACK );
-
-		if(GLimp_CreateWindowAndSetMode(R_MODE_FALLBACK, qfalse, glConfig, coreContext))
-			goto success;
+		if (SDL_Init(SDL_INIT_VIDEO) != 0)
+		{
+			Com_Printf("SDL_Init( SDL_INIT_VIDEO ) FAILED (%s)\n", SDL_GetError());
+		}
+        else
+        {
+    		Com_Printf(" SDL using driver \"%s\"\n", SDL_GetCurrentVideoDriver( ));
+        }
+    }
+ 
+	if( RSERR_OK == GLimp_SetMode(r_mode->integer, r_fullscreen->integer, glConfig, coreContext) )
+	{
+        goto success;
 	}
+    else
+    {
+        Com_Printf("Setting r_mode=%d, r_fullscreen=%d failed, falling back on r_mode=%d\n",
+                r_mode->integer, r_fullscreen->integer, R_MODE_FALLBACK );
 
-	// Nothing worked, give up
-	Com_Error( ERR_FATAL, "GLimp_Init() - could not load OpenGL subsystem" );
+        if( RSERR_OK == GLimp_SetMode(R_MODE_FALLBACK, qfalse, glConfig, coreContext) )
+        {
+            goto success;
+        }
+        else
+        {
+            Com_Error( ERR_FATAL, "GLimp_Init() - could not load OpenGL subsystem" );
+        }
+    }
+
 
 success:
 
 	Com_Printf( "MODE: %s, %d x %d, refresh rate: %dhz\n", fsstrings[r_fullscreen->integer == 1], glConfig->vidWidth, glConfig->vidHeight, glConfig->refresh_rate);
-
 
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	IN_Init();
 
 	r_availableModes = Cvar_Get("r_availableModes", "", CVAR_ROM);
     
-    Cmd_AddCommand( "modelist", R_ModeList_f );
+    Cmd_AddCommand("modelist", R_ModeList_f);
     
     Com_Printf("\n-------- Glimp_Init() finished! --------\n");
 }
@@ -616,9 +592,7 @@ success:
  */
 void GLimp_EndFrame( void )
 {
-
 	SDL_GL_SwapWindow( SDL_window );
-
 
 	if( r_fullscreen->modified )
 	{

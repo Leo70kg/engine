@@ -126,7 +126,7 @@ void MakePerpVectors(const float forward[3], float unit[3], float right[3]);
 float MakeTwoPerpVectors(float forward[3], float right[3], float up[3]);
 
 unsigned int ColorBytes4 (float r, float g, float b, float a);
-
+void MatrixMultiply4x4(const float A[16], const float B[16], float out[16]);
 
 
 #endif

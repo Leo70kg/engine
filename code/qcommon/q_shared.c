@@ -412,15 +412,6 @@ char *COM_ParseExt(char **data_p, qboolean allowLineBreaks)
 
 		c = *data;
 
-		// try for glsl program sequence
-		if ( c == '/' && data[1] == '/' && data[2]=='G' && data[3]=='L' && data[4]=='S' && data[5]=='L' )
-		{
-			data += 6;
-			c = *data;
-            if (c==0 || *data == '\n')
-                break;
-		}
-
 		// skip double slash comments
 		if ( c == '/' && data[1] == '/' )
 		{

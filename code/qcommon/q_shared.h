@@ -462,7 +462,6 @@ void VectorInverse( vec3_t v );
 int VectorCompare( const vec3_t v1, const vec3_t v2 );
 float DistanceSquared( const vec3_t p1, const vec3_t p2 );
 float Distance( const vec3_t p1, const vec3_t p2 );
-void VectorNormalizeFast( vec3_t v );
 
 // this isn't a real cheap function to call!
 int DirToByte( vec3_t dir );

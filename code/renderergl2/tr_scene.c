@@ -452,10 +452,10 @@ void RE_RenderScene( const refdef_t *fd ) {
 		return;
 	}
 
-	qboolean	customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
+	qboolean customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
 	int startTime = ri.Milliseconds();
 
-	if (!tr.world && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
+	if (!tr.world && customscrn ) {
 		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
 	}
 

@@ -36,90 +36,88 @@ Out must have space for two more vertexes than in
 #define	SIDE_FRONT	0
 #define	SIDE_BACK	1
 #define	SIDE_ON		2
-static void R_ChopPolyBehindPlane( int numInPoints, vec3_t inPoints[MAX_VERTS_ON_POLY],
-		int *numOutPoints, vec3_t outPoints[MAX_VERTS_ON_POLY], vec3_t normal, vec_t dist, vec_t epsilon)
+
+static void R_ChopPolyBehindPlane( int numInPoints, vec3_t inPoints[MAX_VERTS_ON_POLY], int *numOutPoints, vec3_t outPoints[MAX_VERTS_ON_POLY], vec3_t normal, float dist)
 {
-	float		dists[MAX_VERTS_ON_POLY+4] = { 0 };
-	int			sides[MAX_VERTS_ON_POLY+4] = { 0 };
-	int			counts[3];
-	float		dot;
-	int			i, j;
-	float		*p1, *p2, *clip;
-	float		d;
+	float	dists[MAX_VERTS_ON_POLY+4] = { 0 };
+	int		sides[MAX_VERTS_ON_POLY+4] = { 0 };
+	int		counts[3] = { 0 };
+	int		i;
 
 	// don't clip if it might overflow
-	if ( numInPoints >= MAX_VERTS_ON_POLY - 2 ) {
+	if ( numInPoints >= MAX_VERTS_ON_POLY - 2 )
+	{
 		*numOutPoints = 0;
+		ri.Printf(PRINT_WARNING, "numInPoints overflow");
 		return;
 	}
 
-	counts[0] = counts[1] = counts[2] = 0;
 
 	// determine sides for each point
-	for ( i = 0 ; i < numInPoints ; i++ )
+	for (i = 0; i < numInPoints; i++)
     {
-		dot = DotProduct( inPoints[i], normal );
-		dot -= dist;
+		float dot = DotProduct( inPoints[i], normal ) - dist;
 		dists[i] = dot;
-		if ( dot > epsilon ) {
+
+		if ( dot > 0.5 ) 
 			sides[i] = SIDE_FRONT;
-		} else if ( dot < -epsilon ) {
+		else if ( dot < -0.5 )
 			sides[i] = SIDE_BACK;
-		} else {
+		else
 			sides[i] = SIDE_ON;
-		}
+	
 		counts[sides[i]]++;
 	}
+	
 	sides[i] = sides[0];
 	dists[i] = dists[0];
 
 	*numOutPoints = 0;
 
-	if ( !counts[0] )
+	if ( counts[0] == 0)
 		return;
     
-	if ( !counts[1] ) 
+	if ( counts[1] == 0) 
     {
 		*numOutPoints = numInPoints;
 		memcpy( outPoints, inPoints, numInPoints * sizeof(vec3_t) );
 		return;
 	}
 
-	for ( i = 0 ; i < numInPoints ; i++ ) {
-		p1 = inPoints[i];
-		clip = outPoints[ *numOutPoints ];
-		
-		if ( sides[i] == SIDE_ON ) {
-			VectorCopy( p1, clip );
+
+	for ( i = 0 ; i < numInPoints; i++ )
+	{
+				
+		if ( sides[i] == SIDE_ON )
+		{
+			VectorCopy( inPoints[i], outPoints[ *numOutPoints ] );
 			(*numOutPoints)++;
 			continue;
 		}
 	
-		if ( sides[i] == SIDE_FRONT ) {
-			VectorCopy( p1, clip );
+		if ( sides[i] == SIDE_FRONT )
+		{
+			VectorCopy( inPoints[i], outPoints[ *numOutPoints ] );
 			(*numOutPoints)++;
-			clip = outPoints[ *numOutPoints ];
 		}
 
-		if ( sides[i+1] == SIDE_ON || sides[i+1] == sides[i] ) {
+		if ( sides[i+1] == SIDE_ON || sides[i+1] == sides[i] )
 			continue;
-		}
 			
 		// generate a split point
-		p2 = inPoints[ (i+1) % numInPoints ];
 
-		d = dists[i] - dists[i+1];
-		if ( d == 0 ) {
-			dot = 0;
-		} else {
-			dot = dists[i] / d;
-		}
+		float d = dists[i] - dists[i+1];
+		if ( d != 0 )
+			d = dists[i] / d;
 
 		// clip xyz
-
-		for (j=0 ; j<3 ; j++) {
-			clip[j] = p1[j] + dot * ( p2[j] - p1[j] );
-		}
+		int j = (i+1) % numInPoints;
+		
+        float* clip = outPoints[ *numOutPoints ];
+		
+		clip[0] = inPoints[i][0] + d * (inPoints[j][0] - inPoints[i][0]);
+		clip[1] = inPoints[i][1] + d * (inPoints[j][1] - inPoints[i][1]);
+		clip[2] = inPoints[i][2] + d * (inPoints[j][2] - inPoints[i][2]);
 
 		(*numOutPoints)++;
 	}
@@ -218,9 +216,8 @@ static void R_AddMarkFragments(int numClipPoints, vec3_t clipPoints[2][MAX_VERTS
 	for ( i = 0 ; i < numPlanes ; i++ )
     {
 
-		R_ChopPolyBehindPlane( numClipPoints, clipPoints[pingPong],
-						   &numClipPoints, clipPoints[!pingPong],
-							normals[i], dists[i], 0.5 );
+		R_ChopPolyBehindPlane( numClipPoints, clipPoints[pingPong], &numClipPoints,
+                clipPoints[!pingPong], normals[i], dists[i]);
 		pingPong ^= 1;
 		if ( numClipPoints == 0 )
         {
@@ -267,7 +264,7 @@ R_MarkFragments
 int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projection,
 				   int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer ) {
 	int				numsurfaces, numPlanes;
-	int				i, j, k, m, n;
+	int				i, m, n;
 	surfaceType_t	*surfaces[64];
 	vec3_t			mins, maxs;
 	int				returnedFragments;
@@ -276,14 +273,12 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	float			dists[MAX_VERTS_ON_POLY+2];
 	vec3_t			clipPoints[2][MAX_VERTS_ON_POLY];
 	int				numClipPoints;
-	float			*v;
 	srfGridMesh_t	*cv;
 	drawVert_t		*dv;
 	vec3_t			normal;
 	vec3_t			projectionDir;
 	vec3_t			v1, v2;
-	int				*indexes;
-
+	
 	if (numPoints <= 0) {
 		return 0;
 	}
@@ -295,7 +290,8 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	VectorNormalize2( projection, projectionDir );
 	// find all the brushes that are to be considered
 	ClearBounds( mins, maxs );
-	for ( i = 0 ; i < numPoints ; i++ ) {
+	for ( i = 0 ; i < numPoints ; i++ )
+    {
 		vec3_t	temp;
 
 		AddPointToBounds( points[i], mins, maxs );
@@ -306,14 +302,17 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 		AddPointToBounds( temp, mins, maxs );
 	}
 
-	if (numPoints > MAX_VERTS_ON_POLY) numPoints = MAX_VERTS_ON_POLY;
-	// create the bounding planes for the to be projected polygon
-	for ( i = 0 ; i < numPoints ; i++ ) {
+	if (numPoints > MAX_VERTS_ON_POLY)
+        numPoints = MAX_VERTS_ON_POLY;
+	
+    // create the bounding planes for the to be projected polygon
+	for ( i = 0 ; i < numPoints ; i++ )
+    {
 		VectorSubtract(points[(i+1)%numPoints], points[i], v1);
 		VectorAdd(points[i], projection, v2);
 		VectorSubtract(points[i], v2, v2);
 		CrossProduct(v1, v2, normals[i]);
-		VectorNormalizeFast(normals[i]);
+		FastNormalize1f(normals[i]);
 		dists[i] = DotProduct(normals[i], points[i]);
 	}
 	// add near and far clipping planes for projection
@@ -332,10 +331,11 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	returnedPoints = 0;
 	returnedFragments = 0;
 
-	for ( i = 0 ; i < numsurfaces ; i++ ) {
+	for ( i = 0 ; i < numsurfaces ; i++ )
+    {
 
-		if (*surfaces[i] == SF_GRID) {
-
+		if (*surfaces[i] == SF_GRID)
+        {
 			cv = (srfGridMesh_t *) surfaces[i];
 			for ( m = 0 ; m < cv->height - 1 ; m++ ) {
 				for ( n = 0 ; n < cv->width - 1 ; n++ ) {
@@ -374,7 +374,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					VectorSubtract(clipPoints[0][0], clipPoints[0][1], v1);
 					VectorSubtract(clipPoints[0][2], clipPoints[0][1], v2);
 					CrossProduct(v1, v2, normal);
-					VectorNormalizeFast(normal);
+					FastNormalize1f(normal);
 					if (DotProduct(normal, projectionDir) < -0.1) {
 						// add the fragments of this triangle
 						R_AddMarkFragments(numClipPoints, clipPoints,
@@ -398,7 +398,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					VectorSubtract(clipPoints[0][0], clipPoints[0][1], v1);
 					VectorSubtract(clipPoints[0][2], clipPoints[0][1], v2);
 					CrossProduct(v1, v2, normal);
-					VectorNormalizeFast(normal);
+					FastNormalize1f(normal);
 					if (DotProduct(normal, projectionDir) < -0.05) {
 						// add the fragments of this triangle
 						R_AddMarkFragments(numClipPoints, clipPoints,
@@ -414,7 +414,8 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 				}
 			}
 		}
-		else if (*surfaces[i] == SF_FACE) {
+		else if (*surfaces[i] == SF_FACE)
+        {
 
 			srfSurfaceFace_t *surf = ( srfSurfaceFace_t * ) surfaces[i];
 
@@ -423,33 +424,36 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 				continue;
 			}
 
-			indexes = (int *)( (byte *)surf + surf->ofsIndices );
-			for ( k = 0 ; k < surf->numIndices ; k += 3 ) {
-				for ( j = 0 ; j < 3 ; j++ ) {
-					v = surf->points[0] + VERTEXSIZE * indexes[k+j];;
+			int* indexes = (int *)( (byte *)surf + surf->ofsIndices );
+            int k = 0, j = 0;
+			for ( k = 0; k < surf->numIndices; k += 3 )
+            {
+				for ( j = 0; j < 3; j++ )
+                {
+					float* v = surf->points[0] + VERTEXSIZE * indexes[k+j];
 					VectorMA( v, MARKER_OFFSET, surf->plane.normal, clipPoints[0][j] );
 				}
 
 				// add the fragments of this face
-				R_AddMarkFragments( 3 , clipPoints,
-								   numPlanes, normals, dists,
-								   maxPoints, pointBuffer,
-								   maxFragments, fragmentBuffer,
+				R_AddMarkFragments( 3 , clipPoints, numPlanes, normals, dists,
+								   maxPoints, pointBuffer, maxFragments, fragmentBuffer,
 								   &returnedPoints, &returnedFragments, mins, maxs);
-				if ( returnedFragments == maxFragments ) {
+				if ( returnedFragments == maxFragments )
+                {
 					return returnedFragments;	// not enough space for more fragments
 				}
 			}
 		}
-		else if(*surfaces[i] == SF_TRIANGLES && r_marksOnTriangleMeshes->integer) {
+		else if(*surfaces[i] == SF_TRIANGLES && r_marksOnTriangleMeshes->integer)
+        {
 
 			srfTriangles_t *surf = (srfTriangles_t *) surfaces[i];
-
+            int k = 0, j = 0;
 			for (k = 0; k < surf->numIndexes; k += 3)
 			{
 				for(j = 0; j < 3; j++)
 				{
-					v = surf->verts[surf->indexes[k + j]].xyz;
+					float* v = surf->verts[surf->indexes[k + j]].xyz;
 					VectorMA(v, MARKER_OFFSET, surf->verts[surf->indexes[k + j]].normal, clipPoints[0][j]);
 				}
 

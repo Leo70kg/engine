@@ -125,7 +125,7 @@ void RB_AddFlare(srfFlare_t *surface, int fogNum, vec3_t point, vec3_t color, ve
 	if(normal && (normal[0] || normal[1] || normal[2]) )
     {
 		VectorSubtract( backEnd.viewParms.or.origin, point, local );
-		VectorNormalizeFast(local);
+		FastNormalize1f(local);
 		d = DotProduct(local, normal);
 
 		// If the viewer is behind the flare don't add it.

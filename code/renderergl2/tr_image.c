@@ -1392,7 +1392,7 @@ static void R_MipMapNormalHeight (const byte *in, byte *out, int width, int heig
 			v[1] += OffsetByteToFloat(in[   row+5]);
 			v[2] += OffsetByteToFloat(in[   row+6]);
 
-			VectorNormalizeFast(v);
+			FastNormalize1f(v);
 
 			//v[0] *= 0.25f;
 			//v[1] *= 0.25f;

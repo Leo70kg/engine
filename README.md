@@ -35,7 +35,7 @@ make ARCH=x86_64
 
 
 ## RUN ##
-First, download the map packages from [baseoa-download]: http://openarena.ws/download.php
+First, download the map packages from http://openarena.ws/download.php
 Second, extract the data files on ~/.OpenArena/ (linux) or C:\Users\youname\AppData\Roaming\OpenArena\ (windows)
 
 
@@ -100,3 +100,8 @@ In particular the Open Arena Expanded topic: http://openarena.ws/board/index.php
 
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
+## extra ##
+use gprof to examine the 
+```
+gprof openarena.x86_64 gmon.out > report.txt
+```

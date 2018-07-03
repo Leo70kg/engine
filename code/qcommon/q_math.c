@@ -588,7 +588,7 @@ ID_INLINE vec_t VectorNormalize2( const vec3_t v, vec3_t out)
 	if (length)
 	{
 		/* writing it this way allows gcc to recognize that rsqrt can be used */
-		float ilength = 1/(float)sqrt (length);
+		float ilength = 1/(float)sqrt(length);
 		/* sqrt(length) = length * (1 / sqrt(length)) */
 		length *= ilength;
 		out[0] = v[0]*ilength;
@@ -835,26 +835,8 @@ ID_INLINE vec_t DistanceSquared( const vec3_t p1, const vec3_t p2 )
 	return v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
 }
 
-// fast vector normalize routine that does not check to make sure
-// that length != 0, nor does it return length, uses rsqrt approximation
-ID_INLINE void VectorNormalizeFast( vec3_t v )
-{
-	floatint_t t;
 
-	const float threehalfs = 1.5F;
-    float number = DotProduct( v, v );
-	float x2 = number * 0.5F;
-	float y;
-    t.f  = number;
-	t.i  = 0x5f3759df - ( t.i >> 1 );               // what the fuck?
-	y  = t.f;
-	y  = y * ( threehalfs - ( x2 * y * y ) );   // 1st iteration
-//	y  = y * ( threehalfs - ( x2 * y * y ) );   // 2nd iteration, this can be removed
 
-	v[0] *= y;
-	v[1] *= y;
-	v[2] *= y;
-}
 
 ID_INLINE void VectorInverse( vec3_t v ){
 	v[0] = -v[0];

@@ -131,8 +131,6 @@ cvar_t	*r_lensReflectionBrightness;
 
 cvar_t	*r_flareDelay;		// time delay for medium quality flare testing
 
-cvar_t	*r_specMode;
-
 cvar_t	*r_flaresDlightShrink;
 cvar_t	*r_flaresDlightFade;
 cvar_t	*r_flaresDlightOpacity;
@@ -946,8 +944,6 @@ static void R_Register( void )
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
 
 
-
-	r_specMode = ri.Cvar_Get( "r_specMode", "1" , CVAR_ARCHIVE );
 	//r_waveMode = ri.Cvar_Get( "r_waveMode", "0" , CVAR_ARCHIVE );
 
 	r_lensReflectionBrightness = ri.Cvar_Get( "r_lensReflectionBrightness", "0.5" , CVAR_ARCHIVE);

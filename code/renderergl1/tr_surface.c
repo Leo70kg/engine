@@ -606,7 +606,7 @@ static void VectorArrayNormalize(vec4_t *normals, unsigned int count)
 #else // No assembly version for this architecture, or C_ONLY defined
 	// given the input, it's safe to call VectorNormalizeFast
     while (count--) {
-        VectorNormalizeFast(normals[0]);
+        FastNormalize1f(normals[0]);
         normals++;
     }
 #endif

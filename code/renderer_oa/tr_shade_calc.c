@@ -221,7 +221,7 @@ void RB_CalcDeformNormals( deformStage_t *ds ) {
 			tess.shaderTime * ds->deformationWave.frequency );
 		normal[ 2 ] += ds->deformationWave.amplitude * scale;
 
-		VectorNormalizeFast( normal );
+		FastNormalize1f( normal );
 	}
 }
 
@@ -248,7 +248,7 @@ void RB_CalcDeformNormalsEvenMore( deformStage_t *ds ) {
 			tess.shaderTime * ds->deformationWave.frequency );
 		normal[ 2 ] += ds->deformationWave.amplitude * scale;
 
-		VectorNormalizeFast( normal );
+		FastNormalize1f( normal );
 	}
 }
 
@@ -983,7 +983,6 @@ void RB_CalcEnvironmentTexCoords( float *st )
 	int			i;
 	float		*v, *normal;
 	vec3_t		viewer, reflected;
-	float		d;
 
 	v = tess.xyz[0];
 	normal = tess.normal[0];
@@ -991,9 +990,9 @@ void RB_CalcEnvironmentTexCoords( float *st )
 	for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) 
 	{
 		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-		VectorNormalizeFast (viewer);
+		FastNormalize1f(viewer);
 
-		d = DotProduct (normal, viewer);
+		float d = DotProduct (normal, viewer);
 
 		reflected[0] = normal[0]*2*d - viewer[0];
 		reflected[1] = normal[1]*2*d - viewer[1];
@@ -1001,59 +1000,6 @@ void RB_CalcEnvironmentTexCoords( float *st )
 
 		st[0] = 0.5 + reflected[1] * 0.5;
 		st[1] = 0.5 - reflected[2] * 0.5;
-	}
-}
-
-/*
-** RB_CalcEnvironmentTexCoordsNew
-
-	This one also is offset by origin and axis which makes it look better on moving
-	objects and weapons. May be slow.
-
-*/
-void RB_CalcEnvironmentTexCoordsNew( float *st ) 
-{
-
-	int			i;
-	vec3_t		viewer, reflected, where, what, why, who;
-	float		d;
-
-	float *v = tess.xyz[0];
-	float *normal = tess.normal[0];
-
-	for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) 
-	{
-
-		VectorSubtract (backEnd.or.axis[0], v, what);
-		VectorSubtract (backEnd.or.axis[1], v, why);
-		VectorSubtract (backEnd.or.axis[2], v, who);
-
-		VectorSubtract (backEnd.or.origin, v, where);
-		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-
-		VectorNormalizeFast (viewer);
-		VectorNormalizeFast (where);
-		VectorNormalizeFast (what);
-		VectorNormalizeFast (why);
-		VectorNormalizeFast (who);
-
-		d = DotProduct (normal, viewer);
-		//a = DotProduct (normal, where);
-
-		if ( backEnd.currentEntity == &tr.worldEntity )
-        {
-    		reflected[0] = normal[0]*2*d - viewer[0];
-	    	reflected[1] = normal[1]*2*d - viewer[1];
-		    reflected[2] = normal[2]*2*d - viewer[2];
-		}
-	    else
-		{
-		    reflected[0] = normal[0]*2*d - viewer[0] - (where[0] * 5) + (what[0] * 4);
-		    reflected[1] = normal[1]*2*d - viewer[1] - (where[1] * 5) + (why[1] * 4);
-		    reflected[2] = normal[2]*2*d - viewer[2] - (where[2] * 5) + (who[2] * 4);
-		}
-		st[0] = 0.33 + reflected[1] * 0.33;
-		st[1] = 0.33 - reflected[2] * 0.33;
 	}
 }
 
@@ -1104,7 +1050,7 @@ void RB_CalcEnvironmentTexCoordsJO( float *st )
 		for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) 
 		{
 			VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-			VectorNormalizeFast (viewer);
+			FastNormalize1f(viewer);
 
 			d = DotProduct (normal, viewer);
 			st[0] = normal[0]*d - 0.5*viewer[0];
@@ -1149,10 +1095,10 @@ void RB_CalcEnvironmentTexCoordsR( float *st )
 	for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) 
 	{
 		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-		VectorNormalizeFast (viewer);
+		FastNormalize1f(viewer);
 
 		VectorSubtract (sundy, v, sunned);
-		VectorNormalizeFast (sunned);
+		FastNormalize1f(sunned);
 
 		d = DotProduct (normal, viewer) + DotProduct (viewer, sunned);
 
@@ -1188,7 +1134,7 @@ void RB_CalcCelTexCoords( float *st )
 	for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) 
 	{
 		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-		VectorNormalizeFast (viewer);
+		FastNormalize1f(viewer);
 
 		d = DotProduct (normal, viewer);
 
@@ -1226,7 +1172,6 @@ void RB_CalcEnvironmentCelShadeTexCoords( float *st )
     int    i;
     float  *v, *normal;
     vec3_t lightDir;
-    float  d;
 
     normal = tess.normal[0];
 	v = tess.xyz[0];
@@ -1236,12 +1181,13 @@ void RB_CalcEnvironmentCelShadeTexCoords( float *st )
 //	if ( backEnd.currentEntity == &tr.worldEntity )
 //		VectorSubtract( lightOrigin, v, lightDir );
 //	else
-		VectorCopy( backEnd.currentEntity->lightDir, lightDir );
-	VectorNormalizeFast( lightDir );
+	
+    VectorCopy( backEnd.currentEntity->lightDir, lightDir );
+	FastNormalize1f( lightDir );
 
-    for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) {
-		d= DotProduct( normal, lightDir );
-
+    for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 )
+    {
+		float d= DotProduct( normal, lightDir );
 		st[0] = 0.5 + d * 0.5;
 		st[1] = 0.5;
     }
@@ -1423,118 +1369,6 @@ void RB_CalcAtlasTexCoords( const atlas_t *at, float *st )
 	tmi.translate[1] = ((1.0f / h) * framey);
 
 	RB_CalcTransformTexCoords( &tmi, st );
-}
-
-
-
-/*
-** RB_CalcSpecularAlpha
-**
-** Calculates specular coefficient and places it in the alpha channel
-*/
-vec3_t lightOrigin = { -960, 1980, 96 };		// FIXME: track dynamically
-
-void RB_CalcSpecularAlpha( unsigned char *alphas ) {
-	int			i;
-	float		*v, *normal;
-	vec3_t		viewer,  reflected;
-	int			b;
-	vec3_t		lightDir;
-	int			numVertexes;
-
-	v = tess.xyz[0];
-	normal = tess.normal[0];
-
-
-
-	alphas += 3;
-
-	numVertexes = tess.numVertexes;
-	for (i = 0 ; i < numVertexes ; i++, v += 4, normal += 4, alphas += 4)
-    {
-
-		VectorSubtract( lightOrigin, v, lightDir );
-		VectorNormalizeFast( lightDir );
-
-		// calculate the specular color
-		float d = DotProduct (normal, lightDir);
-
-		// we don't optimize for the d < 0 case since this tends to
-		// cause visual artifacts such as faceted "snapping"
-		reflected[0] = normal[0]*2*d - lightDir[0];
-		reflected[1] = normal[1]*2*d - lightDir[1];
-		reflected[2] = normal[2]*2*d - lightDir[2];
-
-		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-		float l = DotProduct (reflected, viewer) / sqrtf( DotProduct( viewer, viewer ) );
-
-		if (l < 0) {
-			b = 0;
-		} else {
-			l = l*l;
-			l = l*l;
-			b = l * 255;
-			if (b > 255) {
-				b = 255;
-			}
-		}
-
-		*alphas = b;
-	}
-}
-
-// This fixed version comes from ZEQ2Lite
-void RB_CalcSpecularAlphaNew( unsigned char *alphas )
-{
-    int			i;
-	float		*v, *normal;
-	vec3_t		viewer,  reflected;
-	int			b;
-	vec3_t		lightDir;
-	int			numVertexes;
-
-	v = tess.xyz[0];
-	normal = tess.normal[0];
-
-	alphas += 3;
-
-	numVertexes = tess.numVertexes;
-	for (i = 0 ; i < numVertexes ; i++, v += 4, normal += 4, alphas += 4)
-    {
-
-		if ( backEnd.currentEntity == &tr.worldEntity )
-			VectorSubtract( lightOrigin, v, lightDir );	// old compatibility with maps that use it on some models
-		else
-			VectorCopy( backEnd.currentEntity->lightDir, lightDir );
-
-		VectorNormalizeFast( lightDir );
-
-		// calculate the specular color
-		float d = DotProduct (normal, lightDir);
-
-		// we don't optimize for the d < 0 case since this tends to
-		// cause visual artifacts such as faceted "snapping"
-		reflected[0] = normal[0]*2*d - lightDir[0];
-		reflected[1] = normal[1]*2*d - lightDir[1];
-		reflected[2] = normal[2]*2*d - lightDir[2];
-
-		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-		float l = DotProduct (reflected, viewer) / sqrtf( DotProduct( viewer, viewer ) );
-
-		if (l < 0) {
-			b = 0;
-		} else {
-			l = l*l;
-			l = l*l;
-			b = l * 255;
-			if (b > 255) {
-				b = 255;
-			}
-		}
-
-		*alphas = b;
-	}
-
 }
 
 

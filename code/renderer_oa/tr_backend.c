@@ -63,19 +63,6 @@ static void RB_Hyperspace( void )
 }
 
 
-static void SetViewportAndScissor( void )
-{
-	qglMatrixMode(GL_PROJECTION);
-	qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
-	qglMatrixMode(GL_MODELVIEW);
-
-	// set the window clipping
-	qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, 
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
-	qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, 
-		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
-}
-
 
 /*
  * RB_BeginDrawingView: Any mirrored or portaled views have already been drawn, 
@@ -100,7 +87,16 @@ static void RB_BeginDrawingView(void)
 	//
 	// set the modelview matrix for the viewer
 	//
-	SetViewportAndScissor();
+	qglMatrixMode(GL_PROJECTION);
+	qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
+	qglMatrixMode(GL_MODELVIEW);
+
+	// set the window clipping
+	qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, 
+		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+	qglScissor( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, 
+		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
+
 
 	// ensures that depth writes are enabled for the depth clear
 	GL_State( GLS_DEFAULT );
@@ -350,8 +346,7 @@ static void RB_SetGL2D (void)
 	qglMatrixMode(GL_MODELVIEW);
     qglLoadIdentity ();
 
-	GL_State( GLS_DEPTHTEST_DISABLE |
-				GLS_SRCBLEND_SRC_ALPHA |
+	GL_State( GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_SRC_ALPHA |
 				GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
 
 	qglDisable( GL_CULL_FACE );
@@ -921,7 +916,6 @@ Used for cinematics.
 */
 void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const unsigned char *data, int client, qboolean dirty)
 {
-	int	i, j;
 	int	start, end;
 
 	if ( !tr.registered ) {
@@ -941,19 +935,29 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const unsign
 		start = ri.Milliseconds();
 	}
 
-	// make sure rows and cols are powers of 2
-	for ( i = 0 ; ( 1 << i ) < cols ; i++ ) {
-	}
-	for ( j = 0 ; ( 1 << j ) < rows ; j++ ) {
-	}
-	if ( ( 1 << i ) != cols || ( 1 << j ) != rows) {
-		ri.Error (ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
-	}
+    {
+        // make sure rows and cols are powers of 2
+        int	i, j;
+
+        for ( i = 0 ; ( 1 << i ) < cols ; i++ ) {
+        }
+        for ( j = 0 ; ( 1 << j ) < rows ; j++ ) {
+        }
+
+        
+        if ( (( 1 << i ) != cols) || (( 1 << j ) != rows))
+        {
+            ri.Error (ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i",
+                    cols, rows);
+        }
+    }
 
 	GL_Bind( tr.scratchImage[client] );
 
 	// if the scratchImage isn't in the format we want, specify it as a new texture
-	if ( cols != tr.scratchImage[client]->width || rows != tr.scratchImage[client]->height ) {
+	if ( (cols != tr.scratchImage[client]->width) || 
+            (rows != tr.scratchImage[client]->height) )
+    {
 		tr.scratchImage[client]->width = tr.scratchImage[client]->uploadWidth = cols;
 		tr.scratchImage[client]->height = tr.scratchImage[client]->uploadHeight = rows;
 		qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGB8, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
@@ -963,9 +967,13 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const unsign
 
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );	
-	} else {
-		if (dirty) {
-			// otherwise, just subimage upload it so that drivers can tell we are going to be changing
+	}
+    else
+    {
+		if (dirty)
+        {
+			// otherwise, just subimage upload it so that 
+            // drivers can tell we are going to be changing
 			// it and don't try and do a texture compression
 			qglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_RGBA, GL_UNSIGNED_BYTE, data );
 		}

@@ -216,7 +216,11 @@ endif
 
 
 ifndef DEBUG_CFLAGS
-DEBUG_CFLAGS=-ggdb -O0
+DEBUG_CFLAGS=-ggdb -pg -O0
+endif
+
+ifndef DEBUG_LDFLAGS
+DEBUG_LDFLAGS=-pg
 endif
 
 #############################################################################
@@ -260,14 +264,14 @@ bin_path=$(shell which $(1) 2> /dev/null)
 ifneq ($(BUILD_CLIENT),0)
   # set PKG_CONFIG_PATH to influence this, e.g.
   # PKG_CONFIG_PATH=/opt/cross/i386-mingw32msvc/lib/pkgconfig
-  ifneq ($(call bin_path, pkg-config),)
-	CURL_CFLAGS ?= $(shell pkg-config --silence-errors --cflags libcurl)
-	CURL_LIBS ?= $(shell pkg-config --silence-errors --libs libcurl)
-	OPENAL_CFLAGS ?= $(shell pkg-config --silence-errors --cflags openal)
-	OPENAL_LIBS ?= $(shell pkg-config --silence-errors --libs openal)
-	SDL_CFLAGS ?= $(shell pkg-config --silence-errors --cflags sdl2|sed 's/-Dmain=SDL_main//')
-	SDL_LIBS ?= $(shell pkg-config --silence-errors --libs sdl2)
-	FREETYPE_CFLAGS ?= $(shell pkg-config --silence-errors --cflags freetype2)
+  ifneq ($(call bin_path, PKG_CONFIG),)
+	CURL_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags libcurl)
+	CURL_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs libcurl)
+	OPENAL_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags openal)
+	OPENAL_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs openal)
+	SDL_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags sdl2|sed 's/-Dmain=SDL_main//')
+	SDL_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs sdl2)
+	FREETYPE_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags freetype2)
   else
 	# assume they're in the system default paths (no -I or -L needed)
 	CURL_LIBS ?= -lcurl
@@ -299,20 +303,19 @@ ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu" "gnu")
   BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -pipe -DUSE_ICON -DARCH_STRING=\\\"$(ARCH)\\\"
   CLIENT_CFLAGS += $(SDL_CFLAGS)
 
-  OPTIMIZEVM = -O3 -funroll-loops -fomit-frame-pointer
-  OPTIMIZE = $(OPTIMIZEVM) -ffast-math
+  OPTIMIZEVM = -O2 -funroll-loops
+  OPTIMIZE = $(OPTIMIZEVM) -ffast-math 
 
   ifeq ($(ARCH),x86_64)
-	OPTIMIZEVM = -O3 -fomit-frame-pointer -funroll-loops
-	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
+	OPTIMIZEVM = -O2 -funroll-loops
+	OPTIMIZE = $(OPTIMIZEVM) -ffast-math -msse2 -msse3
 	HAVE_VM_COMPILED=true
   else
   ifeq ($(ARCH),x86)
 	OPTIMIZEVM = -O3 -march=i586 -fomit-frame-pointer -funroll-loops
 	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 	HAVE_VM_COMPILED=true
-
-endif
+  endif
 
 endif
 
@@ -708,8 +711,8 @@ ifeq ($(NEED_OPUS),1)
 	  -I$(OPUSDIR)/include -I$(OPUSDIR)/celt -I$(OPUSDIR)/silk \
 	  -I$(OPUSDIR)/silk/float -I$(OPUSFILEDIR)/include
   else
-	OPUS_CFLAGS ?= $(shell pkg-config --silence-errors --cflags opusfile opus || true)
-	OPUS_LIBS ?= $(shell pkg-config --silence-errors --libs opusfile opus || echo -lopusfile -lopus)
+	OPUS_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags opusfile opus || true)
+	OPUS_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs opusfile opus || echo -lopusfile -lopus)
   endif
   CLIENT_CFLAGS += $(OPUS_CFLAGS)
   CLIENT_LIBS += $(OPUS_LIBS)
@@ -721,8 +724,8 @@ ifeq ($(USE_CODEC_VORBIS),1)
   ifeq ($(USE_INTERNAL_VORBIS),1)
 	CLIENT_CFLAGS += -I$(VORBISDIR)/include -I$(VORBISDIR)/lib
   else
-	VORBIS_CFLAGS ?= $(shell pkg-config --silence-errors --cflags vorbisfile vorbis || true)
-	VORBIS_LIBS ?= $(shell pkg-config --silence-errors --libs vorbisfile vorbis || echo -lvorbisfile -lvorbis)
+	VORBIS_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags vorbisfile vorbis || true)
+	VORBIS_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs vorbisfile vorbis || echo -lvorbisfile -lvorbis)
   endif
   CLIENT_CFLAGS += $(VORBIS_CFLAGS)
   CLIENT_LIBS += $(VORBIS_LIBS)
@@ -733,8 +736,8 @@ ifeq ($(NEED_OGG),1)
   ifeq ($(USE_INTERNAL_OGG),1)
 	OGG_CFLAGS = -I$(OGGDIR)/include
   else
-	OGG_CFLAGS ?= $(shell pkg-config --silence-errors --cflags ogg || true)
-	OGG_LIBS ?= $(shell pkg-config --silence-errors --libs ogg || echo -logg)
+	OGG_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags ogg || true)
+	OGG_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs ogg || echo -logg)
   endif
   CLIENT_CFLAGS += $(OGG_CFLAGS)
   CLIENT_LIBS += $(OGG_LIBS)
@@ -751,8 +754,8 @@ endif
 ifeq ($(USE_INTERNAL_ZLIB),1)
   ZLIB_CFLAGS = -DNO_GZIP -I$(ZDIR)
 else
-  ZLIB_CFLAGS ?= $(shell pkg-config --silence-errors --cflags zlib || true)
-  ZLIB_LIBS ?= $(shell pkg-config --silence-errors --libs zlib || echo -lz)
+  ZLIB_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags zlib || true)
+  ZLIB_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs zlib || echo -lz)
 endif
 BASE_CFLAGS += $(ZLIB_CFLAGS)
 LIBS += $(ZLIB_LIBS)
@@ -763,15 +766,15 @@ ifeq ($(USE_INTERNAL_JPEG),1)
 else
   # IJG libjpeg doesn't have pkg-config, but libjpeg-turbo uses libjpeg.pc;
   # we fall back to hard-coded answers if libjpeg.pc is unavailable
-  JPEG_CFLAGS ?= $(shell pkg-config --silence-errors --cflags libjpeg || true)
-  JPEG_LIBS ?= $(shell pkg-config --silence-errors --libs libjpeg || echo -ljpeg)
+  JPEG_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags libjpeg || true)
+  JPEG_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs libjpeg || echo -ljpeg)
   BASE_CFLAGS += $(JPEG_CFLAGS)
   RENDERER_LIBS += $(JPEG_LIBS)
 endif
 
 ifeq ($(USE_FREETYPE),1)
-  FREETYPE_CFLAGS ?= $(shell pkg-config --silence-errors --cflags freetype2 || true)
-  FREETYPE_LIBS ?= $(shell pkg-config --silence-errors --libs freetype2 || echo -lfreetype)
+  FREETYPE_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags freetype2 || true)
+  FREETYPE_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs freetype2 || echo -lfreetype)
 
   BASE_CFLAGS += -DBUILD_FREETYPE $(FREETYPE_CFLAGS)
   RENDERER_LIBS += $(FREETYPE_LIBS)
@@ -915,7 +918,8 @@ all: debug release
 debug:
 	@$(MAKE) targets B=$(BD) CFLAGS="$(CFLAGS) $(BASE_CFLAGS) $(DEPEND_CFLAGS)" \
 	  OPTIMIZE="$(DEBUG_CFLAGS)" OPTIMIZEVM="$(DEBUG_CFLAGS)" \
-	  CLIENT_CFLAGS="$(CLIENT_CFLAGS)" SERVER_CFLAGS="$(SERVER_CFLAGS)" V=$(V)
+	  CLIENT_CFLAGS="$(CLIENT_CFLAGS)" SERVER_CFLAGS="$(SERVER_CFLAGS)" V=$(V) \
+	  LDFLAGS="$(DEBUG_LDFLAGS)"
 
 release:
 	@$(MAKE) targets B=$(BR) CFLAGS="$(CFLAGS) $(BASE_CFLAGS) $(DEPEND_CFLAGS)" \
@@ -1826,20 +1830,20 @@ $(B)/renderer_opengl1_$(SHLIBNAME): $(Q3ROBJ) $(JPGOBJ)
 
 else
 
-$(B)/$(CLIENTBIN)$(FULLBINEXT): $(Q3OBJ) $(Q3ROAOBJ) $(JPGOBJ) $(LIBSDLMAIN)
+$(B)/$(CLIENTBIN)$(FULLBINEXT): $(Q3OBJ) $(Q3ROAOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
-		-o $@ $(Q3OBJ) $(Q3ROAOBJ) $(JPGOBJ) $(LIBSDLMAIN) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+		-o $@ $(Q3OBJ) $(Q3ROAOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
 
 $(B)/$(CLIENTBIN)_opengl1$(FULLBINEXT): $(Q3OBJ) $(Q3ROBJ)  $(JPGOBJ) $(LIBSDLMAIN)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
-		-o $@ $(Q3OBJ) $(Q3ROBJ) $(JPGOBJ) $(LIBSDLMAIN) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+		-o $@ $(Q3OBJ) $(Q3ROBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
 										
 $(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT): $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ) $(LIBSDLMAIN)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
-		-o $@ $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ) $(LIBSDLMAIN) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+		-o $@ $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
 
 
 endif
@@ -2301,9 +2305,6 @@ $(B)/$(MISSIONPACK)/vm/ui.qvm: $(MPUIVMOBJ) $(UIDIR)/ui_syscalls.asm $(Q3ASM)
 #############################################################################
 ## CLIENT/SERVER RULES
 #############################################################################
-
-#$(B)/client/%.o: $(CMDIR)/%.s
-#	$(DO_AS)
 
 $(B)/client/%.o: $(CDIR)/%.c
 	$(DO_CC)

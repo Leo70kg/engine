@@ -116,17 +116,10 @@ void VectorCross( const vec3_t v1, const vec3_t v2, vec3_t cross )
 }
 
 
-void FastNormalize2f( const float* v, float* out)
-{
-	// writing it this way allows gcc to recognize that rsqrt can be used
-    float invLen = 1.0f / sqrtf(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-
- 	out[0] = v[0] * invLen;
-	out[1] = v[1] * invLen;
-	out[2] = v[2] * invLen;
-}
 
 
+// fast vector normalize routine that does not check to make sure
+// that length != 0, nor does it return length, uses rsqrt approximation
 void FastNormalize1f(float v[3])
 {
 	// writing it this way allows gcc to recognize that rsqrt can be used
@@ -137,7 +130,15 @@ void FastNormalize1f(float v[3])
 	v[2] = v[2] * invLen;
 }
 
+void FastNormalize2f( const float* v, float* out)
+{
+	// writing it this way allows gcc to recognize that rsqrt can be used
+    float invLen = 1.0f / sqrtf(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 
+ 	out[0] = v[0] * invLen;
+	out[1] = v[1] * invLen;
+	out[2] = v[2] * invLen;
+}
 
 // use Rodrigue's rotation formula
 void PointRotateAroundVector(float* sum, const float* dir, const float* p, const float degrees)
@@ -277,4 +278,27 @@ unsigned ColorBytes4 (float r, float g, float b, float a)
     cvt.uc[3] = a * 255;
 
 	return cvt.i;
+}
+
+void MatrixMultiply4x4(const float A[16], const float B[16], float out[16])
+{
+    out[0] = A[0]*B[0] + A[1]*B[4] + A[2]*B[8] + A[3]*B[12];
+    out[1] = A[0]*B[1] + A[1]*B[5] + A[2]*B[9] + A[3]*B[13];
+    out[2] = A[0]*B[2] + A[1]*B[6] + A[2]*B[10] + A[3]*B[14];
+    out[3] = A[0]*B[3] + A[1]*B[7] + A[2]*B[11] + A[3]*B[15];
+
+    out[4] = A[4]*B[0] + A[5]*B[4] + A[6]*B[8] + A[7]*B[12];
+    out[5] = A[4]*B[1] + A[5]*B[5] + A[6]*B[9] + A[7]*B[13];
+    out[6] = A[4]*B[2] + A[5]*B[6] + A[6]*B[10] + A[7]*B[14];
+    out[7] = A[4]*B[3] + A[5]*B[7] + A[6]*B[11] + A[7]*B[15];
+
+    out[8] = A[8]*B[0] + A[9]*B[4] + A[10]*B[8] + A[11]*B[12];
+    out[9] = A[8]*B[1] + A[9]*B[5] + A[10]*B[9] + A[11]*B[13];
+    out[10] = A[8]*B[2] + A[9]*B[6] + A[10]*B[10] + A[11]*B[14];
+    out[11] = A[8]*B[3] + A[9]*B[7] + A[10]*B[11] + A[11]*B[15];
+
+    out[12] = A[12]*B[0] + A[13]*B[4] + A[14]*B[8] + A[15]*B[12];
+    out[13] = A[12]*B[1] + A[13]*B[5] + A[14]*B[9] + A[15]*B[13];
+    out[14] = A[12]*B[2] + A[13]*B[6] + A[14]*B[10] + A[15]*B[14];
+    out[15] = A[12]*B[3] + A[13]*B[7] + A[14]*B[11] + A[15]*B[15];
 }

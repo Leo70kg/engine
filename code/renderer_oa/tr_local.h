@@ -1154,8 +1154,6 @@ extern cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_lensReflectionBrightness;
 
-extern	cvar_t	*r_specMode;		
-
 extern	cvar_t	*r_flaresDlightShrink;
 extern	cvar_t	*r_flaresDlightFade;
 extern	cvar_t	*r_flaresDlightOpacity;
@@ -1647,7 +1645,6 @@ void	RB_CalcEnvironmentTexCoordsJO( float *dstTexCoords );	// leilei
 void	RB_CalcEnvironmentTexCoordsR( float *dstTexCoords );	// leilei
 void    RB_CalcEyes( float *st, qboolean theothereye); // leilei - eyes
 void	RB_CalcEnvironmentCelShadeTexCoords( float *dstTexCoords );
-void	RB_CalcEnvironmentTexCoordsNew( float *dstTexCoords );
 void	RB_CalcEnvironmentTexCoordsHW(void);
 void	RB_CalcFogTexCoords( float *dstTexCoords );
 void	RB_CalcScrollTexCoords( const float scroll[2], float *dstTexCoords );
@@ -1667,8 +1664,6 @@ void	RB_CalcLightscaleTexCoords( float *texCoords );
 void	RB_CalcAtlasTexCoords( const atlas_t *at, float *st );
 void	RB_CalcColorFromEntity( unsigned char *dstColors );
 void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
-void	RB_CalcSpecularAlpha( unsigned char *alphas );
-void	RB_CalcSpecularAlphaNew( unsigned char *alphas );
 void	RB_CalcUniformColor( unsigned char *colors );
 void	RB_CalcDynamicColor( unsigned char *colors );
 void	RB_CalcDiffuseColor_Specular( unsigned char *colors );	// leilei - specular hack

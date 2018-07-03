@@ -595,6 +595,51 @@ static void RB_CalcDiffuseColor(unsigned char (*colors)[4])
 	}
 }
 
+// This fixed version comes from ZEQ2Lite
+//Calculates specular coefficient and places it in the alpha channel
+static void RB_CalcSpecularAlphaNew(unsigned char (*alphas)[4])
+{
+    vec3_t lightOrigin = { -960, 1980, 96 };		// FIXME: track dynamically
+	int numVertexes = tess.numVertexes;
+	
+    int	i;
+    for (i = 0 ; i < numVertexes; i++)
+    {
+        vec3_t lightDir, viewer, reflected;
+		if ( backEnd.currentEntity == &tr.worldEntity )
+        {
+            // old compatibility with maps that use it on some models
+			VectorSubtract( lightOrigin, tess.xyz[i], lightDir );
+        }
+        else
+        {
+			VectorCopy( backEnd.currentEntity->lightDir, lightDir );
+        }
+		// calculate the specular color
+		float d = 2*DotProduct(tess.normal[i], lightDir);
+
+		// we don't optimize for the d < 0 case since this tends to
+		// cause visual artifacts such as faceted "snapping"
+		reflected[0] = tess.normal[i][0]*d - lightDir[0];
+		reflected[1] = tess.normal[i][1]*d - lightDir[1];
+		reflected[2] = tess.normal[i][2]*d - lightDir[2];
+
+		VectorSubtract(backEnd.or.viewOrigin, tess.xyz[i], viewer);
+		
+        float l = DotProduct(reflected, viewer)/sqrtf(DotProduct(viewer, viewer));
+
+		if(l < 0)
+			alphas[i][3] = 0;
+        else if(l >= 1)
+			alphas[i][3] = 255;
+        else
+        {
+			l = l*l;
+            alphas[i][3] = l*l*255;
+		}
+	}
+}
+
 
 static void ComputeColors( shaderStage_t *pStage )
 {
@@ -748,10 +793,7 @@ static void ComputeColors( shaderStage_t *pStage )
 		RB_CalcWaveAlpha( &pStage->alphaWave, ( unsigned char * ) tess.svars.colors );
 		break;
 	case AGEN_LIGHTING_SPECULAR:
-		if ( r_specMode->integer == 1)
-			RB_CalcSpecularAlphaNew( ( unsigned char * ) tess.svars.colors );
-		else
-			RB_CalcSpecularAlpha( ( unsigned char * ) tess.svars.colors );
+		RB_CalcSpecularAlphaNew(tess.svars.colors);
 		break;
 	case AGEN_ENTITY:
 		RB_CalcAlphaFromEntity( ( unsigned char * ) tess.svars.colors );
