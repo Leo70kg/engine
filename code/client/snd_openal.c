@@ -582,7 +582,7 @@ typedef struct src_s
 	qboolean	local;			// Is this local (relative to the cam)
 } src_t;
 
-#ifdef MACOS_X
+#ifdef __APPLE__
 	#define MAX_SRC 64
 #else
 	#define MAX_SRC 128
@@ -900,7 +900,8 @@ static void S_AL_NewLoopMaster(src_t *rmSource, qboolean iskilled)
 				S_AL_SaveLoopPos(rmSource, rmSource->alSource);
 			}
 		}
-		else if(rmSource == &srcList[curSfx->masterLoopSrc])
+		else if((curSfx->masterLoopSrc != -1) &&
+		        (rmSource == &srcList[curSfx->masterLoopSrc]))
 		{
 			int firstInactive = -1;
 
@@ -2518,7 +2519,6 @@ qboolean S_AL_Init( soundInterface_t *si )
 	s_alDevice = Cvar_Get("s_alDevice", "", CVAR_ARCHIVE | CVAR_LATCH);
 
 	// xmpspeed = 48000; // leilei - force it to 48000 which is the native mixing rate post-ac'97
-
 	// Load QAL
 	if( !QAL_Init( s_alDriver->string ) )
 	{
@@ -2644,7 +2644,7 @@ qboolean S_AL_Init( soundInterface_t *si )
 #endif
 	else
 	{
-#ifdef MACOS_X
+#ifdef __APPLE__
 		// !!! FIXME: Apple has a 1.1-compliant OpenAL, which includes
 		// !!! FIXME:  capture support, but they don't list it in the
 		// !!! FIXME:  extension string. We need to check the version string,
@@ -2724,6 +2724,7 @@ qboolean S_AL_Init( soundInterface_t *si )
 	si->StopCapture = S_AL_StopCapture;
 	si->MasterGain = S_AL_MasterGain;
 #endif
+
 	return qtrue;
 #else
 	return qfalse;

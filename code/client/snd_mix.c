@@ -110,7 +110,6 @@ LClampDone2:
 
 void S_TransferStereo16 (unsigned long *pbuf, int endtime)
 {
-	int		lpos;
 	int		ls_paintedtime;
 	
 	snd_p = (int *) paintbuffer;
@@ -119,7 +118,7 @@ void S_TransferStereo16 (unsigned long *pbuf, int endtime)
 	while (ls_paintedtime < endtime)
 	{
 	// handle recirculating buffer issues
-		lpos = ls_paintedtime & ((dma.samples>>1)-1);
+		int lpos = ls_paintedtime & ((dma.samples>>1)-1);
 
 		snd_out = (short *) pbuf + (lpos<<1);
 
@@ -151,7 +150,6 @@ void S_TransferPaintBuffer(int endtime)
 	int 	out_idx;
 	int 	count;
 	int 	out_mask;
-	int 	*p;
 	int 	step;
 	int		val;
 	unsigned long *pbuf;
@@ -175,7 +173,7 @@ void S_TransferPaintBuffer(int endtime)
 	}
 	else
 	{	// general case
-		p = (int *) paintbuffer;
+		int* p = (int *) paintbuffer;
 		count = (endtime - s_paintedtime) * dma.channels;
 		out_mask = dma.samples - 1; 
 		out_idx = s_paintedtime * dma.channels & out_mask;

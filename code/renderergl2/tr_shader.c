@@ -46,9 +46,9 @@ return a hash value for the filename
   #warning TODO: check if long is ok here 
 #endif
 static long generateHashValue( const char *fname, const int size ) {
-	int		i = 0;
-	long	hash = 0;
-	char	letter;
+	int i = 0;
+	long hash = 0;
+	char letter;
 
 	while (fname[i] != '\0') {
 		letter = tolower(fname[i]);
@@ -1112,6 +1112,7 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 					stage->specularScale[1] = (stage->specularScale[0] < 0.5f) ? 0.0f : 1.0f;
 					stage->specularScale[0] = smoothness;
 				}
+				else
 				{
 					// two values, rgb then gloss
 					stage->specularScale[3] = stage->specularScale[1];
@@ -1130,7 +1131,7 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 				continue;
 			}
 
-			stage->specularScale[2] = atof( token );
+			stage->specularScale[3] = atof( token );
 
 		}
 		//
@@ -3053,7 +3054,7 @@ static shader_t *FinishShader( void ) {
 	//
 	// if we are in r_vertexLight mode, never use a lightmap texture
 	//
-	if ( stage > 1 && (r_vertexLight->integer && !r_uiFullScreen->integer)  ) {
+	if ( (stage > 1) && (r_vertexLight->integer && !r_uiFullScreen->integer)  ) {
 		VertexLightingCollapse();
 		hasLightmapStage = qfalse;
 	}
@@ -3634,8 +3635,7 @@ a single large text block that can be scanned for shader names
 #define	MAX_SHADER_FILES	4096
 static void ScanAndLoadShaderFiles( void )
 {
-	char *buffers[MAX_SHADER_FILES] = {NULL};
-	char *p;
+	void* buffers[MAX_SHADER_FILES] = {NULL};
 	int numShaderFiles;
 	int i;
 	char *oldp, *token, *hashMem, *textEnd;
@@ -3643,7 +3643,7 @@ static void ScanAndLoadShaderFiles( void )
 	char shaderName[MAX_QPATH];
 	int shaderLine;
 
-	long sum = 0, summand;
+	long sum = 0;
 	// scan for shader files
 	char **shaderFiles = ri.FS_ListFiles( "scripts", ".shader", &numShaderFiles );
 
@@ -3677,14 +3677,14 @@ static void ScanAndLoadShaderFiles( void )
 			}
 		}
 		
-		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
-		summand = ri.FS_ReadFile( filename, (void **)&buffers[i] );
+		ri.Printf( PRINT_ALL, "...loading '%s'\n", filename );
+		long summand = ri.FS_ReadFile( filename, &buffers[i] );
 		
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
 		
 		// Do a simple check on the shader structure in that file to make sure one bad shader file cannot fuck up all other shaders.
-		p = buffers[i];
+		char *p = buffers[i];
 		COM_BeginParseSession(filename);
 		while(1)
 		{
@@ -3751,9 +3751,11 @@ static void ScanAndLoadShaderFiles( void )
 	memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));
 	size = 0;
 
-	p = s_shaderText;
+
 	// look for shader names
-	while ( 1 ) {
+    char *p = s_shaderText;
+	while ( 1 )
+    {
 		token = COM_ParseExt( &p, qtrue );
 		if ( token[0] == 0 ) {
 			break;

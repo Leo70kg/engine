@@ -158,7 +158,7 @@ endif
 
 
 ifndef USE_OPENAL_DLOPEN
-USE_OPENAL_DLOPEN=1
+USE_OPENAL_DLOPEN=0
 endif
 
 
@@ -300,14 +300,14 @@ CLIENT_EXTRA_FILES=
 
 ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu" "gnu"))
   TOOLS_CFLAGS += -DARCH_STRING=\"$(ARCH)\"
-  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes -pipe -DUSE_ICON -DARCH_STRING=\\\"$(ARCH)\\\"
+  BASE_CFLAGS = -Wall  -Wimplicit -Wstrict-prototypes -pipe -DUSE_ICON -DARCH_STRING=\\\"$(ARCH)\\\"
   CLIENT_CFLAGS += $(SDL_CFLAGS)
 
   OPTIMIZEVM = -O2 -funroll-loops
   OPTIMIZE = $(OPTIMIZEVM) -ffast-math 
 
   ifeq ($(ARCH),x86_64)
-	OPTIMIZEVM = -O2 -funroll-loops
+	OPTIMIZEVM = -O3 -funroll-loops
 	OPTIMIZE = $(OPTIMIZEVM) -ffast-math -msse2 -msse3
 	HAVE_VM_COMPILED=true
   else

@@ -37,20 +37,6 @@ use the shader system.
 #include "tr_local.h"
 
 
-static void RB_CheckVao(vao_t *vao)
-{
-	if (vao != glState.currentVao)
-	{
-		RB_EndSurface();
-		RB_BeginSurface(tess.shader, tess.fogNum, tess.cubemapIndex);
-
-		R_BindVao(vao);
-	}
-
-	if (vao != tess.vao)
-		tess.useInternalVao = qfalse;
-}
-
 
 void RB_CheckOverflow( int verts, int indexes )
 {
@@ -69,6 +55,20 @@ void RB_CheckOverflow( int verts, int indexes )
 	}
 
 	RB_BeginSurface(tess.shader, tess.fogNum, tess.cubemapIndex );
+}
+
+static void RB_CheckVao(vao_t *vao)
+{
+	if (vao != glState.currentVao)
+	{
+		RB_EndSurface();
+		RB_BeginSurface(tess.shader, tess.fogNum, tess.cubemapIndex);
+
+		R_BindVao(vao);
+	}
+
+	if (vao != tess.vao)
+		tess.useInternalVao = qfalse;
 }
 
 
@@ -226,7 +226,7 @@ static void RB_SurfaceSprite( void )
 	}
     else
     {
-		float ang = M_PI * backEnd.currentEntity->e.rotation / 180;
+		float ang = M_PI/180 * backEnd.currentEntity->e.rotation ;
 		float s = sin( ang );
 		float c = cos( ang );
 
@@ -1287,7 +1287,6 @@ void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 	mdrFrame_t		*oldFrame;
 	mdrBone_t		bones[MDR_MAX_BONES], *bonePtr;
 
-	int			frameSize;
 
 	// don't lerp if lerping off, or this is the only frame, or the last frame...
 	//
@@ -1304,7 +1303,7 @@ void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 
 	header = (mdrHeader_t *)((byte *)surface + surface->ofsHeader);
 
-	frameSize = (size_t)( &((mdrFrame_t *)0)->bones[ header->numBones ] );
+	int frameSize = (size_t)( &((mdrFrame_t *)0)->bones[ header->numBones ] );
 
 	frame = (mdrFrame_t *)((byte *)header + header->ofsFrames +
 		backEnd.currentEntity->e.frame * frameSize );

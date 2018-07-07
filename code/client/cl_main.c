@@ -1208,7 +1208,7 @@ void CL_ShutdownAll(qboolean shutdownRef)
 		CL_StopRecord_f();
 
 	CL_cURL_Shutdown();
-	
+
 	// clear sounds
 	S_DisableSounds();
 	// shutdown CGame
@@ -1241,7 +1241,7 @@ void CL_ClearMemory(qboolean shutdownRef)
 	CL_ShutdownAll(shutdownRef);
 
 	// if not running a server clear the whole hunk
-	if ( !com_sv_running->integer ) {
+	if ( !com_sv_running || !com_sv_running->integer ) {
 		// clear the whole hunk
 		Hunk_Clear();
 		// clear collision map data
@@ -1399,6 +1399,7 @@ void CL_Disconnect( qboolean showMainMenu )
 		for (i = 0; i < MAX_CLIENTS; i++) {
 			opus_decoder_destroy(clc.opusDecoder[i]);
 		}
+		clc.voipCodecInitialized = qfalse;
 	}
 	Cmd_RemoveCommand ("voip");
 #endif
@@ -1480,7 +1481,7 @@ void CL_ForwardCommandToServer( const char *string )
 	if ( cmd[0] == '-' )
 		return;
 
-	if ( clc.demoplaying || clc.state < CA_CONNECTED || cmd[0] == '+' )
+	if ( clc.demoplaying || (clc.state < CA_CONNECTED) || (cmd[0] == '+') )
     {
 		Com_Printf ("Unknown command \"%s" S_COLOR_WHITE "\"\n", cmd);
 		return;
@@ -3521,12 +3522,9 @@ void CL_Init( void )
 	cl_showMouseRate = Cvar_Get ("cl_showmouserate", "0", 0);
 
 	cl_allowDownload = Cvar_Get ("cl_allowDownload", "0", CVAR_ARCHIVE);
-#ifdef USE_CURL_DLOPEN
-	cl_cURLLib = Cvar_Get("cl_cURLLib", DEFAULT_CURL_LIB, CVAR_ARCHIVE);
-#endif
 
 	cl_conXOffset = Cvar_Get ("cl_conXOffset", "0", 0);
-#ifdef MACOS_X
+#ifdef __APPLE__
 	// In game video is REALLY slow in Mac OS X right now due to driver slowness
 	cl_inGameVideo = Cvar_Get ("r_inGameVideo", "0", CVAR_ARCHIVE);
 #else
@@ -3542,7 +3540,7 @@ void CL_Init( void )
 	m_yaw = Cvar_Get ("m_yaw", "0.022", CVAR_ARCHIVE);
 	m_forward = Cvar_Get ("m_forward", "0.25", CVAR_ARCHIVE);
 	m_side = Cvar_Get ("m_side", "0.25", CVAR_ARCHIVE);
-#ifdef MACOS_X
+#ifdef __APPLE__
 	// Input is jittery on OS X w/o this
 	m_filter = Cvar_Get ("m_filter", "1", CVAR_ARCHIVE);
 #else
@@ -3607,6 +3605,7 @@ void CL_Init( void )
 	cl_voipProtocol = Cvar_Get ("cl_voipProtocol", cl_voip->integer ? "opus" : "", CVAR_USERINFO | CVAR_ROM);
 #endif
 
+
 	// cgame might not be initialized before menu is used
 	Cvar_Get ("cg_viewsize", "100", CVAR_ARCHIVE );
 	// Make sure cg_stereoSeparation is zero as that variable is deprecated and should not be used anymore.
@@ -3662,20 +3661,19 @@ void CL_Init( void )
 
 void CL_Shutdown(char *finalmsg, qboolean disconnect, qboolean quit)
 {
-	static qboolean s_recurSD = qfalse;
+	static qboolean recursive = qfalse;
 	
 	// check whether the client is running at all.
 	if(!(com_cl_running && com_cl_running->integer))
 		return;
 	
-	Com_Printf("\n-------- Client Shutdown (%s) --------\n", finalmsg);
+	Com_Printf( "----- Client Shutdown (%s) -----\n", finalmsg );
 
-	if ( s_recurSD )
-    {
-		Com_Printf("WARNING: Recursive shutdown\n");
+	if ( recursive ) {
+		Com_Printf( "WARNING: Recursive shutdown\n" );
 		return;
 	}
-	s_recurSD = qtrue;
+	recursive = qtrue;
 
 	noGameRestart = quit;
 
@@ -3714,10 +3712,12 @@ void CL_Shutdown(char *finalmsg, qboolean disconnect, qboolean quit)
 
 	Cvar_Set( "cl_running", "0" );
 
-	s_recurSD = qfalse;
+	recursive = qfalse;
 
 	memset( &cls, 0, sizeof( cls ) );
 	Key_SetCatcher( 0 );
+
+	Com_Printf( "-----------------------\n" );
 
 }
 
