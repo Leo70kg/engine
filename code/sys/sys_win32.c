@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
-#include "../sdl/glimp.h"
+
 #include <windows.h>
 #include <lmerr.h>
 #include <lmcons.h>
@@ -39,14 +39,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <psapi.h>
 #include <float.h>
 
+#include "../sdl/glimp.h"
 
-#ifdef USE_CONSOLE_WINDOW
-// windowstuff
-void Sys_ShowConsole( int visLevel, qboolean quitOnClose );
-void Conbuf_AppendText( const char *pMsg );
-void Sys_DestroyConsole( void );
-
-#endif
 // Used to determine where to store user-specific files
 static char homePath[ MAX_OSPATH ] = { 0 };
 
@@ -322,6 +316,14 @@ Sys_FOpen
 ==============
 */
 FILE *Sys_FOpen( const char *ospath, const char *mode ) {
+	size_t length;
+
+	// Windows API ignores all trailing spaces and periods which can get around Quake 3 file system restrictions.
+	length = strlen( ospath );
+	if ( length == 0 || ospath[length-1] == ' ' || ospath[length-1] == '.' ) {
+		return NULL;
+	}
+
 	return fopen( ospath, mode );
 }
 
@@ -621,36 +623,6 @@ Display an error message
 */
 void Sys_ErrorDialog( const char *error )
 {
-#ifdef USE_CONSOLE_WINDOW
-	// leilei - console restoration
-	//va_list		argptr;
-	//char		text[4096];
-   	 MSG        msg;
-
-	Conbuf_AppendText( error );
-	Conbuf_AppendText( "\n" );
-
-	Sys_SetErrorText( error );
-	Sys_ShowConsole( 1, qtrue );
-
-	timeEndPeriod( 1 );
-
-	IN_Shutdown();
-
-	// wait for the user to quit
-	while ( 1 )
-	{
-		if (!GetMessage (&msg, NULL, 0, 0))
-			Com_Quit_f ();
-		TranslateMessage (&msg);
-      		DispatchMessage (&msg);
-	}
-	Sys_DestroyConsole();
-
-
-	exit (1);
-
-#else
 	if( Sys_Dialog( DT_YES_NO, va( "%s. Copy console log to clipboard?", error ),
 			"Error" ) == DR_YES )
 	{
@@ -681,7 +653,6 @@ void Sys_ErrorDialog( const char *error )
 			CloseClipboard( );
 		}
 	}
-#endif
 }
 
 /*
@@ -732,19 +703,6 @@ void Sys_PlatformInit( void )
 	Sys_SetFloatEnv();
 
 #ifndef DEDICATED
-
-
-#ifdef USE_CONSOLE_WINDOW
-
-	// leilei - console restoration
-	// done before Com/Sys_Init since we need this for error output
-	//Sys_CreateConsole();
-
-#endif
-
-	// leilei - no 3dfx splashes please
-		_putenv("FX_GLIDE_NO_SPLASH=1");
-
 	if(timeGetDevCaps(&ptc, sizeof(ptc)) == MMSYSERR_NOERROR)
 	{
 		timerResolution = ptc.wPeriodMin;
@@ -813,33 +771,8 @@ qboolean Sys_PIDIsRunning( int pid )
 	DWORD numBytes, numProcesses;
 	int i;
 
-// leilei - load PSAPI.DLL here, check for EnumProcesses.
-//	Fixes Windows 95 support. 
-	HMODULE psapi = LoadLibrary("psapi.dll");
-	FARPROC qEnumProcesses;
-
-	if(psapi == NULL)
-	{
-		Com_Printf("Unable to load PSAPI.dll\n");
-		FreeLibrary(psapi);
-		return qfalse;
-	}
-
-		qEnumProcesses = GetProcAddress(psapi, "EnumProcesses");
-		if(qEnumProcesses == NULL)
-		{
-			Com_Printf("Unable to find EnumProcesses in psapi.dll\n");
-			FreeLibrary(psapi);
-			return qfalse;
-		}
-
-
-		if( !qEnumProcesses( processes, sizeof( processes ), &numBytes ) ){
-			FreeLibrary(psapi);
-			return qfalse; // Assume it's not running
-		}
-
-	FreeLibrary(psapi); // we're still done
+	if( !EnumProcesses( processes, sizeof( processes ), &numBytes ) )
+		return qfalse; // Assume it's not running
 
 	numProcesses = numBytes / sizeof( DWORD );
 
@@ -849,291 +782,6 @@ qboolean Sys_PIDIsRunning( int pid )
 		if( processes[ i ] == pid )
 			return qtrue;
 	}
-	
+
 	return qfalse;
 }
-
-
-
-// leilei - win32 console restoration
-
-
-#ifdef USE_CONSOLE_WINDOW
-
-#include "../sys/win_resource.h"
-#include "../qcommon/q_shared.h"
-#include "../qcommon/qcommon.h"
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <windows.h>
-#include <olectl.h>
-#include <wingdi.h>
-#include <math.h>
-
-#include "../renderercommon/tr_common.h"
-#include "../sys/sys_local.h"
-
-typedef struct
-{
-	
-	HINSTANCE		reflib_library;		// Handle to refresh DLL 
-	qboolean		reflib_active;
-
-	HWND			hWnd;
-	HINSTANCE		hInstance;
-	qboolean		activeApp;
-	qboolean		isMinimized;
-	OSVERSIONINFO	osversion;
-
-	// when we get a windows message, we store the time off so keyboard processing
-	// can know the exact time of an event
-	unsigned		sysMsgTime;
-} WinVars_t;
-
-WinVars_t	g_wv;
-
-
-
-#define CONSOLE_WINDOW_TITLE  "OpenArena3 Console"
-#define CONSOLE_WINDOW_ICON  CLIENT_WINDOW_ICON
-
-
-#define COPY_ID			1
-#define QUIT_ID			2
-#define CLEAR_ID		3
-
-#define ERRORBOX_ID		10
-#define ERRORTEXT_ID	11
-
-#define EDIT_ID			100
-#define INPUT_ID		101
-
-typedef struct
-{
-	HWND		hWnd;
-	HWND		hwndBuffer;
-
-	HWND		hwndButtonClear;
-	HWND		hwndButtonCopy;
-	HWND		hwndButtonQuit;
-
-	HWND		hwndErrorBox;
-	HWND		hwndErrorText;
-
-	HBITMAP		hbmLogo;
-	HBITMAP		hbmClearBitmap;
-
-	HBRUSH		hbrEditBackground;
-	HBRUSH		hbrErrorBackground;
-
-	HFONT		hfBufferFont;
-	HFONT		hfButtonFont;
-
-	HWND		hwndInputLine;
-
-	char		errorString[80];
-
-	char		consoleText[512], returnedText[512];
-	int			visLevel;
-	qboolean	quitOnClose;
-	int			windowWidth, windowHeight;
-	
-	WNDPROC		SysInputLineWndProc;
-
-} WinConData;
-
-static WinConData s_wcd;
-
-
-LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	char inputBuffer[1024];
-
-	switch ( uMsg )
-	{
-	case WM_KILLFOCUS:
-		if ( ( HWND ) wParam == s_wcd.hWnd ||
-			 ( HWND ) wParam == s_wcd.hwndErrorBox )
-		{
-			SetFocus( hWnd );
-			return 0;
-		}
-		break;
-
-	case WM_CHAR:
-		if ( wParam == 13 )
-		{
-			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ) );
-			strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - strlen( s_wcd.consoleText ) - 5 );
-			strcat( s_wcd.consoleText, "\n" );
-			SetWindowText( s_wcd.hwndInputLine, "" );
-
-			Sys_Print( va( "]%s\n", inputBuffer ) );
-
-			return 0;
-		}
-	}
-
-	return CallWindowProc( s_wcd.SysInputLineWndProc, hWnd, uMsg, wParam, lParam );
-}
-
-
-
-/*
-** Sys_DestroyConsole
-*/
-void Sys_DestroyConsole( void ) {
-	if ( s_wcd.hWnd ) {
-		ShowWindow( s_wcd.hWnd, SW_HIDE );
-		CloseWindow( s_wcd.hWnd );
-		DestroyWindow( s_wcd.hWnd );
-		s_wcd.hWnd = 0;
-	}
-}
-void Conbuf_AppendText( const char *pMsg );
-
-/*
-** Sys_ShowConsole
-*/
-void Sys_ShowConsole( int visLevel, qboolean quitOnClose )
-{
-	s_wcd.quitOnClose = quitOnClose;
-
-	if ( visLevel == s_wcd.visLevel )
-	{
-		return;
-	}
-
-	s_wcd.visLevel = visLevel;
-
-	if ( !s_wcd.hWnd )
-		return;
-
-	switch ( visLevel )
-	{
-	case 0:
-		ShowWindow( s_wcd.hWnd, SW_HIDE );
-		break;
-	case 1:
-		ShowWindow( s_wcd.hWnd, SW_SHOWNORMAL );
-		SendMessage( s_wcd.hwndBuffer, EM_LINESCROLL, 0, 0xffff );
-		break;
-	case 2:
-		ShowWindow( s_wcd.hWnd, SW_MINIMIZE );
-		break;
-	default:
-		Sys_Error( "Invalid visLevel %d sent to Sys_ShowConsole\n", visLevel );
-		break;
-	}
-}
-
-
-
-/*
-** Conbuf_AppendText
-*/
-void Conbuf_AppendText( const char *pMsg )
-{
-#define CONSOLE_BUFFER_SIZE		16384
-
-	char buffer[CONSOLE_BUFFER_SIZE*2];
-	char *b = buffer;
-	const char *msg;
-	int bufLen;
-	int i = 0;
-	static unsigned long s_totalChars;
-
-	//
-	// if the message is REALLY long, use just the last portion of it
-	//
-	if ( strlen( pMsg ) > CONSOLE_BUFFER_SIZE - 1 )
-	{
-		msg = pMsg + strlen( pMsg ) - CONSOLE_BUFFER_SIZE + 1;
-	}
-	else
-	{
-		msg = pMsg;
-	}
-
-	//
-	// copy into an intermediate buffer
-	//
-	while ( msg[i] && ( ( b - buffer ) < sizeof( buffer ) - 1 ) )
-	{
-		if ( msg[i] == '\n' && msg[i+1] == '\r' )
-		{
-			b[0] = '\r';
-			b[1] = '\n';
-			b += 2;
-			i++;
-		}
-		else if ( msg[i] == '\r' )
-		{
-			b[0] = '\r';
-			b[1] = '\n';
-			b += 2;
-		}
-		else if ( msg[i] == '\n' )
-		{
-			b[0] = '\r';
-			b[1] = '\n';
-			b += 2;
-		}
-		else if ( Q_IsColorString( &msg[i] ) )
-		{
-			i++;
-		}
-		else
-		{
-			*b= msg[i];
-			b++;
-		}
-		i++;
-	}
-	*b = 0;
-	bufLen = b - buffer;
-
-	s_totalChars += bufLen;
-
-	//
-	// replace selection instead of appending if we're overflowing
-	//
-	if ( s_totalChars > 0x7fff )
-	{
-		SendMessage( s_wcd.hwndBuffer, EM_SETSEL, 0, -1 );
-		s_totalChars = bufLen;
-	}
-
-	//
-	// put this text into the windows console
-	//
-	SendMessage( s_wcd.hwndBuffer, EM_LINESCROLL, 0, 0xffff );
-	SendMessage( s_wcd.hwndBuffer, EM_SCROLLCARET, 0, 0 );
-	SendMessage( s_wcd.hwndBuffer, EM_REPLACESEL, 0, (LPARAM) buffer );
-}
-
-
-/*
-** Sys_SetErrorText
-*/
-void Sys_SetErrorText( const char *buf )
-{
-	Q_strncpyz( s_wcd.errorString, buf, sizeof( s_wcd.errorString ) );
-
-	if ( !s_wcd.hwndErrorBox )
-	{
-		s_wcd.hwndErrorBox = CreateWindow( "static", NULL, WS_CHILD | WS_VISIBLE | SS_SUNKEN,
-													6, 5, 526, 30,
-													s_wcd.hWnd, 
-													( HMENU ) ERRORBOX_ID,	// child window ID
-													g_wv.hInstance, NULL );
-		SendMessage( s_wcd.hwndErrorBox, WM_SETFONT, ( WPARAM ) s_wcd.hfBufferFont, 0 );
-		SetWindowText( s_wcd.hwndErrorBox, s_wcd.errorString );
-
-		DestroyWindow( s_wcd.hwndInputLine );
-		s_wcd.hwndInputLine = NULL;
-	}
-}
-
-#endif

@@ -33,9 +33,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "snd_codec.h"
 #include "client.h"
 
-// leilei - mod playabck support
-
-
 void S_Update_( void );
 void S_Base_StopAllSounds(void);
 void S_Base_StopBackgroundTrack( void );
@@ -57,8 +54,6 @@ static char		s_backgroundLoop[MAX_QPATH];
 channel_t   s_channels[MAX_CHANNELS];
 channel_t   loop_channels[MAX_CHANNELS];
 int			numLoopChannels;
-
-int			samplingrate;	// leilei - for snd_xmp
 
 static int	s_soundStarted;
 static		qboolean	s_soundMuted;
@@ -105,7 +100,7 @@ void S_Base_SoundInfo(void) {
 	} else {
 		Com_Printf("%5d stereo\n", dma.channels - 1);
 		Com_Printf("%5d samples\n", dma.samples);
-		Com_Printf("%5d samplebits\n", dma.samplebits);
+		Com_Printf("%5d samplebits (%s)\n", dma.samplebits, dma.isfloat ? "float" : "int");
 		Com_Printf("%5d submission_chunk\n", dma.submission_chunk);
 		Com_Printf("%5d speed\n", dma.speed);
 		Com_Printf("%p dma buffer\n", dma.buffer);
@@ -124,32 +119,31 @@ void S_Base_SoundInfo(void) {
 static
 void S_Base_StartCapture( void )
 {
-	// !!! FIXME: write me.
+	SNDDMA_StartCapture();
 }
 
 static
 int S_Base_AvailableCaptureSamples( void )
 {
-	// !!! FIXME: write me.
-	return 0;
+	return SNDDMA_AvailableCaptureSamples();
 }
 
 static
 void S_Base_Capture( int samples, byte *data )
 {
-	// !!! FIXME: write me.
+	SNDDMA_Capture(samples, data);
 }
 
 static
 void S_Base_StopCapture( void )
 {
-	// !!! FIXME: write me.
+	SNDDMA_StopCapture();
 }
 
 static
 void S_Base_MasterGain( float val )
 {
-	// !!! FIXME: write me.
+	SNDDMA_MasterGain(val);
 }
 #endif
 
@@ -1203,9 +1197,6 @@ qboolean S_ScanChannelStarts( void ) {
 	return newSamples;
 }
 
-
-
-
 /*
 ============
 S_Update
@@ -1257,9 +1248,9 @@ void S_GetSoundtime(void)
 
 	if( CL_VideoRecording( ) )
 	{
-		float fps = cl_aviFrameRate->value < 1000.0f ? cl_aviFrameRate->value : 1000.0f;
+		float fps = cl_aviFrameRate->value<1000.0f ? cl_aviFrameRate->value : 1000.0f;
 		float tmp = dma.speed / fps;
-		float frameDuration = (tmp > 1.0f ? tmp : 1.0f) + clc.aviSoundFrameRemainder;
+		float frameDuration = (tmp > 1.0f ? tmp:1.0f) + clc.aviSoundFrameRemainder;
 
 		int msec = (int)frameDuration;
 		s_soundtime += msec;
@@ -1334,7 +1325,6 @@ void S_Update_(void) {
 		sane = 11;			// 85hz
 	}
 
-	samplingrate = dma.speed;
 	ma = s_mixahead->value * dma.speed;
 	op = s_mixPreStep->value + sane*dma.speed*0.01;
 
@@ -1413,7 +1403,6 @@ static void S_OpenBackgroundStream( const char *filename ) {
 		Com_Printf(S_COLOR_YELLOW "WARNING: music file %s is not 22k stereo\n", filename );
 	}
 }
-
 
 /*
 ======================
