@@ -34,8 +34,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 extern shaderCommands_t tess;
-
-
 static qboolean	setArraysOnce;
 /*
 ================
@@ -275,7 +273,7 @@ static void DrawTris (shaderCommands_t *input)
 	qglDepthRange( 0, 1 );
 }
 
-
+#if R_SHOWNORMALS
 /*
 ================
 DrawNormals
@@ -304,7 +302,7 @@ static void DrawNormals (shaderCommands_t *input)
 
 	qglDepthRange( 0, 1 );
 }
-
+#endif
 
 /*
 ===================
@@ -562,7 +560,7 @@ static void RB_CalcDiffuseColor(unsigned char (*colors)[4])
 
     int numVertexes = tess.numVertexes;
 	int	i;
-	for (i = 0 ; i < numVertexes ; i++)
+	for (i = 0; i < numVertexes; i++)
     {
 		float incoming = DotProduct(tess.normal[i], litDir);
 		
@@ -571,27 +569,16 @@ static void RB_CalcDiffuseColor(unsigned char (*colors)[4])
 			*(unsigned int *)colors[i] = ambLitInt;
 			continue;
 		}
-        
-		unsigned int r = abtLit[0] + incoming * drtLit[0];
-		if ( r > 255 )
-			colors[i][0] = 255;
         else
-            colors[i][0] = r;
-
-
-		unsigned int g = abtLit[1] + incoming * drtLit[1];
-		if ( g > 255 )
-			colors[i][1] = 255;
-        else
-		    colors[i][1] = g;
-
-		unsigned int b = abtLit[2] + incoming * drtLit[2];
-		if ( b > 255 )
-			colors[i][2] = 255;
-        else
-		    colors[i][2] = b;
-
-		colors[i][3] = 255;
+        {
+            unsigned int r = abtLit[0] + incoming * drtLit[0];
+            colors[i][0] = (r <= 255 ? r : 255);
+            unsigned int g = abtLit[1] + incoming * drtLit[1];
+            colors[i][1] = (g <= 255 ? g : 255);
+            unsigned int b = abtLit[2] + incoming * drtLit[2];
+            colors[i][2] = (b <= 255 ? b : 255);
+            colors[i][3] = 255;
+        }
 	}
 }
 
@@ -599,7 +586,6 @@ static void RB_CalcDiffuseColor(unsigned char (*colors)[4])
 //Calculates specular coefficient and places it in the alpha channel
 static void RB_CalcSpecularAlphaNew(unsigned char (*alphas)[4])
 {
-    vec3_t lightOrigin = { -960, 1980, 96 };		// FIXME: track dynamically
 	int numVertexes = tess.numVertexes;
 	
     int	i;
@@ -609,6 +595,7 @@ static void RB_CalcSpecularAlphaNew(unsigned char (*alphas)[4])
 		if ( backEnd.currentEntity == &tr.worldEntity )
         {
             // old compatibility with maps that use it on some models
+            vec3_t lightOrigin = {-960, 1980, 96};		// FIXME: track dynamically
 			VectorSubtract( lightOrigin, tess.xyz[i], lightDir );
         }
         else
@@ -641,6 +628,98 @@ static void RB_CalcSpecularAlphaNew(unsigned char (*alphas)[4])
 }
 
 
+static float NormalizeColor(const vec3_t in, vec3_t out)
+{
+	float max= in[0];
+	if ( in[1] > max )
+    {
+		max = in[1];
+	}
+	if ( in[2] > max )
+    {
+		max = in[2];
+	}
+
+	if ( !max )
+    {
+		VectorClear( out );
+	}
+    else
+    {
+		out[0] = in[0] / max;
+		out[1] = in[1] / max;
+		out[2] = in[2] / max;
+	}
+	return max;
+}
+
+
+/*
+** RB_CalcUniformColor
+**
+** RiO; Uniform vertex color lighting for cel shading
+*/
+
+static void RB_CalcUniformColor( unsigned char (*colors)[4] )
+{
+
+	int				i;
+	vec3_t			ambientLight;
+	// vec3_t			directedLight;
+	vec4_t			uniformLight;
+
+
+	VectorCopy( backEnd.currentEntity->ambientLight, ambientLight );
+	//VectorCopy( ent->directedLight, directedLight );
+
+	VectorAdd( ambientLight, ambientLight, uniformLight );
+
+	float normalize = NormalizeColor( uniformLight, uniformLight );
+	if ( normalize > 255 )
+        normalize = 255;
+	VectorScale( uniformLight, normalize, uniformLight );
+	uniformLight[3] = 255;
+
+	int numVertexes = tess.numVertexes;
+	for (i = 0 ; i < numVertexes; i++ )
+    {
+		colors[i][0] = uniformLight[0];
+		colors[i][1] = uniformLight[1];
+		colors[i][2] = uniformLight[2];
+		colors[i][3] = uniformLight[3];
+	}
+}
+
+/*
+** RB_CalcDynamicColor
+**
+** MDave; Vertex color dynamic lighting for cel shading
+*/
+static void RB_CalcDynamicColor( unsigned char (*colors)[4] )
+{
+
+	vec4_t dynamic;
+	VectorCopy(backEnd.currentEntity->dynamicLight, dynamic);
+
+	float normalize = NormalizeColor( dynamic, dynamic );
+	if ( normalize > 255 )
+        normalize = 255;
+	
+    VectorScale( dynamic, normalize, dynamic );
+	dynamic[3] = 255;
+
+	int numVertexes = tess.numVertexes;
+    int i;
+	for (i = 0 ; i < numVertexes ; i++ )
+    {
+		colors[i][0] = dynamic[0];
+		colors[i][1] = dynamic[1];
+		colors[i][2] = dynamic[2];
+		colors[i][3] = dynamic[3];
+	}
+}
+
+
 static void ComputeColors( shaderStage_t *pStage )
 {
 	int	i;
@@ -658,11 +737,9 @@ static void ComputeColors( shaderStage_t *pStage )
 		case CGEN_LIGHTING_DIFFUSE:
 			RB_CalcDiffuseColor( tess.svars.colors ); break;
 		case CGEN_LIGHTING_UNIFORM:
-			RB_CalcUniformColor( ( unsigned char * ) tess.svars.colors );
-			break;
+			RB_CalcUniformColor( tess.svars.colors ); break;
 		case CGEN_LIGHTING_DYNAMIC:
-			RB_CalcDynamicColor( ( unsigned char * ) tess.svars.colors );
-			break;
+			RB_CalcDynamicColor( tess.svars.colors ); break;
 		case CGEN_LIGHTING_FLAT_AMBIENT:
 			RB_CalcFlatAmbient( ( unsigned char * ) tess.svars.colors );
 			break;
@@ -870,6 +947,7 @@ static void ComputeColors( shaderStage_t *pStage )
 }
 
 
+
 static void ComputeTexCoords( shaderStage_t *pStage )
 {
 	int	b, i, tm;
@@ -904,7 +982,33 @@ static void ComputeTexCoords( shaderStage_t *pStage )
                 RB_CalcFogTexCoords( ( float * ) tess.svars.texcoords[b] );
                 break;
             case TCGEN_ENVIRONMENT_MAPPED:
-                RB_CalcEnvironmentTexCoords( ( float * ) tess.svars.texcoords[b] ); 
+            {
+                int	i;
+                int numVertexes = tess.numVertexes;
+                
+                for (i=0 ; i < numVertexes; i++) 
+                {
+                    float viewer[3], reflected[3];
+                    VectorSubtract(backEnd.or.viewOrigin, tess.xyz[i], viewer);
+                    FastNormalize1f(viewer);
+                    
+                    float normal[3];
+                    
+                    normal[0] = tess.normal[i][0];
+                    normal[1] = tess.normal[i][1];
+                    normal[2] = tess.normal[i][2];
+
+                    float d = 2 * DotProduct(normal, viewer);
+
+                    // reflected[0] = normal[i][0]*d - viewer[0];
+                    reflected[1] = normal[1]*d - viewer[1];
+                    reflected[2] = normal[2]*d - viewer[2];
+
+                    tess.svars.texcoords[b][i][0] = 0.5 + reflected[1] * 0.5;
+                    tess.svars.texcoords[b][i][1] = 0.5 - reflected[2] * 0.5;
+                }
+            }
+                //RB_CalcEnvironmentTexCoords( ( float * ) tess.svars.texcoords[b] ); 
                 break;
             case TCGEN_ENVIRONMENT_MAPPED_WATER:
                 RB_CalcEnvironmentTexCoordsJO( ( float * ) tess.svars.texcoords[b] ); 			
@@ -1303,19 +1407,16 @@ void RB_StageIteratorLightmappedMultitexture( void )
 }
 
 
-
 void RB_EndSurface( void )
 {
-	shaderCommands_t *input = &tess;
-
-	if (input->numIndexes == 0) {
+	if ((tess.numIndexes == 0) || (tess.numVertexes == 0)) {
 		return;
 	}
 
-	if (input->indexes[SHADER_MAX_INDEXES-1] != 0) {
+	if (tess.indexes[SHADER_MAX_INDEXES-1] != 0) {
 		ri.Error (ERR_DROP, "RB_EndSurface() - SHADER_MAX_INDEXES hit");
 	}	
-	if (input->xyz[SHADER_MAX_VERTEXES-1][0] != 0) {
+	if (tess.xyz[SHADER_MAX_VERTEXES-1][0] != 0) {
 		ri.Error (ERR_DROP, "RB_EndSurface() - SHADER_MAX_VERTEXES hit");
 	}
 
@@ -1346,13 +1447,13 @@ void RB_EndSurface( void )
 	// draw debugging stuff
 	//
 	if ( r_showtris->integer ) {
-		DrawTris (input);
+		DrawTris (&tess);
 	}
 
-	if ( 0 )
-		DrawNormals (input);
-
+#if R_SHOWNORMALS
+		DrawNormals (&tess);
+#endif
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;
+	tess.numVertexes = 0;
 }
-

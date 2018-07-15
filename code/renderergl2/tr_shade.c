@@ -19,16 +19,17 @@ along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-// tr_shade.c
+
+/* 
+ * tr_shade.c
+ *
+ * THIS ENTIRE FILE IS BACK END
+ *
+ * This file deals with applying shaders to surface data in the tess struct.
+ */
 
 #include "tr_local.h" 
 
-/*
-
-  THIS ENTIRE FILE IS BACK END
-
-  This file deals with applying shaders to surface data in the tess struct.
-*/
 
 
 /*
@@ -1536,22 +1537,17 @@ void RB_StageIteratorGeneric( void )
 	}
 }
 
-/*
-** RB_EndSurface
-*/
-void RB_EndSurface( void ) {
-	shaderCommands_t *input;
 
-	input = &tess;
-
-	if (input->numIndexes == 0 || input->numVertexes == 0) {
+void RB_EndSurface( void )
+{
+	if ((tess.numIndexes == 0) || (tess.numVertexes == 0)) {
 		return;
 	}
 
-	if (input->indexes[SHADER_MAX_INDEXES-1] != 0) {
+	if (tess.indexes[SHADER_MAX_INDEXES-1] != 0) {
 		ri.Error (ERR_DROP, "RB_EndSurface() - SHADER_MAX_INDEXES hit");
 	}	
-	if (input->xyz[SHADER_MAX_VERTEXES-1][0] != 0) {
+	if (tess.xyz[SHADER_MAX_VERTEXES-1][0] != 0) {
 		ri.Error (ERR_DROP, "RB_EndSurface() - SHADER_MAX_VERTEXES hit");
 	}
 
@@ -1588,20 +1584,14 @@ void RB_EndSurface( void ) {
 	// draw debugging stuff
 	//
 	if ( r_showtris->integer ) {
-		DrawTris (input);
+		DrawTris (&tess);
 	}
-    
+
 #if R_SHOWNORMALS
-    //Draws vertex normals for debugging
-    DrawNormals (shaderCommands_t *input)
-    {
-	    //FIXME: implement this
-    }
+		DrawNormals (&tess);
 #endif
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
 	tess.firstIndex = 0;
-
-	//GLimp_LogComment( "----------\n" );
 }

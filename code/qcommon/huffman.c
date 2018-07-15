@@ -59,7 +59,8 @@ int		Huff_getBit( byte *fin, int *offset) {
 }
 
 /* Add a bit to the output file (buffered) */
-static void add_bit (char bit, byte *fout) {
+static void add_bit (char bit, byte *fout)
+{
 	if ((bloc&7) == 0) {
 		fout[(bloc>>3)] = 0;
 	}
@@ -68,9 +69,9 @@ static void add_bit (char bit, byte *fout) {
 }
 
 /* Receive one bit from the input file (buffered) */
-static int get_bit (byte *fin) {
-	int t;
-	t = (fin[(bloc>>3)] >> (bloc&7)) & 0x1;
+static int get_bit (byte *fin)
+{
+	int t = (fin[(bloc>>3)] >> (bloc&7)) & 0x1;
 	bloc++;
 	return t;
 }
@@ -263,11 +264,16 @@ void Huff_addRef(huff_t* huff, byte ch) {
 }
 
 /* Get a symbol */
-int Huff_Receive (node_t *node, int *ch, byte *fin) {
-	while (node && node->symbol == INTERNAL_NODE) {
-		if (get_bit(fin)) {
+int Huff_Receive (node_t *node, int *ch, byte *fin)
+{
+	while (node && node->symbol == INTERNAL_NODE)
+    {
+		if (get_bit(fin))
+        {
 			node = node->right;
-		} else {
+		}
+        else
+        {
 			node = node->left;
 		}
 	}

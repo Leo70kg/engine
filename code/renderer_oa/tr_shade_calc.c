@@ -975,34 +975,6 @@ void RB_CalcFogTexCoords( float *st ) {
 
 
 
-/*
-** RB_CalcEnvironmentTexCoords
-*/
-void RB_CalcEnvironmentTexCoords( float *st ) 
-{
-	int			i;
-	float		*v, *normal;
-	vec3_t		viewer, reflected;
-
-	v = tess.xyz[0];
-	normal = tess.normal[0];
-
-	for (i = 0 ; i < tess.numVertexes ; i++, v += 4, normal += 4, st += 2 ) 
-	{
-		VectorSubtract (backEnd.or.viewOrigin, v, viewer);
-		FastNormalize1f(viewer);
-
-		float d = DotProduct (normal, viewer);
-
-		reflected[0] = normal[0]*2*d - viewer[0];
-		reflected[1] = normal[1]*2*d - viewer[1];
-		reflected[2] = normal[2]*2*d - viewer[2];
-
-		st[0] = 0.5 + reflected[1] * 0.5;
-		st[1] = 0.5 - reflected[2] * 0.5;
-	}
-}
-
 
 /*
 ** RB_CalcEnvironmentTexCoordsHW
@@ -1405,8 +1377,6 @@ void RB_CalcNormal( unsigned char *colors )
 			m[1] = 127 + (n[1]*128);
 			m[2] = 127 + (n[2]*128);
 
-
-
 		
 		colors[i*4+0] = m[0];
 		colors[i*4+1] = m[1];
@@ -1416,100 +1386,6 @@ void RB_CalcNormal( unsigned char *colors )
 }
 
 
-static float NormalizeColor( const vec3_t in, vec3_t out )
-{
-	float max= in[0];
-	if ( in[1] > max )
-    {
-		max = in[1];
-	}
-	if ( in[2] > max )
-    {
-		max = in[2];
-	}
-
-	if ( !max )
-    {
-		VectorClear( out );
-	}
-    else
-    {
-		out[0] = in[0] / max;
-		out[1] = in[1] / max;
-		out[2] = in[2] / max;
-	}
-	return max;
-}
-
-
-/*
-** RB_CalcUniformColor
-**
-** RiO; Uniform vertex color lighting for cel shading
-*/
-
-void RB_CalcUniformColor( unsigned char *colors )
-{
-
-	int				i;
-	trRefEntity_t	*ent;
-	vec3_t			ambientLight;
-	// vec3_t			directedLight;
-	vec4_t			uniformLight;
-	int				numVertexes;
-	float			normalize;
-
-	ent = backEnd.currentEntity;
-
-	VectorCopy( ent->ambientLight, ambientLight );
-	//VectorCopy( ent->directedLight, directedLight );
-
-	VectorAdd( ambientLight, ambientLight, uniformLight );
-
-	normalize = NormalizeColor( uniformLight, uniformLight );
-	if ( normalize > 255 )
-        normalize = 255;
-	VectorScale( uniformLight, normalize, uniformLight );
-	uniformLight[3] = 255;
-
-	numVertexes = tess.numVertexes;
-	for (i = 0 ; i < numVertexes ; i++ ) {
-		colors[i*4+0] = uniformLight[0];
-		colors[i*4+1] = uniformLight[1];
-		colors[i*4+2] = uniformLight[2];
-		colors[i*4+3] = uniformLight[3];
-	}
-}
-
-/*
-** RB_CalcDynamicColor
-**
-** MDave; Vertex color dynamic lighting for cel shading
-*/
-void RB_CalcDynamicColor( unsigned char *colors )
-{
-	int				i;
-	vec4_t			dynamic;
-	int				numVertexes;
-
-	trRefEntity_t* ent = backEnd.currentEntity;
-
-	VectorCopy( ent->dynamicLight, dynamic );
-
-	float normalize = NormalizeColor( dynamic, dynamic );
-	if ( normalize > 255 ) normalize = 255;
-	VectorScale( dynamic, normalize, dynamic );
-	dynamic[3] = 255;
-
-	numVertexes = tess.numVertexes;
-	for (i = 0 ; i < numVertexes ; i++ )
-    {
-		colors[i*4+0] = dynamic[0];
-		colors[i*4+1] = dynamic[1];
-		colors[i*4+2] = dynamic[2];
-		colors[i*4+3] = dynamic[3];
-	}
-}
 
 
 // leilei celsperiment

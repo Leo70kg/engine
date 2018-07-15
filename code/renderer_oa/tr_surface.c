@@ -717,50 +717,44 @@ static void LerpMeshVertexes(md3Surface_t *surf, float backlerp)
    	}
 }
 
-/*
-=============
-RB_SurfaceMesh
-=============
-*/
-static void RB_SurfaceMesh(md3Surface_t *surface) {
-	int				j;
-	float			backlerp;
-	int				*triangles;
-	float			*texCoords;
-	int				indexes;
-	int				Bob, Doug;
-	int				numVerts;
+static void RB_SurfaceMesh(md3Surface_t *surface)
+{
+	int	j;
+	float backlerp;
 
-	if (  backEnd.currentEntity->e.oldframe == backEnd.currentEntity->e.frame ) {
+
+	if( backEnd.currentEntity->e.oldframe == backEnd.currentEntity->e.frame )
 		backlerp = 0;
-	} else  {
+    else
 		backlerp = backEnd.currentEntity->e.backlerp;
-	}
 
 	RB_CHECKOVERFLOW( surface->numVerts, surface->numTriangles*3 );
 
-	LerpMeshVertexes (surface, backlerp);
+	LerpMeshVertexes(surface, backlerp);
 
-	triangles = (int *) ((byte *)surface + surface->ofsTriangles);
-	indexes = surface->numTriangles * 3;
-	Bob = tess.numIndexes;
-	Doug = tess.numVertexes;
-	for (j = 0 ; j < indexes ; j++) {
+	int* triangles = (int *) ((unsigned char *)surface + surface->ofsTriangles);
+	int indexes = surface->numTriangles * 3;
+	int Bob = tess.numIndexes;
+	int Doug = tess.numVertexes;
+	
+    for (j = 0 ; j < indexes ; j++)
+    {
 		tess.indexes[Bob + j] = Doug + triangles[j];
 	}
 	tess.numIndexes += indexes;
 
-	texCoords = (float *) ((byte *)surface + surface->ofsSt);
+	float* texCoords = (float *) ((unsigned char*)surface + surface->ofsSt);
 
-	numVerts = surface->numVerts;
-	for ( j = 0; j < numVerts; j++ ) {
+	int numVerts = surface->numVerts;
+	
+    for ( j = 0; j < numVerts; j++ )
+    {
 		tess.texCoords[Doug + j][0][0] = texCoords[j*2+0];
 		tess.texCoords[Doug + j][0][1] = texCoords[j*2+1];
 		// FIXME: fill in lightmapST for completeness?
 	}
 
 	tess.numVertexes += surface->numVerts;
-
 }
 
 

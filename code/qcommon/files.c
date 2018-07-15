@@ -1843,7 +1843,8 @@ long FS_ReadFileDir(const char *qpath, void *searchPath, qboolean unpure, void *
 			r = FS_Read( &len, sizeof( len ), com_journalDataFile );
 			if( r != sizeof( len ) )
             {
-				if (buffer != NULL) *buffer = NULL;
+				if (buffer != NULL)
+                    *buffer = NULL;
 				return -1;
 			}
 			// if the file didn't exist when the journal was created

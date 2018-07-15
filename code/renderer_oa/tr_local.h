@@ -1185,14 +1185,13 @@ TESSELATOR/SHADER DECLARATIONS
 
 ====================================================================
 */
-typedef unsigned char color4ub_t[4];
-
+/*
 typedef struct stageVars
 {
-	color4ub_t	colors[SHADER_MAX_VERTEXES];
+	unsigned char colors[SHADER_MAX_VERTEXES][4];
 	vec2_t		texcoords[NUM_TEXTURE_BUNDLES][SHADER_MAX_VERTEXES];
 } stageVars_t;
-
+*/
 
 typedef struct shaderCommands_s 
 {
@@ -1200,12 +1199,18 @@ typedef struct shaderCommands_s
 	vec4_t		xyz[SHADER_MAX_VERTEXES] QALIGN(16);
 	vec4_t		normal[SHADER_MAX_VERTEXES] QALIGN(16);
 	vec2_t		texCoords[SHADER_MAX_VERTEXES][2] QALIGN(16);
-	color4ub_t	vertexColors[SHADER_MAX_VERTEXES] QALIGN(16);
+	unsigned char vertexColors[SHADER_MAX_VERTEXES][4] QALIGN(16);
 	int			vertexDlightBits[SHADER_MAX_VERTEXES] QALIGN(16);
 
-	stageVars_t	svars QALIGN(16);
+	//stageVars_t	svars QALIGN(16);
 
-	color4ub_t	constantColor255[SHADER_MAX_VERTEXES] QALIGN(16);
+    struct stageVars
+    {
+        unsigned char colors[SHADER_MAX_VERTEXES][4];
+        vec2_t		texcoords[NUM_TEXTURE_BUNDLES][SHADER_MAX_VERTEXES];
+    } svars QALIGN(16);
+
+	unsigned char constantColor255[SHADER_MAX_VERTEXES][4] QALIGN(16);
 
 	shader_t	*shader;
 	float		shaderTime;
@@ -1639,7 +1644,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 /////////////////////////  tr_shade_calc  //////////////////////////////////////////
 void	RB_DeformTessGeometry( void );
 
-void	RB_CalcEnvironmentTexCoords( float *dstTexCoords );
+//void	RB_CalcEnvironmentTexCoords( float *dstTexCoords );
 void	RB_CalcCelTexCoords( float *dstTexCoords );		// leilei - cel hack
 void	RB_CalcEnvironmentTexCoordsJO( float *dstTexCoords );	// leilei
 void	RB_CalcEnvironmentTexCoordsR( float *dstTexCoords );	// leilei
@@ -1664,9 +1669,6 @@ void	RB_CalcLightscaleTexCoords( float *texCoords );
 void	RB_CalcAtlasTexCoords( const atlas_t *at, float *st );
 void	RB_CalcColorFromEntity( unsigned char *dstColors );
 void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
-void	RB_CalcUniformColor( unsigned char *colors );
-void	RB_CalcDynamicColor( unsigned char *colors );
-void	RB_CalcDiffuseColor_Specular( unsigned char *colors );	// leilei - specular hack
 void	RB_CalcFlatAmbient( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcFlatDirect( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcNormal( unsigned char *colors ); // leilei - normal hack

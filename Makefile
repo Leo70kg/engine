@@ -153,12 +153,12 @@ GENERATE_DEPENDENCIES=1
 endif
 
 ifndef USE_OPENAL
-USE_OPENAL=0
+USE_OPENAL=1
 endif
 
 
 ifndef USE_OPENAL_DLOPEN
-USE_OPENAL_DLOPEN=0
+USE_OPENAL_DLOPEN=1
 endif
 
 
@@ -308,7 +308,7 @@ ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu" "gnu")
 
   ifeq ($(ARCH),x86_64)
 	OPTIMIZEVM = -O3 -funroll-loops
-	OPTIMIZE = $(OPTIMIZEVM) -ffast-math -msse2 -msse3
+	OPTIMIZE = $(OPTIMIZEVM) -ffast-math -march=native
 	HAVE_VM_COMPILED=true
   else
   ifeq ($(ARCH),x86)
@@ -1373,7 +1373,6 @@ Q3R2OBJ = \
   $(B)/renderergl2/tr_curve.o \
   $(B)/renderergl2/tr_dsa.o \
   $(B)/renderergl2/tr_extramath.o \
-  $(B)/renderergl2/tr_extensions.o \
   $(B)/renderergl2/tr_fbo.o \
   $(B)/renderergl2/tr_flares.o \
   $(B)/renderergl2/tr_font.o \
@@ -1442,7 +1441,6 @@ Q3ROBJ = \
   $(B)/renderergl1/tr_bsp.o \
   $(B)/renderergl1/tr_cmds.o \
   $(B)/renderergl1/tr_curve.o \
-  $(B)/renderergl1/tr_extensions.o \
   $(B)/renderergl1/tr_flares.o \
   $(B)/renderergl1/tr_font.o \
   $(B)/renderergl1/tr_image.o \
@@ -1474,7 +1472,6 @@ Q3ROAOBJ = \
   $(B)/renderer_oa/tr_bsp.o \
   $(B)/renderer_oa/tr_cmds.o \
   $(B)/renderer_oa/tr_curve.o \
-  $(B)/renderer_oa/tr_extensions.o \
   $(B)/renderer_oa/tr_flares.o \
   $(B)/renderer_oa/tr_font.o \
   $(B)/renderer_oa/tr_image.o \

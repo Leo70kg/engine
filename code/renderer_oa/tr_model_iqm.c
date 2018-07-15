@@ -1027,7 +1027,7 @@ void RB_IQMSurfaceAnim( surfaceType_t *surface ) {
 	vec4_t		*outXYZ;
 	vec4_t		*outNormal;
 	vec2_t		(*outTexCoord)[2];
-	color4ub_t	*outColor;
+	unsigned char (*outColor)[4];
 
 	int	frame = data->num_frames ? backEnd.currentEntity->e.frame % data->num_frames : 0;
 	int	oldframe = data->num_frames ? backEnd.currentEntity->e.oldframe % data->num_frames : 0;
