@@ -593,7 +593,16 @@ static void R_SetFarClip( void )
 {
 	float	farthestCornerDistance = 0;
 	int		i;
+	// if not rendering the world (icons, menus, etc)
+	// set a 2k far clip plane
+	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
+		tr.viewParms.zFar = 2048;
+		return;
+	}
 
+	//
+	// set far clipping planes dynamically
+	//
 	for ( i = 0; i < 8; i++ )
 	{
 		vec3_t v;
