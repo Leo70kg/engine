@@ -119,7 +119,7 @@ GLimp_Shutdown
 void GLimp_Shutdown( void )
 {
 	IN_Shutdown();
-
+    Cmd_RemoveCommand("modelist");
 	SDL_QuitSubSystem( SDL_INIT_VIDEO );
 }
 
@@ -150,8 +150,6 @@ void GLimp_DestroyWindow(void)
 {
     SDL_DestroyWindow( SDL_window );
     SDL_window = NULL;
-
-    Cmd_RemoveCommand("modelist");
 }
 
 
@@ -176,7 +174,6 @@ static void GLimp_DetectAvailableModes(void)
 {
 	int i, j;
 	char buf[ MAX_STRING_CHARS ] = { 0 };
-
 
 	SDL_DisplayMode windowMode;
     
@@ -530,7 +527,7 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 	}
 
     Cmd_AddCommand("modelist", R_ModeList_f);
-
+	Cmd_AddCommand( "in_restart", IN_Init );
 	// Create the window and set up the context
     
 	if (!SDL_WasInit(SDL_INIT_VIDEO))

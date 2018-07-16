@@ -320,7 +320,7 @@ R_RotateForViewer
 Sets up the modelview matrix for a given viewParm
 =================
 */
-void R_RotateForViewer (void) 
+static void R_RotateForViewer (void) 
 {
 	float	viewerMatrix[16];
 	vec3_t	origin;
@@ -1330,11 +1330,12 @@ A view may be either the actual camera view,
 or a mirror / remote location
 ================
 */
-void R_RenderView (viewParms_t *parms) {
+void R_RenderView (viewParms_t *parms)
+{
 	int		firstDrawSurf;
 	int		numDrawSurfs;
 
-	if ( parms->viewportWidth <= 0 || parms->viewportHeight <= 0 ) {
+	if ( (parms->viewportWidth <= 0) || (parms->viewportHeight <= 0) ) {
 		return;
 	}
 

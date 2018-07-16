@@ -573,7 +573,6 @@ void IN_Init(void)
 	appState = SDL_GetWindowFlags( SDL_window );
 	Cvar_SetValue( "com_unfocused",	!( appState & SDL_WINDOW_INPUT_FOCUS ) );
 	Cvar_SetValue( "com_minimized", appState & SDL_WINDOW_MINIMIZED );
-	Cmd_AddCommand( "in_restart", IN_Init );
 }
 
 

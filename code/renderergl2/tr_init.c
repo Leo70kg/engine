@@ -457,7 +457,6 @@ void GLimp_InitExtraExtensions()
 
 
 
-
 ///////
 
 	r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compressed_textures", "0", CVAR_ARCHIVE | CVAR_LATCH );

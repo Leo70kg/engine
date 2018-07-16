@@ -201,6 +201,8 @@ qboolean GLimp_GetProcAddresses( void )
 	if ( QGL_VERSION_ATLEAST( 1, 2 ) ) {
 		QGL_1_1_PROCS;
 		QGL_DESKTOP_1_1_PROCS;
+        QGL_1_3_PROCS;
+        QGL_1_5_PROCS;
 	} else {
 		ri.Error( ERR_FATAL, "Unsupported OpenGL Version: %s\n", version );
 	}
@@ -484,7 +486,7 @@ static void InitOpenGL(void)
 	//		- r_(color|depth|stencil)bits
 	//		- r_gamma
 
-    ri.GLimpInit(&glConfig , qfalse);
+    ri.GLimpInit(&glConfig, qfalse);
 
     if ( !GLimp_GetProcAddresses() )
     {
@@ -494,10 +496,6 @@ static void InitOpenGL(void)
         ri.GLimpDestroyWin();
     }
 
-	qglClearColor( 0, 0, 0, 1 );
-	qglClear( GL_COLOR_BUFFER_BIT );
-	ri.GLimpEndFrame();
-
     // These values force the UI to disable driver selection
     glConfig.driverType = GLDRV_ICD;
     glConfig.hardwareType = GLHW_GENERIC;
@@ -505,20 +503,14 @@ static void InitOpenGL(void)
     // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
     glConfig.deviceSupportsGamma = qtrue;
 
-    // get our config strings
-    Q_strncpyz( glConfig.vendor_string, (char *) qglGetString(GL_VENDOR), sizeof( glConfig.vendor_string ) );
-    Q_strncpyz( glConfig.renderer_string, (char *) qglGetString(GL_RENDERER), sizeof( glConfig.renderer_string ) );
-    if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
-        glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;
-    Q_strncpyz( glConfig.version_string, (char *) qglGetString (GL_VERSION), sizeof( glConfig.version_string ) );
-    
-    // manually create extension list if using OpenGL 3
-
-    Q_strncpyz( glConfig.extensions_string, (char *)qglGetString(GL_EXTENSIONS), sizeof( glConfig.extensions_string ) );
-
-
     // GLimp_InitExtraExtensions();
     GLimp_InitExtensions(&glConfig);
+    
+    
+    qglClearColor( 0, 0, 0, 1 );
+	qglClear( GL_COLOR_BUFFER_BIT );
+	ri.GLimpEndFrame();
+    
     // OpenGL driver constants
     qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
 
@@ -527,6 +519,15 @@ static void InitOpenGL(void)
     {
         glConfig.maxTextureSize = 0;
     }
+
+        // get our config strings
+    Q_strncpyz( glConfig.vendor_string, (char *) qglGetString(GL_VENDOR), sizeof( glConfig.vendor_string ) );
+    Q_strncpyz( glConfig.renderer_string, (char *) qglGetString(GL_RENDERER), sizeof( glConfig.renderer_string ) );
+    if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
+        glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;
+    Q_strncpyz( glConfig.version_string, (char *) qglGetString (GL_VERSION), sizeof( glConfig.version_string ) );
+    
+    // manually create extension list if using OpenGL 3
 
 	// set default state
 	GL_SetDefaultState();
@@ -1460,7 +1461,6 @@ void RE_Shutdown( qboolean destroyWindow )
 	ri.Cmd_RemoveCommand("screenshotJPEG");
 	ri.Cmd_RemoveCommand("screenshot");
 	ri.Cmd_RemoveCommand("imagelist");
-	ri.Cmd_RemoveCommand("imagelistmaponly");
 	ri.Cmd_RemoveCommand("shaderlist");
 	ri.Cmd_RemoveCommand("skinlist");
 	ri.Cmd_RemoveCommand("gfxinfo");

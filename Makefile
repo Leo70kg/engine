@@ -308,7 +308,7 @@ ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu" "gnu")
 
   ifeq ($(ARCH),x86_64)
 	OPTIMIZEVM = -O3 -funroll-loops
-	OPTIMIZE = $(OPTIMIZEVM) -ffast-math -march=native
+	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 	HAVE_VM_COMPILED=true
   else
   ifeq ($(ARCH),x86)
@@ -503,12 +503,12 @@ ifdef MINGW
 
 
   ifeq ($(ARCH),x86_64)
-	OPTIMIZEVM = -O3 -funroll-loops
+	OPTIMIZEVM = -O2 -funroll-loops -fomit-frame-pointer -funroll-loops -mmmx -msse2
 	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 	HAVE_VM_COMPILED = true
   endif
   ifeq ($(ARCH),x86)
-	OPTIMIZEVM = -O3 -march=i586
+	OPTIMIZEVM = -O2 -march=i586
 	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 	HAVE_VM_COMPILED = true
   endif
