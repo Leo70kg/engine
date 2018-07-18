@@ -1553,11 +1553,4 @@ size_t RE_SaveJPGToBuffer(byte *buffer, size_t bufSize, int quality,
 void RE_TakeVideoFrame( int width, int height,
 		byte *captureBuffer, byte *encodeBuffer, qboolean motionJpeg );
 
-
-
-void    GLimp_InitExtensions( glconfig_t *glConfig );
-qboolean GLimp_GetProcAddresses( void );
-void GLimp_ClearProcAddresses( void );
-
-
 #endif //TR_LOCAL_H

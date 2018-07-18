@@ -134,7 +134,7 @@ int		max_polyverts;
 
 static cvar_t* r_ext_texture_filter_anisotropic;
 static cvar_t* r_ext_max_anisotropy;
-static int qglMajorVersion, qglMinorVersion;
+
 
 void (APIENTRYP qglActiveTextureARB) (GLenum texture);
 void (APIENTRYP qglClientActiveTextureARB) (GLenum texture);
@@ -162,6 +162,7 @@ qboolean GLimp_GetProcAddresses( void )
 {
 	qboolean success = qtrue;
 	const char *version;
+    int qglMajorVersion, qglMinorVersion;
 
 #ifdef __SDL_NOGETPROCADDR__
 #define GLE( ret, name, ... ) qgl##name = gl#name;
@@ -188,7 +189,8 @@ qboolean GLimp_GetProcAddresses( void )
 
     sscanf( version, "%d.%d", &qglMajorVersion, &qglMinorVersion );
 
-	if ( QGL_VERSION_ATLEAST( 1, 2 ) ) {
+	if ( (qglMajorVersion > 1) || ( ( qglMajorVersion == 1) && (qglMinorVersion >= 2 ) ) )
+    {
 		QGL_1_1_PROCS;
 		QGL_DESKTOP_1_1_PROCS;
         QGL_1_3_PROCS;
@@ -213,9 +215,6 @@ Clear addresses for OpenGL functions.
 void GLimp_ClearProcAddresses( void )
 {
 #define GLE( ret, name, ... ) qgl##name = NULL;
-	qglMajorVersion = 0;
-	qglMinorVersion = 0;
-
     QGL_1_1_PROCS;
     QGL_DESKTOP_1_1_PROCS;
     QGL_1_3_PROCS;

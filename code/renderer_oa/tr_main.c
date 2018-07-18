@@ -866,33 +866,29 @@ static void R_DebugGraphics( void )
 	ri.CM_DrawDebugSurface( R_DebugPolygon );
 }
 
-
-
-
-
 //==========================================================================================
 
-static void R_SetupProjection(viewParms_t *dest)
+static void R_SetupProjection(void)
 {
 
     float zProj = r_zproj->value;
-	float ymax = zProj * tan(dest->fovY * (M_PI / 360.0f));
-	float xmax = zProj * tan(dest->fovX * (M_PI / 360.0f));
+	float ymax = zProj * tan(tr.viewParms.fovY * (M_PI / 360.0f));
+	float xmax = zProj * tan(tr.viewParms.fovX * (M_PI / 360.0f));
 	
-	dest->projectionMatrix[0] = zProj / xmax;
-	dest->projectionMatrix[4] = 0;
-	dest->projectionMatrix[8] = 0;
-	dest->projectionMatrix[12] = 0;
+	tr.viewParms.projectionMatrix[0] = zProj / xmax;
+	tr.viewParms.projectionMatrix[4] = 0;
+	tr.viewParms.projectionMatrix[8] = 0;
+	tr.viewParms.projectionMatrix[12] = 0;
 
-	dest->projectionMatrix[1] = 0;
-	dest->projectionMatrix[5] = zProj / ymax;
-	dest->projectionMatrix[9] = 0;	// normally 0
-	dest->projectionMatrix[13] = 0;
+	tr.viewParms.projectionMatrix[1] = 0;
+	tr.viewParms.projectionMatrix[5] = zProj / ymax;
+	tr.viewParms.projectionMatrix[9] = 0;	// normally 0
+	tr.viewParms.projectionMatrix[13] = 0;
 
-	dest->projectionMatrix[3] = 0;
-	dest->projectionMatrix[7] = 0;
-	dest->projectionMatrix[11] = -1;
-	dest->projectionMatrix[15] = 0;
+	tr.viewParms.projectionMatrix[3] = 0;
+	tr.viewParms.projectionMatrix[7] = 0;
+	tr.viewParms.projectionMatrix[11] = -1;
+	tr.viewParms.projectionMatrix[15] = 0;
 	
 
     
@@ -902,40 +898,92 @@ static void R_SetupProjection(viewParms_t *dest)
     // we got from computing the first two rows of the projection matrix.
 
     // symmetric case can be simplified
-    float length = sqrtf(xmax * xmax + zProj * zProj);
-    float oppleg = xmax / length;
-    float adjleg = zProj / length;
-
+    unsigned char signbits;
+    float length;
+    float oppleg;
+    float adjleg;
     float normal_op[3];
     float normal_adj[3];
+    float N[3];
 
-    VectorScale(dest->or.axis[0], oppleg, normal_op);
-    VectorScale(dest->or.axis[1], adjleg, normal_adj);
-    VectorAdd(normal_op, normal_adj, dest->frustum[0].normal);
-    VectorSubtract(normal_op, normal_adj, dest->frustum[1].normal);
-    //
+    float ofsorigin[3];
+    VectorCopy(tr.viewParms.or.origin, ofsorigin);	
 
-	length = sqrt(ymax * ymax + zProj * zProj);
+    length = sqrtf(xmax * xmax + zProj * zProj);
+    oppleg = xmax / length;
+    adjleg = zProj / length;
+    VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
+    VectorScale(tr.viewParms.or.axis[1], adjleg, normal_adj);
+
+    ////
+    VectorAdd(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[0].normal);
+    tr.viewParms.frustum[0].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[0].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[0].signbits = signbits;
+
+
+    ////
+    VectorSubtract(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[1].normal);
+    tr.viewParms.frustum[1].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[1].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[1].signbits = signbits;
+
+
+	length = sqrtf(ymax * ymax + zProj * zProj);
 	oppleg = ymax / length;
 	adjleg = zProj / length;
+	VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
+	VectorScale(tr.viewParms.or.axis[2], adjleg, normal_adj);
 
-	VectorScale(dest->or.axis[0], oppleg, normal_op);
-	VectorScale(dest->or.axis[2], adjleg, normal_adj);
-    VectorAdd(normal_op, normal_adj, dest->frustum[2].normal);
-    VectorSubtract(normal_op, normal_adj, dest->frustum[3].normal);
+    
+    ////
+    VectorAdd(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[2].normal);
+    tr.viewParms.frustum[2].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[2].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[2].signbits = signbits;
 
-
-    vec3_t ofsorigin;
-
-    VectorCopy(dest->or.origin, ofsorigin);	
-    int i;
-	for (i=0 ; i<4 ; i++)
-    {
-		dest->frustum[i].type = PLANE_NON_AXIAL;
-		dest->frustum[i].dist = DotProduct (ofsorigin, dest->frustum[i].normal);
-		SetPlaneSignbits( &dest->frustum[i] );
-	}
-
+    
+    ////
+    VectorSubtract(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[3].normal);
+    tr.viewParms.frustum[3].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[3].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[3].signbits = signbits;
 }
 
 
@@ -987,7 +1035,7 @@ void R_RenderView(viewParms_t *parms)
 	// set viewParms.world
 	R_RotateForViewer();
 
-	R_SetupProjection(&tr.viewParms);
+	R_SetupProjection();
 
 	R_GenerateDrawSurfs();
 

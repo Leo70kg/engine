@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 
+extern void (APIENTRYP qglActiveTextureARB) (GLenum texture);
+
+
 static unsigned char s_gammatable[256];
 
 static int gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;

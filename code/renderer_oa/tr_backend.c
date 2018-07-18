@@ -22,6 +22,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 //#include "../sdl/sdl_glimp.h"
 
+
+extern void (APIENTRYP qglActiveTextureARB) (GLenum texture);
+extern void (APIENTRYP qglClientActiveTextureARB) (GLenum texture);
+
+
 extern shaderCommands_t tess;
 extern cvar_t* r_flares;
 

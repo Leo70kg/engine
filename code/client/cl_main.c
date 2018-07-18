@@ -3091,9 +3091,6 @@ void CL_ShutdownRef( void )
 }
 
 
-extern int vresWidth;
-extern int vresHeight;
-
 
 /*
 ============================

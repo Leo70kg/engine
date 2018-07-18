@@ -28,9 +28,6 @@ endif
 ifndef BUILD_MISSIONPACK
   BUILD_MISSIONPACK= 1
 endif
-ifndef BUILD_RENDERER_OPENGL2
-  BUILD_RENDERER_OPENGL2=1
-endif
 
 ifndef USE_RENDERER_DLOPEN
 USE_RENDERER_DLOPEN=0
@@ -635,15 +632,10 @@ endif
 
 ifneq ($(BUILD_CLIENT),0)
   ifneq ($(USE_RENDERER_DLOPEN),0)
-	TARGETS += $(B)/$(CLIENTBIN)$(FULLBINEXT) $(B)/renderer_opengl1_$(SHLIBNAME) $(B)/renderer_openarena_$(SHLIBNAME)
-	ifneq ($(BUILD_RENDERER_OPENGL2), 0)
-	  TARGETS += $(B)/renderer_opengl2_$(SHLIBNAME)
-	endif
+	TARGETS += $(B)/$(CLIENTBIN)$(FULLBINEXT)
+	TARGETS += $(B)/renderer_openarena_$(SHLIBNAME) $(B)/renderer_opengl1_$(SHLIBNAME) $(B)/renderer_opengl2_$(SHLIBNAME)
   else
-	TARGETS += $(B)/$(CLIENTBIN)$(FULLBINEXT) $(B)/$(CLIENTBIN)_opengl1$(FULLBINEXT)
-	ifneq ($(BUILD_RENDERER_OPENGL2),0)
-	  TARGETS += $(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT)
-	endif
+	TARGETS += $(B)/$(CLIENTBIN)$(FULLBINEXT) $(B)/$(CLIENTBIN)_opengl1$(FULLBINEXT) $(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT)
   endif
 endif
 
@@ -2548,14 +2540,10 @@ ifneq ($(BUILD_CLIENT),0)
   ifneq ($(USE_RENDERER_DLOPEN),0)
 	$(INSTALL) $(STRIP_FLAG) -m 0755 $(BR)/renderer_opengl1_$(SHLIBNAME) $(COPYBINDIR)/renderer_opengl1_$(SHLIBNAME)
 	$(INSTALL) $(STRIP_FLAG) -m 0755 $(BR)/renderer_openarena_$(SHLIBNAME) $(COPYBINDIR)/renderer_openarena_$(SHLIBNAME)
-	ifneq ($(BUILD_RENDERER_OPENGL2),0)
 	$(INSTALL) $(STRIP_FLAG) -m 0755 $(BR)/renderer_opengl2_$(SHLIBNAME) $(COPYBINDIR)/renderer_opengl2_$(SHLIBNAME)
-	endif
   else
 	$(INSTALL) $(STRIP_FLAG) -m 0755 $(BR)/$(CLIENTBIN)_opengl1$(FULLBINEXT) $(COPYBINDIR)/$(CLIENTBIN)_opengl1$(FULLBINEXT)
-	ifneq ($(BUILD_RENDERER_OPENGL2),0)
 	$(INSTALL) $(STRIP_FLAG) -m 0755 $(BR)/$(CLIENTBIN)_opengl2$(FULLBINEXT) $(COPYBINDIR)/$(CLIENTBIN)_opengl2$(FULLBINEXT)
-	endif
   endif
 endif
 

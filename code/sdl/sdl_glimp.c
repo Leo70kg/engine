@@ -34,7 +34,7 @@ typedef enum
 } rserr_t;
 
 static cvar_t* r_fullscreen;
-static cvar_t* r_availableModes;
+cvar_t* r_availableModes;
 
 
 SDL_Window *SDL_window = NULL;
@@ -51,7 +51,7 @@ static cvar_t* r_stencilbits;
 static cvar_t* r_colorbits;
 static cvar_t* r_depthbits;
 
-
+// display refresh rate
 static cvar_t* r_displayRefresh;
 
 
@@ -118,8 +118,14 @@ GLimp_Shutdown
 */
 void GLimp_Shutdown( void )
 {
-	IN_Shutdown();
     Cmd_RemoveCommand("modelist");
+	Cmd_RemoveCommand("in_restart");
+
+    GLimp_DeleteGLContext();
+    GLimp_DestroyWindow();
+
+    Com_Printf("GL Window and Context deleted. \n");
+	IN_Shutdown();
 	SDL_QuitSubSystem( SDL_INIT_VIDEO );
 }
 
@@ -168,7 +174,6 @@ qboolean GLimp_ExtensionSupported(const char* fun)
 
     return qfalse;
 }
-
 
 static void GLimp_DetectAvailableModes(void)
 {
@@ -280,8 +285,9 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 
 	//Let SDL_GetDisplayMode handle this
 	SDL_Init(SDL_INIT_VIDEO);
-	Com_Printf("SDL_GetNumVideoDisplays(): %d\n", SDL_GetNumVideoDisplays());
-	
+	//Com_Printf("SDL_GetNumVideoDisplays(): %d\n", SDL_GetNumVideoDisplays());
+    SDL_GetNumVideoDisplays();
+
 	int display_mode_count = SDL_GetNumDisplayModes(r_displayIndex->integer);
 	if (display_mode_count < 1)
 	{
@@ -349,7 +355,7 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 	// Destroy existing state if it exists
 	if( SDL_glContext != NULL )
 	{
-		SDL_GL_DeleteContext( SDL_glContext );
+        SDL_GL_DeleteContext( SDL_glContext );
 		SDL_glContext = NULL;
 	}
 
@@ -415,7 +421,6 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 		if (SDL_glContext == NULL)
 		{
 			Com_Printf("SDL_GL_CreateContext failed: %s\n", SDL_GetError());
-			Com_Printf("Reverting to default context\n");
 			
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profileMask);
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, majorVersion);
@@ -428,12 +433,28 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 	}
 	else
 	{
+        SDL_glContext = NULL;
+    /*   
         SDL_glContext = SDL_GL_CreateContext( SDL_window );
 		if( SDL_glContext == NULL )
 		{
 			Com_Printf("SDL_GL_CreateContext failed: %s\n", SDL_GetError( ) );
 		}
+    */    
 	}
+
+
+    if ( !SDL_glContext )
+    {
+        if( ( SDL_glContext = SDL_GL_CreateContext( SDL_window ) ) == NULL )
+        {
+            Com_Printf("SDL_GL_CreateContext failed: %s\n", SDL_GetError( ) );
+            SDL_DestroyWindow( SDL_window );
+            SDL_window = NULL;
+        }
+
+    }
+
 
     #define SWAP_INTERVAL   0
 	if( SDL_GL_SetSwapInterval( SWAP_INTERVAL ) == -1 )
@@ -484,9 +505,6 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
     return RSERR_INVALID_MODE;
 }
 
-
-
-#define R_MODE_FALLBACK 3 // 640 * 480
 
 /*
  * This routine is responsible for initializing the OS specific portions of OpenGL
@@ -541,7 +559,9 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
     		Com_Printf(" SDL using driver \"%s\"\n", SDL_GetCurrentVideoDriver( ));
         }
     }
- 
+
+
+    
 	if( RSERR_OK == GLimp_SetMode(r_mode->integer, r_fullscreen->integer, glConfig, coreContext) )
 	{
         goto success;
@@ -549,9 +569,9 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
     else
     {
         Com_Printf("Setting r_mode=%d, r_fullscreen=%d failed, falling back on r_mode=%d\n",
-                r_mode->integer, r_fullscreen->integer, R_MODE_FALLBACK );
+                r_mode->integer, r_fullscreen->integer, 3 );
 
-        if( RSERR_OK == GLimp_SetMode(R_MODE_FALLBACK, qfalse, glConfig, coreContext) )
+        if( RSERR_OK == GLimp_SetMode(3, qfalse, glConfig, coreContext) )
         {
             goto success;
         }
@@ -570,7 +590,6 @@ success:
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	IN_Init();
 
-    Com_Printf("\n-------- Glimp_Init() finished! --------\n");
 }
 
 

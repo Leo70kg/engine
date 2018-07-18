@@ -143,7 +143,10 @@ cvar_t	*r_ntsc;		// Leilei - ntsc / composite signals
 
 static cvar_t* r_ext_texture_filter_anisotropic;
 static cvar_t* r_ext_max_anisotropy;
-static int qglMajorVersion, qglMinorVersion;
+
+// not used.
+static cvar_t* r_ext_compressed_textures;
+
 
 #define GLE(ret, name, ...) name##proc * qgl##name;
 QGL_1_1_PROCS;
@@ -153,12 +156,22 @@ QGL_1_5_PROCS;
 #undef GLE
 
 
-void (APIENTRYP qglActiveTextureARB) (GLenum texture);
-void (APIENTRYP qglClientActiveTextureARB) (GLenum texture);
-void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
+void (APIENTRYP qglActiveTextureARB) (GLenum texture) = NULL;
+void (APIENTRYP qglClientActiveTextureARB) (GLenum texture) = NULL;
+void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t) = NULL;
 
-void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
-void (APIENTRYP qglUnlockArraysEXT) (void);
+void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count) = NULL;
+void (APIENTRYP qglUnlockArraysEXT) (void) = NULL;
+
+
+static qboolean GLimp_HaveExtension(const char *ext)
+{
+	const char *ptr = Q_stristr( glConfig.extensions_string, ext );
+	if (ptr == NULL)
+		return qfalse;
+	ptr += strlen(ext);
+	return ((*ptr == ' ') || (*ptr == '\0'));  // verify it's complete string.
+}
 
 /*
 ===============
@@ -167,10 +180,9 @@ GLimp_GetProcAddresses
 Get addresses for OpenGL functions.
 ===============
 */
-qboolean GLimp_GetProcAddresses( void )
+static qboolean GLimp_GetProcAddresses( void )
 {
-	qboolean success = qtrue;
-	const char *version;
+    int qglMajorVersion, qglMinorVersion;
 
 #ifdef __SDL_NOGETPROCADDR__
 #define GLE( ret, name, ... ) qgl##name = gl#name;
@@ -178,7 +190,6 @@ qboolean GLimp_GetProcAddresses( void )
 #define GLE( ret, name, ... ) qgl##name = (name##proc *) ri.GLimpGetProcAddress("gl" #name); \
 	if ( qgl##name == NULL ) { \
 		ri.Error(ERR_FATAL, "Missing OpenGL function %s\n", "gl" #name ); \
-		success = qfalse; \
 	}
 #endif
 
@@ -189,73 +200,84 @@ qboolean GLimp_GetProcAddresses( void )
 		ri.Error( ERR_FATAL, "glGetString is NULL" );
 	}
 
-	version = (const char *)qglGetString( GL_VERSION );
-    printf("%s\n", version);
-	if ( !version ) {
+	const char * pStr = (const char *)qglGetString( GL_VERSION );
+	if ( !pStr )
+    {
 		ri.Error( ERR_FATAL, "GL_VERSION is NULL\n" );
 	}
 
+	sscanf( pStr, "%d.%d", &qglMajorVersion, &qglMinorVersion );
 
-	sscanf( version, "%d.%d", &qglMajorVersion, &qglMinorVersion );
 
-	if ( QGL_VERSION_ATLEAST( 1, 2 ) ) {
+	if ( (qglMajorVersion > 1) || ( (qglMajorVersion == 1) && (qglMinorVersion >= 2) ) )
+    {
 		QGL_1_1_PROCS;
 		QGL_DESKTOP_1_1_PROCS;
         QGL_1_3_PROCS;
         QGL_1_5_PROCS;
 	} else {
-		ri.Error( ERR_FATAL, "Unsupported OpenGL Version: %s\n", version );
+		ri.Error( ERR_FATAL, "Unsupported OpenGL Version: %s\n", pStr);
 	}
 
-
 #undef GLE
-
-	return success;
-}
+	ri.Printf( PRINT_ALL, "\n...Using OpenGL %s\n", pStr);
 
 
-/*
-===============
-GLimp_ClearProcAddresses
+    // get our config strings
 
-Clear addresses for OpenGL functions.
-===============
-*/
-void GLimp_ClearProcAddresses( void )
-{
-#define GLE( ret, name, ... ) qgl##name = NULL;
+    strcpy( glConfig.version_string, pStr);
+    glConfig.version_string[strlen(pStr)+1] = 0;
 
-	qglMajorVersion = 0;
-	qglMinorVersion = 0;
+    pStr = (char *) qglGetString(GL_VENDOR);
+    strcpy(glConfig.vendor_string, pStr);
+    glConfig.renderer_string[strlen(pStr)+1] = 0;
 
-    QGL_1_1_PROCS;
-    QGL_DESKTOP_1_1_PROCS;
-    QGL_1_3_PROCS;
-    QGL_1_5_PROCS;
-#undef GLE
-}
+    pStr = (char *) qglGetString(GL_RENDERER);
+    strcpy(glConfig.renderer_string, pStr);
+    glConfig.renderer_string[strlen(pStr)+1] = 0;
 
-void GLimp_InitExtensions( glconfig_t *glConfig )
-{
+    pStr = (char *)qglGetString(GL_EXTENSIONS);
+    strcpy(glConfig.extensions_string, pStr);
+    glConfig.extensions_string[strlen(pStr)+1] = 0;
 
-    r_ext_texture_filter_anisotropic = ri.Cvar_Get( "r_ext_texture_filter_anisotropic", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "2", CVAR_ARCHIVE | CVAR_LATCH );
 
 	ri.Printf( PRINT_ALL,  "\n...Initializing OpenGL extensions\n" );
 
 
-	// GL_EXT_texture_env_add
-	glConfig->textureEnvAddAvailable = qfalse;
-	if ( ri.GLimpExtensionSupported( "EXT_texture_env_add" ) )
+	// GL_EXT_texture_compression_s3tc
+    glConfig.textureCompression = TC_NONE;
+	if ( GLimp_HaveExtension( "GL_ARB_texture_compression" ) &&
+	     GLimp_HaveExtension( "GL_EXT_texture_compression_s3tc" ) )
 	{
-		if ( ri.GLimpExtensionSupported( "GL_EXT_texture_env_add" ) )
+		if ( r_ext_compressed_textures->value )
 		{
-			glConfig->textureEnvAddAvailable = qtrue;
+			glConfig.textureCompression = TC_S3TC_ARB;
+			ri.Printf( PRINT_ALL, "...using GL_EXT_texture_compression_s3tc\n" );
+		}
+		else
+		{
+			ri.Printf( PRINT_ALL, "...ignoring GL_EXT_texture_compression_s3tc\n" );
+		}
+	}
+	else
+	{
+		ri.Printf( PRINT_ALL, "...GL_EXT_texture_compression_s3tc not found\n" );
+	}
+
+
+
+	// GL_EXT_texture_env_add
+	glConfig.textureEnvAddAvailable = qfalse;
+	if ( GLimp_HaveExtension( "EXT_texture_env_add" ) )
+	{
+		if ( GLimp_HaveExtension( "GL_EXT_texture_env_add" ) )
+		{
+			glConfig.textureEnvAddAvailable = qtrue;
 			ri.Printf( PRINT_ALL, "...using GL_EXT_texture_env_add\n" );
 		}
 		else
 		{
-			glConfig->textureEnvAddAvailable = qfalse;
+			glConfig.textureEnvAddAvailable = qfalse;
 			ri.Printf( PRINT_ALL, "...ignoring GL_EXT_texture_env_add\n" );
 		}
 	}
@@ -268,7 +290,7 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 	qglMultiTexCoord2fARB = NULL;
 	qglActiveTextureARB = NULL;
 	qglClientActiveTextureARB = NULL;
-	if ( ri.GLimpExtensionSupported( "GL_ARB_multitexture" ) )
+	if ( GLimp_HaveExtension( "GL_ARB_multitexture" ) )
 	{
 		qglMultiTexCoord2fARB = ri.GLimpGetProcAddress( "glMultiTexCoord2fARB" );
 		qglActiveTextureARB = ri.GLimpGetProcAddress( "glActiveTextureARB" );
@@ -278,8 +300,8 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 		{
 			GLint glint = 0;
 			qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &glint );
-			glConfig->numTextureUnits = (int) glint;
-			if ( glConfig->numTextureUnits > 1 )
+			glConfig.numTextureUnits = (int) glint;
+			if ( glConfig.numTextureUnits > 1 )
 			{
 				ri.Printf( PRINT_ALL, "...using GL_ARB_multitexture\n" );
 			}
@@ -298,7 +320,7 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 	}
 
 	// GL_EXT_compiled_vertex_array
-	if ( ri.GLimpExtensionSupported( "GL_EXT_compiled_vertex_array" ) )
+	if ( GLimp_HaveExtension( "GL_EXT_compiled_vertex_array" ) )
 	{
 		ri.Printf( PRINT_ALL,  "...using GL_EXT_compiled_vertex_array\n" );
 		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) ri.GLimpGetProcAddress( "glLockArraysEXT" );
@@ -313,7 +335,7 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 		ri.Printf( PRINT_ALL, "...GL_EXT_compiled_vertex_array not found\n" );
 	}
 
-	if ( ri.GLimpExtensionSupported( "GL_EXT_texture_filter_anisotropic" ) )
+	if ( GLimp_HaveExtension( "GL_EXT_texture_filter_anisotropic" ) )
 	{
 		if ( r_ext_texture_filter_anisotropic->integer )
         {
@@ -329,7 +351,6 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
                 sprintf(target_string, "%d", maxAnisotropy);
 				ri.Printf( PRINT_ALL,  "...using GL_EXT_texture_filter_anisotropic (max: %i)\n", maxAnisotropy );
                 ri.Cvar_Set( "r_ext_max_anisotropy", target_string);
-
 			}
 		}
 		else
@@ -341,7 +362,29 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 	{
 		ri.Printf( PRINT_ALL, "...GL_EXT_texture_filter_anisotropic not found\n" );
 	}
+
+
+	return qtrue;
 }
+
+
+/*
+===============
+GLimp_ClearProcAddresses
+
+Clear addresses for OpenGL functions.
+===============
+*/
+static void GLimp_ClearProcAddresses(void)
+{
+#define GLE( ret, name, ... ) qgl##name = NULL;
+    QGL_1_1_PROCS;
+    QGL_DESKTOP_1_1_PROCS;
+    QGL_1_3_PROCS;
+    QGL_1_5_PROCS;
+#undef GLE
+}
+
 
 
 static void GL_SetDefaultState(void)
@@ -464,9 +507,8 @@ static void GfxInfo_f( void )
 	ri.Printf( PRINT_ALL, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
 	ri.Printf( PRINT_ALL, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
 	ri.Printf( PRINT_ALL, "compressed textures: %s\n", enablestrings[glConfig.textureCompression!=TC_NONE] );
-//	ri.Printf( PRINT_ALL, "glsl programs: %s\n", enablestrings[vertexShaders] );
 
-	if ( r_finish->integer ) {
+	if ( r_finish->integer) {
 		ri.Printf( PRINT_ALL, "Forcing glFinish\n" );
 	}
 }
@@ -486,48 +528,40 @@ static void InitOpenGL(void)
 	//		- r_(color|depth|stencil)bits
 	//		- r_gamma
 
-    ri.GLimpInit(&glConfig, qfalse);
+	if ( glConfig.vidWidth == 0 )
+	{
+        ri.GLimpInit(&glConfig, qfalse);
+        
+        if ( !GLimp_GetProcAddresses() )
+        {
+            ri.Error(ERR_FATAL, "GLimp_GetProcAddresses() failed\n" );
+            GLimp_ClearProcAddresses();
+            ri.GLimpDeleteCtx();
+            ri.GLimpDestroyWin();
+        }
 
-    if ( !GLimp_GetProcAddresses() )
-    {
-        ri.Error(ERR_FATAL, "GLimp_GetProcAddresses() failed\n" );
-        GLimp_ClearProcAddresses();
-        ri.GLimpDeleteCtx();
-        ri.GLimpDestroyWin();
-    }
+        // These values force the UI to disable driver selection
+        glConfig.driverType = GLDRV_ICD;
+        glConfig.hardwareType = GLHW_GENERIC;
 
-    // These values force the UI to disable driver selection
-    glConfig.driverType = GLDRV_ICD;
-    glConfig.hardwareType = GLHW_GENERIC;
+        // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
+        glConfig.deviceSupportsGamma = qtrue;
 
-    // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
-    glConfig.deviceSupportsGamma = qtrue;
 
-    // GLimp_InitExtraExtensions();
-    GLimp_InitExtensions(&glConfig);
-    
-    
-    qglClearColor( 0, 0, 0, 1 );
-	qglClear( GL_COLOR_BUFFER_BIT );
-	ri.GLimpEndFrame();
-    
-    // OpenGL driver constants
-    qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
+        qglClearColor( 0, 0, 0, 1 );
+        qglClear( GL_COLOR_BUFFER_BIT );
+        ri.GLimpEndFrame();
+        
+        // OpenGL driver constants
+        qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
 
-    // stubbed or broken drivers may have reported 0...
-    if( glConfig.maxTextureSize < 0 )
-    {
-        glConfig.maxTextureSize = 0;
-    }
+        // stubbed or broken drivers may have reported 0...
+        if( glConfig.maxTextureSize < 0 )
+        {
+            glConfig.maxTextureSize = 0;
+        }
+	}
 
-        // get our config strings
-    Q_strncpyz( glConfig.vendor_string, (char *) qglGetString(GL_VENDOR), sizeof( glConfig.vendor_string ) );
-    Q_strncpyz( glConfig.renderer_string, (char *) qglGetString(GL_RENDERER), sizeof( glConfig.renderer_string ) );
-    if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
-        glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;
-    Q_strncpyz( glConfig.version_string, (char *) qglGetString (GL_VERSION), sizeof( glConfig.version_string ) );
-    
-    // manually create extension list if using OpenGL 3
 
 	// set default state
 	GL_SetDefaultState();
@@ -1168,6 +1202,7 @@ static void R_Register( void )
 	r_iconBits = ri.Cvar_Get ("r_iconBits", "0", CVAR_ARCHIVE | CVAR_LATCH );	// leilei - icon bits
 
 
+
 	// make sure all the commands added here are also
 	// removed in R_Shutdown
 	ri.Cmd_AddCommand( "imagelist", R_ImageList_f );
@@ -1482,6 +1517,8 @@ void RE_Shutdown( qboolean destroyWindow )
 
 		memset(&glConfig, 0, sizeof( glConfig ));
 		memset(&glState, 0, sizeof( glState ));
+
+        GLimp_ClearProcAddresses();
 	}
 
 	tr.registered = qfalse;
@@ -1497,6 +1534,11 @@ void R_Init(void)
 	unsigned char *ptr;
 
 	ri.Printf( PRINT_ALL, "-------- R_Init --------\n" );
+
+    r_ext_texture_filter_anisotropic = ri.Cvar_Get( "r_ext_texture_filter_anisotropic", "0", CVAR_ARCHIVE | CVAR_LATCH );
+	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "2", CVAR_ARCHIVE | CVAR_LATCH );
+
+    r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compressed_textures", "0", CVAR_ARCHIVE | CVAR_LATCH );
 
 	// clear all our internal state
 	memset( &tr, 0, sizeof( tr ) );

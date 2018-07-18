@@ -1588,7 +1588,7 @@ void RB_EndSurface( void )
 	}
 
 #if R_SHOWNORMALS
-		DrawNormals (&tess);
+	DrawNormals (&tess);
 #endif
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;

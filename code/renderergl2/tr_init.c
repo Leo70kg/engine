@@ -193,13 +193,10 @@ cvar_t	*r_maxpolyverts;
 int		max_polyverts;
 
 
-
-
 cvar_t* r_ext_compressed_textures;
 static cvar_t* r_ext_texture_filter_anisotropic;
 static cvar_t* r_ext_max_anisotropy;
-static int qglMajorVersion, qglMinorVersion;
-//int qglesMajorVersion, qglesMinorVersion;
+
 
 #define GLE(ret, name, ...) name##proc * qgl##name;
 QGL_1_1_PROCS;
@@ -221,7 +218,7 @@ void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
 void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
 void (APIENTRYP qglUnlockArraysEXT) (void);
 
-
+qboolean q_gl_version_at_least_3_2;
 
 /*
 ===============
@@ -234,7 +231,8 @@ qboolean GLimp_GetProcAddresses( void )
 {
 	qboolean success = qtrue;
 	const char *version;
-
+    int qglMajorVersion, qglMinorVersion;
+//int qglesMajorVersion, qglesMinorVersion;
 #ifdef __SDL_NOGETPROCADDR__
 #define GLE( ret, name, ... ) qgl##name = gl#name;
 #else
@@ -260,16 +258,24 @@ qboolean GLimp_GetProcAddresses( void )
 
 	sscanf( version, "%d.%d", &qglMajorVersion, &qglMinorVersion );
 
-	if ( QGL_VERSION_ATLEAST( 1, 2 ) ) {
+	if ( (qglMajorVersion > 1) || ( ( qglMajorVersion == 1) && (qglMinorVersion >= 2 ) ) ) {
 		QGL_1_1_PROCS;
 		QGL_DESKTOP_1_1_PROCS;
 	}else {
 		ri.Error( ERR_FATAL, "Unsupported OpenGL Version: %s\n", version );
 	}
 
-	if ( QGL_VERSION_ATLEAST( 3, 0 ) ) {
+	if ( (qglMajorVersion > 3) || ( ( qglMajorVersion == 3) && (qglMinorVersion >= 2 ) ) )
+    {
 		QGL_3_0_PROCS;
+        q_gl_version_at_least_3_2 = 1;
 	}
+    else
+    {
+       q_gl_version_at_least_3_2 = 0;
+    }
+
+
 #undef GLE
 
 	return success;
@@ -286,12 +292,6 @@ Clear addresses for OpenGL functions.
 void GLimp_ClearProcAddresses( void )
 {
 #define GLE( ret, name, ... ) qgl##name = NULL;
-
-	qglMajorVersion = 0;
-	qglMinorVersion = 0;
-	//qglesMajorVersion = 0;
-	//qglesMinorVersion = 0;
-
     QGL_1_1_PROCS;
     QGL_DESKTOP_1_1_PROCS;
     QGL_1_3_PROCS;
@@ -301,15 +301,12 @@ void GLimp_ClearProcAddresses( void )
     QGL_ARB_vertex_array_object_PROCS;
     QGL_EXT_direct_state_access_PROCS;
     QGL_3_0_PROCS;
-
 #undef GLE
 }
 
 
 
-
-
-void GLimp_InitExtensions( glconfig_t *glConfig )
+static void GLimp_InitExtensions(void)
 {
     r_ext_texture_filter_anisotropic = ri.Cvar_Get( "r_ext_texture_filter_anisotropic", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "2", CVAR_ARCHIVE | CVAR_LATCH );
@@ -317,17 +314,17 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 
 
 	// GL_EXT_texture_env_add
-	glConfig->textureEnvAddAvailable = qfalse;
+	glConfig.textureEnvAddAvailable = qfalse;
 	if ( ri.GLimpExtensionSupported( "EXT_texture_env_add" ) )
 	{
 		if ( ri.GLimpExtensionSupported( "GL_EXT_texture_env_add" ) )
 		{
-			glConfig->textureEnvAddAvailable = qtrue;
+			glConfig.textureEnvAddAvailable = qtrue;
 			ri.Printf( PRINT_ALL, "...using GL_EXT_texture_env_add\n" );
 		}
 		else
 		{
-			glConfig->textureEnvAddAvailable = qfalse;
+			glConfig.textureEnvAddAvailable = qfalse;
 			ri.Printf( PRINT_ALL, "...ignoring GL_EXT_texture_env_add\n" );
 		}
 	}
@@ -350,8 +347,8 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 		{
 			GLint glint = 0;
 			qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &glint );
-			glConfig->numTextureUnits = (int) glint;
-			if ( glConfig->numTextureUnits > 1 )
+			glConfig.numTextureUnits = (int) glint;
+			if ( glConfig.numTextureUnits > 1 )
 			{
 				ri.Printf( PRINT_ALL, "...using GL_ARB_multitexture\n" );
 			}
@@ -368,6 +365,7 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 	{
 		ri.Printf( PRINT_ALL,  "...GL_ARB_multitexture not found\n" );
 	}
+
 
 	// GL_EXT_compiled_vertex_array
 	if ( ri.GLimpExtensionSupported( "GL_EXT_compiled_vertex_array" ) )
@@ -413,24 +411,10 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 	{
 		ri.Printf( PRINT_ALL, "...GL_EXT_texture_filter_anisotropic not found\n" );
 	}
-}
-
-
-void GLimp_InitExtraExtensions()
-{
 
 	char *extension;
 	const char* result[3] = { "...ignoring %s\n", "...using %s\n", "...%s not found\n" };
-	qboolean q_gl_version_at_least_3_0;
-	qboolean q_gl_version_at_least_3_2;
 
-	// Check OpenGL version
-	if ( !QGL_VERSION_ATLEAST( 2, 0 ) )
-		ri.Error(ERR_FATAL, "OpenGL 2.0 required!");
-	ri.Printf(PRINT_ALL, "...using OpenGL %s\n", glConfig.version_string);
-
-	q_gl_version_at_least_3_0 = QGL_VERSION_ATLEAST( 3, 0 );
-	q_gl_version_at_least_3_2 = QGL_VERSION_ATLEAST( 3, 2 );
 
 	// Check if we need Intel graphics specific fixes.
 	glRefConfig.intelGraphics = qfalse;
@@ -509,7 +493,7 @@ void GLimp_InitExtraExtensions()
 	glRefConfig.framebufferObject = qfalse;
 	glRefConfig.framebufferBlit = qfalse;
 	glRefConfig.framebufferMultisample = qfalse;
-	if (q_gl_version_at_least_3_0 || ri.GLimpExtensionSupported(extension))
+	if (q_gl_version_at_least_3_2 || ri.GLimpExtensionSupported(extension))
 	{
 		glRefConfig.framebufferObject = !!r_ext_framebuffer_object->integer;
 		glRefConfig.framebufferBlit = qtrue;
@@ -530,9 +514,9 @@ void GLimp_InitExtraExtensions()
 	// OpenGL 3.0 - GL_ARB_vertex_array_object
 	extension = "GL_ARB_vertex_array_object";
 	glRefConfig.vertexArrayObject = qfalse;
-	if (q_gl_version_at_least_3_0 || ri.GLimpExtensionSupported(extension))
+	if (q_gl_version_at_least_3_2 || ri.GLimpExtensionSupported(extension))
 	{
-		if (q_gl_version_at_least_3_0)
+		if (q_gl_version_at_least_3_2)
 		{
 			// force VAO, core context requires it
 			glRefConfig.vertexArrayObject = qtrue;
@@ -554,7 +538,7 @@ void GLimp_InitExtraExtensions()
 	// OpenGL 3.0 - GL_ARB_texture_float
 	extension = "GL_ARB_texture_float";
 	glRefConfig.textureFloat = qfalse;
-	if (q_gl_version_at_least_3_0 || ri.GLimpExtensionSupported(extension))
+	if (q_gl_version_at_least_3_2 || ri.GLimpExtensionSupported(extension))
 	{
 		glRefConfig.textureFloat = !!r_ext_texture_float->integer;
 
@@ -701,8 +685,6 @@ void GLimp_InitExtraExtensions()
 
 
 
-
-
 /*
 ** InitOpenGL
 **
@@ -778,11 +760,10 @@ static void InitOpenGL( void )
         // manually create extension list if using OpenGL 3
         if( qglGetStringi )
         {
-            int i, numExtensions, extensionLength, listLength;
+            int i, numExtensions, extensionLength, listLength = 0;
             const char *extension;
 
             qglGetIntegerv( GL_NUM_EXTENSIONS, &numExtensions );
-            listLength = 0;
 
             for ( i = 0; i < numExtensions; i++ )
             {
@@ -807,9 +788,7 @@ static void InitOpenGL( void )
         }
 
             // initialize extensions
-        GLimp_InitExtensions(&glConfig);
-
-		GLimp_InitExtraExtensions();
+        GLimp_InitExtensions();
 
 		strcpy( renderer_buffer, glConfig.renderer_string );
 		Q_strlwr( renderer_buffer );
@@ -1946,16 +1925,19 @@ void RE_Shutdown( qboolean destroyWindow ) {
 	}
 
 	R_DoneFreeType();
+	tr.registered = qfalse;
 
 	// shut down platform specific OpenGL stuff
-	if ( destroyWindow ) {
-		ri.GLimpShutdown();
-
+	if ( destroyWindow )
+    {
+        ri.GLimpShutdown();
 		memset( &glConfig, 0, sizeof( glConfig ) );
 		memset( &glState, 0, sizeof( glState ) );
+
+        GLimp_ClearProcAddresses();
+
 	}
 
-	tr.registered = qfalse;
 }
 
 

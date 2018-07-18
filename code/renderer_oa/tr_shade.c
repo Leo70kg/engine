@@ -30,6 +30,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 
+extern void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
+extern void (APIENTRYP qglUnlockArraysEXT) (void);
+extern void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
+
 
 
 

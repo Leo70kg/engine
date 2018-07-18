@@ -33,7 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/qgl.h"
 
 extern refimport_t ri;
-extern glconfig_t glConfig;	
+
 
 
 union uInt4bytes{
@@ -1330,11 +1330,6 @@ typedef enum {
 
 
 ///////////////////////////// tr_init.c  //////////////////////////////
-
-void    GLimp_InitExtensions( glconfig_t *glConfig );
-qboolean GLimp_GetProcAddresses( void );
-void GLimp_ClearProcAddresses( void );
-
 
 // outside of TR since it shouldn't be cleared during ref re-init
 extern glstate_t glState;

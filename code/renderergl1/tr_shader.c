@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
+extern void (APIENTRYP qglActiveTextureARB) (GLenum texture);
+
+
 static char *s_shaderText;
 
 // the shader is parsed into these global variables, then copied into

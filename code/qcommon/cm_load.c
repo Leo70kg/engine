@@ -567,7 +567,7 @@ void CM_LoadMap( const char *name, qboolean clientload, int *checksum ) {
 		int				*i;
 		void			*v;
 	} buf;
-	int				i;
+
 	dheader_t		header;
 	int				length;
 	static unsigned	last_checksum;
@@ -618,9 +618,14 @@ void CM_LoadMap( const char *name, qboolean clientload, int *checksum ) {
 	*checksum = last_checksum;
 
 	header = *(dheader_t *)buf.i;
-	for (i=0 ; i<sizeof(dheader_t)/4 ; i++) {
-		((int *)&header)[i] = LittleLong ( ((int *)&header)[i]);
+
+#if defined( Q3_BIG_ENDIAN )
+    int	i;
+    for (i=0 ; i<sizeof(dheader_t)/4 ; i++)
+    {
+		((int *)&header)[i] = LongSwap( ((int *)&header)[i]);
 	}
+#endif
 
 	if ( header.version != BSP_VERSION ) {
 		Com_Error (ERR_DROP, "CM_LoadMap: %s has wrong version number (%i should be %i)"

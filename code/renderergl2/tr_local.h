@@ -1933,17 +1933,6 @@ void    R_RemapShader(const char *oldShader, const char *newShader, const char *
 /*
 ====================================================================
 
-IMPLEMENTATION SPECIFIC FUNCTIONS
-
-====================================================================
-*/
-qboolean GLimp_GetProcAddresses( void );
-void    GLimp_ClearProcAddresses( void );
-void	GLimp_InitExtraExtensions( void );
-void    GLimp_InitExtensions( glconfig_t *glConfig );
-/*
-====================================================================
-
 TESSELATOR/SHADER DECLARATIONS
 
 ====================================================================
