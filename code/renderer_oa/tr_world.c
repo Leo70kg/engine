@@ -650,14 +650,6 @@ qboolean R_inPVS( const vec3_t p1, const vec3_t p2 )
 
 void R_AddWorldSurfaces (void)
 {
-	if ( !r_drawworld->integer ) {
-		return;
-	}
-
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
-		return;
-	}
-
 	tr.currentEntityNum = REFENTITYNUM_WORLD;
 	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_REFENTITYNUM_SHIFT;
 

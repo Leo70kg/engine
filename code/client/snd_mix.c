@@ -27,9 +27,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 static portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 static int snd_vol;
 
-int*     snd_p;  
-int      snd_linear_count;
-short*   snd_out;
+static int*     snd_p;  
+static int      snd_linear_count;
+static short*   snd_out;
 
 #if	!id386                                        // if configured not to use asm
 
@@ -110,10 +110,10 @@ LClampDone2:
 
 void S_TransferStereo16 (unsigned long *pbuf, int endtime)
 {
-	int		ls_paintedtime;
 	
-	snd_p = (int *) paintbuffer;
-	ls_paintedtime = s_paintedtime;
+	//snd_p = (int *) paintbuffer;
+    snd_p = &paintbuffer[0].left;
+	int ls_paintedtime = s_paintedtime;
 
 	while (ls_paintedtime < endtime)
 	{
@@ -150,34 +150,35 @@ void S_TransferPaintBuffer(int endtime)
 	int 	out_idx;
 	int 	count;
 	int 	out_mask;
-	int 	step;
 	int		val;
-	unsigned long *pbuf;
-
-	pbuf = (unsigned long *)dma.buffer;
+	unsigned long *pbuf = (unsigned long *)dma.buffer;
 
 
-	if ( s_testsound->integer ) {
-		int		i;
+	if ( s_testsound->integer )
+    {
+		int	i;
 
 		// write a fixed sine wave
 		count = (endtime - s_paintedtime);
-		for (i=0 ; i<count ; i++)
-			paintbuffer[i].left = paintbuffer[i].right = sin((s_paintedtime+i)*0.1)*20000*256;
+		for (i=0; i<count; i++)
+			paintbuffer[i].left = paintbuffer[i].right 
+                = sin((s_paintedtime+i)*0.1)*(20000*256);
 	}
 
 
-	if (dma.samplebits == 16 && dma.channels == 2)
+	if ((dma.samplebits == 16) && (dma.channels == 2))
 	{	// optimized case
-		S_TransferStereo16 (pbuf, endtime);
+		S_TransferStereo16(pbuf, endtime);
 	}
 	else
 	{	// general case
-		int* p = (int *) paintbuffer;
+		int* p = &paintbuffer[0].left;
+        //snd_p = (int *) paintbuffer;
+
 		count = (endtime - s_paintedtime) * dma.channels;
 		out_mask = dma.samples - 1; 
 		out_idx = s_paintedtime * dma.channels & out_mask;
-		step = 3 - dma.channels;
+		int step = 3 - dma.channels;
 
 		if ((dma.isfloat) && (dma.samplebits == 32))
 		{

@@ -106,6 +106,55 @@ static cvar_t* r_flareFade;
 
 
 /*
+==========================
+R_TransformModelToClip
+
+==========================
+*/
+static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,	vec4_t eye, vec4_t dst )
+{
+	int i;
+
+	for ( i = 0 ; i < 4 ; i++ )
+    {
+		eye[i] = 
+			src[0] * modelMatrix[ i + 0 * 4 ] +
+			src[1] * modelMatrix[ i + 1 * 4 ] +
+			src[2] * modelMatrix[ i + 2 * 4 ] +
+                 1 * modelMatrix[ i + 3 * 4 ];
+	}
+
+	for ( i = 0 ; i < 4 ; i++ )
+    {
+		dst[i] = 
+			eye[0] * projectionMatrix[ i + 0 * 4 ] +
+			eye[1] * projectionMatrix[ i + 1 * 4 ] +
+			eye[2] * projectionMatrix[ i + 2 * 4 ] +
+			eye[3] * projectionMatrix[ i + 3 * 4 ];
+	}
+}
+
+
+/*
+==========================
+R_TransformClipToWindow
+==========================
+*/
+static void R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t normalized, vec4_t window )
+{
+	normalized[0] = clip[0] / clip[3];
+	normalized[1] = clip[1] / clip[3];
+	normalized[2] = ( clip[2] + clip[3] ) / ( 2 * clip[3] );
+
+	window[0] = 0.5f * ( 1.0f + normalized[0] ) * view->viewportWidth;
+	window[1] = 0.5f * ( 1.0f + normalized[1] ) * view->viewportHeight;
+	window[2] = normalized[2];
+
+	window[0] = (int) ( window[0] + 0.5 );
+	window[1] = (int) ( window[1] + 0.5 );
+}
+
+/*
 ==================
 RB_AddFlare: This is called at surface tesselation time
 ==================
@@ -141,7 +190,7 @@ void RB_AddFlare(srfFlare_t *surface, int fogNum, vec3_t point, vec3_t color, ve
 	// check to see if the point is completely off screen
 	for ( i = 0 ; i < 3 ; i++ )
     {
-		if ( clip[i] >= clip[3] || clip[i] <= -clip[3] )
+		if ( (clip[i] >= clip[3]) || (clip[i] <= -clip[3]) )
         {
 			return;
 		}
@@ -662,7 +711,7 @@ void RB_RenderFlares(void)
 }
 
 
-
+/*
 void RB_DrawSunFlare( void )
 {
 	vec3_t origin, vec1, vec2;
@@ -724,7 +773,7 @@ void RB_DrawSunFlare( void )
 
 	backEnd.doneSunFlare = qtrue;
 }
-
+*/
 
 // Init and Flares
 void R_InitFlares( void )

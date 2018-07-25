@@ -3256,7 +3256,7 @@ void CL_InitRef(void)
     ri.GLimpDestroyWin = GLimp_DestroyWindow;
 
     ri.GLimpGetProcAddress = GLimp_GetProcAddress;
-    ri.GLimpExtensionSupported = GLimp_ExtensionSupported;
+//    ri.GLimpExtensionSupported = GLimp_ExtensionSupported;
 
 	ret = GetRefAPI(REF_API_VERSION, &ri);
 

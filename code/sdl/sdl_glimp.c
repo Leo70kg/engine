@@ -54,7 +54,6 @@ static cvar_t* r_depthbits;
 // display refresh rate
 static cvar_t* r_displayRefresh;
 
-
 // not used cvar, keep it for backward compatibility
 static cvar_t* r_stereoSeparation;
 static cvar_t* r_displayIndex;
@@ -164,16 +163,6 @@ void* GLimp_GetProcAddress(const char* fun)
     return SDL_GL_GetProcAddress(fun);
 }
 
-
-qboolean GLimp_ExtensionSupported(const char* fun)
-{
-	if(SDL_GL_ExtensionSupported(fun))
-	{
-		return qtrue;
-	}
-
-    return qfalse;
-}
 
 static void GLimp_DetectAvailableModes(void)
 {
@@ -434,25 +423,17 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 	else
 	{
         SDL_glContext = NULL;
-    /*   
-        SDL_glContext = SDL_GL_CreateContext( SDL_window );
-		if( SDL_glContext == NULL )
-		{
-			Com_Printf("SDL_GL_CreateContext failed: %s\n", SDL_GetError( ) );
-		}
-    */    
 	}
 
 
-    if ( !SDL_glContext )
+    if(!SDL_glContext)
     {
-        if( ( SDL_glContext = SDL_GL_CreateContext( SDL_window ) ) == NULL )
+        if(( SDL_glContext = SDL_GL_CreateContext( SDL_window ) ) == NULL)
         {
-            Com_Printf("SDL_GL_CreateContext failed: %s\n", SDL_GetError( ) );
-            SDL_DestroyWindow( SDL_window );
+            Com_Printf("SDL_GL_CreateContext failed: %s\n", SDL_GetError( ));
+            SDL_DestroyWindow(SDL_window);
             SDL_window = NULL;
         }
-
     }
 
 
@@ -545,7 +526,7 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 	}
 
     Cmd_AddCommand("modelist", R_ModeList_f);
-	Cmd_AddCommand( "in_restart", IN_Init );
+	Cmd_AddCommand("in_restart", IN_Init );
 	// Create the window and set up the context
     
 	if (!SDL_WasInit(SDL_INIT_VIDEO))

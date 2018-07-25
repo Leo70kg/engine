@@ -63,8 +63,7 @@ static void R_RotateForViewer(void)
 	vec3_t	origin;
 
 	
-    VectorCopy(tr.viewParms.or.origin, origin );
-
+    VectorCopy(tr.viewParms.or.origin, origin);
     memset(&tr.or, 0, sizeof(tr.or));
     tr.or.axis[0][0] = 1;
 	tr.or.axis[1][1] = 1;
@@ -77,17 +76,17 @@ static void R_RotateForViewer(void)
 	viewerMatrix[0] = tr.viewParms.or.axis[0][0];
 	viewerMatrix[4] = tr.viewParms.or.axis[0][1];
 	viewerMatrix[8] = tr.viewParms.or.axis[0][2];
-	viewerMatrix[12] = -origin[0] * viewerMatrix[0] + -origin[1] * viewerMatrix[4] + -origin[2] * viewerMatrix[8];
+	viewerMatrix[12] = -origin[0] * viewerMatrix[0] - origin[1] * viewerMatrix[4] - origin[2] * viewerMatrix[8];
 
 	viewerMatrix[1] = tr.viewParms.or.axis[1][0];
 	viewerMatrix[5] = tr.viewParms.or.axis[1][1];
 	viewerMatrix[9] = tr.viewParms.or.axis[1][2];
-	viewerMatrix[13] = -origin[0] * viewerMatrix[1] + -origin[1] * viewerMatrix[5] + -origin[2] * viewerMatrix[9];
+	viewerMatrix[13] = -origin[0] * viewerMatrix[1] - origin[1] * viewerMatrix[5] - origin[2] * viewerMatrix[9];
 
 	viewerMatrix[2] = tr.viewParms.or.axis[2][0];
 	viewerMatrix[6] = tr.viewParms.or.axis[2][1];
 	viewerMatrix[10] = tr.viewParms.or.axis[2][2];
-	viewerMatrix[14] = -origin[0] * viewerMatrix[2] + -origin[1] * viewerMatrix[6] + -origin[2] * viewerMatrix[10];
+	viewerMatrix[14] = -origin[0] * viewerMatrix[2] - origin[1] * viewerMatrix[6] - origin[2] * viewerMatrix[10];
 
 	viewerMatrix[3] = 0;
 	viewerMatrix[7] = 0;
@@ -179,6 +178,14 @@ static void R_PlaneForSurface(surfaceType_t *surfType, cplane_t *plane)
             plane->normal[0] = 1;		
             return;
 	}
+}
+
+
+static void R_LocalNormalToWorld (vec3_t local, vec3_t world)
+{
+	world[0] = local[0] * tr.or.axis[0][0] + local[1] * tr.or.axis[1][0] + local[2] * tr.or.axis[2][0];
+	world[1] = local[0] * tr.or.axis[0][1] + local[1] * tr.or.axis[1][1] + local[2] * tr.or.axis[2][1];
+	world[2] = local[0] * tr.or.axis[0][2] + local[1] * tr.or.axis[1][2] + local[2] * tr.or.axis[2][2];
 }
 
 /*
@@ -382,9 +389,7 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 	shader_t *shader;
 	int		fogNum;
 	int dlighted;
-	vec4_t clip, eye;
 	int i;
-	unsigned int pointOr = 0;
 	unsigned int pointAnd = (unsigned int)~0;
 
 	R_RotateForViewer();
@@ -393,14 +398,37 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 	RB_BeginSurface( shader, fogNum );
 	rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
 
-	assert( tess.numVertexes < 128 );
+    int nVertexes = tess.numVertexes;
+	assert( nVertexes < 128 );
 
-	for ( i = 0; i < tess.numVertexes; i++ )
+	for ( i = 0; i < nVertexes; i++ )
 	{
 		int j;
 		unsigned int pointFlags = 0;
+        vec4_t clip;
 
-		R_TransformModelToClip( tess.xyz[i], tr.or.modelMatrix, tr.viewParms.projectionMatrix, eye, clip );
+		//R_TransformModelToClip( tess.xyz[i], tr.or.modelMatrix, tr.viewParms.projectionMatrix, eye, clip );
+        {
+            float eye[4];
+            for ( j = 0 ; j < 4 ; j++ )
+            {
+                eye[j] = 
+                    tess.xyz[j][0] * tr.or.modelMatrix[ j + 0 * 4 ] +
+                    tess.xyz[j][1] * tr.or.modelMatrix[ j + 1 * 4 ] +
+                    tess.xyz[j][2] * tr.or.modelMatrix[ j + 2 * 4 ] +
+                                 1 * tr.or.modelMatrix[ j + 3 * 4 ];
+            }
+
+            for ( j = 0 ; j < 4 ; j++ )
+            {
+                clip[j] = 
+                    eye[0] * tr.viewParms.projectionMatrix[ j + 0 * 4 ] +
+                    eye[1] * tr.viewParms.projectionMatrix[ j + 1 * 4 ] +
+                    eye[2] * tr.viewParms.projectionMatrix[ j + 2 * 4 ] +
+                    eye[3] * tr.viewParms.projectionMatrix[ j + 3 * 4 ];
+            }
+        }
+        ////////
 
 		for ( j = 0; j < 3; j++ )
 		{
@@ -414,7 +442,6 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 			}
 		}
 		pointAnd &= pointFlags;
-		pointOr |= pointFlags;
 	}
 
 	// trivially reject
@@ -751,69 +778,6 @@ static void R_AddEntitySurfaces (void)
 }
 
 
-
-static void R_GenerateDrawSurfs( void )
-{
-	R_AddWorldSurfaces();
-
-	R_AddPolygonSurfaces();
-
-	// set the projection matrix with the minimum zfar
-	// now that we have the world bounded
-	// this needs to be done before entities are added, 
-    // because they use the projection matrix for lod calculation
-
-	// dynamically compute far clip plane distance
-	// if not rendering the world (icons, menus, etc), set a 2k far clip plane
-    float zFar;	
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL )
-    {
-		zFar = 2048;
-	}
-    else{
-        float o[3];
-
-        o[0] = tr.viewParms.or.origin[0];
-        o[1] = tr.viewParms.or.origin[1];
-        o[2] = tr.viewParms.or.origin[2];
-
-        float farthestCornerDistance = 0;
-        int	i;
-
-        // set far clipping planes dynamically
-        for ( i = 0; i < 8; i++ )
-        {
-            float v[3];
-     
-            v[0] = tr.viewParms.visBounds[!(i&1)][0] - o[0];
-            v[1] = tr.viewParms.visBounds[!(i&2)][1] - o[1];
-            v[2] = tr.viewParms.visBounds[!(i&4)][2] - o[2];
-
-            float distance = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-            if( distance > farthestCornerDistance )
-            {
-                farthestCornerDistance = distance;
-            }
-        }
-        
-        zFar = sqrtf(farthestCornerDistance);
-    }
-
-	// we know the size of the clipping volume. Now set the rest of the projection matrix.
-    // sets the z-component transformation part in the projection matrix
-
-	float zNear	= r_znear->value;
-	float depth	= zFar - zNear;
-    tr.viewParms.zFar = zFar;
-
-	tr.viewParms.projectionMatrix[2] = 0;
-	tr.viewParms.projectionMatrix[6] = 0;
-	tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
-	tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
- 
-	R_AddEntitySurfaces();
-}
-
 /*
 ================
 R_DebugPolygon
@@ -855,10 +819,6 @@ Visualization aid for movement clipping debugging
 */
 static void R_DebugGraphics( void ) 
 {
-	if ( !r_debugSurface->integer ) {
-		return;
-	}
-
 	R_IssuePendingRenderCommands();
 
 	GL_Bind( tr.whiteImage);
@@ -871,26 +831,23 @@ static void R_DebugGraphics( void )
 static void R_SetupProjection(void)
 {
 
-    float zProj = r_zproj->value;
-	float ymax = zProj * tan(tr.viewParms.fovY * (M_PI / 360.0f));
-	float xmax = zProj * tan(tr.viewParms.fovX * (M_PI / 360.0f));
-	
-	tr.viewParms.projectionMatrix[0] = zProj / xmax;
-	tr.viewParms.projectionMatrix[4] = 0;
-	tr.viewParms.projectionMatrix[8] = 0;
-	tr.viewParms.projectionMatrix[12] = 0;
+    float py = tan(tr.viewParms.fovY * (M_PI / 360.0f));
+    float px = tan(tr.viewParms.fovX * (M_PI / 360.0f));
+    
+    tr.viewParms.projectionMatrix[0] = 1 / px;
+    tr.viewParms.projectionMatrix[4] = 0;
+    tr.viewParms.projectionMatrix[8] = 0;
+    tr.viewParms.projectionMatrix[12] = 0;
 
-	tr.viewParms.projectionMatrix[1] = 0;
-	tr.viewParms.projectionMatrix[5] = zProj / ymax;
-	tr.viewParms.projectionMatrix[9] = 0;	// normally 0
-	tr.viewParms.projectionMatrix[13] = 0;
+    tr.viewParms.projectionMatrix[1] = 0;
+    tr.viewParms.projectionMatrix[5] = 1 / py;
+    tr.viewParms.projectionMatrix[9] = 0;	// normally 0
+    tr.viewParms.projectionMatrix[13] = 0;
 
-	tr.viewParms.projectionMatrix[3] = 0;
-	tr.viewParms.projectionMatrix[7] = 0;
-	tr.viewParms.projectionMatrix[11] = -1;
-	tr.viewParms.projectionMatrix[15] = 0;
-	
-
+    tr.viewParms.projectionMatrix[3] = 0;
+    tr.viewParms.projectionMatrix[7] = 0;
+    tr.viewParms.projectionMatrix[11] = -1;
+    tr.viewParms.projectionMatrix[15] = 0;
     
 	// Now that we have all the data for the projection matrix we can also setup the view frustum.
 	// R_SetupFrustum(dest, xmin, xmax, ymax, zProj, 0);
@@ -899,9 +856,6 @@ static void R_SetupProjection(void)
 
     // symmetric case can be simplified
     unsigned char signbits;
-    float length;
-    float oppleg;
-    float adjleg;
     float normal_op[3];
     float normal_adj[3];
     float N[3];
@@ -909,12 +863,13 @@ static void R_SetupProjection(void)
     float ofsorigin[3];
     VectorCopy(tr.viewParms.or.origin, ofsorigin);	
 
-    length = sqrtf(xmax * xmax + zProj * zProj);
-    oppleg = xmax / length;
-    adjleg = zProj / length;
-    VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
-    VectorScale(tr.viewParms.or.axis[1], adjleg, normal_adj);
+    {
+        float adjleg = 1 / sqrtf(px * px + 1);
+        float oppleg = px * adjleg;
 
+        VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
+        VectorScale(tr.viewParms.or.axis[1], adjleg, normal_adj);
+    }
     ////
     VectorAdd(normal_op, normal_adj, N);
     VectorCopy(N, tr.viewParms.frustum[0].normal);
@@ -946,13 +901,13 @@ static void R_SetupProjection(void)
         signbits |= 4;
     tr.viewParms.frustum[1].signbits = signbits;
 
+    {
+        float adjleg = 1 / sqrtf(py * py + 1);
+        float oppleg = py * adjleg;
 
-	length = sqrtf(ymax * ymax + zProj * zProj);
-	oppleg = ymax / length;
-	adjleg = zProj / length;
-	VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
-	VectorScale(tr.viewParms.or.axis[2], adjleg, normal_adj);
-
+        VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
+        VectorScale(tr.viewParms.or.axis[2], adjleg, normal_adj);
+    }
     
     ////
     VectorAdd(normal_op, normal_adj, N);
@@ -1012,13 +967,14 @@ void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader, int *fog
 
 
 
+
 /*
  * A view may be either the actual camera view, or a mirror / remote location
  */
 void R_RenderView(viewParms_t *parms)
 {
 
-	if ( parms->viewportWidth <= 0 || parms->viewportHeight <= 0 ) {
+	if ( (parms->viewportWidth <= 0) || (parms->viewportHeight <= 0) ) {
 		return;
 	}
 
@@ -1037,30 +993,95 @@ void R_RenderView(viewParms_t *parms)
 
 	R_SetupProjection();
 
-	R_GenerateDrawSurfs();
+    //R_GenerateDrawSurfs();
+	if(r_drawworld->integer && !( tr.refdef.rdflags & RDF_NOWORLDMODEL ) )
+    {
+	    R_AddWorldSurfaces();
+	}
+
+
+	//R_AddPolygonSurfaces();
+    // Adds all the scene's polys into this view's drawsurf list
+    {
+        tr.currentEntityNum = REFENTITYNUM_WORLD;
+        tr.shiftedEntityNum = tr.currentEntityNum << QSORT_REFENTITYNUM_SHIFT;
+        
+        int	i;
+        srfPoly_t* poly = tr.refdef.polys;
+
+        for ( i = 0; i < tr.refdef.numPolys ; i++, poly++ )
+        {
+            shader_t* sh = R_GetShaderByHandle( poly->hShader );
+            R_AddDrawSurf( ( void * )poly, sh, poly->fogIndex, qfalse );
+        }
+    }
+
+	// set the projection matrix with the minimum zfar
+	// now that we have the world bounded
+	// this needs to be done before entities are added, 
+    // because they use the projection matrix for lod calculation
+
+	// dynamically compute far clip plane distance
+	// if not rendering the world (icons, menus, etc), set a 2k far clip plane
+
+	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL )
+    {
+		tr.viewParms.zFar = 2048.0f;
+	}
+    else{
+        float o[3];
+
+        o[0] = tr.viewParms.or.origin[0];
+        o[1] = tr.viewParms.or.origin[1];
+        o[2] = tr.viewParms.or.origin[2];
+
+        float farthestCornerDistance = 0;
+        int	i;
+
+        // set far clipping planes dynamically
+        for ( i = 0; i < 8; i++ )
+        {
+            float v[3];
+     
+            v[0] = tr.viewParms.visBounds[!(i&1)][0] - o[0];
+            v[1] = tr.viewParms.visBounds[!(i&2)][1] - o[1];
+            v[2] = tr.viewParms.visBounds[!(i&4)][2] - o[2];
+
+            float distance = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+            if( distance > farthestCornerDistance )
+            {
+                farthestCornerDistance = distance;
+            }
+        }
+        
+        tr.viewParms.zFar = sqrtf(farthestCornerDistance);
+    }
+
+	// we know the size of the clipping volume. 
+    // Now set the rest of the projection matrix.
+    // sets the z-component transformation part in the projection matrix
+
+    float zFar = tr.viewParms.zFar;
+	float zNear	= r_znear->value;
+	float depth	= zFar - zNear;
+
+	tr.viewParms.projectionMatrix[2] = 0;
+	tr.viewParms.projectionMatrix[6] = 0;
+	tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
+	tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
+ 
+	R_AddEntitySurfaces();
 
 	R_SortDrawSurfs( tr.refdef.drawSurfs + firstDrawSurf, tr.refdef.numDrawSurfs - firstDrawSurf );
 
 	// draw main system development information (surface outlines, etc)
-	R_DebugGraphics();
+	if ( r_debugSurface->integer )
+    {
+        R_DebugGraphics();
+	}
 }
 
 
-
-void R_LocalNormalToWorld (vec3_t local, vec3_t world)
-{
-	world[0] = local[0] * tr.or.axis[0][0] + local[1] * tr.or.axis[1][0] + local[2] * tr.or.axis[2][0];
-	world[1] = local[0] * tr.or.axis[0][1] + local[1] * tr.or.axis[1][1] + local[2] * tr.or.axis[2][1];
-	world[2] = local[0] * tr.or.axis[0][2] + local[1] * tr.or.axis[1][2] + local[2] * tr.or.axis[2][2];
-}
-
-
-void R_LocalPointToWorld (vec3_t local, vec3_t world)
-{
-	world[0] = local[0] * tr.or.axis[0][0] + local[1] * tr.or.axis[1][0] + local[2] * tr.or.axis[2][0] + tr.or.origin[0];
-	world[1] = local[0] * tr.or.axis[0][1] + local[1] * tr.or.axis[1][1] + local[2] * tr.or.axis[2][1] + tr.or.origin[1];
-	world[2] = local[0] * tr.or.axis[0][2] + local[1] * tr.or.axis[1][2] + local[2] * tr.or.axis[2][2] + tr.or.origin[2];
-}
 
 
 /*
@@ -1073,53 +1094,8 @@ static void R_WorldToLocal(vec3_t world, vec3_t local)
 */
 
 
-/*
-==========================
-R_TransformModelToClip
 
-==========================
-*/
-void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,	vec4_t eye, vec4_t dst )
-{
-	int i;
 
-	for ( i = 0 ; i < 4 ; i++ )
-    {
-		eye[i] = 
-			src[0] * modelMatrix[ i + 0 * 4 ] +
-			src[1] * modelMatrix[ i + 1 * 4 ] +
-			src[2] * modelMatrix[ i + 2 * 4 ] +
-                 1 * modelMatrix[ i + 3 * 4 ];
-	}
-
-	for ( i = 0 ; i < 4 ; i++ )
-    {
-		dst[i] = 
-			eye[0] * projectionMatrix[ i + 0 * 4 ] +
-			eye[1] * projectionMatrix[ i + 1 * 4 ] +
-			eye[2] * projectionMatrix[ i + 2 * 4 ] +
-			eye[3] * projectionMatrix[ i + 3 * 4 ];
-	}
-}
-
-/*
-==========================
-R_TransformClipToWindow
-==========================
-*/
-void R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t normalized, vec4_t window )
-{
-	normalized[0] = clip[0] / clip[3];
-	normalized[1] = clip[1] / clip[3];
-	normalized[2] = ( clip[2] + clip[3] ) / ( 2 * clip[3] );
-
-	window[0] = 0.5f * ( 1.0f + normalized[0] ) * view->viewportWidth;
-	window[1] = 0.5f * ( 1.0f + normalized[1] ) * view->viewportHeight;
-	window[2] = normalized[2];
-
-	window[0] = (int) ( window[0] + 0.5 );
-	window[1] = (int) ( window[1] + 0.5 );
-}
 
 /*
 =================
@@ -1177,9 +1153,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 	if( ent->e.nonNormalizedAxes )
     {
 		axisLength = VectorLength( ent->e.axis[0] );
-		if ( !axisLength ) {
-			axisLength = 0;
-		} else {
+		if ( axisLength != 0 ) {
 			axisLength = 1.0f / axisLength;
 		}
 	}

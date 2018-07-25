@@ -2570,6 +2570,45 @@ static void Com_WriteConfig_f( void )
 }
 
 
+/*
+===============
+Com_WriteConfiguration
+
+Writes key bindings and archived cvars to config file if modified
+===============
+*/
+void Com_WriteConfiguration( void )
+{
+
+    // if we are quiting without fully initializing, make sure we don't write out anything
+	if ( !com_fullyInitialized )
+		return;
+
+
+	if ( !(cvar_modifiedFlags & CVAR_ARCHIVE ) )
+		return;
+
+	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
+
+	Com_WriteConfigToFile( Q3CONFIG_CFG );
+
+	// not needed for dedicated or standalone
+#if !defined(DEDICATED) && !defined(STANDALONE)
+	cvar_t* fs = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
+
+	if(!com_standalone->integer)
+	{
+		if (UI_usesUniqueCDKey() && fs && fs->string[0] != 0) {
+			Com_WriteCDKey( fs->string, &cl_cdkey[16] );
+		} else {
+			Com_WriteCDKey( BASEGAME, cl_cdkey );
+		}
+	}
+#endif
+}
+
+
+
 void Com_Init(char *commandLine )
 {
 	char *s;
@@ -2824,45 +2863,6 @@ void Com_ReadFromPipe( void )
 
 
 /*
-===============
-Com_WriteConfiguration
-
-Writes key bindings and archived cvars to config file if modified
-===============
-*/
-void Com_WriteConfiguration( void )
-{
-
-    // if we are quiting without fully initializing, make sure we don't write out anything
-	if ( !com_fullyInitialized )
-		return;
-
-
-	if ( !(cvar_modifiedFlags & CVAR_ARCHIVE ) )
-		return;
-
-	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
-
-	Com_WriteConfigToFile( Q3CONFIG_CFG );
-
-	// not needed for dedicated or standalone
-#if !defined(DEDICATED) && !defined(STANDALONE)
-	cvar_t* fs = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
-
-	if(!com_standalone->integer)
-	{
-		if (UI_usesUniqueCDKey() && fs && fs->string[0] != 0) {
-			Com_WriteCDKey( fs->string, &cl_cdkey[16] );
-		} else {
-			Com_WriteCDKey( BASEGAME, cl_cdkey );
-		}
-	}
-#endif
-}
-
-
-
-/*
 ================
 Com_ModifyMsec
 ================
@@ -2945,10 +2945,8 @@ void Com_Frame(void)
 	if ( setjmp (abortframe) )
 		return;	// an ERR_DROP was thrown
 
-
 	// write config file if anything changed
 	Com_WriteConfiguration(); 
-
 	//
 	// main event loop
 	//
@@ -3088,7 +3086,7 @@ void Com_Frame(void)
 
 		Com_Printf ("frame:%i all:%3i sv:%3i ev:%3i cl:%3i gm:%3i rf:%3i bk:%3i\n", 
 					 com_frameNumber, all, sv, ev, cl, time_game, time_frontend, time_backend );
-	}	
+	}
 
 	//
 	// trace optimization tracking

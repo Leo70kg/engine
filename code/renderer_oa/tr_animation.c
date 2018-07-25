@@ -410,6 +410,12 @@ static int R_ComputeLOD( trRefEntity_t *ent )
 
 //////////////////////////////////////////////////////////////////////////
 
+static void R_LocalPointToWorld (vec3_t local, vec3_t world)
+{
+	world[0] = local[0] * tr.or.axis[0][0] + local[1] * tr.or.axis[1][0] + local[2] * tr.or.axis[2][0] + tr.or.origin[0];
+	world[1] = local[0] * tr.or.axis[0][1] + local[1] * tr.or.axis[1][1] + local[2] * tr.or.axis[2][1] + tr.or.origin[1];
+	world[2] = local[0] * tr.or.axis[0][2] + local[1] * tr.or.axis[1][2] + local[2] * tr.or.axis[2][2] + tr.or.origin[2];
+}
 
 
 int R_CullLocalPointAndRadius( vec3_t pt, float radius )

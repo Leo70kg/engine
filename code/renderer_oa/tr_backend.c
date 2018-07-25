@@ -78,13 +78,14 @@ static void RB_BeginDrawingView(void)
 	int clearBits = 0;
 
 	// sync with gl if needed
-	if ( r_finish->integer == 1 && !glState.finishCalled ) {
-		qglFinish();
-		glState.finishCalled = qtrue;
-	}
 	if ( r_finish->integer == 0 ) {
 		glState.finishCalled = qtrue;
 	}
+    else if (!glState.finishCalled)
+    {
+        qglFinish();
+		glState.finishCalled = qtrue;
+    }
 
 	// we will need to change the projection matrix before drawing 2D images again
 	backEnd.projection2D = qfalse;
@@ -212,7 +213,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 		// change the tess parameters if needed
 		// a "entityMergable" shader is a shader that can have surfaces from separate
 		// entities merged into a single batch, like smoke and blood puff sprites
-		if ( shader != NULL && ( shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted 
+		if ( (shader != NULL) && ( shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted 
 			|| ( entityNum != oldEntityNum && !shader->entityMergable ) ) )
         {
 			if (oldShader != NULL) {
@@ -349,7 +350,7 @@ static void RB_SetGL2D (void)
     qglLoadIdentity ();
 	qglOrtho (0, glConfig.vidWidth, glConfig.vidHeight, 0, 0, 1);
 	qglMatrixMode(GL_MODELVIEW);
-    qglLoadIdentity ();
+    qglLoadIdentity();
 
 	GL_State( GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_SRC_ALPHA |
 				GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );

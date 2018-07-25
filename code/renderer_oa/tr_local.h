@@ -934,10 +934,7 @@ typedef struct {
 
 	qboolean	projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
 	unsigned char color2D[4];
-//	qboolean	doneFlareTests;		// leilei - done testing flares
-	qboolean	doneSunFlare;
 	qboolean	doneSun;
-//	float		flareTestTime;
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
 } backEndState_t;
 
@@ -979,25 +976,6 @@ typedef struct {
 
 	shader_t				*flareShader;
 	shader_t				*sunShader;
-
-	qhandle_t				defaultProgram;
-	qhandle_t				vertexLitProgram;
-	qhandle_t				lightmappedMultitextureProgram;
-	qhandle_t				skyProgram;
-	qhandle_t				postprocessingProgram;
-
-	qhandle_t				leiFXGammaProgram;	// leilei
-	qhandle_t				leiFXFilterProgram;	// leilei
-	qhandle_t				animeProgram;	// leilei
-	qhandle_t				animeFilmProgram;	// leilei
-	qhandle_t				BrightnessProgram;	// leilei
-	qhandle_t				CRTProgram;	// leilei
-	qhandle_t				NTSCEncodeProgram;	// leilei
-	qhandle_t				NTSCDecodeProgram;	// leilei
-	qhandle_t				NTSCBleedProgram;	// leilei
-	qhandle_t				paletteProgram;	// leilei
-
-	int						numPrograms;
 
 	int						numLightmaps;
 	image_t					**lightmaps;
@@ -1362,10 +1340,10 @@ const void *RB_TakeVideoFrameCmd( const void *data );
 void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap );
 void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader, int *fogNum, int *dlightMap );
 void R_RenderView( viewParms_t *parms );
-void R_LocalNormalToWorld (vec3_t local, vec3_t world);
-void R_LocalPointToWorld (vec3_t local, vec3_t world);
-void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix, vec4_t eye, vec4_t dst);
-void R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t normalized, vec4_t window );
+// void R_LocalNormalToWorld (vec3_t local, vec3_t world);
+//void R_LocalPointToWorld (vec3_t local, vec3_t world);
+//void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix, vec4_t eye, vec4_t dst);
+//void R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t normalized, vec4_t window );
 void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, orientationr_t *or );
 
 
@@ -1486,7 +1464,7 @@ void RB_StageIteratorSky( void );
 
 void RB_AddFlare(srfFlare_t *surface, int fogNum, vec3_t point, vec3_t color, vec3_t normal, int radii, float scaled, int type);
 void RB_RenderFlares (void);
-void RB_DrawSunFlare( void );
+//void RB_DrawSunFlare( void );
 void R_InitFlares( void );
 
 
@@ -1502,7 +1480,7 @@ void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *vert
 void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_RenderScene( const refdef_t *fd );
-void R_AddPolygonSurfaces( void );
+//void R_AddPolygonSurfaces( void );
 void R_InitNextFrame( void );
 
 void RE_ClearScene( void );
@@ -1668,5 +1646,12 @@ void	RB_CalcFlatAmbient( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcFlatDirect( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcNormal( unsigned char *colors ); // leilei - normal hack
 
+
+#define GLE(ret, name, ...) extern name##proc * qgl##name;
+QGL_1_1_PROCS;
+QGL_DESKTOP_1_1_PROCS;
+QGL_1_3_PROCS;
+QGL_1_5_PROCS;
+#undef GLE
 
 #endif //TR_LOCAL_H

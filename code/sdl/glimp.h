@@ -29,7 +29,7 @@ void GLimp_DeleteGLContext(void);
 void GLimp_DestroyWindow(void);
 
 void* GLimp_GetProcAddress(const char* fun);
-qboolean GLimp_ExtensionSupported(const char* fun);
+
 
 
 void IN_Init(void);

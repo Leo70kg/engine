@@ -845,6 +845,8 @@ qboolean		Com_PlayerNameToFieldString( char *str, int length, const char *name )
 qboolean		Com_FieldStringToPlayerName( char *name, int length, const char *rawname );
 int QDECL	Com_strCompare( const void *a, const void *b );
 
+void		Com_WriteConfiguration( void );
+
 
 extern	cvar_t	*com_developer;
 extern	cvar_t	*com_dedicated;

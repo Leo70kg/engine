@@ -207,7 +207,7 @@ R_PostProcessingCmd
 
 =============
 */
-void R_AddPostProcessCmd( )
+void R_AddPostProcessCmd(void)
 {
 	postProcessCommand_t* cmd = R_GetCommandBuffer( sizeof( *cmd ) );
 	if ( !cmd ) {

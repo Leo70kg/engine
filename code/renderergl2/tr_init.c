@@ -304,7 +304,14 @@ void GLimp_ClearProcAddresses( void )
 #undef GLE
 }
 
-
+static qboolean GLimp_HaveExtension(const char *ext)
+{
+	const char *ptr = Q_stristr( glConfig.extensions_string, ext );
+	if (ptr == NULL)
+		return qfalse;
+	ptr += strlen(ext);
+	return ((*ptr == ' ') || (*ptr == '\0'));  // verify it's complete string.
+}
 
 static void GLimp_InitExtensions(void)
 {
@@ -315,9 +322,9 @@ static void GLimp_InitExtensions(void)
 
 	// GL_EXT_texture_env_add
 	glConfig.textureEnvAddAvailable = qfalse;
-	if ( ri.GLimpExtensionSupported( "EXT_texture_env_add" ) )
+	if ( GLimp_HaveExtension( "EXT_texture_env_add" ) )
 	{
-		if ( ri.GLimpExtensionSupported( "GL_EXT_texture_env_add" ) )
+		if ( GLimp_HaveExtension( "GL_EXT_texture_env_add" ) )
 		{
 			glConfig.textureEnvAddAvailable = qtrue;
 			ri.Printf( PRINT_ALL, "...using GL_EXT_texture_env_add\n" );
@@ -337,7 +344,7 @@ static void GLimp_InitExtensions(void)
 	qglMultiTexCoord2fARB = NULL;
 	qglActiveTextureARB = NULL;
 	qglClientActiveTextureARB = NULL;
-	if ( ri.GLimpExtensionSupported( "GL_ARB_multitexture" ) )
+	if ( GLimp_HaveExtension( "GL_ARB_multitexture" ) )
 	{
 		qglMultiTexCoord2fARB = ri.GLimpGetProcAddress( "glMultiTexCoord2fARB" );
 		qglActiveTextureARB = ri.GLimpGetProcAddress( "glActiveTextureARB" );
@@ -368,7 +375,7 @@ static void GLimp_InitExtensions(void)
 
 
 	// GL_EXT_compiled_vertex_array
-	if ( ri.GLimpExtensionSupported( "GL_EXT_compiled_vertex_array" ) )
+	if ( GLimp_HaveExtension( "GL_EXT_compiled_vertex_array" ) )
 	{
 		ri.Printf( PRINT_ALL,  "...using GL_EXT_compiled_vertex_array\n" );
 		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) ri.GLimpGetProcAddress( "glLockArraysEXT" );
@@ -383,7 +390,7 @@ static void GLimp_InitExtensions(void)
 		ri.Printf( PRINT_ALL, "...GL_EXT_compiled_vertex_array not found\n" );
 	}
 
-	if ( ri.GLimpExtensionSupported( "GL_EXT_texture_filter_anisotropic" ) )
+	if ( GLimp_HaveExtension( "GL_EXT_texture_filter_anisotropic" ) )
 	{
 		if ( r_ext_texture_filter_anisotropic->integer )
         {
@@ -448,7 +455,7 @@ static void GLimp_InitExtensions(void)
 	glConfig.textureCompression = TC_NONE;
 
 	// GL_EXT_texture_compression_s3tc
-    if( ri.GLimpExtensionSupported( "GL_ARB_texture_compression" ) && ri.GLimpExtensionSupported( "GL_EXT_texture_compression_s3tc" ) )
+    if( GLimp_HaveExtension( "GL_ARB_texture_compression" ) && GLimp_HaveExtension( "GL_EXT_texture_compression_s3tc" ) )
 	{
 		if ( r_ext_compressed_textures->value )
 		{
@@ -468,7 +475,7 @@ static void GLimp_InitExtensions(void)
 	// GL_S3_s3tc ... legacy extension before GL_EXT_texture_compression_s3tc.
 	if(glConfig.textureCompression == TC_NONE)
 	{
-		if( ri.GLimpExtensionSupported( "GL_S3_s3tc" ) )
+		if( GLimp_HaveExtension( "GL_S3_s3tc" ) )
 		{
 			if ( r_ext_compressed_textures->value )
 			{
@@ -493,7 +500,7 @@ static void GLimp_InitExtensions(void)
 	glRefConfig.framebufferObject = qfalse;
 	glRefConfig.framebufferBlit = qfalse;
 	glRefConfig.framebufferMultisample = qfalse;
-	if (q_gl_version_at_least_3_2 || ri.GLimpExtensionSupported(extension))
+	if (q_gl_version_at_least_3_2 || GLimp_HaveExtension(extension))
 	{
 		glRefConfig.framebufferObject = !!r_ext_framebuffer_object->integer;
 		glRefConfig.framebufferBlit = qtrue;
@@ -514,7 +521,7 @@ static void GLimp_InitExtensions(void)
 	// OpenGL 3.0 - GL_ARB_vertex_array_object
 	extension = "GL_ARB_vertex_array_object";
 	glRefConfig.vertexArrayObject = qfalse;
-	if (q_gl_version_at_least_3_2 || ri.GLimpExtensionSupported(extension))
+	if (q_gl_version_at_least_3_2 || GLimp_HaveExtension(extension))
 	{
 		if (q_gl_version_at_least_3_2)
 		{
@@ -538,7 +545,7 @@ static void GLimp_InitExtensions(void)
 	// OpenGL 3.0 - GL_ARB_texture_float
 	extension = "GL_ARB_texture_float";
 	glRefConfig.textureFloat = qfalse;
-	if (q_gl_version_at_least_3_2 || ri.GLimpExtensionSupported(extension))
+	if (q_gl_version_at_least_3_2 || GLimp_HaveExtension(extension))
 	{
 		glRefConfig.textureFloat = !!r_ext_texture_float->integer;
 
@@ -552,7 +559,7 @@ static void GLimp_InitExtensions(void)
 	// OpenGL 3.2 - GL_ARB_depth_clamp
 	extension = "GL_ARB_depth_clamp";
 	glRefConfig.depthClamp = qfalse;
-	if (q_gl_version_at_least_3_2 || ri.GLimpExtensionSupported(extension))
+	if (q_gl_version_at_least_3_2 || GLimp_HaveExtension(extension))
 	{
 		glRefConfig.depthClamp = qtrue;
 
@@ -566,7 +573,7 @@ static void GLimp_InitExtensions(void)
 	// OpenGL 3.2 - GL_ARB_seamless_cube_map
 	extension = "GL_ARB_seamless_cube_map";
 	glRefConfig.seamlessCubeMap = qfalse;
-	if (q_gl_version_at_least_3_2 || ri.GLimpExtensionSupported(extension))
+	if (q_gl_version_at_least_3_2 || GLimp_HaveExtension(extension))
 	{
 		glRefConfig.seamlessCubeMap = !!r_arb_seamless_cube_map->integer;
 
@@ -593,7 +600,7 @@ static void GLimp_InitExtensions(void)
 
 	// GL_NVX_gpu_memory_info
 	extension = "GL_NVX_gpu_memory_info";
-	if( ri.GLimpExtensionSupported( extension ) )
+	if( GLimp_HaveExtension( extension ) )
 	{
 		glRefConfig.memInfo = MI_NVX;
 
@@ -606,7 +613,7 @@ static void GLimp_InitExtensions(void)
 
 	// GL_ATI_meminfo
 	extension = "GL_ATI_meminfo";
-	if( ri.GLimpExtensionSupported( extension ) )
+	if( GLimp_HaveExtension( extension ) )
 	{
 		if (glRefConfig.memInfo == MI_NONE)
 		{
@@ -628,7 +635,7 @@ static void GLimp_InitExtensions(void)
 
 	// GL_ARB_texture_compression_rgtc
 	extension = "GL_ARB_texture_compression_rgtc";
-	if (ri.GLimpExtensionSupported(extension))
+	if (GLimp_HaveExtension(extension))
 	{
 		qboolean useRgtc = r_ext_compressed_textures->integer >= 1;
 
@@ -646,7 +653,7 @@ static void GLimp_InitExtensions(void)
 
 	// GL_ARB_texture_compression_bptc
 	extension = "GL_ARB_texture_compression_bptc";
-	if (ri.GLimpExtensionSupported(extension))
+	if (GLimp_HaveExtension(extension))
 	{
 		qboolean useBptc = r_ext_compressed_textures->integer >= 2;
 
@@ -663,7 +670,7 @@ static void GLimp_InitExtensions(void)
 	// GL_EXT_direct_state_access
 	extension = "GL_EXT_direct_state_access";
 	glRefConfig.directStateAccess = qfalse;
-	if (ri.GLimpExtensionSupported(extension))
+	if (GLimp_HaveExtension(extension))
 	{
 		glRefConfig.directStateAccess = !!r_ext_direct_state_access->integer;
 

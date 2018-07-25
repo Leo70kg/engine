@@ -3200,6 +3200,10 @@ qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring ) {
 	return qfalse; // We have them all
 }
 
+
+
+
+
 /*
 ================
 FS_Shutdown
@@ -3216,6 +3220,8 @@ void FS_Shutdown( qboolean closemfp ) {
 			FS_FCloseFile(i);
 		}
 	}
+
+    Com_WriteConfiguration();
 
 	// free everything
 	for(p = fs_searchpaths; p; p = next)

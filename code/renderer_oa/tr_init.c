@@ -45,7 +45,6 @@ cvar_t	*r_detailTextureLayers;
 
 
 cvar_t	*r_znear;
-cvar_t	*r_zproj;
 
 cvar_t	*r_skipBackEnd;
 
@@ -164,6 +163,20 @@ void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count) = NULL;
 void (APIENTRYP qglUnlockArraysEXT) (void) = NULL;
 
 
+/*
+qboolean GLimp_ExtensionSupported(const char* fun);
+qboolean GLimp_ExtensionSupported(const char* fun)
+{
+	if(SDL_GL_ExtensionSupported(fun))
+	{
+		return qtrue;
+	}
+
+    return qfalse;
+}
+*/
+
+
 static qboolean GLimp_HaveExtension(const char *ext)
 {
 	const char *ptr = Q_stristr( glConfig.extensions_string, ext );
@@ -172,6 +185,7 @@ static qboolean GLimp_HaveExtension(const char *ext)
 	ptr += strlen(ext);
 	return ((*ptr == ' ') || (*ptr == '\0'));  // verify it's complete string.
 }
+
 
 /*
 ===============
@@ -1115,7 +1129,6 @@ static void R_Register( void )
 
 	r_znear = ri.Cvar_Get( "r_znear", "4", CVAR_CHEAT );
 	ri.Cvar_CheckRange( r_znear, 0.001f, 200, qfalse );
-	r_zproj = ri.Cvar_Get( "r_zproj", "64", CVAR_ARCHIVE );
 	r_ignoreGLErrors = ri.Cvar_Get( "r_ignoreGLErrors", "1", CVAR_ARCHIVE );
 	r_fastsky = ri.Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE );
 	r_inGameVideo = ri.Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE );

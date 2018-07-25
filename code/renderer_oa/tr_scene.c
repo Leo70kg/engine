@@ -72,27 +72,7 @@ DISCRETE POLYS
 ===========================================================================
 */
 
-/*
-=====================
-R_AddPolygonSurfaces
 
-Adds all the scene's polys into this view's drawsurf list
-=====================
-*/
-void R_AddPolygonSurfaces( void )
-{
-	int			i;
-	srfPoly_t	*poly;
-
-	tr.currentEntityNum = REFENTITYNUM_WORLD;
-	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_REFENTITYNUM_SHIFT;
-
-	for ( i = 0, poly = tr.refdef.polys; i < tr.refdef.numPolys ; i++, poly++ )
-    {
-		shader_t* sh = R_GetShaderByHandle( poly->hShader );
-		R_AddDrawSurf( ( void * )poly, sh, poly->fogIndex, qfalse );
-	}
-}
 
 
 void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts, int numPolys )
@@ -396,7 +376,7 @@ void RE_RenderScene( const refdef_t *fd )
 		//if (((tr.refdef.fov_x /  tr.refdef.fov_y) > 1.3) && (tr.refdef.width > (320 * refdefscalex)) && (tr.refdef.height > (240 * refdefscaley)))
 		float x_div_y = tr.refdef.fov_x / tr.refdef.fov_y;
 
-		if ((x_div_y > 1.3) && (tr.refdef.width / tr.refdef.height == glConfig.vidWidth / glConfig.vidHeight))
+		if ((x_div_y > 1.3f) && (tr.refdef.width / tr.refdef.height == glConfig.vidWidth / glConfig.vidHeight))
 		{
 			// undo vert-
 			parms.fovY *= x_div_y * (73.739792 / 90.0);

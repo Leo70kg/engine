@@ -136,12 +136,12 @@ static cvar_t* r_ext_texture_filter_anisotropic;
 static cvar_t* r_ext_max_anisotropy;
 
 
-void (APIENTRYP qglActiveTextureARB) (GLenum texture);
-void (APIENTRYP qglClientActiveTextureARB) (GLenum texture);
-void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
+void (APIENTRYP qglActiveTextureARB) (GLenum texture) = NULL;
+void (APIENTRYP qglClientActiveTextureARB) (GLenum texture) = NULL;
+void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t) = NULL;
 
-void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
-void (APIENTRYP qglUnlockArraysEXT) (void);
+void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count) = NULL;
+void (APIENTRYP qglUnlockArraysEXT) (void) = NULL;
 
 #define GLE(ret, name, ...) name##proc * qgl##name;
 QGL_1_1_PROCS;
@@ -223,6 +223,17 @@ void GLimp_ClearProcAddresses( void )
 }
 
 
+
+static qboolean GLimp_HaveExtension(const char *ext)
+{
+	const char *ptr = Q_stristr( glConfig.extensions_string, ext );
+	if (ptr == NULL)
+		return qfalse;
+	ptr += strlen(ext);
+	return ((*ptr == ' ') || (*ptr == '\0'));  // verify it's complete string.
+}
+
+
 void GLimp_InitExtensions( glconfig_t *glConfig )
 {
 	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "2", CVAR_ARCHIVE | CVAR_LATCH );
@@ -233,9 +244,9 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 
 	// GL_EXT_texture_env_add
 	glConfig->textureEnvAddAvailable = qfalse;
-	if ( ri.GLimpExtensionSupported( "EXT_texture_env_add" ) )
+	if ( GLimp_HaveExtension( "EXT_texture_env_add" ) )
 	{
-		if ( ri.GLimpExtensionSupported( "GL_EXT_texture_env_add" ) )
+		if ( GLimp_HaveExtension( "GL_EXT_texture_env_add" ) )
 		{
 			glConfig->textureEnvAddAvailable = qtrue;
 			ri.Printf( PRINT_ALL, "...using GL_EXT_texture_env_add\n" );
@@ -255,7 +266,7 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 	qglMultiTexCoord2fARB = NULL;
 	qglActiveTextureARB = NULL;
 	qglClientActiveTextureARB = NULL;
-	if ( ri.GLimpExtensionSupported( "GL_ARB_multitexture" ) )
+	if ( GLimp_HaveExtension( "GL_ARB_multitexture" ) )
 	{
 		qglMultiTexCoord2fARB = ri.GLimpGetProcAddress( "glMultiTexCoord2fARB" );
 		qglActiveTextureARB = ri.GLimpGetProcAddress( "glActiveTextureARB" );
@@ -285,7 +296,7 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 	}
 
 	// GL_EXT_compiled_vertex_array
-	if ( ri.GLimpExtensionSupported( "GL_EXT_compiled_vertex_array" ) )
+	if ( GLimp_HaveExtension( "GL_EXT_compiled_vertex_array" ) )
 	{
 		ri.Printf( PRINT_ALL,  "...using GL_EXT_compiled_vertex_array\n" );
 		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) ri.GLimpGetProcAddress( "glLockArraysEXT" );
@@ -300,7 +311,7 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 		ri.Printf( PRINT_ALL, "...GL_EXT_compiled_vertex_array not found\n" );
 	}
 
-	if ( ri.GLimpExtensionSupported( "GL_EXT_texture_filter_anisotropic" ) )
+	if ( GLimp_HaveExtension( "GL_EXT_texture_filter_anisotropic" ) )
 	{
 		if ( r_ext_texture_filter_anisotropic->integer )
         {

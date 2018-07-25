@@ -171,7 +171,7 @@ typedef struct {
     void    (*GLimpDestroyWin)(void);
 
     void*	(*GLimpGetProcAddress)(const char* fun);
-    qboolean (*GLimpExtensionSupported)(const char* fun);
+//    qboolean (*GLimpExtensionSupported)(const char* fun);
 
     
 } refimport_t;
