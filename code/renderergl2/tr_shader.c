@@ -37,24 +37,24 @@ static	shader_t*		hashTable[FILE_HASH_SIZE];
 #define MAX_SHADERTEXT_HASH		2048
 static char **shaderTextHashTable[MAX_SHADERTEXT_HASH];
 
-/*
-================
-return a hash value for the filename
-================
-*/
-#ifdef __GNUCC__
-  #warning TODO: check if long is ok here 
-#endif
-static long generateHashValue( const char *fname, const int size ) {
+
+
+static long int generateHashValue( const char *fname, const int size )
+{
 	int i = 0;
 	long hash = 0;
-	char letter;
 
-	while (fname[i] != '\0') {
-		letter = tolower(fname[i]);
-		if (letter =='.') break;				// don't include extension
-		if (letter =='\\') letter = '/';		// damn path names
-		if (letter == PATH_SEP) letter = '/';		// damn path names
+	while (fname[i] != '\0')
+	{
+		char letter = tolower(fname[i]);
+		if (letter =='.')
+			break;				// don't include extension
+
+		if (letter =='\\')
+			letter = '/';		// damn path names
+		if (letter == PATH_SEP)
+			letter = '/';		// damn path names
+
 		hash+=(long)(letter)*(i+119);
 		i++;
 	}
@@ -62,6 +62,7 @@ static long generateHashValue( const char *fname, const int size ) {
 	hash &= (size-1);
 	return hash;
 }
+
 
 void R_RemapShader(const char *shaderName, const char *newShaderName, const char *timeOffset) {
 	char		strippedName[MAX_QPATH];
@@ -316,9 +317,7 @@ ParseWaveForm
 */
 static void ParseWaveForm( char **text, waveForm_t *wave )
 {
-	char *token;
-
-	token = COM_ParseExt( text, qfalse );
+	char *token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 )
 	{
 		ri.Printf( PRINT_WARNING, "WARNING: missing waveform parm in shader '%s'\n", shader.name );
@@ -368,23 +367,17 @@ ParseTexMod
 */
 static void ParseTexMod( char *_text, shaderStage_t *stage )
 {
-	const char *token;
 	char **text = &_text;
-	texModInfo_t *tmi;
-
 	if ( stage->bundle[0].numTexMods == TR_MAX_TEXMODS ) {
 		ri.Error( ERR_DROP, "ERROR: too many tcMod stages in shader '%s'", shader.name );
 		return;
 	}
 
-	tmi = &stage->bundle[0].texMods[stage->bundle[0].numTexMods];
+	texModInfo_t *tmi = &stage->bundle[0].texMods[stage->bundle[0].numTexMods];
 	stage->bundle[0].numTexMods++;
 
-	token = COM_ParseExt( text, qfalse );
+	const char *token = COM_ParseExt( text, qfalse );
 
-	//
-	// turb
-	//
 	if ( !Q_stricmp( token, "turb" ) )
 	{
 		token = COM_ParseExt( text, qfalse );
@@ -418,9 +411,6 @@ static void ParseTexMod( char *_text, shaderStage_t *stage )
 
 		tmi->type = TMOD_TURBULENT;
 	}
-	//
-	// scale
-	//
 	else if ( !Q_stricmp( token, "scale" ) )
 	{
 		token = COM_ParseExt( text, qfalse );
@@ -440,9 +430,6 @@ static void ParseTexMod( char *_text, shaderStage_t *stage )
 		tmi->scale[1] = atof( token );
 		tmi->type = TMOD_SCALE;
 	}
-	//
-	// scroll
-	//
 	else if ( !Q_stricmp( token, "scroll" ) )
 	{
 		token = COM_ParseExt( text, qfalse );
@@ -461,9 +448,6 @@ static void ParseTexMod( char *_text, shaderStage_t *stage )
 		tmi->scroll[1] = atof( token );
 		tmi->type = TMOD_SCROLL;
 	}
-	//
-	// stretch
-	//
 	else if ( !Q_stricmp( token, "stretch" ) )
 	{
 		token = COM_ParseExt( text, qfalse );
@@ -2731,7 +2715,7 @@ GeneratePermanentShader
 static shader_t *GeneratePermanentShader( void ) {
 	shader_t	*newShader;
 	int			i, b;
-	int			size, hash;
+	int			size;
 
 	if ( tr.numShaders == MAX_SHADERS ) {
 		ri.Printf( PRINT_WARNING, "WARNING: GeneratePermanentShader - MAX_SHADERS hit\n");
@@ -2772,101 +2756,13 @@ static shader_t *GeneratePermanentShader( void ) {
 
 	SortNewShader();
 
-	hash = generateHashValue(newShader->name, FILE_HASH_SIZE);
+	long int hash = generateHashValue(newShader->name, FILE_HASH_SIZE);
 	newShader->next = hashTable[hash];
 	hashTable[hash] = newShader;
 
 	return newShader;
 }
 
-/*
-=================
-VertexLightingCollapse
-
-If vertex lighting is enabled, only render a single
-pass, trying to guess which is the correct one to best approximate
-what it is supposed to look like.
-=================
-*/
-static void VertexLightingCollapse( void ) {
-	int		stage;
-	shaderStage_t	*bestStage;
-	int		bestImageRank;
-	int		rank;
-
-	// if we aren't opaque, just use the first pass
-	if ( shader.sort == SS_OPAQUE ) {
-
-		// pick the best texture for the single pass
-		bestStage = &stages[0];
-		bestImageRank = -999999;
-
-		for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ ) {
-			shaderStage_t *pStage = &stages[stage];
-
-			if ( !pStage->active ) {
-				break;
-			}
-			rank = 0;
-
-			if ( pStage->bundle[0].isLightmap ) {
-				rank -= 100;
-			}
-			if ( pStage->bundle[0].tcGen != TCGEN_TEXTURE ) {
-				rank -= 5;
-			}
-			if ( pStage->bundle[0].numTexMods ) {
-				rank -= 5;
-			}
-			if ( pStage->rgbGen != CGEN_IDENTITY && pStage->rgbGen != CGEN_IDENTITY_LIGHTING ) {
-				rank -= 3;
-			}
-
-			if ( rank > bestImageRank  ) {
-				bestImageRank = rank;
-				bestStage = pStage;
-			}
-		}
-
-		stages[0].bundle[0] = bestStage->bundle[0];
-		stages[0].stateBits &= ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-		stages[0].stateBits |= GLS_DEPTHMASK_TRUE;
-		if ( shader.lightmapIndex == LIGHTMAP_NONE ) {
-			stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
-		} else {
-			stages[0].rgbGen = CGEN_EXACT_VERTEX;
-		}
-		stages[0].alphaGen = AGEN_SKIP;		
-	} else {
-		// don't use a lightmap (tesla coils)
-		if ( stages[0].bundle[0].isLightmap ) {
-			stages[0] = stages[1];
-		}
-
-		// if we were in a cross-fade cgen, hack it to normal
-		if ( stages[0].rgbGen == CGEN_ONE_MINUS_ENTITY || stages[1].rgbGen == CGEN_ONE_MINUS_ENTITY ) {
-			stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-		}
-		if ( ( stages[0].rgbGen == CGEN_WAVEFORM && stages[0].rgbWave.func == GF_SAWTOOTH )
-			&& ( stages[1].rgbGen == CGEN_WAVEFORM && stages[1].rgbWave.func == GF_INVERSE_SAWTOOTH ) ) {
-			stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-		}
-		if ( ( stages[0].rgbGen == CGEN_WAVEFORM && stages[0].rgbWave.func == GF_INVERSE_SAWTOOTH )
-			&& ( stages[1].rgbGen == CGEN_WAVEFORM && stages[1].rgbWave.func == GF_SAWTOOTH ) ) {
-			stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-		}
-	}
-
-	for ( stage = 1; stage < MAX_SHADER_STAGES; stage++ ) {
-		shaderStage_t *pStage = &stages[stage];
-
-		if ( !pStage->active ) {
-			break;
-		}
-
-		memset( pStage, 0, sizeof( *pStage ) );
-	}
-}
 
 /*
 ===============
@@ -2910,13 +2806,12 @@ Returns a freshly allocated shader with all the needed info
 from the current global working shader
 =========================
 */
-static shader_t *FinishShader( void ) {
+static shader_t *FinishShader( void )
+{
 	int stage;
-	qboolean		hasLightmapStage;
-	qboolean		vertexLightmap;
+	qboolean hasLightmapStage = qfalse;
+	qboolean vertexLightmap = qfalse;
 
-	hasLightmapStage = qfalse;
-	vertexLightmap = qfalse;
 
 	//
 	// set sky stuff appropriate
@@ -2942,13 +2837,15 @@ static shader_t *FinishShader( void ) {
 			break;
 		}
 
-    // check for a missing texture
-		if ( !pStage->bundle[0].image[0] ) {
+        // check for a missing texture
+		if ( !pStage->bundle[0].image[0] )
+		{
 			ri.Printf( PRINT_WARNING, "Shader %s has a stage with no image\n", shader.name );
 			pStage->active = qfalse;
 			stage++;
 			continue;
 		}
+
 
 		//
 		// ditch this stage if it's detail and detail textures are disabled
@@ -3052,14 +2949,6 @@ static shader_t *FinishShader( void ) {
 	}
 
 	//
-	// if we are in r_vertexLight mode, never use a lightmap texture
-	//
-	if ( (stage > 1) && (r_vertexLight->integer && !r_uiFullScreen->integer)  ) {
-		VertexLightingCollapse();
-		hasLightmapStage = qfalse;
-	}
-
-	//
 	// look for multitexture potential
 	//
 	stage = CollapseStagesToGLSL();
@@ -3073,7 +2962,6 @@ static shader_t *FinishShader( void ) {
   			//shader.lightmapIndex = LIGHTMAP_NONE;
 		}
 	}
-
 
 	//
 	// compute number of passes
@@ -3113,7 +3001,7 @@ static char *FindShaderInShaderText( const char *shadername ) {
 
 	int i;
 
-	long hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
+	long int hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
 
 	if(shaderTextHashTable[hash])
 	{
@@ -3171,7 +3059,7 @@ shader_t *R_FindShaderByName( const char *name ) {
 
 	COM_StripExtension(name, strippedName, sizeof(strippedName));
 
-	long hash = generateHashValue(strippedName, FILE_HASH_SIZE);
+	long int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
 	//
 	// see if the shader is already loaded
@@ -3677,8 +3565,8 @@ static void ScanAndLoadShaderFiles( void )
 			}
 		}
 		
-		ri.Printf( PRINT_ALL, "...loading '%s'\n", filename );
-		long summand = ri.FS_ReadFile( filename, (void**)&buffers[i] );
+		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
+		long summand = ri.FS_ReadFile( filename, (void **)&buffers[i] );
 		
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
@@ -3721,7 +3609,6 @@ static void ScanAndLoadShaderFiles( void )
 			}
 		}
 			
-		
 		if (buffers[i])
 			sum += summand;		
 	}

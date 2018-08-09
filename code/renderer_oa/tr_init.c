@@ -40,8 +40,6 @@ cvar_t	*r_verbose;
 cvar_t	*r_ignore;
 
 cvar_t	*r_detailTextures;
-cvar_t	*r_detailTextureScale;
-cvar_t	*r_detailTextureLayers;
 
 
 cvar_t	*r_znear;
@@ -53,7 +51,6 @@ cvar_t	*r_measureOverdraw;
 cvar_t	*r_inGameVideo;
 cvar_t	*r_fastsky;
 cvar_t	*r_drawSun;
-cvar_t	*r_dynamiclight;
 cvar_t	*r_dlightBacks;
 
 cvar_t	*r_lodbias;
@@ -66,7 +63,7 @@ cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_facePlaneCull;
 cvar_t	*r_showcluster;
-// cvar_t	*r_nocurves;
+
 
 
 
@@ -75,7 +72,11 @@ cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_primitives;
 
 cvar_t	*r_lightmap;
+
+
 cvar_t	*r_uiFullScreen;
+
+
 cvar_t	*r_shadows;
 
 cvar_t	*r_nobind;
@@ -89,7 +90,6 @@ cvar_t	*r_showtris;
 cvar_t	*r_showsky;
 cvar_t	*r_finish;
 cvar_t	*r_clear;
-static cvar_t	*r_textureMode;
 cvar_t	*r_offsetFactor;
 cvar_t	*r_offsetUnits;
 cvar_t	*r_gamma;
@@ -138,8 +138,9 @@ cvar_t	*r_modelshader;		// Leilei
 
 cvar_t	*r_ntsc;		// Leilei - ntsc / composite signals
 
-
-
+// dynamic lights enabled/disabled
+static cvar_t* r_dynamiclight;
+static cvar_t* r_textureMode;
 static cvar_t* r_ext_texture_filter_anisotropic;
 static cvar_t* r_ext_max_anisotropy;
 
@@ -537,7 +538,6 @@ static void InitOpenGL(void)
 	// initialize OS specific portions of the renderer
 	//
 	// directly or indirectly references the following cvars:
-	//		- r_fullscreen
 	//		- r_mode
 	//		- r_(color|depth|stencil)bits
 	//		- r_gamma
@@ -730,27 +730,6 @@ const void *RB_TakeScreenshotCmd( const void *data )
 		RB_TakeScreenshot( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName);
 
 	return (const void *)(cmd + 1);
-}
-
-
-static void R_TakeScreenshot( int x, int y, int width, int height, char *name, qboolean jpeg )
-{
-	static char	fileName[MAX_OSPATH]; // bad things if two screenshots per frame?
-	screenshotCommand_t	*cmd;
-
-	cmd = R_GetCommandBuffer( sizeof( *cmd ) );
-	if ( !cmd ) {
-		return;
-	}
-	cmd->commandId = RC_SCREENSHOT;
-
-	cmd->x = x;
-	cmd->y = y;
-	cmd->width = width;
-	cmd->height = height;
-	Q_strncpyz( fileName, name, sizeof(fileName) );
-	cmd->fileName = fileName;
-	cmd->jpeg = jpeg;
 }
 
 
@@ -1111,7 +1090,6 @@ static void R_Register( void )
 	r_detailTextures = ri.Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH );
 
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	//r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
 	r_subdivisions = ri.Cvar_Get ("r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH);
 
 	//
@@ -1127,13 +1105,12 @@ static void R_Register( void )
 	r_lodCurveError = ri.Cvar_Get( "r_lodCurveError", "250", CVAR_ARCHIVE|CVAR_CHEAT );
 	r_lodbias = ri.Cvar_Get( "r_lodbias", "0", CVAR_ARCHIVE );
 
-	r_znear = ri.Cvar_Get( "r_znear", "4", CVAR_CHEAT );
+	r_znear = ri.Cvar_Get( "r_znear", "4", CVAR_ARCHIVE );
 	ri.Cvar_CheckRange( r_znear, 0.001f, 200, qfalse );
 	r_ignoreGLErrors = ri.Cvar_Get( "r_ignoreGLErrors", "1", CVAR_ARCHIVE );
 	r_fastsky = ri.Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE );
 	r_inGameVideo = ri.Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE );
 	r_drawSun = ri.Cvar_Get( "r_drawSun", "0", CVAR_ARCHIVE );
-	r_dynamiclight = ri.Cvar_Get( "r_dynamiclight", "1", CVAR_ARCHIVE );
 	r_dlightBacks = ri.Cvar_Get( "r_dlightBacks", "1", CVAR_ARCHIVE );
 	r_finish = ri.Cvar_Get ("r_finish", "0", CVAR_ARCHIVE);
 	r_textureMode = ri.Cvar_Get( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE | CVAR_LATCH );
@@ -1156,7 +1133,6 @@ static void R_Register( void )
 	r_debugSort = ri.Cvar_Get( "r_debugSort", "0", CVAR_CHEAT );
 	r_printShaders = ri.Cvar_Get( "r_printShaders", "0", 0 );
 
-//	r_nocurves = ri.Cvar_Get ("r_nocurves", "0", CVAR_CHEAT );
 	r_drawworld = ri.Cvar_Get ("r_drawworld", "1", CVAR_CHEAT );
 	r_lightmap = ri.Cvar_Get ("r_lightmap", "0", 0 );
 	r_portalOnly = ri.Cvar_Get ("r_portalOnly", "0", CVAR_CHEAT );
@@ -1191,6 +1167,7 @@ static void R_Register( void )
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", MAX_POLYS), 0);
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
 
+    r_dynamiclight = ri.Cvar_Get( "r_dynamiclight", "1", CVAR_ARCHIVE );
 
 	//r_waveMode = ri.Cvar_Get( "r_waveMode", "0" , CVAR_ARCHIVE );
 
@@ -1206,13 +1183,16 @@ static void R_Register( void )
 
 
 	r_modelshader = ri.Cvar_Get( "r_modelshader", "0" , CVAR_ARCHIVE | CVAR_LATCH);		// leilei - load and use special shaders for lightDiffuse models
-	r_detailTextureScale = ri.Cvar_Get( "r_detailtextureScale", "0", CVAR_ARCHIVE | CVAR_LATCH ); // leilei - adjust scale of detail textures
-	r_detailTextureLayers = ri.Cvar_Get( "r_detailtextureLayers", "0", CVAR_ARCHIVE | CVAR_LATCH ); // leilei - add more detail layers
 
 	r_ntsc = ri.Cvar_Get( "r_ntsc", "0" , CVAR_ARCHIVE | CVAR_LATCH);			// leilei - ntsc filter
 
 	r_iconmip = ri.Cvar_Get ("r_iconmip", "0", CVAR_ARCHIVE | CVAR_LATCH );		// leilei - icon mip
 	r_iconBits = ri.Cvar_Get ("r_iconBits", "0", CVAR_ARCHIVE | CVAR_LATCH );	// leilei - icon bits
+
+
+
+    // notued cvar, keep here for consistency
+	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0); // not used
 
 
 

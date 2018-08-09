@@ -106,10 +106,11 @@ int		com_frameNumber;
 qboolean	com_errorEntered = qfalse;
 qboolean	com_fullyInitialized = qfalse;
 qboolean	com_gameRestarting = qfalse;
+qboolean	com_gameClientRestarting = qfalse;
 
 char	com_errorMessage[MAXPRINTMSG];
 
-//void Com_WriteConfig_f( void );
+static void Com_WriteConfig_f( void );
 void CIN_CloseAllVideos( void );
 
 
@@ -243,6 +244,7 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 	static int	lastErrorTime;
 	static int	errorCount;
 	int			currentTime;
+	qboolean	restartClient;
 
 	if(com_errorEntered)
 		Sys_Error("recursive error after: %s", com_errorMessage);
@@ -274,9 +276,17 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 	if (code != ERR_DISCONNECT && code != ERR_NEED_CD)
 		Cvar_Set("com_errorMessage", com_errorMessage);
 
+	restartClient = com_gameClientRestarting && !( com_cl_running && com_cl_running->integer );
+
+	com_gameRestarting = qfalse;
+	com_gameClientRestarting = qfalse;
+
 	if (code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT) {
 		VM_Forced_Unload_Start();
 		SV_Shutdown( "Server disconnected" );
+		if ( restartClient ) {
+			CL_Init();
+		}
 		CL_Disconnect( qtrue );
 		CL_FlushMemory( );
 		VM_Forced_Unload_Done();
@@ -288,6 +298,9 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 		Com_Printf ("********************\nERROR: %s\n********************\n", com_errorMessage);
 		VM_Forced_Unload_Start();
 		SV_Shutdown (va("Server crashed: %s",  com_errorMessage));
+		if ( restartClient ) {
+			CL_Init();
+		}
 		CL_Disconnect( qtrue );
 		CL_FlushMemory( );
 		VM_Forced_Unload_Done();
@@ -297,6 +310,9 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 	} else if ( code == ERR_NEED_CD ) {
 		VM_Forced_Unload_Start();
 		SV_Shutdown( "Server didn't have CD" );
+		if ( restartClient ) {
+			CL_Init();
+		}
 		if ( com_cl_running && com_cl_running->integer ) {
 			CL_Disconnect( qtrue );
 			CL_FlushMemory( );
@@ -784,7 +800,7 @@ static void Z_ClearZone( memzone_t *zone, int size )
 Z_AvailableZoneMemory
 ========================
 */
-int Z_AvailableZoneMemory( memzone_t *zone ) {
+static int Z_AvailableZoneMemory( memzone_t *zone ) {
 	return zone->size - zone->used;
 }
 
@@ -798,39 +814,37 @@ int Z_AvailableMemory( void ) {
 }
 
 
-void Z_Free( void* ptr )
-{
+void Z_Free( void *ptr ) {
+	memblock_t	*block, *other;
 	memzone_t *zone;
 	
 	if (!ptr) {
 		Com_Error( ERR_DROP, "Z_Free: NULL pointer" );
 	}
 
-	memblock_t* block = (memblock_t *) ( (char *)ptr - sizeof(memblock_t));
-	
-    if (block->id != ZONEID)
+	block = (memblock_t *) ( (unsigned char *)ptr - sizeof(memblock_t));
+	if (block->id != ZONEID) {
 		Com_Error( ERR_FATAL, "Z_Free: freed a pointer without ZONEID" );
-
-	if (block->tag == 0)
+	}
+	if (block->tag == 0) {
 		Com_Error( ERR_FATAL, "Z_Free: freed a freed pointer" );
-
+	}
 	// if static memory
-	if (block->tag == TAG_STATIC)
-    {
+	if (block->tag == TAG_STATIC) {
 		return;
 	}
 
 	// check the memory trash tester
-	if ( *(int *)((char *)block + block->size - 4 ) != ZONEID )
-    {
+	if ( *(int *)((unsigned char *)block + block->size - 4 ) != ZONEID ) {
 		Com_Error( ERR_FATAL, "Z_Free: memory block wrote past end" );
 	}
 
-	if (block->tag == TAG_SMALL)
+	if (block->tag == TAG_SMALL) {
 		zone = smallzone;
-	else
+	}
+	else {
 		zone = mainzone;
-
+	}
 
 	zone->used -= block->size;
 	// set the block to something that should cause problems
@@ -839,15 +853,13 @@ void Z_Free( void* ptr )
 
 	block->tag = 0;		// mark as free
 	
-	memblock_t* other = block->prev;
-	if (!other->tag)
-    {
-		// merge with previous free block/
+	other = block->prev;
+	if (!other->tag) {
+		// merge with previous free block
 		other->size += block->size;
 		other->next = block->next;
 		other->next->prev = other;
-		if (block == zone->rover)
-        {
+		if (block == zone->rover) {
 			zone->rover = other;
 		}
 		block = other;
@@ -856,8 +868,7 @@ void Z_Free( void* ptr )
 	zone->rover = block;
 
 	other = block->next;
-	if( !other->tag )
-    {
+	if ( !other->tag ) {
 		// merge the next free block onto the end
 		block->size += other->size;
 		block->next = other->next;
@@ -872,7 +883,6 @@ Z_FreeTags
 ================
 */
 void Z_FreeTags( int tag ) {
-	int			count;
 	memzone_t	*zone;
 
 	if ( tag == TAG_SMALL ) {
@@ -881,13 +891,11 @@ void Z_FreeTags( int tag ) {
 	else {
 		zone = mainzone;
 	}
-	count = 0;
 	// use the rover as our pointer, because
 	// Z_Free automatically adjusts it
 	zone->rover = zone->blocklist.next;
 	do {
 		if ( zone->rover->tag == tag ) {
-			count++;
 			Z_Free( (void *)(zone->rover + 1) );
 			continue;
 		}
@@ -1017,7 +1025,6 @@ void *Z_Malloc( int size ) {
 
 	return buf;
 }
-
 
 #ifdef ZONE_DEBUG
 void *S_MallocDebug( int size, char *label, char *file, int line ) {
@@ -1240,7 +1247,7 @@ Com_Meminfo_f
 void Com_Meminfo_f( void ) {
 	memblock_t	*block;
 	int			zoneBytes, zoneBlocks;
-	int			smallZoneBytes, smallZoneBlocks;
+	int			smallZoneBytes;
 	int			botlibBytes, rendererBytes;
 	int			unused;
 
@@ -1278,11 +1285,9 @@ void Com_Meminfo_f( void ) {
 	}
 
 	smallZoneBytes = 0;
-	smallZoneBlocks = 0;
 	for (block = smallzone->blocklist.next ; ; block = block->next) {
 		if ( block->tag ) {
 			smallZoneBytes += block->size;
-			smallZoneBlocks++;
 		}
 
 		if (block->next == &smallzone->blocklist) {
@@ -1334,7 +1339,7 @@ Touch all known used data to make sure it is paged in
 void Com_TouchMemory( void ) {
 	int		start, end;
 	int		i, j;
-	int		sum;
+	unsigned	sum;
 	memblock_t	*block;
 
 	Z_CheckHeap();
@@ -1918,7 +1923,6 @@ void Com_QueueEvent( int time, sysEventType_t type, int value, int value2, int p
 		}
 	}
 
-
 	ev = &eventQueue[ eventHead & MASK_QUEUED_EVENTS ];
 
 	if ( eventHead - eventTail >= MAX_QUEUED_EVENTS )
@@ -2322,16 +2326,14 @@ void Com_GameRestart(int checksumFeed, qboolean disconnect)
 	// make sure no recursion can be triggered
 	if(!com_gameRestarting && com_fullyInitialized)
 	{
-		int clWasRunning;
-		
 		com_gameRestarting = qtrue;
-		clWasRunning = com_cl_running->integer;
-		
+		com_gameClientRestarting = com_cl_running->integer;
+
 		// Kill server if we have one
 		if(com_sv_running->integer)
 			SV_Shutdown("Game directory changed");
 
-		if(clWasRunning)
+		if(com_gameClientRestarting)
 		{
 			if(disconnect)
 				CL_Disconnect(qfalse);
@@ -2353,13 +2355,14 @@ void Com_GameRestart(int checksumFeed, qboolean disconnect)
 			NET_Restart_f();
 		}
 
-		if(clWasRunning)
+		if(com_gameClientRestarting)
 		{
 			CL_Init();
 			CL_StartHunkUsers(qfalse);
 		}
 		
 		com_gameRestarting = qfalse;
+		com_gameClientRestarting = qfalse;
 	}
 }
 
@@ -2547,66 +2550,6 @@ static void Com_WriteConfigToFile( const char *filename )
 	FS_FCloseFile( f );
 }
 
-/*
-===============
-Com_WriteConfig_f
-
-Write the config file to a specific name
-===============
-*/
-static void Com_WriteConfig_f( void )
-{
-	char filename[MAX_QPATH];
-
-	if ( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: writeconfig <filename>\n" );
-		return;
-	}
-
-	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
-	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
-	Com_Printf( "Writing %s.\n", filename );
-	Com_WriteConfigToFile( filename );
-}
-
-
-/*
-===============
-Com_WriteConfiguration
-
-Writes key bindings and archived cvars to config file if modified
-===============
-*/
-void Com_WriteConfiguration( void )
-{
-
-    // if we are quiting without fully initializing, make sure we don't write out anything
-	if ( !com_fullyInitialized )
-		return;
-
-
-	if ( !(cvar_modifiedFlags & CVAR_ARCHIVE ) )
-		return;
-
-	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
-
-	Com_WriteConfigToFile( Q3CONFIG_CFG );
-
-	// not needed for dedicated or standalone
-#if !defined(DEDICATED) && !defined(STANDALONE)
-	cvar_t* fs = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
-
-	if(!com_standalone->integer)
-	{
-		if (UI_usesUniqueCDKey() && fs && fs->string[0] != 0) {
-			Com_WriteCDKey( fs->string, &cl_cdkey[16] );
-		} else {
-			Com_WriteCDKey( BASEGAME, cl_cdkey );
-		}
-	}
-#endif
-}
-
 
 
 void Com_Init(char *commandLine )
@@ -2621,7 +2564,7 @@ void Com_Init(char *commandLine )
 
 
 	// Clear queues
-	memset( eventQueue, 0, sizeof( eventQueue) );
+	memset( eventQueue, 0, MAX_QUEUED_EVENTS * sizeof( sysEvent_t ) );
 
 	// initialize the weak pseudo-random number generator for use later.
 	Com_InitRand();
@@ -2651,7 +2594,7 @@ void Com_Init(char *commandLine )
 
 	com_standalone = Cvar_Get("com_standalone", "0", CVAR_ROM);
 	com_basegame = Cvar_Get("com_basegame", BASEGAME, CVAR_INIT);
-	com_homepath = Cvar_Get("com_homepath", "", CVAR_INIT);
+	com_homepath = Cvar_Get("com_homepath", "", CVAR_INIT|CVAR_PROTECTED);
 	
 	if(!com_basegame->string[0])
 		Cvar_ForceReset("com_basegame");
@@ -2715,6 +2658,7 @@ void Com_Init(char *commandLine )
 	com_sv_running = Cvar_Get ("sv_running", "0", CVAR_ROM);
 	com_cl_running = Cvar_Get ("cl_running", "0", CVAR_ROM);
 	com_buildScript = Cvar_Get( "com_buildScript", "0", 0 );
+	com_ansiColor = Cvar_Get( "com_ansiColor", "0", CVAR_ARCHIVE );
 
 	com_unfocused = Cvar_Get( "com_unfocused", "0", CVAR_ROM );
 	com_maxfpsUnfocused = Cvar_Get( "com_maxfpsUnfocused", "0", CVAR_ARCHIVE );
@@ -2861,6 +2805,64 @@ void Com_ReadFromPipe( void )
 
 
 
+/*
+===============
+Com_WriteConfiguration
+
+Writes key bindings and archived cvars to config file if modified
+===============
+*/
+void Com_WriteConfiguration( void )
+{
+
+    // if we are quiting without fully initializing, make sure we don't write out anything
+	if ( !com_fullyInitialized )
+		return;
+
+
+	if ( !(cvar_modifiedFlags & CVAR_ARCHIVE ) )
+		return;
+
+	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
+
+	Com_WriteConfigToFile( Q3CONFIG_CFG );
+
+	// not needed for dedicated or standalone
+#if !defined(DEDICATED) && !defined(STANDALONE)
+	cvar_t* fs = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
+
+	if(!com_standalone->integer)
+	{
+		if (UI_usesUniqueCDKey() && fs && fs->string[0] != 0) {
+			Com_WriteCDKey( fs->string, &cl_cdkey[16] );
+		} else {
+			Com_WriteCDKey( BASEGAME, cl_cdkey );
+		}
+	}
+#endif
+}
+
+/*
+===============
+Com_WriteConfig_f
+
+Write the config file to a specific name
+===============
+*/
+static void Com_WriteConfig_f( void )
+{
+	char filename[MAX_QPATH];
+
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "Usage: writeconfig <filename>\n" );
+		return;
+	}
+
+	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
+	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
+	Com_Printf( "Writing %s.\n", filename );
+	Com_WriteConfigToFile( filename );
+}
 
 /*
 ================
@@ -2947,6 +2949,7 @@ void Com_Frame(void)
 
 	// write config file if anything changed
 	Com_WriteConfiguration(); 
+
 	//
 	// main event loop
 	//
@@ -3025,16 +3028,15 @@ void Com_Frame(void)
 
 	SV_Frame( msec );
 
-	// if "dedicated" has been modified, start up or shut down the client system.
-	// Do this after the server may have started, but before the client tries to auto-connect
-	if ( com_dedicated->modified )
-    {
+	// if "dedicated" has been modified, start up
+	// or shut down the client system.
+	// Do this after the server may have started,
+	// but before the client tries to auto-connect
+	if ( com_dedicated->modified ) {
 		// get the latched value
 		Cvar_Get( "dedicated", "0", 0 );
 		com_dedicated->modified = qfalse;
-		
-        if ( !com_dedicated->integer )
-        {
+		if ( !com_dedicated->integer ) {
 			SV_Shutdown( "dedicated set to 0" );
 			CL_FlushMemory();
 		}
@@ -3070,13 +3072,14 @@ void Com_Frame(void)
 	}
 #endif
 
+
 	NET_FlushPacketQueue();
 
 	//
 	// report timing information
 	//
 	if ( com_speeds->integer )
-    {
+	{
 		int all = timeAfter - timeBeforeServer;
 		int sv = timeBeforeEvents - timeBeforeServer;
 		int ev = timeBeforeServer - timeBeforeFirstEvents + timeBeforeClient - timeBeforeEvents;
@@ -3102,8 +3105,9 @@ void Com_Frame(void)
 		c_patch_traces = 0;
 		c_pointcontents = 0;
 	}
-                                        
+
 	Com_ReadFromPipe( );
+
 	com_frameNumber++;
 }
 
@@ -3125,9 +3129,8 @@ void Com_Shutdown (void)
 		FS_FCloseFile( pipefile );
 		FS_HomeRemove( com_pipefile->string );
 	}
+
 }
-
-
 
 /*
 ===========================================

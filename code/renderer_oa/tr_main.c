@@ -22,8 +22,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_main.c -- main control flow for each frame
 
 #include "tr_local.h"
+///////// externs ///////////
 
-
+extern	backEndData_t *backEndData;	// the second one may not be allocated
 ///////// globals ///////////
 
 trGlobals_t	tr;
@@ -33,8 +34,213 @@ refimport_t	ri;
 shaderCommands_t tess;
 
 
+/////////////////////////////////
 
-//////// statics ///////////
+
+static int	r_firstSceneDrawSurf;
+
+static int	r_numdlights;
+static int	r_firstSceneDlight;
+
+static int	r_numentities;
+static int	r_firstSceneEntity;
+
+static int	r_numpolys;
+static int	r_firstScenePoly;
+
+static int	r_numpolyverts;
+
+
+static void R_RenderView( viewParms_t *parms );
+
+
+void R_InitNextFrame( void )
+{
+	backEndData->commands.used = 0;
+
+	r_firstSceneDrawSurf = 0;
+
+	r_numdlights = 0;
+	r_firstSceneDlight = 0;
+
+	r_numentities = 0;
+	r_firstSceneEntity = 0;
+
+	r_numpolys = 0;
+	r_firstScenePoly = 0;
+
+	r_numpolyverts = 0;
+}
+
+
+void RE_ClearScene( void )
+{
+	r_firstSceneDlight = r_numdlights;
+	r_firstSceneEntity = r_numentities;
+	r_firstScenePoly = r_numpolys;
+}
+
+
+/*
+===========================================================================
+
+DISCRETE POLYS
+
+===========================================================================
+*/
+
+void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts, int numPolys )
+{
+	int	j;
+	int	fogIndex;
+
+	if ( !tr.registered )
+    {
+		return;
+	}
+
+	if ( !hShader ) {
+		ri.Printf( PRINT_DEVELOPER, "WARNING: RE_AddPolyToScene: NULL poly shader\n");	// leilei - changed this to PRINT_DEVELOPER
+		return;
+	}
+
+	for ( j = 0; j < numPolys; j++ )
+    {
+		if ( (r_numpolyverts + numVerts > max_polyverts) || (r_numpolys >= max_polys) )
+        {
+          /*
+          NOTE TTimo this was initially a PRINT_WARNING
+          but it happens a lot with high fighting scenes and particles
+          since we don't plan on changing the const and making for room for those effects
+          simply cut this message to developer only
+          */
+			ri.Printf( PRINT_DEVELOPER, "WARNING: RE_AddPolyToScene: r_max_polys or r_max_polyverts reached\n");
+			return;
+		}
+
+		srfPoly_t* poly = &backEndData->polys[r_numpolys];
+		poly->surfaceType = SF_POLY;
+		poly->hShader = hShader;
+		poly->numVerts = numVerts;
+		poly->verts = &backEndData->polyVerts[r_numpolyverts];
+		
+		memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
+
+		// done.
+		r_numpolys++;
+		r_numpolyverts += numVerts;
+
+		// if no world is loaded
+		if ( tr.world == NULL )
+        {
+			fogIndex = 0;
+		}
+		else if ( tr.world->numfogs == 1 )
+        {
+            // see if it is in a fog volume
+			fogIndex = 0;
+		}
+        else
+        {
+			// find which fog volume the poly is in
+            vec3_t bounds[2];
+			VectorCopy( poly->verts[0].xyz, bounds[0] );
+			VectorCopy( poly->verts[0].xyz, bounds[1] );
+		    
+            int i;
+            for (i = 1; i < poly->numVerts; i++ )
+            {
+				AddPointToBounds( poly->verts[i].xyz, bounds[0], bounds[1] );
+			}
+
+			for ( fogIndex = 1 ; fogIndex < tr.world->numfogs ; fogIndex++ )
+            {
+				fog_t* fog = &tr.world->fogs[fogIndex]; 
+				if( (bounds[1][0] >= fog->bounds[0][0]) && (bounds[1][1] >= fog->bounds[0][1]) && 
+                    (bounds[1][2] >= fog->bounds[0][2]) && (bounds[0][0] <= fog->bounds[1][0]) &&
+                    (bounds[0][1] <= fog->bounds[1][1]) && (bounds[0][2] <= fog->bounds[1][2]) )
+                {
+					break;
+				}
+			}
+
+			if( fogIndex == tr.world->numfogs )
+            {
+				fogIndex = 0;
+			}
+		}
+
+		poly->fogIndex = fogIndex;
+	}
+}
+
+
+
+/*
+=====================
+RE_AddRefEntityToScene
+
+=====================
+*/
+void RE_AddRefEntityToScene( const refEntity_t *ent )
+{
+	if ( !tr.registered ) {
+		return;
+	}
+	if ( r_numentities >= MAX_REFENTITIES ) {
+		ri.Printf(PRINT_DEVELOPER, "RE_AddRefEntityToScene: Dropping refEntity, reached MAX_REFENTITIES\n");
+		return;
+	}
+	if ( Q_isnan(ent->origin[0]) || Q_isnan(ent->origin[1]) || Q_isnan(ent->origin[2]) ) {
+		static qboolean firstTime = qtrue;
+		if (firstTime) {
+			firstTime = qfalse;
+			ri.Printf( PRINT_WARNING, "RE_AddRefEntityToScene passed a refEntity which has an origin with a NaN component\n");
+		}
+		return;
+	}
+	if ( (int)ent->reType < 0 || ent->reType >= RT_MAX_REF_ENTITY_TYPE ) {
+		ri.Error( ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType );
+	}
+
+	backEndData->entities[r_numentities].e = *ent;
+	backEndData->entities[r_numentities].lightingCalculated = qfalse;
+
+	r_numentities++;
+}
+
+
+void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b )
+{
+	if ( tr.registered && (intensity > 0.0f) && (r_numdlights < MAX_DLIGHTS) )
+    {
+        dlight_t* dl = &backEndData->dlights[r_numdlights++];
+        VectorCopy (org, dl->origin);
+        dl->radius = intensity;
+        dl->color[0] = r;
+        dl->color[1] = g;
+        dl->color[2] = b;
+        dl->additive = qfalse;
+	}
+}
+
+
+void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b )
+{
+	if ( tr.registered && (intensity > 0.0f) && (r_numdlights < MAX_DLIGHTS) )
+    {
+        dlight_t* dl = &backEndData->dlights[r_numdlights++];
+        VectorCopy (org, dl->origin);
+        dl->radius = intensity;
+        dl->color[0] = r;
+        dl->color[1] = g;
+        dl->color[2] = b;
+        dl->additive = qtrue;
+	}
+}
+
+
+//////// static funs ///////////
 
 static const float s_flipMatrix[16] =
 {
@@ -61,8 +267,6 @@ static void R_RotateForViewer(void)
 {
 	float	viewerMatrix[16];
 	vec3_t	origin;
-
-	
     VectorCopy(tr.viewParms.or.origin, origin);
     memset(&tr.or, 0, sizeof(tr.or));
     tr.or.axis[0][0] = 1;
@@ -98,6 +302,7 @@ static void R_RotateForViewer(void)
 	MatrixMultiply4x4( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
 
 	tr.viewParms.world = tr.or;
+
 }
 
 
@@ -112,14 +317,13 @@ static void R_MirrorPoint(vec3_t in, orientation_t *surface, orientation_t *came
 	int		i;
 	vec3_t	local;
 	vec3_t	transformed;
-	float	d;
 
 	VectorSubtract( in, surface->origin, local );
 
 	VectorClear( transformed );
 	for( i = 0 ; i < 3 ; i++ )
     {
-		d = DotProduct(local, surface->axis[i]);
+		float d = DotProduct(local, surface->axis[i]);
 		VectorMA( transformed, d, camera->axis[i], transformed );
 	}
 
@@ -204,8 +408,6 @@ static qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 {
 	int			i;
 	cplane_t	originalPlane, plane;
-	trRefEntity_t	*e;
-	float		d;
 	vec3_t		transformed;
 
 	// create plane axis for the portal we are seeing
@@ -239,8 +441,10 @@ static qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 	// locate the portal entity closest to this plane.
 	// origin will be the origin of the portal, 
     // origin2 will be the origin of the camera
-	for ( i = 0 ; i < tr.refdef.num_entities ; i++ ) {
-		e = &tr.refdef.entities[i];
+	for ( i = 0 ; i < tr.refdef.num_entities ; i++ )
+    {
+        float d;
+		trRefEntity_t *e = &tr.refdef.entities[i];
 		if ( e->e.reType != RT_PORTALSURFACE ) {
 			continue;
 		}
@@ -413,9 +617,9 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
             for ( j = 0 ; j < 4 ; j++ )
             {
                 eye[j] = 
-                    tess.xyz[j][0] * tr.or.modelMatrix[ j + 0 * 4 ] +
-                    tess.xyz[j][1] * tr.or.modelMatrix[ j + 1 * 4 ] +
-                    tess.xyz[j][2] * tr.or.modelMatrix[ j + 2 * 4 ] +
+                    tess.xyz[i][0] * tr.or.modelMatrix[ j + 0 * 4 ] +
+                    tess.xyz[i][1] * tr.or.modelMatrix[ j + 1 * 4 ] +
+                    tess.xyz[i][2] * tr.or.modelMatrix[ j + 2 * 4 ] +
                                  1 * tr.or.modelMatrix[ j + 3 * 4 ];
             }
 
@@ -508,7 +712,7 @@ static ID_INLINE void R_Radix( int byte, int size, drawSurf_t *source, drawSurf_
 {
   int count[ 256 ] = { 0 };
   int index[ 256 ] = { 0 };
-  int           i;
+  int i;
 
   unsigned char* sortKey = ( (unsigned char *)&source[ 0 ].sort ) + byte;
   unsigned char* end = sortKey + ( size * sizeof( drawSurf_t ) );
@@ -971,7 +1175,7 @@ void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader, int *fog
 /*
  * A view may be either the actual camera view, or a mirror / remote location
  */
-void R_RenderView(viewParms_t *parms)
+static void R_RenderView(viewParms_t *parms)
 {
 
 	if ( (parms->viewportWidth <= 0) || (parms->viewportHeight <= 0) ) {
@@ -1075,12 +1279,175 @@ void R_RenderView(viewParms_t *parms)
 	R_SortDrawSurfs( tr.refdef.drawSurfs + firstDrawSurf, tr.refdef.numDrawSurfs - firstDrawSurf );
 
 	// draw main system development information (surface outlines, etc)
-	if ( r_debugSurface->integer )
+	if( r_debugSurface->integer )
     {
         R_DebugGraphics();
 	}
 }
 
+
+
+
+/*
+@@@@@@@@@@@@@@@@@@@@@
+RE_RenderScene
+
+Draw a 3D view into a part of the window, then return to 2D drawing.
+
+Rendering a scene may require multiple views to be rendered to handle mirrors,
+@@@@@@@@@@@@@@@@@@@@@
+*/
+void RE_RenderScene( const refdef_t *fd )
+{
+
+	if ( !tr.registered ) {
+		return;
+	}
+
+	int startTime = ri.Milliseconds();
+
+	qboolean customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
+
+
+#ifndef NDEBUG	
+	if (!tr.world && customscrn )
+    {
+		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
+	}
+#endif
+	memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
+
+	tr.refdef.x = fd->x;
+	tr.refdef.y = fd->y;
+	tr.refdef.width = fd->width;
+	tr.refdef.height = fd->height;
+	tr.refdef.fov_x = fd->fov_x;
+	tr.refdef.fov_y = fd->fov_y;
+
+	VectorCopy( fd->vieworg, tr.refdef.vieworg );
+	VectorCopy( fd->viewaxis[0], tr.refdef.viewaxis[0] );
+	VectorCopy( fd->viewaxis[1], tr.refdef.viewaxis[1] );
+	VectorCopy( fd->viewaxis[2], tr.refdef.viewaxis[2] );
+
+	tr.refdef.time = fd->time;
+	tr.refdef.rdflags = fd->rdflags;
+
+	// copy the areamask data over and note if it has changed, which
+	// will force a reset of the visible leafs even if the view hasn't moved
+	tr.refdef.areamaskModified = qfalse;
+	if ( customscrn )
+    {
+		int	i;
+		// compare the area bits
+		for (i = 0; i < sizeof(tr.refdef.areamask); i++)
+        {
+			if(tr.refdef.areamask[i] ^ fd->areamask[i])
+			{
+			    // a door just opened or something
+			    tr.refdef.areamaskModified = qtrue;
+                break;
+		    }
+		}
+
+        if(tr.refdef.areamaskModified)
+        {
+            memcpy(tr.refdef.areamask, fd->areamask, sizeof(tr.refdef.areamask));
+        }
+	}
+
+
+	// derived info
+
+	tr.refdef.floatTime = tr.refdef.time * 0.001f;
+
+	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
+	tr.refdef.drawSurfs = backEndData->drawSurfs;
+
+	tr.refdef.num_entities = r_numentities - r_firstSceneEntity;
+	tr.refdef.entities = &backEndData->entities[r_firstSceneEntity];
+
+	tr.refdef.num_dlights = r_numdlights - r_firstSceneDlight;
+	tr.refdef.dlights = &backEndData->dlights[r_firstSceneDlight];
+
+	tr.refdef.numPolys = r_numpolys - r_firstScenePoly;
+	tr.refdef.polys = &backEndData->polys[r_firstScenePoly];
+
+	// turn off dynamic lighting globally by clearing all the dlights 
+    // if it needs to be disabled or if vertex lighting is enabled
+	//if ( r_dynamiclight->integer == 0 ) {
+    //	tr.refdef.num_dlights = 0;
+	//}
+
+	// a single frame may have multiple scenes draw inside it --
+	// a 3D game view, 3D status bar renderings, 3D menus, etc.
+	// They need to be distinguished by the light flare code, because
+	// the visibility state for a given surface may be different in
+	// each scene / view.
+	tr.frameSceneNum++;
+	tr.sceneCount++;
+
+
+	// setup view parms for the initial view
+	// The refdef takes 0-at-the-top y coordinates, so
+	// convert to GL's 0-at-the-bottom space
+	//
+    viewParms_t	parms;
+	memset(&parms, 0, sizeof( parms ));
+	parms.viewportX = tr.refdef.x;
+	parms.viewportY = glConfig.vidHeight - tr.refdef.y - tr.refdef.height;
+	parms.viewportWidth = tr.refdef.width;
+	parms.viewportHeight = tr.refdef.height;
+	parms.isPortal = qfalse;
+
+	parms.fovX = tr.refdef.fov_x;
+	parms.fovY = tr.refdef.fov_y;
+
+
+/*	
+    // ri.Printf(PRINT_ALL, "B: fovX: %f, fovY: %f, aspect: %f\n", parms.fovX, parms.fovY, tan(parms.fovX *(M_PI/360.0)) / tan(parms.fovY*(M_PI/360.0)));
+	// leilei - widescreen
+	// recalculate fov according to widescreen parameters
+    // figure out our zoom or changed fov magnitiude from cg_fov and cg_zoomfov
+    // try not to recalculate fov of ui and hud elements
+    // && (parms.fovX > 1.3f * parms.fovY) && (tr.refdef.width * glConfig.vidHeight == glConfig.vidWidth * tr.refdef.height)
+    if ( customscrn )
+    {
+        // undo vert-
+        parms.fovY = parms.fovX * (73.739792 / 90.0);
+        // recalculate the fov_x
+        parms.fovX = atan(tan(parms.fovY * (M_PI/360.0)) * glConfig.windowAspect) * (360.0/M_PI);
+    }
+
+
+	if (customscrn){
+		// In Vert- FOV the horizontal FOV is unchanged, so we use it to
+		// calculate the vertical FOV that would be used if playing on 4:3 to get the Hor+ vertical FOV
+		parms.fovY = (360.0 / M_PI) * atan( tan( (M_PI/360.0) * parms.fovX ) * 0.75f );
+		// Then we use the Hor+ vertical FOV to calculate our new expanded horizontal FOV
+		parms.fovX = (360.0 / M_PI) * atan( tan( (M_PI/360.0) * parms.fovY ) * tr.refdef.width / tr.refdef.height ) ;
+	}
+
+    ri.Printf(PRINT_ALL, "fovX: %f, fovY: %f, aspect: %f\n", parms.fovX, parms.fovY, tan(parms.fovX *(M_PI/360.0)) / tan(parms.fovY*(M_PI/360.0)));
+*/
+
+
+	VectorCopy( fd->vieworg, parms.or.origin );
+	VectorCopy( fd->viewaxis[0], parms.or.axis[0] );
+	VectorCopy( fd->viewaxis[1], parms.or.axis[1] );
+	VectorCopy( fd->viewaxis[2], parms.or.axis[2] );
+
+	VectorCopy( fd->vieworg, parms.pvsOrigin );
+
+	R_RenderView( &parms );
+
+	// the next scene rendered in this frame will tack on after this one
+	r_firstSceneDrawSurf = tr.refdef.numDrawSurfs;
+	r_firstSceneEntity = r_numentities;
+	r_firstSceneDlight = r_numdlights;
+	r_firstScenePoly = r_numpolys;
+
+	tr.frontEndMsec += ri.Milliseconds() - startTime;
+}
 
 
 

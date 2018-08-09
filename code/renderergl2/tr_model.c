@@ -25,18 +25,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define	LL(x) x=LittleLong(x)
 
-typedef struct
-{
-	char *ext;
-	qhandle_t (*ModelLoader)( const char *, model_t * );
-} modelExtToLoaderMap_t;
-
 static qboolean R_LoadMD3(model_t *mod, int lod, void *buffer, int bufferSize, const char* modName);
 static qboolean R_LoadMDR(model_t *mod, void *buffer, int filesize, const char *name );
 static qhandle_t R_RegisterMD3(const char *name, model_t *mod);
 static qhandle_t R_RegisterMDR(const char *name, model_t *mod);
 static qhandle_t R_RegisterIQM(const char *name, model_t *mod);
 
+typedef struct
+{
+	char *ext;
+	qhandle_t (*ModelLoader)( const char *, model_t * );
+} modelExtToLoaderMap_t;
 
 // Note that the ordering indicates the order of preference used
 // when there are multiple models of different formats available
@@ -790,6 +789,7 @@ static qboolean R_LoadMD3(model_t* mod, int lod, void *buffer, int bufferSize, c
 }
 
 
+
 /*
 =============================================================
 UNCOMPRESSING BONES
@@ -1421,6 +1421,7 @@ void R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs )
 
 		VectorCopy( frame->bounds[0], mins );
 		VectorCopy( frame->bounds[1], maxs );
+		
 		return;
 	}
 	else if(model->type == MOD_IQM)
@@ -1439,6 +1440,7 @@ void R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs )
 	VectorClear( maxs );
 }
 
+
 void R_ModelInit( void )
 {
 	// leave a space for NULL model
@@ -1448,5 +1450,6 @@ void R_ModelInit( void )
 	mod->index = tr.numModels;
 	tr.models[tr.numModels] = mod;
 	tr.numModels++;
+
 	mod->type = MOD_BAD;
 }

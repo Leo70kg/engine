@@ -36,7 +36,7 @@ Q_EXPORT void dllEntry( intptr_t (QDECL  *syscallptr)( intptr_t arg,... ) ) {
 }
 
 
-int PASSFLOAT( float x ) {
+static int PASSFLOAT( float x ) {
 	float	floatTemp;
 	floatTemp = x;
 	return *(int *)&floatTemp;

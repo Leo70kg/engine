@@ -683,7 +683,6 @@ void *VM_ArgPtr( intptr_t intValue )
 
 	if ( currentVM->entryPoint )
 		return (void *)(currentVM->dataBase + intValue);
-
 	else
 		return (void *)(currentVM->dataBase + (intValue & currentVM->dataMask));
 }

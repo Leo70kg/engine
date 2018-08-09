@@ -1251,21 +1251,6 @@ static void CG_CalculateWeaponPosition( vec3_t origin, vec3_t angles )
 		angles[PITCH] += cg.xyspeed * cg.bobfracsin * 0.005;
 	}
 
-	// leilei - fudgeweapon ported directly from quake :D
-
-	if (cg_viewnudge.integer) {
-
-		if (cg_viewsize.integer== 110)
-			origin[2] += 1;
-		else if (cg_viewsize.integer == 100)
-			origin[2] += 2;
-		else if (cg_viewsize.integer == 90)
-			origin[2] += 1;
-		else if (cg_viewsize.integer == 80)
-			origin[2] += 0.5;
-
-	}
-
 
 	// drop the weapon when landing
 	delta = cg.time - cg.landTime;

@@ -48,8 +48,9 @@ cvar_t	*r_ignore;
 cvar_t	*r_detailTextures;
 
 cvar_t	*r_znear;
-cvar_t	*r_zproj;
-
+//cvar_t	*r_stereoSeparation;
+//cvar_t	*r_stereoEnabled;
+//cvar_t	*r_anaglyphMode;
 cvar_t	*r_skipBackEnd;
 
 cvar_t	*r_measureOverdraw;
@@ -70,9 +71,15 @@ cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_facePlaneCull;
 cvar_t	*r_showcluster;
-cvar_t	*r_nocurves;
 
 cvar_t	*r_allowExtensions;
+
+//cvar_t	*r_ext_compressed_textures;
+//cvar_t	*r_ext_multitexture;
+//cvar_t	*r_ext_compiled_vertex_array;
+//cvar_t	*r_ext_texture_env_add;
+//cvar_t	*r_ext_texture_filter_anisotropic;
+//cvar_t	*r_ext_max_anisotropy;
 
 cvar_t  *r_ext_framebuffer_object;
 cvar_t  *r_ext_texture_float;
@@ -109,6 +116,7 @@ cvar_t  *r_deluxeMapping;
 cvar_t  *r_parallaxMapping;
 cvar_t  *r_cubeMapping;
 cvar_t  *r_cubemapSize;
+cvar_t  *r_deluxeSpecular;
 cvar_t  *r_pbr;
 cvar_t  *r_baseNormalX;
 cvar_t  *r_baseNormalY;
@@ -141,7 +149,6 @@ cvar_t	*r_ignoreGLErrors;
 
 
 cvar_t	*r_lightmap;
-cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
 cvar_t	*r_shadows;
 cvar_t	*r_flares;
@@ -809,6 +816,9 @@ static void InitOpenGL( void )
 		{
 			glConfig.maxTextureSize = 0;
 		}
+
+		qglGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &temp );
+		glConfig.numTextureUnits = temp;
 	}
 
 	// set default state
@@ -1508,7 +1518,7 @@ void GfxInfo_f( void )
 	}
 	ri.Printf( PRINT_ALL, "\n" );
 	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
-	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_UNITS_ARB: %d\n", glConfig.numTextureUnits );
+	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_IMAGE_UNITS: %d\n", glConfig.numTextureUnits );
 	ri.Printf( PRINT_ALL, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
 	ri.Printf( PRINT_ALL, "MODE: %d x %d hz:", glConfig.vidWidth, glConfig.vidHeight);
 	if ( glConfig.refresh_rate )
@@ -1620,7 +1630,6 @@ void R_Register( void )
 	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
 
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
 	r_subdivisions = ri.Cvar_Get ("r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH);
 
@@ -1652,6 +1661,7 @@ void R_Register( void )
 	r_parallaxMapping = ri.Cvar_Get( "r_parallaxMapping", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_cubeMapping = ri.Cvar_Get( "r_cubeMapping", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_cubemapSize = ri.Cvar_Get( "r_cubemapSize", "128", CVAR_ARCHIVE | CVAR_LATCH );
+	r_deluxeSpecular = ri.Cvar_Get("r_deluxeSpecular", "0.3", CVAR_ARCHIVE | CVAR_LATCH);
 	r_pbr = ri.Cvar_Get("r_pbr", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_baseNormalX = ri.Cvar_Get( "r_baseNormalX", "1.0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_baseNormalY = ri.Cvar_Get( "r_baseNormalY", "1.0", CVAR_ARCHIVE | CVAR_LATCH );
@@ -1697,7 +1707,6 @@ void R_Register( void )
 	r_flares = ri.Cvar_Get ("r_flares", "0", CVAR_ARCHIVE );
 	r_znear = ri.Cvar_Get( "r_znear", "4", CVAR_CHEAT );
 	ri.Cvar_CheckRange( r_znear, 0.001f, 200, qfalse );
-	r_zproj = ri.Cvar_Get( "r_zproj", "64", CVAR_ARCHIVE );
 	r_ignoreGLErrors = ri.Cvar_Get( "r_ignoreGLErrors", "1", CVAR_ARCHIVE );
 	r_fastsky = ri.Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE );
 	r_inGameVideo = ri.Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE );
@@ -1728,7 +1737,6 @@ void R_Register( void )
 	r_printShaders = ri.Cvar_Get( "r_printShaders", "0", 0 );
 
 
-	r_nocurves = ri.Cvar_Get ("r_nocurves", "0", CVAR_CHEAT );
 	r_drawworld = ri.Cvar_Get ("r_drawworld", "1", CVAR_CHEAT );
 	r_lightmap = ri.Cvar_Get ("r_lightmap", "0", 0 );
 	r_portalOnly = ri.Cvar_Get ("r_portalOnly", "0", CVAR_CHEAT );
@@ -1939,10 +1947,10 @@ void RE_Shutdown( qboolean destroyWindow ) {
     {
         ri.GLimpShutdown();
 		memset( &glConfig, 0, sizeof( glConfig ) );
+		memset( &glRefConfig, 0, sizeof( glRefConfig ) );
 		memset( &glState, 0, sizeof( glState ) );
 
         GLimp_ClearProcAddresses();
-
 	}
 
 }
@@ -2034,7 +2042,7 @@ refexport_t *GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 //=============================================================================
 
 
-void RE_BeginRegistration( glconfig_t *glconfigOut )
+void RE_BeginRegistration(glconfig_t *glconfigOut)
 {
 	int	i;
 

@@ -51,15 +51,16 @@ static long int generateHashValue( const char *fname, const int size )
 	long hash = 0;
 
 	while (fname[i] != '\0')
-    {
+	{
 		char letter = tolower(fname[i]);
 		if (letter =='.')
-            break;				// don't include extension
+			break;				// don't include extension
+
 		if (letter =='\\')
-            letter = '/';		// damn path names
+			letter = '/';		// damn path names
         else if (letter == PATH_SEP)
             letter = '/';		// damn path names
-        
+
 		hash+=(long)(letter)*(i+119);
 		i++;
 	}
@@ -388,7 +389,7 @@ static void ParseTexMod( char *_text, shaderStage_t *stage )
 	const char *token = COM_ParseExt( text, qfalse );
 
 	if ( !Q_stricmp( token, "turb" ) )
-	{   // turb
+	{
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
@@ -421,7 +422,7 @@ static void ParseTexMod( char *_text, shaderStage_t *stage )
 		tmi->type = TMOD_TURBULENT;
 	}
 	else if ( !Q_stricmp( token, "scale" ) )
-	{   // scale
+	{
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
@@ -440,7 +441,7 @@ static void ParseTexMod( char *_text, shaderStage_t *stage )
 		tmi->type = TMOD_SCALE;
 	}
 	else if ( !Q_stricmp( token, "scroll" ) )
-	{   // scroll
+	{
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
@@ -458,7 +459,7 @@ static void ParseTexMod( char *_text, shaderStage_t *stage )
 		tmi->type = TMOD_SCROLL;
 	}
 	else if ( !Q_stricmp( token, "stretch" ) )
-	{   // stretch
+	{
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
@@ -3262,17 +3263,16 @@ static shader_t *GeneratePermanentShader( void ) {
 =========================
 FinishShader
 
-Returns a freshly allocated shader with all the needed info from the current global working shader
+Returns a freshly allocated shader with all the needed info
+from the current global working shader
 =========================
 */
 static shader_t *FinishShader( void )
 {
 	int stage;
-	qboolean hasLightmapStage;
-	qboolean vertexLightmap;
-	
-	hasLightmapStage = qfalse;
-	vertexLightmap = qfalse;
+	qboolean hasLightmapStage = qfalse;
+	qboolean vertexLightmap = qfalse;
+
 
 	//
 	// set sky stuff appropriate
@@ -3298,11 +3298,9 @@ static shader_t *FinishShader( void )
 			break;
 		}
 
-
-
-    // check for a missing texture
-		if ( !pStage->bundle[0].image[0] ) 
-        {
+        // check for a missing texture
+		if ( !pStage->bundle[0].image[0] )
+		{
 			ri.Printf( PRINT_WARNING, "Shader %s has a stage with no image\n", shader.name );
 			pStage->active = qfalse;
 			stage++;
@@ -3405,7 +3403,7 @@ static shader_t *FinishShader( void )
 	//
 	// look for multitexture potential
 	//
-	if ( stage > 1 && CollapseMultitexture() ) {
+	if ( (stage > 1) && CollapseMultitexture() ) {
 		stage--;
 	}
 
@@ -3522,7 +3520,6 @@ shader_t *R_FindShaderByName( const char *name )
 	shader_t	*sh;
 
 	if ( (name==NULL) || (name[0] == 0) ) {
-
 		return tr.defaultShader;
 	}
 
@@ -3544,7 +3541,6 @@ shader_t *R_FindShaderByName( const char *name )
 		}
 	}
 
-	
 	return tr.defaultShader;
 }
 
@@ -3581,6 +3577,9 @@ TODO:	if r_detailTextures 2, try to move the detail texture before the lightmap 
 ===============
 */
 
+//extern  cvar_t	*r_detailTextureScale;		// leilei - scale tweak the detail textures, 0 doesn't tweak at all.
+//extern  cvar_t	*r_detailTextureLayers;		// leilei - add in more smaller detail texture layers, expensive!
+
 
 shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRawImage )
 {
@@ -3598,18 +3597,9 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 	int detailLayer; // leilei - detail layer hack
     
     // leilei - for adjusting detail textures
-    if ( r_detailTextureScale->integer > 0)
-        detailScale = r_detailTextureScale->integer;
-    else
-        detailScale = 8;
-
-	
-    if ( r_detailTextureLayers->integer > 0)
-        detailLayer = r_detailTextureLayers->integer;
-	else{
-        detailLayer = 1; // one usual layer
-	}
-
+    detailScale = 8;
+    detailLayer = 1; // one usual layer
+    
     if (detailLayer > 6){
         detailLayer = 6; // limit 6 for now
 	}
@@ -3715,16 +3705,7 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 						// for adjusting the detail textures and skipping some redundancy
 						if (stages[e].isDetail)
                         {
-							if (r_detailTextureScale->integer)
-                            {
-								if (stages[e].bundle[0].texMods[0].type == TMOD_SCALE)
-								{
-                                    wi = 0.25 * wi / (detailScale / (f + 1));
-                                    hi = 0.25 * hi / (detailScale / (f + 1));
-                                    stages[e].bundle[0].texMods[0].scale[0] = wi;
-                                    stages[e].bundle[0].texMods[0].scale[1] = hi;
-								}
-							}
+
 						}						
 					}
 					}
@@ -4247,8 +4228,6 @@ static void ScanAndLoadShaderFiles( void )
 	}
 
 	COM_Compress( s_shaderText );
-
-
 
 	// free up memory
 	ri.FS_FreeFileList( shaderFiles );

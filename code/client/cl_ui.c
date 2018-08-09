@@ -762,7 +762,7 @@ intptr_t CL_UISystemCalls(intptr_t *args)
             return FS_FOpenFileByMode(VM_ArgPtr( args[1]), VM_ArgPtr(args[2]) , args[3] );
 
         case UI_FS_READ:
-            FS_Read2( VM_ArgPtr(args[1]), args[2], args[3] );
+            FS_Read( VM_ArgPtr(args[1]), args[2], args[3] );
             return 0;
 
         case UI_FS_WRITE:

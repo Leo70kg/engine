@@ -133,7 +133,6 @@ vmCvar_t cg_footsteps;
 vmCvar_t cg_addMarks;
 vmCvar_t cg_brassTime;
 vmCvar_t cg_viewsize;
-vmCvar_t cg_viewnudge; // leilei
 vmCvar_t cg_muzzleflashStyle;
 vmCvar_t cg_drawGun;
 vmCvar_t cg_gun_frame;
@@ -312,7 +311,6 @@ static cvarTable_t cvarTable[] = {// bk001129
 	{ &cg_zoomFov, "cg_zoomfov", "22.5", CVAR_ARCHIVE},
 	{ &cg_fov, "cg_fov", "90", CVAR_ARCHIVE},
 	{ &cg_viewsize, "cg_viewsize", "100", CVAR_ARCHIVE},
-	{ &cg_viewnudge, "cg_viewnudge", "0", CVAR_ARCHIVE},
 	{ &cg_shadows, "cg_shadows", "1", CVAR_ARCHIVE},
 	{ &cg_gibs, "cg_gibs", "1", CVAR_ARCHIVE},
 	{ &cg_draw2D, "cg_draw2D", "1", CVAR_ARCHIVE},

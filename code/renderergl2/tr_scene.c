@@ -410,8 +410,7 @@ void RE_BeginScene(const refdef_t *fd)
 
 	// turn off dynamic lighting globally by clearing all the
 	// dlights if it needs to be disabled or if vertex lighting is enabled
-	if ( r_dynamiclight->integer == 0 ||
-		 r_vertexLight->integer == 1 ) {
+	if ( r_dynamiclight->integer == 0 ) {
 		tr.refdef.num_dlights = 0;
 	}
 
@@ -425,7 +424,7 @@ void RE_BeginScene(const refdef_t *fd)
 }
 
 
-void RE_EndScene()
+void RE_EndScene(void)
 {
 	// the next scene rendered in this frame will tack on after this one
 	r_firstSceneDrawSurf = tr.refdef.numDrawSurfs;
@@ -462,13 +461,13 @@ void RE_RenderScene( const refdef_t *fd ) {
 	RE_BeginScene(fd);
 
 	// SmileTheory: playing with shadow mapping
-	if (customscrn && tr.refdef.num_dlights && r_dlightMode->integer >= 2)
+	if (customscrn && tr.refdef.num_dlights && (r_dlightMode->integer >= 2))
 	{
 		R_RenderDlightCubemaps(fd);
 	}
 
 	/* playing with more shadows */
-	if(glRefConfig.framebufferObject && customscrn && r_shadows->integer == 4)
+	if(glRefConfig.framebufferObject && customscrn && (r_shadows->integer == 4))
 	{
 		R_RenderPshadowMaps(fd);
 	}
@@ -526,7 +525,10 @@ void RE_RenderScene( const refdef_t *fd ) {
 	// set up viewport
 	// The refdef takes 0-at-the-top y coordinates, so
 	// convert to GL's 0-at-the-bottom space
-	//
+	// leilei - widescreen
+	// recalculate fov according to widescreen parameters
+    // figure out our zoom or changed fov magnitiude from cg_fov and cg_zoomfov
+    // try not to recalculate fov of ui and hud elements
 	memset( &parms, 0, sizeof( parms ) );
 	parms.viewportX = tr.refdef.x;
 	parms.viewportY = glConfig.vidHeight - ( tr.refdef.y + tr.refdef.height );
@@ -537,33 +539,6 @@ void RE_RenderScene( const refdef_t *fd ) {
 	parms.fovX = tr.refdef.fov_x;
 	parms.fovY = tr.refdef.fov_y;
 
-	// leilei - widescreen
-	// recalculate fov according to widescreen parameters
-	if (customscrn) // don't affect interface refdefs
-	{
-		// figure out our zoom or changed fov magnitiude from cg_fov and cg_zoomfov
-		//float zoomfov = tr.refdef.fov_x / 90;
-		// find aspect to immediately match our vidwidth for perfect match with resized screens...
-		//float erspact = tr.refdef.width / tr.refdef.height;
-		//float aspact = glConfig.vidWidth / glConfig.vidHeight;
-
-	
-		// try not to recalculate fov of ui and hud elements
-		//if (((tr.refdef.fov_x /  tr.refdef.fov_y) > 1.3) && (tr.refdef.width > 320) && (tr.refdef.height > 240))
-		//if (((tr.refdef.fov_x /  tr.refdef.fov_y) > 1.3) && (tr.refdef.width > (320 * refdefscalex)) && (tr.refdef.height > (240 * refdefscaley)))
-		float x_div_y = tr.refdef.fov_x / tr.refdef.fov_y;
-
-		if ((x_div_y > 1.3) && (tr.refdef.width / tr.refdef.height == glConfig.vidWidth / glConfig.vidHeight))
-		{
-			// undo vert-
-			parms.fovY *= x_div_y * (73.739792 / 90.0);
-			
-			// recalculate the fov
-			parms.fovX = atan( tan(parms.fovY * (M_PI / 360.0f)) * glConfig.vidWidth / glConfig.vidHeight ) * (360.0f / M_PI);
-			parms.fovY = atan( tan(parms.fovX * (M_PI / 360.0f)) * glConfig.vidHeight / glConfig.vidWidth ) * (360.0f / M_PI);
-		}
-	}
-	// leilei - end
 
 	VectorCopy( fd->vieworg, parms.or.origin );
 	VectorCopy( fd->viewaxis[0], parms.or.axis[0] );

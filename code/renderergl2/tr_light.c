@@ -429,9 +429,9 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 
 	// save out the byte packet version
     union uInt4bytes cvt;
-    cvt.uc[0] = ((unsigned char)(ent->ambientLight[0]));
-    cvt.uc[1] = ((unsigned char)(ent->ambientLight[1]));
-    cvt.uc[2] = ((unsigned char)(ent->ambientLight[2]));
+    cvt.uc[0] =(unsigned char)(ent->ambientLight[0]);
+    cvt.uc[1] = (unsigned char)(ent->ambientLight[1]);
+    cvt.uc[2] = (unsigned char)(ent->ambientLight[2]);
     cvt.uc[3] = 255;
     ent->ambientLightInt = cvt.i;
 	

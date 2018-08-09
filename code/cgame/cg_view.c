@@ -70,6 +70,7 @@ can then be moved around
 */
 void CG_TestModel_f (void) {
 	vec3_t		angles;
+
 	cg.testGun = qfalse;
 	memset( &cg.testModelEntity, 0, sizeof(cg.testModelEntity) );
 	if ( trap_Argc() < 2 ) {
@@ -186,7 +187,6 @@ Sets the coordinates of the rendered window
 */
 static void CG_CalcVrect (void) {
 	int		size;
-	int		size2;
 
 	// the intermission should allways be full screen
 	if ( cg.snap->ps.pm_type == PM_INTERMISSION ) {
@@ -204,11 +204,6 @@ static void CG_CalcVrect (void) {
 		}
 
 	}
-
-	size2 = size;
-	if (size>100){
-		size = 100;	// leilei - size should actually be normal...
-	}
 	cg.refdef.width = cgs.glconfig.vidWidth*size/100;
 	cg.refdef.width &= ~1;
 
@@ -217,23 +212,6 @@ static void CG_CalcVrect (void) {
 
 	cg.refdef.x = (cgs.glconfig.vidWidth - cg.refdef.width)/2;
 	cg.refdef.y = (cgs.glconfig.vidHeight - cg.refdef.height)/2;
-
-	// leilei - nudge
-		if (cg_viewnudge.integer) {
-			int nudged = 0;
-
-			if (size2 < 110) {
-				nudged = 48;
-			}
-			else if (size2 < 120) {
-				nudged = 24;
-			}
-
-
-			nudged = nudged * (cgs.glconfig.vidHeight / 480.0);
-			cg.refdef.y = ( cgs.glconfig.vidHeight  - cg.refdef.height) /2 - nudged;
-
-		}
 }
 
 //==============================================================================
@@ -256,7 +234,6 @@ static void CG_OffsetThirdPersonView( void ) {
 	vec3_t		focusPoint;
 	float		focusDist;
 	float		forwardScale, sideScale;
-
 
 	float		range = cg_thirdPersonRange.value;
 
@@ -383,7 +360,6 @@ static void CG_OffsetThirdPersonView( void ) {
 		cg.refdefViewAngles[YAW] -= cg_thirdPersonAngle.value;
 	}
 
-	
 }
 
 
@@ -569,7 +545,6 @@ Fixed fov at intermissions, otherwise account for fov variable and zooms.
 #define	WAVE_FREQUENCY	0.4
 
 static int CG_CalcFov( void ) {
-	float	x;
 	float	phase;
 	float	v;
 	int		contents;
@@ -581,12 +556,16 @@ static int CG_CalcFov( void ) {
 	if ( cg.predictedPlayerState.pm_type == PM_INTERMISSION ) {
 		// if in intermission, use a fixed value
 		fov_x = 90;
-	} else {
+	}
+    else
+    {
 		// user selectable
 		if ( cgs.dmflags & DF_FIXED_FOV ) {
 			// dmflag to prevent wide fov for all clients
 			fov_x = 90;
-		} else {
+		}
+        else
+        {
 			fov_x = cg_fov.value;
 			if ( fov_x < 1 ) {
 				fov_x = 1;
@@ -594,10 +573,6 @@ static int CG_CalcFov( void ) {
 			else if ( fov_x > 160 ) {
 				fov_x = 160;
 			}
-			if( (cgs.videoflags & VF_LOCK_CVARS_BASIC) && fov_x>140 ) {
-				fov_x = 140;
-			}
-
 		}
 
 		if ( cgs.dmflags & DF_FIXED_FOV ) {
@@ -613,10 +588,6 @@ static int CG_CalcFov( void ) {
 			else if ( zoomFov > 160 ) {
 				zoomFov = 160;
 			}
-
-			if( (cgs.videoflags & VF_LOCK_CVARS_BASIC) && zoomFov>140 ) {
-				zoomFov = 140;
-			}
 		}
 
 		if ( cg.zoomed ) {
@@ -630,9 +601,7 @@ static int CG_CalcFov( void ) {
 		}
 		else {
 			f = ( cg.time - cg.zoomTime ) / (float)ZOOM_TIME;
-			if ( f > 1.0 ) {
-			} 
-			else {
+			if ( f <= 1.0 ) {
 				fov_x = zoomFov + f * ( fov_x - zoomFov );
 			}
 		}
@@ -643,9 +612,7 @@ static int CG_CalcFov( void ) {
 		fov_x = fov_x * 0.93 * (cg.xyspeed * (0.0006) + 1);
 	}
 
-	x = cg.refdef.width / tan( fov_x / 360 * M_PI );
-	fov_y = atan2( cg.refdef.height, x );
-	fov_y = fov_y * 360 / M_PI;
+	fov_y = (360.0/M_PI) * atan2( tan( fov_x * (M_PI/360.0) ) * cg.refdef.height , cg.refdef.width);
 
 	// warp if underwater
 	contents = CG_PointContents( cg.refdef.vieworg, -1 );
@@ -757,8 +724,7 @@ static int CG_CalcViewValues( void ) {
 	cg.bobfraccos = fabs( cos( ( ps->bobCycle & 127 ) / 127.0 * M_PI ) );
 	cg.bobfracsin2 = fabs( sin( ( ps->bobCycle & 127) / 127.0 * (M_PI) ));
 
-	cg.xyspeed = sqrt( ps->velocity[0] * ps->velocity[0] +
-		ps->velocity[1] * ps->velocity[1] );
+	cg.xyspeed = sqrt( ps->velocity[0] * ps->velocity[0] + ps->velocity[1] * ps->velocity[1] );
 
 
 	VectorCopy( ps->origin, cg.refdef.vieworg );

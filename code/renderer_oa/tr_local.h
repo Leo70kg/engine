@@ -151,8 +151,7 @@ typedef enum {
 	DEFORM_TEXT4,
 	DEFORM_TEXT5,
 	DEFORM_TEXT6,
-	DEFORM_TEXT7,
-	DEFORM_LFX
+	DEFORM_TEXT7
 } deform_t;
 
 typedef enum {
@@ -252,12 +251,9 @@ typedef struct {
 	vec3_t		moveVector;
 	waveForm_t	deformationWave;
 	float		deformationSpread;
-
 	float		bulgeWidth;
 	float		bulgeHeight;
 	float		bulgeSpeed;
-
-//	lfx_t		deformationLfx;
 } deformStage_t;
 
 
@@ -1056,8 +1052,7 @@ extern cvar_t	*r_verbose;				// used for verbose debug spew
 extern cvar_t	*r_ignoreFastPath;		// allows us to ignore our Tess fast paths
 
 extern cvar_t	*r_znear;				// near Z clip plane
-extern cvar_t	*r_zproj;				// z distance of projection plane
-extern cvar_t	*r_stereoSeparation;			// separation of cameras for stereo rendering
+//extern cvar_t	*r_zproj;				// z distance of projection plane
 
 extern cvar_t	*r_measureOverdraw;		// enables stencil buffer overdraw measurement
 
@@ -1072,7 +1067,7 @@ extern cvar_t	*r_primitives;			// "0" = based on compiled vertex array existance
 extern cvar_t	*r_inGameVideo;				// controls whether in game video should be draw
 extern cvar_t	*r_fastsky;				
 extern cvar_t	*r_drawSun;				// controls drawing of sun quad
-extern cvar_t	*r_dynamiclight;		// dynamic lights enabled/disabled
+
 extern cvar_t	*r_dlightBacks;			// dlight non-facing surfaces for continuity
 
 extern	cvar_t	*r_drawentities;		// disable/enable entity rendering
@@ -1145,12 +1140,11 @@ extern cvar_t	*r_ntsc;	// Leilei - ntsc
 
 
 extern	cvar_t	*r_iconmip;	// leilei - icon mip - picmip for 2d icons
-extern	cvar_t	*r_iconBits;	// leilei - icon color depth for 2d icons
+extern	cvar_t	*r_iconBits;// leilei - icon color depth for 2d icons
 
 extern	cvar_t	*r_texdump;	// leilei - texture dumping
 
-extern  cvar_t	*r_detailTextureScale;		// leilei - scale tweak the detail textures, 0 doesn't tweak at all.
-extern  cvar_t	*r_detailTextureLayers;		// leilei - add in more smaller detail texture layers, expensive!
+
 
 
 
@@ -1324,7 +1318,7 @@ extern int max_polys;
 extern int max_polyverts;
 
 // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=516
-const void *RB_TakeScreenshotCmd( const void *data );
+
 const void *RB_TakeVideoFrameCmd( const void *data );
 
 //void	RE_Shutdown( qboolean destroyWindow );
@@ -1339,12 +1333,23 @@ const void *RB_TakeVideoFrameCmd( const void *data );
 //void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum);
 void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap );
 void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader, int *fogNum, int *dlightMap );
-void R_RenderView( viewParms_t *parms );
+
 // void R_LocalNormalToWorld (vec3_t local, vec3_t world);
 //void R_LocalPointToWorld (vec3_t local, vec3_t world);
 //void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix, vec4_t eye, vec4_t dst);
 //void R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t normalized, vec4_t window );
+void R_TakeScreenshot( int x, int y, int width, int height, char *name, qboolean jpeg );
+//
 void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, orientationr_t *or );
+void R_InitNextFrame( void );
+
+void RE_ClearScene( void );
+void RE_AddRefEntityToScene( const refEntity_t *ent );
+void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
+void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
+void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
+void RE_RenderScene( const refdef_t *fd );
+
 
 
 
@@ -1361,24 +1366,10 @@ void R_AddMD3Surfaces( trRefEntity_t *e );
 
 
 
-/////////////////////////// tr_backend.c  ////////////////////////////
-
-// RENDERER BACK END FUNCTIONS
-// GL wrapper/helper functions
-void	GL_Bind( image_t *image );
-void	GL_SelectTexture( int unit );
-void	GL_Cull( int cullType );
-void	GL_TexEnv( int env );
-void	GL_State( unsigned long stateVector );
+/////////////////////////// tr_backend.c ////////////////////////////
+/////////////////////////// tr_cmds /////////////////////////////////
 
 
-void	RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const unsigned char *data, int client, qboolean dirty);
-void	RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *data, int client, qboolean dirty);
-void    RB_ShowImages( void );
-void    RB_ExecuteRenderCommands( const void *data );
-
-
-///////////////////////////////// tr_cmds ///////////////////////////////////
 // all of the information needed by the back end must be contained in a backEndData_t
 #define	MAX_RENDER_COMMANDS	0x40000
 
@@ -1398,15 +1389,33 @@ typedef struct {
 
 
 
+// RENDERER BACK END FUNCTIONS
+// GL wrapper/helper functions
+void	GL_Bind( image_t *image );
+void	GL_SelectTexture( int unit );
+void	GL_Cull( int cullType );
+void	GL_TexEnv( int env );
+void	GL_State( unsigned long stateVector );
+
+
+
+void    RB_ShowImages( void );
+const void *RB_TakeScreenshotCmd( const void *data );
+
+
 void  R_IssuePendingRenderCommands( void );
-void* R_GetCommandBuffer( int bytes );
 void  R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
 
+void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const unsigned char *data, int client, qboolean dirty);
+void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *data, int client, qboolean dirty);
 void RE_SetColor( const float *rgba );
 void RE_StretchPic ( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_BeginFrame( stereoFrame_t notuse );
 void RE_EndFrame( int *frontEndMsec, int *backEndMsec );
 void RE_TakeVideoFrame( int width, int height, unsigned char *captureBuffer, unsigned char *encodeBuffer, qboolean motionJpeg );
+// void* R_GetCommandBuffer( int bytes );
+//void    RB_ExecuteRenderCommands( const void *data );
+
 
 
 
@@ -1464,31 +1473,9 @@ void RB_StageIteratorSky( void );
 
 void RB_AddFlare(srfFlare_t *surface, int fogNum, vec3_t point, vec3_t color, vec3_t normal, int radii, float scaled, int type);
 void RB_RenderFlares (void);
-//void RB_DrawSunFlare( void );
 void R_InitFlares( void );
 
 
-
-//////////////////////////// tr_scene /////////////////////////////////
-//  SCENE GENERATION
-
-void R_InitNextFrame( void );
-
-void RE_ClearScene( void );
-void RE_AddRefEntityToScene( const refEntity_t *ent );
-void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
-void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
-void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
-void RE_RenderScene( const refdef_t *fd );
-//void R_AddPolygonSurfaces( void );
-void R_InitNextFrame( void );
-
-void RE_ClearScene( void );
-void RE_AddRefEntityToScene( const refEntity_t *ent );
-void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
-void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
-void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
-void RE_RenderScene( const refdef_t *fd );
 
 
 

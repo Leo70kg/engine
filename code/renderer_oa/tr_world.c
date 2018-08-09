@@ -54,10 +54,6 @@ static qboolean	R_CullGrid( srfGridMesh_t *cv )
 {
 	int sphereCull;
 
-//	if ( r_nocurves->integer ) {
-//		return qtrue;
-//	}
-
 	if ( tr.currentEntityNum != REFENTITYNUM_WORLD )
 		sphereCull = R_CullLocalPointAndRadius( cv->localOrigin, cv->meshRadius );
     else

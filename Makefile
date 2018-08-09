@@ -1462,7 +1462,6 @@ Q3ROAOBJ = \
   $(B)/renderer_oa/tr_animation.o \
   $(B)/renderer_oa/tr_backend.o \
   $(B)/renderer_oa/tr_bsp.o \
-  $(B)/renderer_oa/tr_cmds.o \
   $(B)/renderer_oa/tr_curve.o \
   $(B)/renderer_oa/tr_flares.o \
   $(B)/renderer_oa/tr_font.o \
@@ -1479,7 +1478,6 @@ Q3ROAOBJ = \
   $(B)/renderer_oa/tr_model.o \
   $(B)/renderer_oa/tr_model_iqm.o \
   $(B)/renderer_oa/tr_noise.o \
-  $(B)/renderer_oa/tr_scene.o \
   $(B)/renderer_oa/tr_shade.o \
   $(B)/renderer_oa/tr_shade_calc.o \
   $(B)/renderer_oa/tr_shader.o \

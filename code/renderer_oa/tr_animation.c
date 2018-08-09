@@ -431,8 +431,6 @@ int R_CullLocalPointAndRadius( vec3_t pt, float radius )
 int R_CullPointAndRadius( vec3_t pt, float radius )
 {
 	int		i;
-	float	dist;
-	cplane_t	*frust;
 	qboolean mightBeClipped = qfalse;
 
 	if ( r_nocull->integer )
@@ -441,10 +439,10 @@ int R_CullPointAndRadius( vec3_t pt, float radius )
 	// check against frustum planes
 	for (i = 0 ; i < 4 ; i++) 
 	{
-		frust = &tr.viewParms.frustum[i];
-
-		dist = DotProduct( pt, frust->normal) - frust->dist;
-		if ( dist < -radius )
+		cplane_t* frust = &tr.viewParms.frustum[i];
+		float dist = DotProduct( pt, frust->normal) - frust->dist;
+		
+        if ( dist < -radius )
 			return CULL_OUT;
 		else if ( dist <= radius ) 
 			mightBeClipped = qtrue;

@@ -31,12 +31,22 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/tr_common.h"
 #include "../renderercommon/iqm.h"
 #include "../renderercommon/qgl.h"
-
 #include "tr_extratypes.h"
 #include "tr_extramath.h"
 #include "tr_fbo.h"
 #include "tr_postprocess.h"
 
+#define GLE(ret, name, ...) extern name##proc * qgl##name;
+QGL_1_1_PROCS;
+QGL_DESKTOP_1_1_PROCS;
+QGL_1_3_PROCS;
+QGL_1_5_PROCS;
+QGL_2_0_PROCS;
+QGL_3_0_PROCS;
+QGL_ARB_framebuffer_object_PROCS;
+QGL_ARB_vertex_array_object_PROCS;
+QGL_EXT_direct_state_access_PROCS;
+#undef GLE
 
 union uInt4bytes{
     unsigned int i;
@@ -1624,7 +1634,6 @@ extern cvar_t	*r_verbose;				// used for verbose debug spew
 
 extern cvar_t	*r_znear;				// near Z clip plane
 extern cvar_t	*r_zproj;				// z distance of projection plane
-extern cvar_t	*r_stereoSeparation;			// separation of cameras for stereo rendering
 
 extern cvar_t	*r_measureOverdraw;		// enables stencil buffer overdraw measurement
 
@@ -1665,11 +1674,14 @@ extern	cvar_t	*r_finish;
 extern	cvar_t	*r_textureMode;
 extern	cvar_t	*r_offsetFactor;
 extern	cvar_t	*r_offsetUnits;
-
+//extern	cvar_t	*r_anaglyphMode;
+//extern	cvar_t	*r_fullbright;					// avoid lightmap pass
 extern	cvar_t	*r_lightmap;					// render lightmaps only
 extern	cvar_t	*r_vertexLight;					// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;				// ui is running fullscreen
-
+//extern	cvar_t	*r_norefresh;			// bypasses the ref rendering
+//extern	cvar_t	*r_logFile;						// number of frames to emit GL logs
+//extern  cvar_t  *r_deluxeSpecular;
 extern	cvar_t	*r_showtris;					// enables wireframe rendering of the world
 extern	cvar_t	*r_showsky;						// forces sky in front of all surfaces
 extern	cvar_t	*r_shownormals;					// draws wireframe normals
@@ -1716,6 +1728,7 @@ extern  cvar_t  *r_deluxeMapping;
 extern  cvar_t  *r_parallaxMapping;
 extern  cvar_t  *r_cubeMapping;
 extern  cvar_t  *r_cubemapSize;
+extern  cvar_t  *r_deluxeSpecular;
 extern  cvar_t  *r_pbr;
 extern  cvar_t  *r_baseNormalX;
 extern  cvar_t  *r_baseNormalY;
@@ -1827,7 +1840,6 @@ int R_CullPointAndRadiusEx( const vec3_t origin, float radius, const cplane_t* f
 int R_CullPointAndRadius( const vec3_t origin, float radius );
 int R_CullLocalPointAndRadius( const vec3_t origin, float radius );
 
-//void R_SetupProjection(viewParms_t *dest, float zProj, float zFar, qboolean computeFrustum);
 void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, orientationr_t *or );
 
 /*
@@ -2415,18 +2427,6 @@ size_t RE_SaveJPGToBuffer(byte *buffer, size_t bufSize, int quality,
 		          int image_width, int image_height, byte *image_buffer, int padding);
 void RE_TakeVideoFrame( int width, int height,
 		byte *captureBuffer, byte *encodeBuffer, qboolean motionJpeg );
-
-#define GLE(ret, name, ...) extern name##proc * qgl##name;
-QGL_1_1_PROCS;
-QGL_DESKTOP_1_1_PROCS;
-QGL_1_3_PROCS;
-QGL_1_5_PROCS;
-QGL_2_0_PROCS;
-QGL_ARB_framebuffer_object_PROCS;
-QGL_ARB_vertex_array_object_PROCS;
-QGL_EXT_direct_state_access_PROCS;
-QGL_3_0_PROCS;
-#undef GLE
 
 
 #endif //TR_LOCAL_H

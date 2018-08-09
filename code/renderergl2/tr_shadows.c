@@ -244,6 +244,8 @@ overlap and double darken.
 =================
 */
 void RB_ShadowFinish( void ) {
+	// FIXME: implement this
+#if 0
 	if ( r_shadows->integer != 2 ) {
 		return;
 	}
@@ -253,7 +255,6 @@ void RB_ShadowFinish( void ) {
 	qglEnable( GL_STENCIL_TEST );
 	qglStencilFunc( GL_NOTEQUAL, 0, 255 );
 
-	qglDisable (GL_CLIP_PLANE0);
 	GL_Cull( CT_TWO_SIDED );
 
 	GL_BindToTMU( tr.whiteImage, TB_COLORMAP );
@@ -275,6 +276,7 @@ void RB_ShadowFinish( void ) {
 
 	qglColor4f(1,1,1,1);
 	qglDisable( GL_STENCIL_TEST );
+#endif
 }
 
 

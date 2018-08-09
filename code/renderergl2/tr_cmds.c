@@ -362,7 +362,6 @@ void RE_BeginFrame( stereoFrame_t notuse ) {
 		if ((err = qglGetError()) != GL_NO_ERROR)
 			ri.Error(ERR_FATAL, "RE_BeginFrame() - glGetError() failed (0x%x)!", err);
 	}
-
 }
 
 

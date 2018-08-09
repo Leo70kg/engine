@@ -56,6 +56,7 @@ static cvar_t* r_displayRefresh;
 
 // not used cvar, keep it for backward compatibility
 static cvar_t* r_stereoSeparation;
+
 static cvar_t* r_displayIndex;
 
 typedef struct vidmode_s {
@@ -318,7 +319,6 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 	}
 	else if((mode >= 0) && (mode < s_numVidModes))
 	{
-
         glConfig->vidWidth = r_vidModes[mode].width;
         glConfig->vidHeight = r_vidModes[mode].height;
         glConfig->windowAspect = (float)glConfig->vidWidth * r_vidModes[mode].pixelAspect / (float)glConfig->vidHeight;
@@ -509,7 +509,7 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 	r_customPixelAspect = Cvar_Get( "r_customPixelAspect", "1.78", CVAR_ARCHIVE | CVAR_LATCH );
 
 	r_stencilbits = Cvar_Get( "r_stencilbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_colorbits = Cvar_Get( "r_colorbits", "24", CVAR_ARCHIVE | CVAR_LATCH );
+	r_colorbits = Cvar_Get( "r_colorbits", "32", CVAR_ARCHIVE | CVAR_LATCH );
 	r_depthbits = Cvar_Get( "r_depthbits", "24", CVAR_ARCHIVE | CVAR_LATCH );
 
 	r_displayIndex = Cvar_Get( "r_displayIndex", "0", CVAR_ARCHIVE | CVAR_LATCH );

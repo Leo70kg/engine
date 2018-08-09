@@ -443,7 +443,7 @@ static void R_RecursiveWorldNode( mnode_t *node, unsigned int planeBits, unsigne
 		}
 
 		// recurse down the children, front side first
-		R_RecursiveWorldNode (node->children[0], planeBits, newDlights[0] );
+		R_RecursiveWorldNode(node->children[0], planeBits, newDlights[0] );
 
 		// tail recurse
 		node = node->children[1];

@@ -586,231 +586,141 @@ void R_RotateForViewer (void)
 
 }
 
-/*
-** SetFarClip
-*/
-static void R_SetFarClip( void )
-{
-	float	farthestCornerDistance = 0;
-	int		i;
-	// if not rendering the world (icons, menus, etc)
-	// set a 2k far clip plane
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
-		tr.viewParms.zFar = 2048;
-		return;
-	}
-
-	//
-	// set far clipping planes dynamically
-	//
-	for ( i = 0; i < 8; i++ )
-	{
-		vec3_t v;
-		vec3_t vecTo;
-		float distance;
-
-		if ( i & 1 )
-		{
-			v[0] = tr.viewParms.visBounds[0][0];
-		}
-		else
-		{
-			v[0] = tr.viewParms.visBounds[1][0];
-		}
-
-		if ( i & 2 )
-		{
-			v[1] = tr.viewParms.visBounds[0][1];
-		}
-		else
-		{
-			v[1] = tr.viewParms.visBounds[1][1];
-		}
-
-		if ( i & 4 )
-		{
-			v[2] = tr.viewParms.visBounds[0][2];
-		}
-		else
-		{
-			v[2] = tr.viewParms.visBounds[1][2];
-		}
-
-		VectorSubtract( v, tr.viewParms.or.origin, vecTo );
-
-		distance = vecTo[0] * vecTo[0] + vecTo[1] * vecTo[1] + vecTo[2] * vecTo[2];
-
-		if ( distance > farthestCornerDistance )
-		{
-			farthestCornerDistance = distance;
-		}
-	}
-	tr.viewParms.zFar = sqrt( farthestCornerDistance );
-}
-
-/*
-=================
-R_SetupFrustum
-
-Set up the culling frustum planes for the current view using the results we got from computing the first two rows of
-the projection matrix.
-=================
-*/
-static void R_SetupFrustum (viewParms_t *dest, float xmin, float xmax, float ymax, float zProj, float stereoSep)
-{
-	vec3_t ofsorigin;
-	float oppleg, adjleg, length;
-	int i;
-	
-	if(stereoSep == 0 && xmin == -xmax)
-	{
-		// symmetric case can be simplified
-		VectorCopy(dest->or.origin, ofsorigin);
-
-		length = sqrtf(xmax * xmax + zProj * zProj);
-		oppleg = xmax / length;
-		adjleg = zProj / length;
-
-		VectorScale(dest->or.axis[0], oppleg, dest->frustum[0].normal);
-		VectorMA(dest->frustum[0].normal, adjleg, dest->or.axis[1], dest->frustum[0].normal);
-
-		VectorScale(dest->or.axis[0], oppleg, dest->frustum[1].normal);
-		VectorMA(dest->frustum[1].normal, -adjleg, dest->or.axis[1], dest->frustum[1].normal);
-	}
-	else
-	{
-		// In stereo rendering, due to the modification of the projection matrix, dest->or.origin is not the
-		// actual origin that we're rendering so offset the tip of the view pyramid.
-		VectorMA(dest->or.origin, stereoSep, dest->or.axis[1], ofsorigin);
-	
-		oppleg = xmax + stereoSep;
-		length = sqrt(oppleg * oppleg + zProj * zProj);
-		VectorScale(dest->or.axis[0], oppleg / length, dest->frustum[0].normal);
-		VectorMA(dest->frustum[0].normal, zProj / length, dest->or.axis[1], dest->frustum[0].normal);
-
-		oppleg = xmin + stereoSep;
-		length = sqrt(oppleg * oppleg + zProj * zProj);
-		VectorScale(dest->or.axis[0], -oppleg / length, dest->frustum[1].normal);
-		VectorMA(dest->frustum[1].normal, -zProj / length, dest->or.axis[1], dest->frustum[1].normal);
-	}
-
-	length = sqrt(ymax * ymax + zProj * zProj);
-	oppleg = ymax / length;
-	adjleg = zProj / length;
-
-	VectorScale(dest->or.axis[0], oppleg, dest->frustum[2].normal);
-	VectorMA(dest->frustum[2].normal, adjleg, dest->or.axis[2], dest->frustum[2].normal);
-
-	VectorScale(dest->or.axis[0], oppleg, dest->frustum[3].normal);
-	VectorMA(dest->frustum[3].normal, -adjleg, dest->or.axis[2], dest->frustum[3].normal);
-	
-	for (i=0 ; i<4 ; i++) {
-		dest->frustum[i].type = PLANE_NON_AXIAL;
-		dest->frustum[i].dist = DotProduct (ofsorigin, dest->frustum[i].normal);
-		SetPlaneSignbits( &dest->frustum[i] );
-	}
-
-}
 
 /*
 ===============
 R_SetupProjection
 ===============
 */
-void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum)
+static void R_SetupProjection(void)
 {
-	float	xmin, xmax, ymin, ymax;
-	float	width, height;
+    float py = tan(tr.viewParms.fovY * (M_PI / 360.0f));
+    float px = tan(tr.viewParms.fovX * (M_PI / 360.0f));
+    
+    tr.viewParms.projectionMatrix[0] = 1 / px;
+    tr.viewParms.projectionMatrix[4] = 0;
+    tr.viewParms.projectionMatrix[8] = 0;
+    tr.viewParms.projectionMatrix[12] = 0;
 
-	/*
-	 * offset the view origin of the viewer for stereo rendering 
-	 * by setting the projection matrix appropriately.
-	 */
+    tr.viewParms.projectionMatrix[1] = 0;
+    tr.viewParms.projectionMatrix[5] = 1 / py;
+    tr.viewParms.projectionMatrix[9] = 0;	// normally 0
+    tr.viewParms.projectionMatrix[13] = 0;
 
-	ymax = zProj * tan(dest->fovY * M_PI / 360.0f);
-	ymin = -ymax;
-
-	xmax = zProj * tan(dest->fovX * M_PI / 360.0f);
-	xmin = -xmax;
-
-	width = xmax - xmin;
-	height = ymax - ymin;
-	
-	dest->projectionMatrix[0] = 2 * zProj / width;
-	dest->projectionMatrix[4] = 0;
-	dest->projectionMatrix[8] = (xmax + xmin ) / width;
-	dest->projectionMatrix[12] = 0;
-
-	dest->projectionMatrix[1] = 0;
-	dest->projectionMatrix[5] = 2 * zProj / height;
-	dest->projectionMatrix[9] = ( ymax + ymin ) / height;	// normally 0
-	dest->projectionMatrix[13] = 0;
-
-	dest->projectionMatrix[3] = 0;
-	dest->projectionMatrix[7] = 0;
-	dest->projectionMatrix[11] = -1;
-	dest->projectionMatrix[15] = 0;
+    tr.viewParms.projectionMatrix[3] = 0;
+    tr.viewParms.projectionMatrix[7] = 0;
+    tr.viewParms.projectionMatrix[11] = -1;
+    tr.viewParms.projectionMatrix[15] = 0;
 	
 	// Now that we have all the data for the projection matrix we can also setup the view frustum.
-	if(computeFrustum)
-		R_SetupFrustum(dest, xmin, xmax, ymax, zProj, 0);
-}
+	// Now that we have all the data for the projection matrix we can also setup the view frustum.
+	// R_SetupFrustum(dest, xmin, xmax, ymax, zProj, 0);
+    // Set up the culling frustum planes for the current view using the results
+    // we got from computing the first two rows of the projection matrix.
 
-/*
-===============
-R_SetupProjectionZ
+    // symmetric case can be simplified
+    unsigned char signbits;
+    float normal_op[3];
+    float normal_adj[3];
+    float N[3];
 
-Sets the z-component transformation part in the projection matrix
-===============
-*/
-void R_SetupProjectionZ(viewParms_t *dest)
-{
-	float zNear, zFar, depth;
-	
-	zNear = r_znear->value;
-	zFar	= dest->zFar;
+    float ofsorigin[3];
+    VectorCopy(tr.viewParms.or.origin, ofsorigin);	
 
-	depth	= zFar - zNear;
+    {
+        float adjleg = 1 / sqrtf(px * px + 1);
+        float oppleg = px * adjleg;
 
-	dest->projectionMatrix[2] = 0;
-	dest->projectionMatrix[6] = 0;
-	dest->projectionMatrix[10] = -( zFar + zNear ) / depth;
-	dest->projectionMatrix[14] = -2 * zFar * zNear / depth;
+        VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
+        VectorScale(tr.viewParms.or.axis[1], adjleg, normal_adj);
+    }
+    ////
+    VectorAdd(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[0].normal);
+    tr.viewParms.frustum[0].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[0].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[0].signbits = signbits;
 
-	if (dest->isPortal)
+
+    ////
+    VectorSubtract(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[1].normal);
+    tr.viewParms.frustum[1].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[1].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[1].signbits = signbits;
+
+    {
+        float adjleg = 1 / sqrtf(py * py + 1);
+        float oppleg = py * adjleg;
+
+        VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
+        VectorScale(tr.viewParms.or.axis[2], adjleg, normal_adj);
+    }
+    
+    ////
+    VectorAdd(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[2].normal);
+    tr.viewParms.frustum[2].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[2].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[2].signbits = signbits;
+
+    
+    ////
+    VectorSubtract(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[3].normal);
+    tr.viewParms.frustum[3].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[3].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[3].signbits = signbits;
+
+	float zFar = tr.viewParms.zFar;
+
+	if (zFar != 0.0f)
 	{
-		float	plane[4];
-		float	plane2[4];
-		vec4_t q, c;
+		vec3_t farpoint;
 
-		// transform portal plane into camera space
-		plane[0] = dest->portalPlane.normal[0];
-		plane[1] = dest->portalPlane.normal[1];
-		plane[2] = dest->portalPlane.normal[2];
-		plane[3] = dest->portalPlane.dist;
+		VectorMA(ofsorigin, zFar,tr.viewParms.or.axis[0], farpoint);
+		VectorScale(tr.viewParms.or.axis[0], -1.0f,tr.viewParms.frustum[4].normal);
 
-		plane2[0] = -DotProduct (dest->or.axis[1], plane);
-		plane2[1] = DotProduct (dest->or.axis[2], plane);
-		plane2[2] = -DotProduct (dest->or.axis[0], plane);
-		plane2[3] = DotProduct (plane, dest->or.origin) - plane[3];
-
-		// Lengyel, Eric. "Modifying the Projection Matrix to Perform Oblique Near-plane Clipping".
-		// Terathon Software 3D Graphics Library, 2004. http://www.terathon.com/code/oblique.html
-		q[0] = (SGN(plane2[0]) + dest->projectionMatrix[8]) / dest->projectionMatrix[0];
-		q[1] = (SGN(plane2[1]) + dest->projectionMatrix[9]) / dest->projectionMatrix[5];
-		q[2] = -1.0f;
-		q[3] = (1.0f + dest->projectionMatrix[10]) / dest->projectionMatrix[14];
-
-		VectorScale4(plane2, 2.0f / DotProduct4(plane2, q), c);
-
-		dest->projectionMatrix[2]  = c[0];
-		dest->projectionMatrix[6]  = c[1];
-		dest->projectionMatrix[10] = c[2] + 1.0f;
-		dest->projectionMatrix[14] = c[3];
-
+		tr.viewParms.frustum[4].type = PLANE_NON_AXIAL;
+		tr.viewParms.frustum[4].dist = DotProduct (farpoint, tr.viewParms.frustum[4].normal);
+		SetPlaneSignbits( &tr.viewParms.frustum[4] );
+		tr.viewParms.flags |= VPF_FARPLANEFRUSTUM;
 	}
 
 }
+
 
 /*
 ===============
@@ -1594,7 +1504,7 @@ void R_AddEntitySurfaces (void)
 
 static void R_GenerateDrawSurfs( void )
 {
-	R_AddWorldSurfaces ();
+	R_AddWorldSurfaces();
 
 	R_AddPolygonSurfaces();
 
@@ -1607,13 +1517,83 @@ static void R_GenerateDrawSurfs( void )
 	// dynamically compute far clip plane distance
 	if (!(tr.viewParms.flags & VPF_SHADOWMAP))
 	{
-		R_SetFarClip();
+        if ( tr.refdef.rdflags & RDF_NOWORLDMODEL )
+        {
+            tr.viewParms.zFar = 2048.0f;
+        }
+        else{
+            float o[3];
+
+            o[0] = tr.viewParms.or.origin[0];
+            o[1] = tr.viewParms.or.origin[1];
+            o[2] = tr.viewParms.or.origin[2];
+
+            float farthestCornerDistance = 0;
+            int	i;
+
+            // set far clipping planes dynamically
+            for ( i = 0; i < 8; i++ )
+            {
+                float v[3];
+         
+                v[0] = tr.viewParms.visBounds[!(i&1)][0] - o[0];
+                v[1] = tr.viewParms.visBounds[!(i&2)][1] - o[1];
+                v[2] = tr.viewParms.visBounds[!(i&4)][2] - o[2];
+
+                float distance = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+                if( distance > farthestCornerDistance )
+                {
+                    farthestCornerDistance = distance;
+                }
+            }
+            
+            tr.viewParms.zFar = sqrtf(farthestCornerDistance);
+        }
 	}
 
 	// we know the size of the clipping volume. Now set the rest of the projection matrix.
-	R_SetupProjectionZ (&tr.viewParms);
+    float zFar = tr.viewParms.zFar;
+	float zNear	= r_znear->value;
+	float depth	= zFar - zNear;
 
-	R_AddEntitySurfaces ();
+	tr.viewParms.projectionMatrix[2] = 0;
+	tr.viewParms.projectionMatrix[6] = 0;
+	tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
+	tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
+
+	if (tr.viewParms.isPortal)
+	{
+		float	plane[4];
+		float	plane2[4];
+		vec4_t q, c;
+
+		// transform portal plane into camera space
+		plane[0] = tr.viewParms.portalPlane.normal[0];
+		plane[1] = tr.viewParms.portalPlane.normal[1];
+		plane[2] = tr.viewParms.portalPlane.normal[2];
+		plane[3] = tr.viewParms.portalPlane.dist;
+
+		plane2[0] = -DotProduct (tr.viewParms.or.axis[1], plane);
+		plane2[1] = DotProduct (tr.viewParms.or.axis[2], plane);
+		plane2[2] = -DotProduct (tr.viewParms.or.axis[0], plane);
+		plane2[3] = DotProduct (plane, tr.viewParms.or.origin) - plane[3];
+
+		// Lengyel, Eric. "Modifying the Projection Matrix to Perform Oblique Near-plane Clipping".
+		// Terathon Software 3D Graphics Library, 2004. http://www.terathon.com/code/oblique.html
+		q[0] = (SGN(plane2[0]) + tr.viewParms.projectionMatrix[8]) / tr.viewParms.projectionMatrix[0];
+		q[1] = (SGN(plane2[1]) + tr.viewParms.projectionMatrix[9]) / tr.viewParms.projectionMatrix[5];
+		q[2] = -1.0f;
+		q[3] = (1.0f + tr.viewParms.projectionMatrix[10]) / tr.viewParms.projectionMatrix[14];
+
+		VectorScale4(plane2, 2.0f / DotProduct4(plane2, q), c);
+
+		tr.viewParms.projectionMatrix[2]  = c[0];
+		tr.viewParms.projectionMatrix[6]  = c[1];
+		tr.viewParms.projectionMatrix[10] = c[2] + 1.0f;
+		tr.viewParms.projectionMatrix[14] = c[3];
+	}
+
+	R_AddEntitySurfaces();
 }
 
 /*
@@ -1701,7 +1681,7 @@ void R_RenderView (viewParms_t *parms)
 	// set viewParms.world
 	R_RotateForViewer();
 
-	R_SetupProjection(&tr.viewParms, r_zproj->value, qtrue);
+	R_SetupProjection();
 
 	R_GenerateDrawSurfs();
 

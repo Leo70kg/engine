@@ -21,8 +21,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 /*****************************************************************************
  * name:		files.c
+ *
  * desc:		handle based filesystem for Quake III Arena 
+ *
  * $Archive: /MissionPack/code/qcommon/files.c $
+ *
  *****************************************************************************/
 
 
@@ -35,13 +38,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 QUAKE3 FILESYSTEM
 
-All of Quake's data access is through a hierarchical file system, 
-but the contents of the file system can be transparently merged from several sources.
+All of Quake's data access is through a hierarchical file system, but the contents of 
+the file system can be transparently merged from several sources.
 
-A "qpath" is a reference to game file data, which must include a terminating zero. 
-MAX_ZPATH is 256 characters.
-"..", "\\", and ":" are explicitly illegal in qpaths to prevent any references
-outside the quake directory system.
+A "qpath" is a reference to game file data.  MAX_ZPATH is 256 characters, which must include
+a terminating zero. "..", "\\", and ":" are explicitly illegal in qpaths to prevent any
+references outside the quake directory system.
 
 The "base path" is the path to the directory holding all the game directories and usually
 the executable.  It defaults to ".", but can be overridden with a "+set fs_basepath c:\quake3"
@@ -86,7 +88,7 @@ File search order: when FS_FOpenFileRead gets called it will go through the fs_s
 structure and stop on the first successful hit. fs_searchpaths is built with successive
 calls to FS_AddGameDirectory
 
-Additionaly, we search in several subdirectories:
+Additionally, we search in several subdirectories:
 current game is the current mode
 base game is a variable to allow mods based on other mods
 (such as baseq3 + missionpack content combination in a mod for instance)
@@ -251,7 +253,7 @@ static	char		fs_gamedir[MAX_OSPATH];	// this will be a single file name with no 
 static	cvar_t		*fs_debug;
 static	cvar_t		*fs_homepath;
 
-#ifdef MACOS_X
+#ifdef __APPLE__
 // Also search the .app bundle for .pk3 files
 static  cvar_t          *fs_apppath;
 #endif
@@ -265,7 +267,8 @@ static	int			fs_readCount;			// total bytes read
 static	int			fs_loadCount;			// total files read
 static	int			fs_loadStack;			// total files in memory
 static	int			fs_packFiles = 0;		// total number of files in packs
-static  int         fs_checksumFeed;
+
+static int fs_checksumFeed;
 
 
 typedef union qfile_gus {
@@ -285,7 +288,6 @@ typedef struct {
 	int			zipFilePos;
 	int			zipFileLen;
 	qboolean	zipFile;
-	qboolean	streamed;
 	char		name[MAX_ZPATH];
 } fileHandleData_t;
 
@@ -1361,12 +1363,18 @@ long FS_FOpenFileRead(const char *filename, fileHandle_t *file, qboolean uniqueF
 {
 	searchpath_t *search;
 	long len;
+	qboolean isLocalConfig;
 
 	if(!fs_searchpaths)
 		Com_Error(ERR_FATAL, "Filesystem call made without initialization");
 
+	isLocalConfig = !strcmp(filename, "autoexec.cfg") || !strcmp(filename, Q3CONFIG_CFG);
 	for(search = fs_searchpaths; search; search = search->next)
 	{
+		// autoexec.cfg and q3config.cfg can only be loaded outside of pk3 files.
+		if (isLocalConfig && search->pack)
+			continue;
+
 		len = FS_FOpenFileReadDir(filename, search, file, uniqueFILE, qfalse);
 
 		if(file == NULL)
@@ -1493,30 +1501,7 @@ int FS_FindVM(void **startSearch, char *found, int foundlen, const char *name, i
 	return -1;
 }
 
-/*
-=================
-FS_Read: Properly handles partial reads
-=================
-*/
-int FS_Read2( void *buffer, int len, fileHandle_t f )
-{
-	if ( !fs_searchpaths ) {
-		Com_Error( ERR_FATAL, "Filesystem call made without initialization" );
-	}
 
-	if ( !f ) {
-		return 0;
-	}
-	if (fsh[f].streamed) {
-		int r;
-		fsh[f].streamed = qfalse;
-		r = FS_Read( buffer, len, f );
-		fsh[f].streamed = qtrue;
-		return r;
-	} else {
-		return FS_Read( buffer, len, f);
-	}
-}
 
 int FS_Read( void *buffer, int len, fileHandle_t f )
 {
@@ -1646,14 +1631,6 @@ int FS_Seek( fileHandle_t f, long offset, int origin ) {
 	if ( !fs_searchpaths ) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization" );
 		return -1;
-	}
-
-	if (fsh[f].streamed) {
-		int r;
-		fsh[f].streamed = qfalse;
-		r = FS_Seek( f, offset, origin );
-		fsh[f].streamed = qtrue;
-		return r;
 	}
 
 	if (fsh[f].zipFile == qtrue) {
@@ -1818,8 +1795,8 @@ If searchPath is non-NULL search only in that specific search path
 */
 long FS_ReadFileDir(const char *qpath, void *searchPath, qboolean unpure, void **buffer)
 {
-	fileHandle_t    h;
-	searchpath_t *  search;
+	fileHandle_t h;
+	searchpath_t* search;
 	qboolean		isConfig;
 	long			len;
 	unsigned char *	buf = NULL;
@@ -2889,8 +2866,6 @@ Sets fs_gamedir, adds the directory to the head of the path, then loads the zip 
 */
 void FS_AddGameDirectory( const char *path, const char *dir )
 {
-    Com_Printf( "path: %s\n", path);
-    Com_Printf( "dir: %s\n", dir );
 
 	searchpath_t	*sp;
 	searchpath_t	*search;
@@ -2993,7 +2968,7 @@ void FS_AddGameDirectory( const char *path, const char *dir )
 			// But wait, this could be any directory, we're filtering to only ending with ".pk3dir" here.
 			int	len = strlen(pakdirs[pakdirsi]);
 			if (!FS_IsExt(pakdirs[pakdirsi], ".pk3dir", len))
-            {
+			{
 				// This isn't a .pk3dir! Next!
 				pakdirsi++;
 				continue;
@@ -3014,13 +2989,12 @@ void FS_AddGameDirectory( const char *path, const char *dir )
 
 			pakdirsi++;
 		}
-
 	}
 
 	// done
 	Sys_FreeFileList( pakfiles );
 	Sys_FreeFileList( pakdirs );
-    
+
 	//
 	// add the directory to the search path
 	//
@@ -3200,10 +3174,6 @@ qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring ) {
 	return qfalse; // We have them all
 }
 
-
-
-
-
 /*
 ================
 FS_Shutdown
@@ -3220,8 +3190,6 @@ void FS_Shutdown( qboolean closemfp ) {
 			FS_FCloseFile(i);
 		}
 	}
-
-    Com_WriteConfiguration();
 
 	// free everything
 	for(p = fs_searchpaths; p; p = next)
@@ -3315,14 +3283,10 @@ static void FS_Startup( const char *gameName )
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED );
 	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT );
-	const char *homePath = Sys_DefaultHomePath();
-    
-    if ( (homePath == NULL) || !homePath[0])
+	const char* homePath = Sys_DefaultHomePath();
+	if (!homePath || !homePath[0]) {
 		homePath = fs_basepath->string;
-
-    //Com_Printf( "homePath: %s\n", homePath);
-	//Com_Printf( "DefaultInstallPath: %s\n",  Sys_DefaultInstallPath());
-
+	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED );
 	fs_gamedirvar = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
 
@@ -3333,7 +3297,7 @@ static void FS_Startup( const char *gameName )
 	}
 	// fs_homepath is somewhat particular to *nix systems, only add if relevant
 
-#ifdef MACOS_X
+#ifdef __APPLE__
 	fs_apppath = Cvar_Get ("fs_apppath", Sys_DefaultAppPath(), CVAR_INIT|CVAR_PROTECTED );
 	// Make MacOSX also include the base path included with the .app bundle
 	if (fs_apppath->string[0])
@@ -3346,7 +3310,6 @@ static void FS_Startup( const char *gameName )
 		FS_CreatePath ( fs_homepath->string );
 		FS_AddGameDirectory ( fs_homepath->string, gameName );
 	}
-
 
 	// check for additional base game so mods can be based upon other mods
 	if ( fs_basegame->string[0] && Q_stricmp( fs_basegame->string, gameName ) )
@@ -3431,12 +3394,11 @@ static void FS_CheckPak0( void )
 
 	for( path = fs_searchpaths; path; path = path->next )
 	{
-		const char* pakBasename = path->pack->pakBasename;
-
 		if(!path->pack)
 			continue;
 
 		curpack = path->pack;
+		const char* pakBasename = curpack->pakBasename;
 
 		if(!Q_stricmpn( curpack->pakGamename, "demoq3", MAX_OSPATH )
 				&& !Q_stricmpn( pakBasename, "pak0", MAX_OSPATH ))
@@ -3829,7 +3791,7 @@ exception of .cfg and .dat files.
 */
 void FS_PureServerSetLoadedPaks( const char *pakSums, const char *pakNames )
 {
-	int	i, d;
+	int	i;
 
 	Cmd_TokenizeString( pakSums );
 
@@ -3868,7 +3830,7 @@ void FS_PureServerSetLoadedPaks( const char *pakSums, const char *pakNames )
 	if ( pakNames && *pakNames ) {
 		Cmd_TokenizeString( pakNames );
 
-		d = Cmd_Argc();
+		int d = Cmd_Argc();
 		if ( d > MAX_SEARCH_PATHS ) {
 			d = MAX_SEARCH_PATHS;
 		}
@@ -3934,7 +3896,8 @@ void FS_PureServerSetReferencedPaks( const char *pakSums, const char *pakNames )
 ================
 FS_InitFilesystem
 
-Called only at inital startup, not when the filesystem is resetting due to a game change
+Called only at initial startup, not when the filesystem
+is resetting due to a game change
 ================
 */
 void FS_InitFilesystem( void )
@@ -4100,11 +4063,6 @@ int		FS_FOpenFileByMode( const char *qpath, fileHandle_t *f, fsMode_t mode ) {
 
 	if ( *f ) {
 		fsh[*f].fileSize = r;
-		fsh[*f].streamed = qfalse;
-
-		if (mode == FS_READ) {
-			fsh[*f].streamed = qtrue;
-		}
 	}
 	fsh[*f].handleSync = sync;
 
