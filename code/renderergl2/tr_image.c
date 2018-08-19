@@ -2305,12 +2305,12 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 
 		if( *pic )
 		{
+            /*
 			if( orgNameFailed )
 			{
-				ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n",
-						name, altName );
+				ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n", name, altName );
 			}
-
+            */
 			break;
 		}
 	}

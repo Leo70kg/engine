@@ -468,7 +468,7 @@ static void SCR_DrawScreenField(void)
 {
 	qboolean uiFullscreen;
 
-	re.BeginFrame( 	STEREO_CENTER );
+	re.BeginFrame();
 
 	uiFullscreen = (uivm && VM_Call( uivm, UI_IS_FULLSCREEN ));
 

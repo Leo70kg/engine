@@ -24,7 +24,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef __TR_FBO_H__
 #define __TR_FBO_H__
 
-
 struct image_s;
 struct shaderProgram_s;
 

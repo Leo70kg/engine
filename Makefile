@@ -1,6 +1,7 @@
 COMPILE_PLATFORM=$(shell uname | sed -e s/_.*//|tr '[:upper:]' '[:lower:]' | sed -e 's/\//_/g')
 COMPILE_ARCH=$(shell uname -m | sed -e s/i.86/x86/ | sed -e 's/^arm.*/arm/')
 
+CC=clang
 
 ifeq ($(COMPILE_PLATFORM),darwin)
   # Apple does some things a little differently...
@@ -44,8 +45,9 @@ VERSION=3.0.0a
 # causing problems with keeping up to date with the repository.
 #
 #############################################################################
+-include Makefile.local
 
-ifeq ($(COMPILE_PLATFORM), cygwin)
+ifeq ($(COMPILE_PLATFORM),cygwin)
   PLATFORM=mingw32
 endif
 
@@ -153,7 +155,6 @@ ifndef USE_OPENAL
 USE_OPENAL=1
 endif
 
-
 ifndef USE_OPENAL_DLOPEN
 USE_OPENAL_DLOPEN=1
 endif
@@ -168,7 +169,7 @@ USE_CODEC_XMP=0
 endif
 
 ifndef USE_CODEC_OPUS
-USE_CODEC_OPUS=0
+USE_CODEC_OPUS=1
 endif
 
 ifndef USE_MUMBLE
@@ -290,26 +291,27 @@ endif
 #############################################################################
 
 INSTALL=install
-MKDIR=mkdir
+MKDIR=mkdir -p
 EXTRA_FILES=
 CLIENT_EXTRA_FILES=
 
 
 ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu" "gnu"))
   TOOLS_CFLAGS += -DARCH_STRING=\"$(ARCH)\"
-  BASE_CFLAGS = -Wall  -Wimplicit -Wstrict-prototypes -pipe -DUSE_ICON -DARCH_STRING=\\\"$(ARCH)\\\"
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -Wimplicit -Wstrict-prototypes \
+	-pipe -DUSE_ICON -DARCH_STRING=\\\"$(ARCH)\\\"
   CLIENT_CFLAGS += $(SDL_CFLAGS)
 
-  OPTIMIZEVM = -O2 -funroll-loops
-  OPTIMIZE = $(OPTIMIZEVM) -ffast-math 
+  OPTIMIZEVM = -O3
+  OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 
   ifeq ($(ARCH),x86_64)
-	OPTIMIZEVM = -O3 -funroll-loops
-	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
-	HAVE_VM_COMPILED=true
+    OPTIMIZEVM = -O3 -msse2
+    OPTIMIZE = $(OPTIMIZEVM) -ffast-math
+    HAVE_VM_COMPILED=true
   else
   ifeq ($(ARCH),x86)
-	OPTIMIZEVM = -O3 -march=i586 -fomit-frame-pointer -funroll-loops
+	OPTIMIZEVM = -O3 -march=i586
 	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 	HAVE_VM_COMPILED=true
   endif
@@ -338,18 +340,15 @@ endif
 
 
   ifeq ($(USE_MUMBLE),1)
-	CLIENT_LIBS += -lrt
+    CLIENT_LIBS += -lrt
   endif
 
   ifeq ($(ARCH),x86)
-	# linux32 make ...
-	BASE_CFLAGS += -m32
+    # linux32 make ...
+    BASE_CFLAGS += -m32
   else
-  ifeq ($(ARCH),x86_64)
-	BASE_CFLAGS += -m64
-  endif
   ifeq ($(ARCH),ppc64)
-	BASE_CFLAGS += -m64
+    BASE_CFLAGS += -m64
   endif
   endif
 else # ifeq Linux
@@ -407,8 +406,8 @@ ifeq ($(PLATFORM),darwin)
   else
 	TOOLS_CFLAGS += -DMACOS_X
   endif
-
-  BASE_CFLAGS += -fno-strict-aliasing -DMACOS_X -fno-common -pipe
+  BASE_CFLAGS += -fno-strict-aliasing
+  BASE_CFLAGS += -DMACOS_X -fno-common -pipe
 
   ifeq ($(USE_OPENAL),1)
 	ifneq ($(USE_OPENAL_DLOPEN),1)
@@ -551,7 +550,6 @@ ifdef MINGW
   else
 	BASE_CFLAGS += -m64
   endif
-
 
   # libmingw32 must be linked before libSDLmain
   CLIENT_LIBS += -lmingw32
@@ -807,6 +805,9 @@ else
 echo_cmd=@echo
 Q=@
 endif
+
+CFLAGS+="-std=gnu11"
+
 
 define DO_CC
 $(echo_cmd) "CC $<"

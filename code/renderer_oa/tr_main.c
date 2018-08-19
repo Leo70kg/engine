@@ -1403,7 +1403,7 @@ void RE_RenderScene( const refdef_t *fd )
 	parms.fovY = tr.refdef.fov_y;
 
 
-/*	
+
     // ri.Printf(PRINT_ALL, "B: fovX: %f, fovY: %f, aspect: %f\n", parms.fovX, parms.fovY, tan(parms.fovX *(M_PI/360.0)) / tan(parms.fovY*(M_PI/360.0)));
 	// leilei - widescreen
 	// recalculate fov according to widescreen parameters
@@ -1418,7 +1418,7 @@ void RE_RenderScene( const refdef_t *fd )
         parms.fovX = atan(tan(parms.fovY * (M_PI/360.0)) * glConfig.windowAspect) * (360.0/M_PI);
     }
 
-
+/*	
 	if (customscrn){
 		// In Vert- FOV the horizontal FOV is unchanged, so we use it to
 		// calculate the vertical FOV that would be used if playing on 4:3 to get the Hor+ vertical FOV

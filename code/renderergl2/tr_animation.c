@@ -24,10 +24,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /*
 
-All bones should be an identity orientation to display the mesh exactly as it is specified.
+All bones should be an identity orientation to display the mesh exactly
+as it is specified.
 
 For all other frames, the bones represent the transformation from the 
-orientation of the bone in the base frame to the orientation in this frame.
+orientation of the bone in the base frame to the orientation in this
+frame.
 
 */
 
@@ -51,13 +53,13 @@ static float ProjectRadius( float r, vec3_t location )
 
 	float projected[4];
 
-/*   
-    projected[0] = p[0] * tr.viewParms.projectionMatrix[0] + 
+/*
+	projected[0] = p[0] * tr.viewParms.projectionMatrix[0] + 
 		           p[1] * tr.viewParms.projectionMatrix[4] +
 				   p[2] * tr.viewParms.projectionMatrix[8] +
 				   tr.viewParms.projectionMatrix[12];
 
-    projected[2] = p[0] * tr.viewParms.projectionMatrix[2] + 
+	projected[2] = p[0] * tr.viewParms.projectionMatrix[2] + 
 		           p[1] * tr.viewParms.projectionMatrix[6] +
 				   p[2] * tr.viewParms.projectionMatrix[10] +
 				   tr.viewParms.projectionMatrix[14];
@@ -334,8 +336,6 @@ static int R_ComputeFogNum( mdvModel_t *model, trRefEntity_t *ent )
 	return 0;
 }
 
-
-
 static int R_ComputeLOD( trRefEntity_t *ent )
 {
 	float flod;
@@ -402,7 +402,7 @@ static int R_ComputeLOD( trRefEntity_t *ent )
 	
 	if ( lod >= tr.currentModel->numLods )
 		lod = tr.currentModel->numLods - 1;
-    else if ( lod < 0 )
+	if ( lod < 0 )
 		lod = 0;
 
 	return lod;
@@ -436,7 +436,8 @@ void R_MDRAddAnimSurfaces( trRefEntity_t *ent )
 	if ((ent->e.frame >= header->numFrames) || (ent->e.frame < 0) ||
 		(ent->e.oldframe >= header->numFrames) || (ent->e.oldframe < 0) )
 	{
-		ri.Printf( PRINT_ALL, "R_MDRAddAnimSurfaces: no such frame %d to %d for '%s'\n", ent->e.oldframe, ent->e.frame, tr.currentModel->name );
+		ri.Printf( PRINT_DEVELOPER, "R_MDRAddAnimSurfaces: no such frame %d to %d for '%s'\n",
+			   ent->e.oldframe, ent->e.frame, tr.currentModel->name );
 		ent->e.frame = 0;
 		ent->e.oldframe = 0;
 	}
@@ -478,6 +479,7 @@ void R_MDRAddAnimSurfaces( trRefEntity_t *ent )
 
 	for ( i = 0 ; i < lod->numSurfaces ; i++ )
 	{
+		
 		if(ent->e.customShader)
 			shader = R_GetShaderByHandle(ent->e.customShader);
 		else if((ent->e.customSkin > 0) && (ent->e.customSkin < tr.numSkins))
@@ -526,8 +528,11 @@ void R_MDRAddAnimSurfaces( trRefEntity_t *ent )
 
 // tr_mesh.c: triangle model functions
 
-
-
+/*
+=================
+R_AddMD3Surfaces
+=================
+*/
 void R_AddMD3Surfaces( trRefEntity_t *ent )
 {
 	int	i;
@@ -544,10 +549,9 @@ void R_AddMD3Surfaces( trRefEntity_t *ent )
 		ent->e.oldframe %= tr.currentModel->mdv[0]->numFrames;
 	}
 
-
 	// Validate the frames so there is no chance of a crash.
 	// This will write directly into the entity structure, 
-    // so when the surfaces are rendered, 
+	// so when the surfaces are rendered, 
 	// they don't need to be range checked again.
 
 	if ( (ent->e.frame >= tr.currentModel->mdv[0]->numFrames) 
@@ -560,7 +564,6 @@ void R_AddMD3Surfaces( trRefEntity_t *ent )
 			ent->e.frame = 0;
 			ent->e.oldframe = 0;
 	}
-
 
 	// compute LOD
 	int lod = R_ComputeLOD( ent );
@@ -592,7 +595,7 @@ void R_AddMD3Surfaces( trRefEntity_t *ent )
 	//
 	mdvSurface_t* surface = model->surfaces;
 	for ( i = 0 ; i < model->numSurfaces ; i++ )
-    {
+	{
 		if ( ent->e.customShader ) {
 			shader = R_GetShaderByHandle( ent->e.customShader );
 		} else if ( ent->e.customSkin > 0 && ent->e.customSkin < tr.numSkins ) {
@@ -611,7 +614,7 @@ void R_AddMD3Surfaces( trRefEntity_t *ent )
 				}
 			}
 			if (shader == tr.defaultShader) {
-				//ri.Printf( PRINT_DEVELOPER, "WARNING: no shader for surface %s in skin %s\n", surface->name, skin->name);
+				ri.Printf( PRINT_DEVELOPER, "WARNING: no shader for surface %s in skin %s\n", surface->name, skin->name);
 			}
 			else if (shader->defaultShader) {
 				ri.Printf( PRINT_DEVELOPER, "WARNING: shader %s in skin %s not found\n", shader->name, skin->name);
@@ -625,13 +628,15 @@ void R_AddMD3Surfaces( trRefEntity_t *ent )
 		// we will add shadows even if the main object isn't visible in the view
 		// stencil shadows can't do personal models unless I polyhedron clip
 		if ( (!personalModel) && (r_shadows->integer == 2) && (fogNum == 0)
-			&& !(ent->e.renderfx & ( RF_NOSHADOW | RF_DEPTHHACK ) ) && (shader->sort == SS_OPAQUE) )
+			&& !(ent->e.renderfx & ( RF_NOSHADOW | RF_DEPTHHACK ) )
+			&& (shader->sort == SS_OPAQUE) )
 		{
 			R_AddDrawSurf( (void *)&model->vaoSurfaces[i], tr.shadowShader, 0, qfalse, qfalse, 0 );
 		}
 
 		// projection shadows work fine with personal models
-		if ( (r_shadows->integer == 3) && (fogNum == 0) && (ent->e.renderfx & RF_SHADOW_PLANE ) && (shader->sort == SS_OPAQUE) )
+		if ( (r_shadows->integer == 3) && (fogNum == 0)
+			&& (ent->e.renderfx & RF_SHADOW_PLANE ) && (shader->sort == SS_OPAQUE) )
 		{
 			R_AddDrawSurf( (void *)&model->vaoSurfaces[i], tr.projectionShadowShader, 0, qfalse, qfalse, 0 );
 		}

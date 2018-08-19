@@ -292,12 +292,12 @@ static qhandle_t RE_RegisterModelReal( const char *name )
 
 		if( hModel )
 		{
+            /*
 			if( orgNameFailed )
 			{
-				ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n",
-						name, altName );
+				ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n", name, altName );
 			}
-
+            */
 			break;
 		}
 	}

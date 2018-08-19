@@ -148,6 +148,7 @@ cvar_t  *r_ignoreDstAlpha;
 cvar_t	*r_ignoreGLErrors;
 
 
+cvar_t	*r_drawBuffer;
 cvar_t	*r_lightmap;
 cvar_t	*r_uiFullScreen;
 cvar_t	*r_shadows;
@@ -211,10 +212,10 @@ QGL_DESKTOP_1_1_PROCS;
 QGL_1_3_PROCS;
 QGL_1_5_PROCS;
 QGL_2_0_PROCS;
+QGL_3_0_PROCS;
 QGL_ARB_framebuffer_object_PROCS;
 QGL_ARB_vertex_array_object_PROCS;
 QGL_EXT_direct_state_access_PROCS;
-QGL_3_0_PROCS;
 #undef GLE
 
 
@@ -816,9 +817,6 @@ static void InitOpenGL( void )
 		{
 			glConfig.maxTextureSize = 0;
 		}
-
-		qglGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &temp );
-		glConfig.numTextureUnits = temp;
 	}
 
 	// set default state
@@ -1763,6 +1761,7 @@ void R_Register( void )
 	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_CHEAT);
 	r_offsetFactor = ri.Cvar_Get( "r_offsetfactor", "-1", CVAR_CHEAT );
 	r_offsetUnits = ri.Cvar_Get( "r_offsetunits", "-2", CVAR_CHEAT );
+	r_drawBuffer = ri.Cvar_Get( "r_drawBuffer", "GL_BACK", CVAR_CHEAT );
 	r_lockpvs = ri.Cvar_Get ("r_lockpvs", "0", CVAR_CHEAT);
 	r_noportals = ri.Cvar_Get ("r_noportals", "0", CVAR_CHEAT);
 	r_shadows = ri.Cvar_Get( "cg_shadows", "1", 0 );
@@ -1774,6 +1773,7 @@ void R_Register( void )
 
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", MAX_POLYS), 0);
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
+
 	// make sure all the commands added here are also
 	// removed in R_Shutdown
 	ri.Cmd_AddCommand( "imagelist", R_ImageList_f );
@@ -2039,9 +2039,6 @@ refexport_t *GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 }
 
 
-//=============================================================================
-
-
 void RE_BeginRegistration(glconfig_t *glconfigOut)
 {
 	int	i;
@@ -2063,5 +2060,3 @@ void RE_BeginRegistration(glconfig_t *glconfigOut)
 
 	tr.registered = qtrue;
 }
-
-//=============================================================================

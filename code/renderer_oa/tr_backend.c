@@ -1340,7 +1340,7 @@ void RE_StretchPic( float x, float y, float w, float h, float s1, float t1, floa
 
 
 
-void RE_BeginFrame(stereoFrame_t notuse)
+void RE_BeginFrame(void)
 {
 	if ( !tr.registered )
 		return;

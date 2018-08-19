@@ -73,7 +73,7 @@ typedef struct image_s {
 // outside of TR since it shouldn't be cleared during ref re-init
 extern refimport_t ri;
 extern glconfig_t glConfig;	
-
+extern cvar_t *r_drawBuffer;
 // These variables should live inside glConfig but can't because of
 // compatibility issues to the original ID vms.  If you release a stand-alone
 // game and your mod uses tr_types.h from this build you can safely move them
@@ -123,7 +123,7 @@ void stripExtension(const char *in, char *out, int destsize);
 // unit: nornalized of forward,
 // right: perpendicular of forward 
 void MakePerpVectors(const float forward[3], float unit[3], float right[3]);
-float MakeTwoPerpVectors(float forward[3], float right[3], float up[3]);
+float MakeTwoPerpVectors(const float forward[3], float right[3], float up[3]);
 
 unsigned int ColorBytes4 (float r, float g, float b, float a);
 void MatrixMultiply4x4(const float A[16], const float B[16], float out[16]);

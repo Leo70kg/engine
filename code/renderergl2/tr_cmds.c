@@ -286,7 +286,8 @@ If running in stereo, RE_BeginFrame will be called twice
 for each RE_EndFrame
 ====================
 */
-void RE_BeginFrame( stereoFrame_t notuse ) {
+void RE_BeginFrame( void ) {
+	drawBufferCommand_t	*cmd = NULL;
 
 	if ( !tr.registered ) {
 		return;
@@ -362,6 +363,20 @@ void RE_BeginFrame( stereoFrame_t notuse ) {
 		if ((err = qglGetError()) != GL_NO_ERROR)
 			ri.Error(ERR_FATAL, "RE_BeginFrame() - glGetError() failed (0x%x)!", err);
 	}
+
+    if( !(cmd = R_GetCommandBuffer(sizeof(*cmd))) )
+        return;
+
+    if(cmd)
+    {
+        cmd->commandId = RC_DRAW_BUFFER;
+
+        if (!Q_stricmp(r_drawBuffer->string, "GL_FRONT"))
+            cmd->buffer = (int)GL_FRONT;
+        else
+            cmd->buffer = (int)GL_BACK;
+    }
+	
 }
 
 

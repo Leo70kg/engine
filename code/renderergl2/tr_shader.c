@@ -37,9 +37,12 @@ static	shader_t*		hashTable[FILE_HASH_SIZE];
 #define MAX_SHADERTEXT_HASH		2048
 static char **shaderTextHashTable[MAX_SHADERTEXT_HASH];
 
-
-
-static long int generateHashValue( const char *fname, const int size )
+/*
+================
+return a hash value for the filename
+================
+*/
+static long generateHashValue( const char *fname, const int size )
 {
 	int i = 0;
 	long hash = 0;
@@ -2756,7 +2759,7 @@ static shader_t *GeneratePermanentShader( void ) {
 
 	SortNewShader();
 
-	long int hash = generateHashValue(newShader->name, FILE_HASH_SIZE);
+	int hash = generateHashValue(newShader->name, FILE_HASH_SIZE);
 	newShader->next = hashTable[hash];
 	hashTable[hash] = newShader;
 
@@ -2812,7 +2815,6 @@ static shader_t *FinishShader( void )
 	qboolean hasLightmapStage = qfalse;
 	qboolean vertexLightmap = qfalse;
 
-
 	//
 	// set sky stuff appropriate
 	//
@@ -2837,7 +2839,7 @@ static shader_t *FinishShader( void )
 			break;
 		}
 
-        // check for a missing texture
+		// check for a missing texture
 		if ( !pStage->bundle[0].image[0] )
 		{
 			ri.Printf( PRINT_WARNING, "Shader %s has a stage with no image\n", shader.name );
@@ -3001,7 +3003,7 @@ static char *FindShaderInShaderText( const char *shadername ) {
 
 	int i;
 
-	long int hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
+	int hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
 
 	if(shaderTextHashTable[hash])
 	{
@@ -3059,7 +3061,7 @@ shader_t *R_FindShaderByName( const char *name ) {
 
 	COM_StripExtension(name, strippedName, sizeof(strippedName));
 
-	long int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
+	int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
 	//
 	// see if the shader is already loaded
@@ -3130,7 +3132,7 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 
 	COM_StripExtension(name, strippedName, sizeof(strippedName));
 
-	long hash = generateHashValue(strippedName, FILE_HASH_SIZE);
+	int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
 	//
 	// see if the shader is already loaded
@@ -3253,10 +3255,11 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 }
 
 
-qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_t *image, qboolean mipRawImage) {
+qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_t *image, qboolean mipRawImage)
+{
 	shader_t	*sh;
 
-	long hash = generateHashValue(name, FILE_HASH_SIZE);
+	int hash = generateHashValue(name, FILE_HASH_SIZE);
 
 	// probably not necessary since this function
 	// only gets called from tr_font.c with lightmapIndex == LIGHTMAP_2D
@@ -3416,7 +3419,6 @@ For menu graphics that should never be picmiped
 */
 qhandle_t RE_RegisterShaderNoMip( const char *name )
 {
-
 	if ( strlen( name ) >= MAX_QPATH ) {
 		ri.Printf( PRINT_ALL, "Shader name exceeds MAX_QPATH\n" );
 		return 0;
@@ -3447,7 +3449,7 @@ it and returns a valid (possibly default) shader_t to be used internally.
 shader_t *R_GetShaderByHandle( qhandle_t hShader )
 {
 	if ( hShader < 0 ) {
-        ri.Printf( PRINT_WARNING, "R_GetShaderByHandle: out of range hShader '%d'\n", hShader );
+		ri.Printf( PRINT_WARNING, "R_GetShaderByHandle: out of range hShader '%d'\n", hShader );
 		return tr.defaultShader;
 	}
 	if ( hShader >= tr.numShaders ) {
@@ -3523,7 +3525,8 @@ a single large text block that can be scanned for shader names
 #define	MAX_SHADER_FILES	4096
 static void ScanAndLoadShaderFiles( void )
 {
-	void* buffers[MAX_SHADER_FILES] = {NULL};
+	char *buffers[MAX_SHADER_FILES] = {NULL};
+	char *p;
 	int numShaderFiles;
 	int i;
 	char *oldp, *token, *hashMem, *textEnd;
@@ -3572,7 +3575,7 @@ static void ScanAndLoadShaderFiles( void )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
 		
 		// Do a simple check on the shader structure in that file to make sure one bad shader file cannot fuck up all other shaders.
-		char *p = buffers[i];
+		p = buffers[i];
 		COM_BeginParseSession(filename);
 		while(1)
 		{
@@ -3608,7 +3611,7 @@ static void ScanAndLoadShaderFiles( void )
 				break;
 			}
 		}
-			
+	
 		if (buffers[i])
 			sum += summand;		
 	}
@@ -3638,17 +3641,16 @@ static void ScanAndLoadShaderFiles( void )
 	memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));
 	size = 0;
 
-
+	p = s_shaderText;
 	// look for shader names
-    char *p = s_shaderText;
 	while ( 1 )
-    {
+	{
 		token = COM_ParseExt( &p, qtrue );
 		if ( token[0] == 0 ) {
 			break;
 		}
 
-		long hash = generateHashValue(token, MAX_SHADERTEXT_HASH);
+		int hash = generateHashValue(token, MAX_SHADERTEXT_HASH);
 		shaderTextHashTableSizes[hash]++;
 		size++;
 		SkipBracedSection(&p, 0);
@@ -3674,7 +3676,7 @@ static void ScanAndLoadShaderFiles( void )
 			break;
 		}
 
-		long hash = generateHashValue(token, MAX_SHADERTEXT_HASH);
+		int hash = generateHashValue(token, MAX_SHADERTEXT_HASH);
 		shaderTextHashTable[hash][shaderTextHashTableSizes[hash]++] = oldp;
 
 		SkipBracedSection(&p, 0);

@@ -75,8 +75,8 @@ static void RB_CheckVao(vao_t *vao)
 void RB_AddQuadStampExt(vec3_t origin, vec3_t left, vec3_t up, float color[4], float s1, float t1, float s2, float t2 )
 {
 	vec3_t normal;
-	int16_t     iNormal[4];
-	uint16_t    iColor[4];
+	int16_t iNormal[4];
+	uint16_t iColor[4];
 
 	RB_CheckVao(tess.vao);
 
@@ -220,13 +220,13 @@ static void RB_SurfaceSprite( void )
 	// calculate the xyz locations for the four corners
 	float radius = backEnd.currentEntity->e.radius;
 	if ( backEnd.currentEntity->e.rotation == 0 )
-    {
+	{
 		VectorScale( backEnd.viewParms.or.axis[1], radius, left );
 		VectorScale( backEnd.viewParms.or.axis[2], radius, up );
 	}
-    else
-    {
-		float ang = M_PI/180 * backEnd.currentEntity->e.rotation ;
+	else
+	{
+		float ang = (M_PI/180) * backEnd.currentEntity->e.rotation;
 		float s = sin( ang );
 		float c = cos( ang );
 
@@ -238,13 +238,13 @@ static void RB_SurfaceSprite( void )
 	}
 
 	if ( backEnd.viewParms.isMirror )
-    {
+	{
 		VectorSubtract( vec3_origin, left, left );
 	}
 
 	float colors[4];
 	VectorScale4(backEnd.currentEntity->e.shaderRGBA, 1.0f / 255.0f, colors);
-	RB_AddQuadStamp( backEnd.currentEntity->e.origin, left, up, colors );
+	RB_AddQuadStamp(backEnd.currentEntity->e.origin, left, up, colors);
 }
 
 
@@ -253,7 +253,7 @@ static void RB_SurfaceSprite( void )
 RB_SurfacePolychain
 =============
 */
-static void RB_SurfacePolychain( srfPoly_t *p )
+static void RB_SurfacePolychain(srfPoly_t *p)
 {
 	int	i;
 
@@ -652,8 +652,9 @@ static void DoRailDiscs( int numSegs, const vec3_t start, const vec3_t dir, cons
 /*
 ** RB_SurfaceRailRinges
 */
-static void RB_SurfaceRailRings( void ) {
-    int			numSegs;
+static void RB_SurfaceRailRings( void )
+{
+	int			numSegs;
 	vec3_t		vec;
 	vec3_t		right, up;
 	vec3_t		start, end;
@@ -666,10 +667,10 @@ static void RB_SurfaceRailRings( void ) {
 	// compute variables
 	VectorSubtract( end, start, vec );
 	float len = MakeTwoPerpVectors( vec, right, up );
-	numSegs =  len / r_railSegmentLength->value;
+	numSegs = len / r_railSegmentLength->value;
+
 	if ( numSegs <= 0 )
 		numSegs = 1;
-
 
 	VectorScale( vec, r_railSegmentLength->value, vec );
 

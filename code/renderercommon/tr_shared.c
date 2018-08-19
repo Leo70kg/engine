@@ -220,53 +220,41 @@ void MakePerpVectors(const float forward[3], float unit[3], float right[3])
 // note: vector forward are NOT assumed to be nornalized,
 // after this funtion is called , forward are nornalized.
 // right, up: perpendicular of forward 
-float MakeTwoPerpVectors(float forward[3], float right[3], float up[3])
+float MakeTwoPerpVectors(const float forward[3], float right[3], float up[3])
 {
-	// this rotate and negate guarantees a vector not colinear with the original
-    if(forward[0])
+
+    float sqLen = forward[0]*forward[0]+forward[1]*forward[1]+forward[2]*forward[2];
+    if(sqLen)
     {
-        right[0] = 0;
-	    right[1] = 1;
-	    right[2] = 0;
+        float nf[3] = {0, 0, 1};
+        float invLen = 1.0f / sqrtf(sqLen);
+        nf[0] = forward[0] * invLen;
+        nf[1] = forward[1] * invLen;
+        nf[2] = forward[2] * invLen;
+
+        float adjlen = DotProduct(nf, right);
+
+        // this rotate and negate guarantees a vector
+        // not colinear with the original
+        right[0] = forward[2] - adjlen * nf[0];
+        right[1] = -forward[0] - adjlen * nf[1];
+        right[2] = forward[1] - adjlen * nf[2];
+
+
+        invLen = 1.0f/sqrtf(right[0]*right[0]+right[1]*right[1]+right[2]*right[2]);
+        right[0] *= invLen;
+        right[1] *= invLen;
+        right[2] *= invLen;
+
+        // get the up vector with the right hand rules 
+        VectorCross(right, nf, up);
+
+        return (sqLen * invLen);
     }
-    else if(forward[1])
-    {
-        right[0] = 0;
-	    right[1] = 0;
-	    right[2] = 1;
-    }
-    else if(forward[2])
-    {
-        right[0] = 1;
-	    right[1] = 0;
-	    right[2] = 0;
-        return 1;
-    }
-
-    float sqLen = forward[0]*forward[0] + forward[1]*forward[1] + forward[2]*forward[2];
-    float invLen = 1.0f / sqrtf(sqLen);
-    forward[0] = forward[0] * invLen;
-    forward[1] = forward[1] * invLen;
-    forward[2] = forward[2] * invLen;
-    float ret = sqLen * invLen;
-    
-    float d = DotProduct(forward, right);
-	right[0] -= d*forward[0];
-	right[1] -= d*forward[1];
-	right[2] -= d*forward[2];
-
-    // normalize the result
-    sqLen = right[0]*right[0] + right[1]*right[1] + right[2]*right[2];
-    invLen = 1.0f / sqrtf(sqLen);
-
-    right[0] *= invLen;
-    right[1] *= invLen;
-    right[2] *= invLen;
-
-    VectorCross(forward, right, up);
-
-    return ret;
+    return 0;
 }
+
+
 
 unsigned ColorBytes4 (float r, float g, float b, float a)
 {

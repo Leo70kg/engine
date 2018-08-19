@@ -72,6 +72,7 @@ static ID_INLINE signed char ClampChar( int i )
 	return i;
 }
 
+/*
 static ID_INLINE signed short ClampShort( int i )
 {
 	if ( i < -32768 ) {
@@ -83,6 +84,8 @@ static ID_INLINE signed short ClampShort( int i )
     
 	return i;
 }
+*/
+
 
 void IN_MLookDown( void ) {
 	in_mlooking = qtrue;

@@ -622,6 +622,7 @@ void	RB_SetGL2D (void) {
 			  GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
 
 	GL_Cull( CT_TWO_SIDED );
+	qglDisable( GL_CLIP_PLANE0 );
 
 	// set time for 2D shaders
 	backEnd.refdef.time = ri.Milliseconds();
@@ -1404,7 +1405,6 @@ const void *RB_CapShadowMap(const void *data)
 }
 
 
-
 const void *RB_PostProcess(const void *data)
 {
 	const postProcessCommand_t *cmd = data;
@@ -1612,8 +1612,7 @@ void RB_ExecuteRenderCommands( const void *data )
 			break;
 		case RC_EXPORT_CUBEMAPS:
 			data = RB_ExportCubemaps(data);
-			break;            
-
+			break;
         case RC_END_OF_LIST:
 		default:
 			// finish any 2D drawing if needed

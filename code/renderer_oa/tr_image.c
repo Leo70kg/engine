@@ -783,11 +783,12 @@ static void R_LoadImage(const char *name, unsigned char **pic, int *width, int *
 
 		if( *pic )
 		{
+            /*
 			if( orgNameFailed )
 			{
 				ri.Printf( PRINT_WARNING, "WARNING: %s not present, using %s instead\n",name, altName );
 			}
-
+            */
 			break;
 		}
 	}

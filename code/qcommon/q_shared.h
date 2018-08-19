@@ -560,8 +560,7 @@ void	AnglesSubtract( vec3_t v1, vec3_t v2, vec3_t v3 );
 qboolean PlaneFromPoints( vec4_t plane, const vec3_t a, const vec3_t b, const vec3_t c );
 void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
 void RotateAroundDirection( vec3_t axis[3], float yaw );
-void MakeNormalVectors( const vec3_t forward, vec3_t right, vec3_t up );
-// perpendicular vector could be replaced by this
+
 
 //int	PlaneTypeForNormal (vec3_t normal);
 qboolean Matrix4Compare(const float a[16], const float b[16]);

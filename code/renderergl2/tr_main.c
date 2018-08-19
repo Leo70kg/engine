@@ -449,6 +449,7 @@ void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const f
 /*
 ==========================
 R_TransformClipToWindow
+
 ==========================
 */
 void R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t normalized, vec4_t window )
@@ -720,7 +721,6 @@ static void R_SetupProjection(void)
 	}
 
 }
-
 
 /*
 ===============
@@ -1318,12 +1318,14 @@ static void R_RadixSort( drawSurf_t *source, int size )
 #endif //Q3_LITTLE_ENDIAN
 }
 
+
 //==========================================================================================
 
 
 void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap, int pshadowMap, int cubemap )
 {
 	// instead of checking for overflow, we just mask the index so it wraps around
+	// so it wraps around
 	int index = tr.refdef.numDrawSurfs & DRAWSURF_MASK;
 	// the sort data is packed into a single 32 bit value so it can be
 	// compared quickly during the qsorting process
@@ -1552,8 +1554,11 @@ static void R_GenerateDrawSurfs( void )
 	}
 
 	// we know the size of the clipping volume. Now set the rest of the projection matrix.
-    float zFar = tr.viewParms.zFar;
-	float zNear	= r_znear->value;
+	
+	// Sets the z-component transformation part in the projection matrix
+
+	float zFar = tr.viewParms.zFar;
+	float zNear = r_znear->value;
 	float depth	= zFar - zNear;
 
 	tr.viewParms.projectionMatrix[2] = 0;
@@ -1592,6 +1597,7 @@ static void R_GenerateDrawSurfs( void )
 		tr.viewParms.projectionMatrix[10] = c[2] + 1.0f;
 		tr.viewParms.projectionMatrix[14] = c[3];
 	}
+
 
 	R_AddEntitySurfaces();
 }

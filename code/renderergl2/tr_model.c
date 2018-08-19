@@ -279,6 +279,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	// only set the name after the model has been successfully loaded
 	Q_strncpyz( mod->name, name, sizeof( mod->name ) );
 
+
 	R_IssuePendingRenderCommands();
 
 	mod->type = MOD_BAD;
@@ -337,12 +338,12 @@ qhandle_t RE_RegisterModel( const char *name ) {
 
 		if( hModel )
 		{
+            /*
 			if( orgNameFailed )
 			{
-				ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n",
-						name, altName );
+				ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n", name, altName );
 			}
-
+            */
 			break;
 		}
 	}
