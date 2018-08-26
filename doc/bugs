@@ -2,170 +2,195 @@ suijingfeng ate Kernie's rocket
 ********************
 ERROR: Hunk_Alloc failed on 3564736
 ********************
-  
--------- FS_Startup -------
-path: .
-dir: baseoa
-path: /home/suijingfeng/.local/share/OpenArena
-dir: baseoa
-path: .
-dir: CTF
-path: /home/suijingfeng/.local/share/OpenArena
-dir: CTF
-We are looking in the current search path:
-/home/suijingfeng/.local/share/OpenArena/CTF
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-adr-vm.pk3 (2 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-adq-sounds.pk3 (21 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-adq-pmskins.pk3 (29 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-ado-vm.pk3 (3 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-adn-vm.pk3 (3 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-adc-stuff3.pk3 (26 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-adb-stuff2.pk3 (50 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-adb-stuff1.pk3 (30 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-acj-icons.pk3 (29 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-aci-icons.pk3 (29 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-ach-basebgreenskin.pk3 (7 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-acf-baseskins.pk3 (17 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-aac-cfgs.pk3 (8 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zzzz-failmod-aab-cfgs.pk3 (7 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zz-proskins2.pk3 (8 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/zz-bioFlags.pk3 (11 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/z-gpl-q3a2oa-textures-v4.pk3 (1446 files)
-/home/suijingfeng/.local/share/OpenArena/CTF/z-gpl-q3a2oa-textures-v3.pk3 (1375 files)
-./CTF
-/home/suijingfeng/.local/share/OpenArena/baseoa
-/home/suijingfeng/.local/share/OpenArena/baseoa/z_hydronex3_a1.pk3 (14 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/zz-pillcity.pk3 (223 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/zz-hdsagoalpha-aas.pk3 (2 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ZTN3DM1.pk3 (10 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/zih_roof.pk3 (109 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/z-history.pk3 (146 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/z-ctfspak1.pk3 (261 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/xpress.pk3 (38 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/wub-juckr.pk3 (15 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/woohaa.pk3 (9 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/wintersago_rev1.pk3 (167 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/wildwest.pk3 (124 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/VilesRails.pk3 (231 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/UT_The_Day_After2.pk3 (157 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ut4_rctf1.pk3 (10 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/twistedcity.pk3 (66 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/train1.pk3 (39 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/stchctf9a.pk3 (70 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/speedyctf.pk3 (73 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/sos_ctf4ish.pk3 (15 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/sokar3dm5.pk3 (131 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/skytown2.pk3 (48 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/simpsons.pk3 (592 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/saintctf2.pk3 (50 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/run_cheez7.pk3 (3 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/rota3ctf2.pk3 (255 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/rooftopsctf.pk3 (24 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/reptctf12.pk3 (72 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/reptctf11.pk3 (67 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/quarea51.pk3 (61 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/qqq.pk3 (10 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3_cr8.pk3 (8 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3wpak4.pk3 (562 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3wpak1.pk3 (396 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3wpak0.pk3 (287 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3tourney3ctf_beta.pk3 (20 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3shw13.pk3 (175 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3rave.pk3 (51 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3practice.pk3 (27 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3hockey-final.pk3 (27 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/Q3floGGer1.pk3 (114 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3dm6tmp.pk3 (2 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/q3dade12.pk3 (42 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pukka3tourney6.pk3 (71 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pukka3tourney2.pk3 (91 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ps9ctf.pk3 (11 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ps7ctf.pk3 (9 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/PS37CTF-MMP.pk3 (13 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pro-q3dm6.pk3 (6 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/poolside.pk3 (76 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pillcity.pk3 (222 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/park.pk3 (63 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak6-patch088.pk3 (711 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak6-patch085.pk3 (559 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak6-misc.pk3 (229 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak5-TA.pk3 (139 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak4-textures.pk3 (1753 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak2-players.pk3 (669 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak2-players-mature.pk3 (231 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak1-maps.pk3 (100 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak1-maps.026309b8.pk3 (106 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/pak0.pk3 (1042 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/overkill.pk3 (8 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ospra3map11_2.pk3 (27 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/oa_shine2b2.pk3 (23 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/oasago2_081.pk3 (5 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/oasago2j.pk3 (11 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/oaN.pk3 (10 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/Mx2Ctf5.pk3 (15 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/MoixPack.pk3 (18 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/mlctf1beta.pk3 (7 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/mkbase.pk3 (90 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/MiniCtfArena.pk3 (11 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/mg_final.pk3 (52 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/mctf.pk3 (199 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map_oxodm3.pk3 (148 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/mapel4b.pk3 (59 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-wintergames.pk3 (52 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-overskillctf.pk3 (23 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-hauptbad.pk3 (44 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-durdm3.pk3 (36 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-dawnoftimeb3.pk3 (168 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-casablanca.pk3 (131 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-alleyq3dc2.pk3 (129 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-13vast.pk3 (83 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-13stone.pk3 (43 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-13island.pk3 (47 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-13dream.pk3 (54 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/map-13black_se.pk3 (48 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/lsdm1.pk3 (97 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/lovet-neiT.pk3 (18 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/love.pk3 (49 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/lae3dm3.pk3 (48 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/kirei.pk3 (79 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/jokictf2.pk3 (72 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/jaxdm4_v21.pk3 (106 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/jas3dm2.pk3 (26 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/japanc.pk3 (43 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ironwood.pk3 (88 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ikzdm1.pk3 (138 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/horxis.pk3 (100 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/HDsagoalpha.pk3 (15 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/hctf3.pk3 (43 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/hangar.pk3 (21 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/god_z_maps1.pk3 (102 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/god_space.pk3 (32 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/geit3ctf1.pk3 (70 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/gas-st.pk3 (68 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/Face.pk3 (59 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/dust.pk3 (38 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/drasticcity.pk3 (76 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/dm-morbias.pk3 (42 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/dc-mappack.pk3 (451 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/Dangercity.pk3 (198 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ctf_inyard85.pk3 (6 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ctf_gate85.pk3 (6 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ctf-cintoast.pk3 (14 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ct3ctf2.pk3 (132 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/ct3ctf1.pk3 (60 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/cityrush.pk3 (79 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/casablancacity.pk3 (127 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/bubctf1.pk3 (72 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/brickyard.pk3 (90 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/atlantis.pk3 (54 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/alliance_maps01.pk3 (423 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/4ish_test2.pk3 (5 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/17+ctf.pk3 (72 files)
-/home/suijingfeng/.local/share/OpenArena/baseoa/071oasago2.pk3 (9 files)
-./baseoa
+
+
+
+DEBUG:
+********************
+ERROR: Hunk_Alloc failed on 739360: code/renderergl2/tr_model.c, line: 535 (sizeof(*v) * (md3Surf->numVerts * md3Surf->numFrames))
+********************
+
   
 ----------------------
 18774 files in pk3 files
 ----- Client Shutdown (Game directory changed) -----
 forcefully unloading cgame vm
+
+
+It seems that the memory OA using is increasing.
+
+
+
+build with clang without -fno-strict-aliasing:
+
+WARNING: light grid mismatch, l->filelen=103896, numGridPoints*8=95904
+
+...loaded 3035 faces, 0 meshes, 3 trisurfs, 104 flares
+light_grid_size=64.000000
+s_worldData.lightGridBounds[i]=37
+light_grid_size=64.000000
+s_worldData.lightGridBounds[i]=39
+light_grid_size=128.000000
+s_worldData.lightGridBounds[i]=9
+WARNING: light grid mismatch, l->filelen=103896,numGridPoints*8=103896
+
+
+
+build with gcc without -fno-strict-aliasing:
+
+...loaded 3035 faces, 0 meshes, 3 trisurfs, 104 flares
+light_grid_size=64.000000
+s_worldData.lightGridBounds[i]=37
+light_grid_size=64.000000
+s_worldData.lightGridBounds[i]=39
+light_grid_size=128.000000
+s_worldData.lightGridBounds[i]=9
+WARNING: light grid mismatch, l->filelen=103896,numGridPoints*8=103896
+
+
+====================================================
+looking for maps/cityrush/vertlight.raw
+Couldn't find image file for shader textures/base_object/boxq3_4b
+WARNING: shader 'textures/base_object/boxq3_4b' has lightmap but no lightmap stage!
+Couldn't find image file for shader textures/base_wall/metaltech12darkfinal
+WARNING: shader 'textures/base_wall/metaltech12darkfinal' has lightmap but no lightmap stage!
+Couldn't find image file for shader textures/base_wall/comp3c
+WARNING: shader 'textures/base_wall/comp3c' has lightmap but no lightmap stage!
+Couldn't find image file for shader textures/gothic_block/killtrim_trans
+WARNING: shader 'textures/gothic_block/killtrim_trans' has lightmap but no lightmap stage!
+Couldn't find image file for shader textures/gothic_floor/q1metal7_98
+WARNING: shader 'textures/gothic_floor/q1metal7_98' has lightmap but no lightmap stage!
+...R_InitSkyTexCoords()...
+Couldn't find image file for shader models/mapobjects/barrel/barrelq32
+Couldn't find image file for shader models/mapobjects/barrel/barrel
+Couldn't find image file for shader models/mapobjects/wall_lamp3
+Couldn't find image file for shader models/mapobjects/lamplight_y
+Couldn't find image file for shader models/mapobjects/barrel/barrelq3
+Couldn't find image file for shader models/mapobjects/skel/skel
+Couldn't find image file for shader models/mapobjects/signs/bioh
+Couldn't find image file for shader models/mapobjects/barrel/barrel2
+stitched 0 LoD cracks
+...loaded 4768 faces, 9 meshes, 32 trisurfs, 0 flares
+s_worldData.lightGridBounds[i]=64
+s_worldData.lightGridBounds[i]=41
+s_worldData.lightGridBounds[i]=7
+Light grid l->filelen=146944
+looking for maps/cityrush/lightgrid.raw
+WARNING: reused image textures/flares/flarey.tga with mixed flags (67 vs 3)
+Couldn't find image file for shader gfx/2d/crosshair00
+Couldn't find image file for shader gfx/2d/crosshair01
+Couldn't find image file for shader gfx/2d/crosshair02
+Couldn't find image file for shader gfx/2d/crosshair03
+Couldn't find image file for shader gfx/2d/crosshair04
+Couldn't find image file for shader gfx/2d/crosshair05
+Couldn't find image file for shader gfx/2d/crosshair06
+Couldn't find image file for shader gfx/2d/crosshair07
+Couldn't find image file for shader gfx/2d/crosshair08
+Couldn't find image file for shader gfx/2d/crosshair09
+Couldn't find image file for shader gfx/2d/crosshair10
+Couldn't find image file for shader gfx/2d/crosshair11
+Couldn't find image file for shader gfx/2d/crosshair12
+Couldn't find image file for shader gfx/2d/crosshair13
+Couldn't find image file for shader gfx/2d/crosshair14
+Couldn't find image file for shader gfx/2d/crosshair15
+Couldn't find image file for shader gfx/2d/crosshair16
+Couldn't find image file for shader gfx/2d/crosshair17
+Couldn't find image file for shader gfx/2d/crosshair18
+Couldn't find image file for shader gfx/2d/crosshair19
+Couldn't find image file for shader gfx/2d/crosshair20
+Couldn't find image file for shader gfx/2d/crosshair21
+Couldn't find image file for shader gfx/2d/crosshair22
+Couldn't find image file for shader gfx/2d/crosshair23
+Couldn't find image file for shader gfx/2d/crosshair24
+Couldn't find image file for shader gfx/2d/crosshair25
+Couldn't find image file for shader gfx/2d/crosshair26
+Couldn't find image file for shader gfx/2d/crosshair27
+Couldn't find image file for shader gfx/2d/crosshair28
+Couldn't find image file for shader gfx/2d/crosshair29
+Couldn't find image file for shader gfx/2d/crosshair30
+Couldn't find image file for shader gfx/2d/crosshair31
+Couldn't find image file for shader gfx/2d/crosshair32
+Couldn't find image file for shader gfx/2d/crosshair33
+Couldn't find image file for shader gfx/2d/crosshair34
+Couldn't find image file for shader gfx/2d/crosshair35
+Couldn't find image file for shader gfx/2d/crosshair36
+Couldn't find image file for shader gfx/2d/crosshair37
+Couldn't find image file for shader gfx/2d/crosshair38
+Couldn't find image file for shader gfx/2d/crosshair39
+Couldn't find image file for shader gfx/2d/crosshair40
+Couldn't find image file for shader gfx/2d/crosshair41
+Couldn't find image file for shader gfx/2d/crosshair42
+Couldn't find image file for shader gfx/2d/crosshair43
+Couldn't find image file for shader gfx/2d/crosshair44
+Couldn't find image file for shader gfx/2d/crosshair45
+Couldn't find image file for shader gfx/2d/crosshair46
+Couldn't find image file for shader gfx/2d/crosshair47
+Couldn't find image file for shader gfx/2d/crosshair48
+Couldn't find image file for shader gfx/2d/crosshair49
+Couldn't find image file for shader gfx/2d/crosshair50
+Couldn't find image file for shader gfx/2d/crosshair51
+Couldn't find image file for shader gfx/2d/crosshair52
+Couldn't find image file for shader gfx/2d/crosshair53
+Couldn't find image file for shader gfx/2d/crosshair54
+Couldn't find image file for shader gfx/2d/crosshair55
+Couldn't find image file for shader gfx/2d/crosshair56
+Couldn't find image file for shader gfx/2d/crosshair57
+Couldn't find image file for shader gfx/2d/crosshair58
+Couldn't find image file for shader gfx/2d/crosshair59
+Couldn't find image file for shader gfx/2d/crosshair60
+Couldn't find image file for shader gfx/2d/crosshair61
+Couldn't find image file for shader gfx/2d/crosshair62
+Couldn't find image file for shader gfx/2d/crosshair63
+Couldn't find image file for shader gfx/2d/crosshair64
+Couldn't find image file for shader gfx/2d/crosshair65
+Couldn't find image file for shader gfx/2d/crosshair66
+Couldn't find image file for shader gfx/2d/crosshair67
+Couldn't find image file for shader gfx/2d/crosshair68
+Couldn't find image file for shader gfx/2d/crosshair69
+Couldn't find image file for shader gfx/2d/crosshair70
+Couldn't find image file for shader gfx/2d/crosshair71
+Couldn't find image file for shader gfx/2d/crosshair72
+Couldn't find image file for shader gfx/2d/crosshair73
+Couldn't find image file for shader gfx/2d/crosshair74
+Couldn't find image file for shader gfx/2d/crosshair75
+Couldn't find image file for shader gfx/2d/crosshair76
+Couldn't find image file for shader gfx/2d/crosshair77
+Couldn't find image file for shader gfx/2d/crosshair78
+Couldn't find image file for shader gfx/2d/crosshair79
+Couldn't find image file for shader gfx/2d/crosshair80
+Couldn't find image file for shader gfx/2d/crosshair81
+Couldn't find image file for shader gfx/2d/crosshair82
+Couldn't find image file for shader gfx/2d/crosshair83
+Couldn't find image file for shader gfx/2d/crosshair84
+Couldn't find image file for shader gfx/2d/crosshair85
+Couldn't find image file for shader gfx/2d/crosshair86
+Couldn't find image file for shader gfx/2d/crosshair87
+Couldn't find image file for shader gfx/2d/crosshair88
+Couldn't find image file for shader playeroverlays/playerSuit1_Red
+Couldn't find image file for shader playeroverlays/playerSuit1_Blue
+Couldn't find image file for shader models/weaphits/kamikred
+Couldn't find image file for shader powerups/blueflag
+Couldn't find image file for shader models/weaphits/kamikblu
+Couldn't find image file for shader poopypants
+Couldn't find image file for shader E:\projects\oa\newplasrailhit\Sphere
+Couldn't find image file for shader rocketFlare_001
+Couldn't find image file for shader E:\projects\oa\newtele\Circle
+Couldn't find image file for shader teleporterEffect
+Couldn't find image file for shader ui/assets/statusbar/selectedhealth.tga
+WARNING: reused image textures/flares/lava.tga with mixed flags (3 vs 67)
+Couldn't find image file for shader models/players/james/icon_default.tga
+Couldn't find image file for shader models/players/characters/james/icon_default.tga
+Failed to load model file models/players/characters/james/lower.md3
+Couldn't find image file for shader models/players/grismlambert2SG
+Couldn't find image file for shader grismlambert2SG
+Couldn't find image file for shader D:\svnthis\oa\source\assets\models\grism\lambert2SG
+Couldn't find image file for shader E:\projects\oa\baseq3\models\players\doom\lambert2SG
+Couldn't find image file for shader Material
+Couldn't find image file for shader models/players/kyonshiMaterial.001
+Couldn't find image file for shader D:\projects\oahopper\hair
+Couldn't find image file for shader D:\projects\oahopper\Material.001
+WARNING: reused image textures/effects/skinspecmult.tga with mixed flags (3 vs 67)
+WARNING: reused image textures/effects/skinspecmult.tga with mixed flags (3 vs 67)
+WARNING: reused image textures/effects/skinspecmulttin.tga with mixed flags (3 vs 67)
+Couldn't find image file for shader models\players\assassin\clothes.001
 

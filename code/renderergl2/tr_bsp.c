@@ -37,11 +37,9 @@ void RE_LoadWorldMap( const char *name );
 
 */
 
-static	world_t		s_worldData;
-static	byte		*fileBase;
+static world_t		s_worldData;
+static unsigned char* fileBase;
 
-int			c_subdivisions;
-int			c_gridVerts;
 
 //===============================================================================
 
@@ -113,10 +111,9 @@ static	void R_ColorShiftLightingBytes( byte in[4], byte out[4] ) {
 	b = in[2] << shift;
 	
 	// normalize by color instead of saturating to white
-	if ( ( r | g | b ) > 255 ) {
-		int		max;
-
-		max = r > g ? r : g;
+	if ( ( r | g | b ) > 255 )
+    {
+		int	max = r > g ? r : g;
 		max = max > b ? max : b;
 		r = r * 255 / max;
 		g = g * 255 / max;
@@ -554,7 +551,8 @@ This is called by the clipmodel subsystem so we can share the 1.8 megs of
 space in big maps...
 =================
 */
-void		RE_SetWorldVisData( const byte *vis ) {
+void RE_SetWorldVisData( const unsigned char *vis )
+{
 	tr.externalVisData = vis;
 }
 
@@ -1727,7 +1725,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 		int size;
 
 		snprintf( filename, sizeof( filename ), "maps/%s/vertlight.raw", s_worldData.baseName);
-		//ri.Printf(PRINT_ALL, "looking for %s\n", filename);
+		ri.Printf(PRINT_ALL, "looking for %s\n", filename);
 
 		size = ri.FS_ReadFile(filename, (void **)&hdrVertColors);
 
@@ -1953,14 +1951,11 @@ static	void R_LoadNodesAndLeafs (lump_t *nodeLump, lump_t *leafLump) {
 
 //=============================================================================
 
-/*
-=================
-R_LoadShaders
-=================
-*/
-static	void R_LoadShaders( lump_t *l ) {	
-	int		i, count;
-	dshader_t	*in, *out;
+static void R_LoadShaders( lump_t *l )
+{	
+	int	i, count;
+	dshader_t* in;
+	dshader_t* out;
 	
 	in = (void *)(fileBase + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -1973,7 +1968,8 @@ static	void R_LoadShaders( lump_t *l ) {
 
 	memcpy( out, in, count*sizeof(*out) );
 
-	for ( i=0 ; i<count ; i++ ) {
+	for ( i=0 ; i<count ; i++ )
+    {
 		out[i].surfaceFlags = LittleLong( out[i].surfaceFlags );
 		out[i].contentFlags = LittleLong( out[i].contentFlags );
 	}
@@ -2159,49 +2155,45 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump ) {
 }
 
 
-/*
-================
-R_LoadLightGrid
-
-================
-*/
-void R_LoadLightGrid( lump_t *l ) {
+void R_LoadLightGrid( lump_t *l )
+{
 	int		i;
 	vec3_t	maxs;
-	int		numGridPoints;
-	world_t	*w;
-	float	*wMins, *wMaxs;
 
-	w = &s_worldData;
+	s_worldData.lightGridInverseSize[0] = 1.0f / s_worldData.lightGridSize[0];
+	s_worldData.lightGridInverseSize[1] = 1.0f / s_worldData.lightGridSize[1];
+	s_worldData.lightGridInverseSize[2] = 1.0f / s_worldData.lightGridSize[2];
 
-	w->lightGridInverseSize[0] = 1.0f / w->lightGridSize[0];
-	w->lightGridInverseSize[1] = 1.0f / w->lightGridSize[1];
-	w->lightGridInverseSize[2] = 1.0f / w->lightGridSize[2];
+	for ( i = 0 ; i < 3 ; i++ )
+    {
+        float light_grid_size = s_worldData.lightGridSize[i];
 
-	wMins = w->bmodels[0].bounds[0];
-	wMaxs = w->bmodels[0].bounds[1];
 
-	for ( i = 0 ; i < 3 ; i++ ) {
-		w->lightGridOrigin[i] = w->lightGridSize[i] * ceil( wMins[i] / w->lightGridSize[i] );
-		maxs[i] = w->lightGridSize[i] * floor( wMaxs[i] / w->lightGridSize[i] );
-		w->lightGridBounds[i] = (maxs[i] - w->lightGridOrigin[i])/w->lightGridSize[i] + 1;
+		s_worldData.lightGridOrigin[i] = light_grid_size * ceil( s_worldData.bmodels[0].bounds[0][i] / light_grid_size );
+		maxs[i] = light_grid_size * floor( s_worldData.bmodels[0].bounds[1][i]/light_grid_size );
+		s_worldData.lightGridBounds[i] = (int)((maxs[i] - s_worldData.lightGridOrigin[i])/light_grid_size) + 1;
+
+        ri.Printf( PRINT_WARNING, "s_worldData.lightGridBounds[i]=%d\n", s_worldData.lightGridBounds[i]);
+        // add this line can prevent a bugs of clang.
 	}
 
-	numGridPoints = w->lightGridBounds[0] * w->lightGridBounds[1] * w->lightGridBounds[2];
+	int numGridPoints = s_worldData.lightGridBounds[0] * s_worldData.lightGridBounds[1] * s_worldData.lightGridBounds[2];
 
 	if ( l->filelen != numGridPoints * 8 ) {
-		ri.Printf( PRINT_WARNING, "WARNING: light grid mismatch\n" );
-		w->lightGridData = NULL;
+		ri.Printf( PRINT_WARNING, "WARNING: light grid mismatch, l->filelen=%d,numGridPoints*8=%d\n", l->filelen, numGridPoints * 8 );
+		s_worldData.lightGridData = NULL;
 		return;
 	}
-
-	w->lightGridData = ri.Hunk_Alloc( l->filelen, h_low );
-	memcpy( w->lightGridData, (void *)(fileBase + l->fileofs), l->filelen );
+    else	
+        ri.Printf( PRINT_ALL, "Light grid l->filelen=%d\n", l->filelen);
+	
+    s_worldData.lightGridData = ri.Hunk_Alloc( l->filelen, h_low );
+	memcpy( s_worldData.lightGridData, (void *)(fileBase + l->fileofs), l->filelen );
 
 	// deal with overbright bits
 	for ( i = 0 ; i < numGridPoints ; i++ ) {
-		R_ColorShiftLightingBytes( &w->lightGridData[i*8], &w->lightGridData[i*8] );
-		R_ColorShiftLightingBytes( &w->lightGridData[i*8+3], &w->lightGridData[i*8+3] );
+		R_ColorShiftLightingBytes( &s_worldData.lightGridData[i*8], &s_worldData.lightGridData[i*8] );
+		R_ColorShiftLightingBytes( &s_worldData.lightGridData[i*8+3], &s_worldData.lightGridData[i*8+3] );
 	}
 
 	// load hdr lightgrid
@@ -2212,7 +2204,7 @@ void R_LoadLightGrid( lump_t *l ) {
 		int size;
 
 		snprintf( filename, sizeof( filename ), "maps/%s/lightgrid.raw", s_worldData.baseName);
-		//ri.Printf(PRINT_ALL, "looking for %s\n", filename);
+		ri.Printf(PRINT_ALL, "looking for %s\n", filename);
 
 		size = ri.FS_ReadFile(filename, (void **)&hdrLightGrid);
 
@@ -2223,7 +2215,7 @@ void R_LoadLightGrid( lump_t *l ) {
 			if (size != sizeof(float) * 6 * numGridPoints)
 				ri.Error(ERR_DROP, "Bad size for %s (%i, expected %i)!", filename, size, (int)(sizeof(float)) * 6 * numGridPoints);
 
-			w->lightGrid16 = ri.Hunk_Alloc(sizeof(w->lightGrid16) * 6 * numGridPoints, h_low);
+			s_worldData.lightGrid16 = ri.Hunk_Alloc(sizeof(s_worldData.lightGrid16) * 6 * numGridPoints, h_low);
 
 			for (i = 0; i < numGridPoints ; i++)
 			{
@@ -2235,7 +2227,7 @@ void R_LoadLightGrid( lump_t *l ) {
 				c[3] = 1.0f;
 
 				R_ColorShiftLightingFloats(c, c);
-				ColorToRGB16(c, &w->lightGrid16[i * 6]);
+				ColorToRGB16(c, &s_worldData.lightGrid16[i * 6]);
 
 				c[0] = hdrLightGrid[i * 6 + 3];
 				c[1] = hdrLightGrid[i * 6 + 4];
@@ -2243,22 +2235,22 @@ void R_LoadLightGrid( lump_t *l ) {
 				c[3] = 1.0f;
 
 				R_ColorShiftLightingFloats(c, c);
-				ColorToRGB16(c, &w->lightGrid16[i * 6 + 3]);
+				ColorToRGB16(c, &s_worldData.lightGrid16[i * 6 + 3]);
 			}
 		}
 		else if (0)
 		{
 			// promote 8-bit lightgrid to 16-bit
-			w->lightGrid16 = ri.Hunk_Alloc(sizeof(w->lightGrid16) * 6 * numGridPoints, h_low);
+			s_worldData.lightGrid16 = ri.Hunk_Alloc(sizeof(s_worldData.lightGrid16) * 6 * numGridPoints, h_low);
 
 			for (i = 0; i < numGridPoints; i++)
 			{
-				w->lightGrid16[i * 6]     = w->lightGridData[i * 8] * 257;
-				w->lightGrid16[i * 6 + 1] = w->lightGridData[i * 8 + 1] * 257;
-				w->lightGrid16[i * 6 + 2] = w->lightGridData[i * 8 + 2] * 257;
-				w->lightGrid16[i * 6 + 3] = w->lightGridData[i * 8 + 3] * 257;
-				w->lightGrid16[i * 6 + 4] = w->lightGridData[i * 8 + 4] * 257;
-				w->lightGrid16[i * 6 + 5] = w->lightGridData[i * 8 + 5] * 257;
+				s_worldData.lightGrid16[i * 6]     = s_worldData.lightGridData[i * 8] * 257;
+				s_worldData.lightGrid16[i * 6 + 1] = s_worldData.lightGridData[i * 8 + 1] * 257;
+				s_worldData.lightGrid16[i * 6 + 2] = s_worldData.lightGridData[i * 8 + 2] * 257;
+				s_worldData.lightGrid16[i * 6 + 3] = s_worldData.lightGridData[i * 8 + 3] * 257;
+				s_worldData.lightGrid16[i * 6 + 4] = s_worldData.lightGridData[i * 8 + 4] * 257;
+				s_worldData.lightGrid16[i * 6 + 5] = s_worldData.lightGridData[i * 8 + 5] * 257;
 			}
 		}
 
@@ -2360,10 +2352,9 @@ void R_LoadEntities( lump_t *l ) {
 R_GetEntityToken
 =================
 */
-qboolean R_GetEntityToken( char *buffer, int size ) {
-	const char	*s;
-
-	s = COM_Parse( &s_worldData.entityParsePoint );
+qboolean R_GetEntityToken( char *buffer, int size )
+{
+	const char	*s = COM_ParseExt( &s_worldData.entityParsePoint, qtrue );
 	Q_strncpyz( buffer, s, size );
 	if ( !s_worldData.entityParsePoint && !s[0] ) {
 		s_worldData.entityParsePoint = s_worldData.entityString;
@@ -2755,10 +2746,9 @@ void RE_LoadWorldMap( const char *name ) {
 	Q_strncpyz( s_worldData.name, name, sizeof( s_worldData.name ) );
 
 	Q_strncpyz( s_worldData.baseName, COM_SkipPath( s_worldData.name ), sizeof( s_worldData.name ) );
-	COM_StripExtension(s_worldData.baseName, s_worldData.baseName, sizeof(s_worldData.baseName));
+	stripExtension(s_worldData.baseName, s_worldData.baseName, sizeof(s_worldData.baseName));
 
 	startMarker = ri.Hunk_Alloc(0, h_low);
-	c_gridVerts = 0;
 
 	header = (dheader_t *)buffer.b;
 	fileBase = (byte *)header;

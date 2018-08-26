@@ -738,10 +738,6 @@ R_AddWorldSurfaces
 void R_AddWorldSurfaces (void) {
 	uint32_t planeBits, dlightBits, pshadowBits;
 
-	if ( !r_drawworld->integer ) {
-		return;
-	}
-
 	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
 		return;
 	}

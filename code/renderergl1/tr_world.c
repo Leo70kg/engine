@@ -643,9 +643,6 @@ R_AddWorldSurfaces
 =============
 */
 void R_AddWorldSurfaces (void) {
-	if ( !r_drawworld->integer ) {
-		return;
-	}
 
 	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
 		return;

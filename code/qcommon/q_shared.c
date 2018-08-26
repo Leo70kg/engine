@@ -282,10 +282,12 @@ string will be returned if the next token is
 a newline.
 ==============
 */
-static char *SkipWhitespace( char *data, qboolean *hasNewLines ) {
+static char* SkipWhitespace( char *data, qboolean *hasNewLines )
+{
 	int c;
 
-	while( (c = *data) <= ' ') {
+	while( (c = *data) <= ' ')
+    {
 		if( !c ) {
 			return NULL;
 		}
@@ -299,6 +301,7 @@ static char *SkipWhitespace( char *data, qboolean *hasNewLines ) {
 	return data;
 }
 
+
 int COM_Compress( char *data_p )
 {
 	int c;
@@ -310,12 +313,6 @@ int COM_Compress( char *data_p )
 	if (in)
     {
 		while ((c = *in) != 0) {
-
-			// try for glsl escape sequence
-			if ( c == '/' && in[1] == '/' && in[2]=='G' && in[3]=='L' && in[4]=='S' && in[5]=='L') {
-				in+=6;
-				c = *in; if (c==0 || *in == '\n') break;
-			}
 
 			// skip double slash comments
 			if ( c == '/' && in[1] == '/' ) {
@@ -379,7 +376,7 @@ int COM_Compress( char *data_p )
 }
 
 
-char *COM_ParseExt(char **data_p, qboolean allowLineBreaks)
+char* COM_ParseExt(char** data_p, qboolean allowLineBreaks)
 {
 	int c = 0, len = 0;
 	qboolean hasNewLines = qfalse;
@@ -413,7 +410,7 @@ char *COM_ParseExt(char **data_p, qboolean allowLineBreaks)
 		c = *data;
 
 		// skip double slash comments
-		if ( c == '/' && data[1] == '/' )
+		if ( (c == '/') && (data[1] == '/') )
 		{
 			data += 2;
 			while (*data && *data != '\n')
@@ -421,7 +418,7 @@ char *COM_ParseExt(char **data_p, qboolean allowLineBreaks)
 				data++;
 			}
 		}
-		else if ( c=='/' && data[1] == '*' ) 
+		else if ( (c=='/') && (data[1] == '*') ) 
 		{   // skip /* */ comments
 			data += 2;
 			while ( *data && ( *data != '*' || data[1] != '/' ) ) 
@@ -496,7 +493,7 @@ COM_MatchToken
 */
 void COM_MatchToken( char **buf_p, char *match )
 {
-	char* token = COM_Parse( buf_p );
+	char* token = COM_ParseExt( buf_p, qtrue );
 	if ( strcmp( token, match ) )
 		Com_Error( ERR_DROP, "MatchToken: %s != %s", token, match );
 }
@@ -564,7 +561,7 @@ void Parse1DMatrix (char **buf_p, int x, float *m) {
 	COM_MatchToken( buf_p, "(" );
 
 	for (i = 0 ; i < x ; i++) {
-		token = COM_Parse(buf_p);
+		token = COM_ParseExt(buf_p, qtrue);
 		m[i] = atof(token);
 	}
 

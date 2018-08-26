@@ -1030,31 +1030,11 @@ static void R_DebugGraphics( void )
 	ri.CM_DrawDebugSurface( R_DebugPolygon );
 }
 
-//==========================================================================================
+//==================================================================================
 
-static void R_SetupProjection(void)
+/*
+static void R_SetupFrustum(void)
 {
-
-    float py = tan(tr.viewParms.fovY * (M_PI / 360.0f));
-    float px = tan(tr.viewParms.fovX * (M_PI / 360.0f));
-    
-    tr.viewParms.projectionMatrix[0] = 1 / px;
-    tr.viewParms.projectionMatrix[4] = 0;
-    tr.viewParms.projectionMatrix[8] = 0;
-    tr.viewParms.projectionMatrix[12] = 0;
-
-    tr.viewParms.projectionMatrix[1] = 0;
-    tr.viewParms.projectionMatrix[5] = 1 / py;
-    tr.viewParms.projectionMatrix[9] = 0;	// normally 0
-    tr.viewParms.projectionMatrix[13] = 0;
-
-    tr.viewParms.projectionMatrix[3] = 0;
-    tr.viewParms.projectionMatrix[7] = 0;
-    tr.viewParms.projectionMatrix[11] = -1;
-    tr.viewParms.projectionMatrix[15] = 0;
-    
-	// Now that we have all the data for the projection matrix we can also setup the view frustum.
-	// R_SetupFrustum(dest, xmin, xmax, ymax, zProj, 0);
     // Set up the culling frustum planes for the current view using the results
     // we got from computing the first two rows of the projection matrix.
 
@@ -1068,7 +1048,7 @@ static void R_SetupProjection(void)
     VectorCopy(tr.viewParms.or.origin, ofsorigin);	
 
     {
-        float adjleg = 1 / sqrtf(px * px + 1);
+        float adjleg = 1.0f / sqrtf(px * px + 1.0f);
         float oppleg = px * adjleg;
 
         VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
@@ -1106,7 +1086,7 @@ static void R_SetupProjection(void)
     tr.viewParms.frustum[1].signbits = signbits;
 
     {
-        float adjleg = 1 / sqrtf(py * py + 1);
+        float adjleg = 1.0f / sqrtf(py * py + 1.0f);
         float oppleg = py * adjleg;
 
         VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
@@ -1144,7 +1124,112 @@ static void R_SetupProjection(void)
         signbits |= 4;
     tr.viewParms.frustum[3].signbits = signbits;
 }
+*/
 
+void R_SetupFrustum (void)
+{
+	float	xs, xc;
+	float	ang;
+    unsigned char signbits;
+
+	ang = tr.viewParms.fovX * ( M_PI / 360.0) ;
+	xs = sin( ang );
+	xc = cos( ang );
+
+    float temp1[3];
+    float temp2[3];
+
+    // 0
+	VectorScale( tr.viewParms.or.axis[0], xs, temp1 );
+	VectorScale( tr.viewParms.or.axis[1], xc, temp2);
+    
+    VectorAdd(temp1, temp2, tr.viewParms.frustum[0].normal);
+	
+    tr.viewParms.frustum[0].type = PLANE_NON_AXIAL;
+	tr.viewParms.frustum[0].dist = DotProduct (tr.viewParms.or.origin, tr.viewParms.frustum[0].normal);
+    signbits = 0;
+    if (tr.viewParms.frustum[0].normal[0] < 0)
+        signbits |= 1;
+    if (tr.viewParms.frustum[0].normal[1] < 0)
+        signbits |= 2;
+    if (tr.viewParms.frustum[0].normal[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[0].signbits = signbits;
+
+    // 1
+    VectorSubtract(temp1, temp2, tr.viewParms.frustum[1].normal);
+
+    tr.viewParms.frustum[1].type = PLANE_NON_AXIAL;
+	tr.viewParms.frustum[1].dist = DotProduct (tr.viewParms.or.origin, tr.viewParms.frustum[1].normal);
+    signbits = 0;
+    if (tr.viewParms.frustum[1].normal[0] < 0)
+        signbits |= 1;
+    if (tr.viewParms.frustum[1].normal[1] < 0)
+        signbits |= 2;
+    if (tr.viewParms.frustum[1].normal[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[1].signbits = signbits;
+
+
+	ang = tr.viewParms.fovY *( M_PI / 360.0);
+	xs = sin( ang );
+	xc = cos( ang );
+
+	VectorScale( tr.viewParms.or.axis[0], xs, temp1);
+	VectorScale( tr.viewParms.or.axis[2], xc, temp2);
+
+    // 2
+    VectorAdd(temp1, temp2, tr.viewParms.frustum[2].normal);
+
+    tr.viewParms.frustum[2].type = PLANE_NON_AXIAL;
+	tr.viewParms.frustum[2].dist = DotProduct (tr.viewParms.or.origin, tr.viewParms.frustum[2].normal);
+    signbits = 0;
+    if (tr.viewParms.frustum[2].normal[0] < 0)
+        signbits |= 1;
+    if (tr.viewParms.frustum[2].normal[1] < 0)
+        signbits |= 2;
+    if (tr.viewParms.frustum[2].normal[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[2].signbits = signbits;
+
+
+    // 3
+    VectorSubtract(temp1, temp2, tr.viewParms.frustum[3].normal);
+
+    tr.viewParms.frustum[3].type = PLANE_NON_AXIAL;
+	tr.viewParms.frustum[3].dist = DotProduct (tr.viewParms.or.origin, tr.viewParms.frustum[3].normal);
+    signbits = 0;
+    if (tr.viewParms.frustum[3].normal[0] < 0)
+        signbits |= 1;
+    if (tr.viewParms.frustum[3].normal[1] < 0)
+        signbits |= 2;
+    if (tr.viewParms.frustum[3].normal[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[3].signbits = signbits;
+}
+
+
+static void R_SetupProjection(void)
+{
+
+    float py = tan(tr.viewParms.fovY * (M_PI / 360.0f));
+    float px = tan(tr.viewParms.fovX * (M_PI / 360.0f));
+    
+    tr.viewParms.projectionMatrix[0] = 1 / px;
+    tr.viewParms.projectionMatrix[4] = 0;
+    tr.viewParms.projectionMatrix[8] = 0;
+    tr.viewParms.projectionMatrix[12] = 0;
+
+    tr.viewParms.projectionMatrix[1] = 0;
+    tr.viewParms.projectionMatrix[5] = 1 / py;
+    tr.viewParms.projectionMatrix[9] = 0;	// normally 0
+    tr.viewParms.projectionMatrix[13] = 0;
+
+    tr.viewParms.projectionMatrix[3] = 0;
+    tr.viewParms.projectionMatrix[7] = 0;
+    tr.viewParms.projectionMatrix[11] = -1;
+    tr.viewParms.projectionMatrix[15] = 0;
+}
 
 
 void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap )
@@ -1197,8 +1282,12 @@ static void R_RenderView(viewParms_t *parms)
 
 	R_SetupProjection();
 
+	// Now that we have all the data for the projection matrix 
+    // we can also setup the view frustum.
+	R_SetupFrustum();
+
     //R_GenerateDrawSurfs();
-	if(r_drawworld->integer && !( tr.refdef.rdflags & RDF_NOWORLDMODEL ) )
+	if( !( tr.refdef.rdflags & RDF_NOWORLDMODEL ) )
     {
 	    R_AddWorldSurfaces();
 	}
@@ -1403,7 +1492,7 @@ void RE_RenderScene( const refdef_t *fd )
 	parms.fovY = tr.refdef.fov_y;
 
 
-
+/*	
     // ri.Printf(PRINT_ALL, "B: fovX: %f, fovY: %f, aspect: %f\n", parms.fovX, parms.fovY, tan(parms.fovX *(M_PI/360.0)) / tan(parms.fovY*(M_PI/360.0)));
 	// leilei - widescreen
 	// recalculate fov according to widescreen parameters
@@ -1418,7 +1507,7 @@ void RE_RenderScene( const refdef_t *fd )
         parms.fovX = atan(tan(parms.fovY * (M_PI/360.0)) * glConfig.windowAspect) * (360.0/M_PI);
     }
 
-/*	
+
 	if (customscrn){
 		// In Vert- FOV the horizontal FOV is unchanged, so we use it to
 		// calculate the vertical FOV that would be used if playing on 4:3 to get the Hor+ vertical FOV

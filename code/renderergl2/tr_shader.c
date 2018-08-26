@@ -96,7 +96,7 @@ void R_RemapShader(const char *shaderName, const char *newShaderName, const char
 
 	// remap all the shaders with the given name
 	// even tho they might have different lightmaps
-	COM_StripExtension(shaderName, strippedName, sizeof(strippedName));
+	stripExtension(shaderName, strippedName, sizeof(strippedName));
 	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 	for (sh = hashTable[hash]; sh; sh = sh->next) {
 		if (Q_stricmp(sh->name, strippedName) == 0) {
@@ -2224,7 +2224,7 @@ static void CollapseStagesToLightall(shaderStage_t *diffuse,
 			imgFlags_t normalFlags = (diffuseImg->flags & ~IMGFLAG_GENNORMALMAP) | IMGFLAG_NOLIGHTSCALE;
 
 			// try a normalheight image first
-			COM_StripExtension(diffuseImg->imgName, normalName, MAX_QPATH);
+			stripExtension(diffuseImg->imgName, normalName, MAX_QPATH);
 			Q_strcat(normalName, MAX_QPATH, "_nh");
 
 			normalImg = R_FindImageFile(normalName, IMGTYPE_NORMALHEIGHT, normalFlags);
@@ -2269,7 +2269,7 @@ static void CollapseStagesToLightall(shaderStage_t *diffuse,
 			image_t *specularImg;
 			imgFlags_t specularFlags = (diffuseImg->flags & ~IMGFLAG_GENNORMALMAP) | IMGFLAG_NOLIGHTSCALE;
 
-			COM_StripExtension(diffuseImg->imgName, specularName, MAX_QPATH);
+			stripExtension(diffuseImg->imgName, specularName, MAX_QPATH);
 			Q_strcat(specularName, MAX_QPATH, "_s");
 
 			specularImg = R_FindImageFile(specularName, IMGTYPE_COLORALPHA, specularFlags);
@@ -3059,7 +3059,7 @@ shader_t *R_FindShaderByName( const char *name ) {
 		return tr.defaultShader;
 	}
 
-	COM_StripExtension(name, strippedName, sizeof(strippedName));
+	stripExtension(name, strippedName, sizeof(strippedName));
 
 	int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
@@ -3130,7 +3130,7 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 		lightmapIndex = LIGHTMAP_BY_VERTEX;
 	}
 
-	COM_StripExtension(name, strippedName, sizeof(strippedName));
+	stripExtension(name, strippedName, sizeof(strippedName));
 
 	int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
@@ -3522,31 +3522,30 @@ Finds and loads all .shader files, combining them into
 a single large text block that can be scanned for shader names
 =====================
 */
-#define	MAX_SHADER_FILES	4096
+#define	MAX_SHADER_FILES	1024
 static void ScanAndLoadShaderFiles( void )
 {
-	char *buffers[MAX_SHADER_FILES] = {NULL};
-	char *p;
+	void *buffers[MAX_SHADER_FILES] = {NULL};
+
 	int numShaderFiles;
 	int i;
-	char *oldp, *token, *hashMem, *textEnd;
-	int shaderTextHashTableSizes[MAX_SHADERTEXT_HASH], size;
-	char shaderName[MAX_QPATH];
-	int shaderLine;
 
 	long sum = 0;
 	// scan for shader files
 	char **shaderFiles = ri.FS_ListFiles( "scripts", ".shader", &numShaderFiles );
 
-	if ( !shaderFiles || !numShaderFiles )
+
+	if( !shaderFiles || !numShaderFiles )
 	{
 		ri.Printf( PRINT_WARNING, "WARNING: no shader files found\n" );
 		return;
 	}
-
-	if ( numShaderFiles > MAX_SHADER_FILES ) {
-		numShaderFiles = MAX_SHADER_FILES;
-	}
+    else
+    {
+        ri.Printf( PRINT_ALL, "****************************************\n");
+        ri.Printf( PRINT_ALL, "Total %d Shader Files need to be loaded.\n", numShaderFiles);
+        ri.Printf( PRINT_ALL, "****************************************\n");
+    }
 
 	// load and parse shader files
 	for ( i = 0; i < numShaderFiles; i++ )
@@ -3569,23 +3568,24 @@ static void ScanAndLoadShaderFiles( void )
 		}
 		
 		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
-		long summand = ri.FS_ReadFile( filename, (void **)&buffers[i] );
+		long summand = ri.FS_ReadFile(filename, &buffers[i]);
 		
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
 		
 		// Do a simple check on the shader structure in that file to make sure one bad shader file cannot fuck up all other shaders.
-		p = buffers[i];
+		char* p = buffers[i];
 		COM_BeginParseSession(filename);
 		while(1)
 		{
-			token = COM_ParseExt(&p, qtrue);
+			char* token = COM_ParseExt(&p, qtrue);
 			
 			if(!*token)
 				break;
-
+	        
+            char shaderName[MAX_QPATH];
 			Q_strncpyz(shaderName, token, sizeof(shaderName));
-			shaderLine = COM_GetCurrentParseLine();
+			int shaderLine = COM_GetCurrentParseLine();
 
 			token = COM_ParseExt(&p, qtrue);
 			if(token[0] != '{' || token[1] != '\0')
@@ -3619,10 +3619,12 @@ static void ScanAndLoadShaderFiles( void )
 	// build single large buffer
 	s_shaderText = ri.Hunk_Alloc( sum + numShaderFiles*2, h_low );
 	s_shaderText[ 0 ] = '\0';
-	textEnd = s_shaderText;
+	
+    
+    char* textEnd = s_shaderText;
  
 	// free in reverse order, so the temp files are all dumped
-	for ( i = numShaderFiles - 1; i >= 0 ; i-- )
+	for(i = numShaderFiles - 1; i >= 0; i--)
 	{
 		if ( !buffers[i] )
 			continue;
@@ -3638,14 +3640,16 @@ static void ScanAndLoadShaderFiles( void )
 	// free up memory
 	ri.FS_FreeFileList( shaderFiles );
 
-	memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));
-	size = 0;
-
-	p = s_shaderText;
+	
+    
+    //memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));
+   	int shaderTextHashTableSizes[MAX_SHADERTEXT_HASH] = {0}; 
+    int size = 0;
+	char* p = s_shaderText;
 	// look for shader names
 	while ( 1 )
 	{
-		token = COM_ParseExt( &p, qtrue );
+		char* token = COM_ParseExt( &p, qtrue );
 		if ( token[0] == 0 ) {
 			break;
 		}
@@ -3658,31 +3662,31 @@ static void ScanAndLoadShaderFiles( void )
 
 	size += MAX_SHADERTEXT_HASH;
 
-	hashMem = ri.Hunk_Alloc( size * sizeof(char *), h_low );
+	char* hashMem = ri.Hunk_Alloc( size * sizeof(char *), h_low );
 
-	for (i = 0; i < MAX_SHADERTEXT_HASH; i++) {
+	for (i = 0; i < MAX_SHADERTEXT_HASH; i++)
+	{
 		shaderTextHashTable[i] = (char **) hashMem;
-		hashMem = ((char *) hashMem) + ((shaderTextHashTableSizes[i] + 1) * sizeof(char *));
+		hashMem = hashMem + ((shaderTextHashTableSizes[i] + 1) * sizeof(char *));
 	}
 
 	memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));
 
 	p = s_shaderText;
-	// look for shader names
-	while ( 1 ) {
-		oldp = p;
-		token = COM_ParseExt( &p, qtrue );
-		if ( token[0] == 0 ) {
+	
+    // look for shader names
+	while ( 1 )
+    {
+		char* oldp = p;
+		char* token = COM_ParseExt( &p, qtrue );
+		if ( token[0] == 0 )
 			break;
-		}
 
 		int hash = generateHashValue(token, MAX_SHADERTEXT_HASH);
 		shaderTextHashTable[hash][shaderTextHashTableSizes[hash]++] = oldp;
 
 		SkipBracedSection(&p, 0);
 	}
-
-	return;
 
 }
 

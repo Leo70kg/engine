@@ -193,7 +193,7 @@ static qhandle_t RE_RegisterModelReal( const char *name )
 {
 	model_t		*mod;
 	qhandle_t	hModel;
-	qboolean	orgNameFailed = qfalse;
+	//qboolean	orgNameFailed = qfalse;
 	int			orgLoader = -1;
 	int			i;
 	char		localName[ MAX_QPATH ];
@@ -266,7 +266,7 @@ static qhandle_t RE_RegisterModelReal( const char *name )
 			{
 				// Loader failed, most likely because the file isn't there;
 				// try again without the extension
-				orgNameFailed = qtrue;
+				//orgNameFailed = qtrue;
 				orgLoader = i;
 				COM_StripExtension( name, localName, MAX_QPATH );
 			}
@@ -589,7 +589,7 @@ static void MC_UnCompress(float mat[3][4],const unsigned char * comp)
 static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char *mod_name ) 
 {
 	int					i, j, k, l;
-	mdrHeader_t			*pinmodel, *mdr;
+	mdrHeader_t* mdr;
 	mdrFrame_t			*frame;
 	mdrLOD_t			*lod, *curlod;
 	mdrSurface_t		*surf, *cursurf;
@@ -597,20 +597,28 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 	mdrVertex_t			*v, *curv;
 	mdrWeight_t			*weight, *curweight;
 	mdrTag_t			*tag, *curtag;
-	int					size;
 	shader_t			*sh;
 
-	pinmodel = (mdrHeader_t *)buffer;
+	mdrHeader_t* pinmodel = (mdrHeader_t *)buffer;
+
+    #if defined( Q3_LITTLE_ENDIAN )
 
 	pinmodel->version = LittleLong(pinmodel->version);
+
+    #endif
+
 	if (pinmodel->version != MDR_VERSION) 
 	{
 		ri.Printf(PRINT_WARNING, "R_LoadMDR: %s has wrong version (%i should be %i)\n", mod_name, pinmodel->version, MDR_VERSION);
 		return qfalse;
 	}
 
-	size = LittleLong(pinmodel->ofsEnd);
-	
+    #if defined( Q3_LITTLE_ENDIAN )
+	int size = LittleLong(pinmodel->ofsEnd);
+    #else
+	int size = pinmodel->ofsEnd;
+    #endif
+
 	if(size > filesize)
 	{
 		ri.Printf(PRINT_WARNING, "R_LoadMDR: Header of %s is broken. Wrong filesize declared!\n", mod_name);
@@ -669,10 +677,9 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 		
 	if (pinmodel->ofsFrames < 0)
 	{
-		mdrCompFrame_t *cframe;
 				
 		// compressed model...				
-		cframe = (mdrCompFrame_t *)((byte *) pinmodel - pinmodel->ofsFrames);
+		mdrCompFrame_t* cframe = (mdrCompFrame_t *)((byte *) pinmodel - pinmodel->ofsFrames);
 		
 		for(i = 0; i < mdr->numFrames; i++)
 		{
@@ -709,12 +716,11 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 	}
 	else
 	{
-		mdrFrame_t *curframe;
 		
 		// uncompressed model...
 		//
     
-		curframe = (mdrFrame_t *)((byte *) pinmodel + pinmodel->ofsFrames);
+		mdrFrame_t* curframe = (mdrFrame_t *)((byte *) pinmodel + pinmodel->ofsFrames);
 		
 		// swap all the frames
 		for ( i = 0 ; i < mdr->numFrames ; i++) 

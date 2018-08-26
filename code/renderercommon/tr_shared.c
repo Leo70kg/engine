@@ -25,33 +25,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 extern refimport_t ri;
 
-/*
-const vec4_t	colorBlack	= {0, 0, 0, 1};
-const vec4_t	colorRed	= {1, 0, 0, 1};
-const vec4_t	colorGreen	= {0, 1, 0, 1};
-const vec4_t	colorBlue	= {0, 0, 1, 1};
-const vec4_t	colorYellow	= {1, 1, 0, 1};
-const vec4_t	colorMagenta= {1, 0, 1, 1};
-const vec4_t	colorCyan	= {0, 1, 1, 1};
-const vec4_t	colorWhite	= {1, 1, 1, 1};
-const vec4_t	colorLtGrey	= {0.75, 0.75, 0.75, 1};
-const vec4_t	colorMdGrey	= {0.5, 0.5, 0.5, 1};
-const vec4_t	colorDkGrey	= {0.25, 0.25, 0.25, 1};
-
-
-void AxisClear( vec3_t axis[3] )
-{
-	axis[0][0] = 1;
-	axis[0][1] = 0;
-	axis[0][2] = 0;
-	axis[1][0] = 0;
-	axis[1][1] = 1;
-	axis[1][2] = 0;
-	axis[2][0] = 0;
-	axis[2][1] = 0;
-	axis[2][2] = 1;
-}
-*/
 
 union uInt4bytes{
     unsigned int i;
@@ -95,7 +68,7 @@ void stripExtension(const char *in, char *out, int destsize)
 }
 
 
-char *getExtension( const char *name )
+char* getExtension( const char *name )
 {
 	char* dot = strrchr(name, '.');
     char* slash = strrchr(name, '/');

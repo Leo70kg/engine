@@ -1397,17 +1397,17 @@ void CL_LoadConsoleHistory( void )
 
 		for( i = COMMAND_HISTORY - 1; i >= 0; i-- )
 		{
-			if( !*( token = COM_Parse( &text_p ) ) )
+			if( !*( token = COM_ParseExt( &text_p, qtrue ) ) )
 				break;
 
 			historyEditLines[ i ].cursor = atoi( token );
 
-			if( !*( token = COM_Parse( &text_p ) ) )
+			if( !*( token = COM_ParseExt( &text_p, qtrue ) ) )
 				break;
 
 			historyEditLines[ i ].scroll = atoi( token );
 
-			if( !*( token = COM_Parse( &text_p ) ) )
+			if( !*( token = COM_ParseExt( &text_p, qtrue ) ) )
 				break;
 
 			numChars = atoi( token );

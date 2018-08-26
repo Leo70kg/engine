@@ -238,11 +238,10 @@ asked for again.
 qhandle_t RE_RegisterModel( const char *name ) {
 	model_t		*mod;
 	qhandle_t	hModel;
-	qboolean	orgNameFailed = qfalse;
+	//qboolean	orgNameFailed = qfalse;
 	int			orgLoader = -1;
 	int			i;
 	char		localName[ MAX_QPATH ];
-	const char	*ext;
 	char		altName[ MAX_QPATH ];
 
 	if ( !name || !name[0] ) {
@@ -290,7 +289,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	//
 	Q_strncpyz( localName, name, MAX_QPATH );
 
-	ext = COM_GetExtension( localName );
+	const char* ext = getExtension( localName );
 
 	if( *ext )
 	{
@@ -312,9 +311,9 @@ qhandle_t RE_RegisterModel( const char *name ) {
 			{
 				// Loader failed, most likely because the file isn't there;
 				// try again without the extension
-				orgNameFailed = qtrue;
+				//orgNameFailed = qtrue;
 				orgLoader = i;
-				COM_StripExtension( name, localName, MAX_QPATH );
+				stripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{
@@ -383,8 +382,7 @@ static qboolean R_LoadMD3(model_t* mod, int lod, void *buffer, int bufferSize, c
 	}
 
 	mod->type = MOD_MESH;
-	int size = LittleLong(md3Model->ofsEnd);
-	mod->dataSize += size;
+	mod->dataSize += LittleLong(md3Model->ofsEnd);
 	mdvModel_t* mdvModel = mod->mdv[lod] = ri.Hunk_Alloc(sizeof(mdvModel_t), h_low);
 
 //  Com_Memcpy(mod->md3[lod], buffer, LittleLong(md3Model->ofsEnd));
@@ -407,7 +405,7 @@ static qboolean R_LoadMD3(model_t* mod, int lod, void *buffer, int bufferSize, c
 
 	// swap all the frames
 	mdvModel->numFrames = md3Model->numFrames;
-	mdvModel->frames = frame = ri.Hunk_Alloc(sizeof(*frame) * md3Model->numFrames, h_low);
+	mdvModel->frames = frame = ri.Hunk_Alloc(sizeof(mdvFrame_t) * md3Model->numFrames, h_low);
 
 	md3Frame_t* md3Frame = (md3Frame_t *) ((unsigned char *)md3Model + md3Model->ofsFrames);
 	for(i = 0; i < md3Model->numFrames; i++, frame++, md3Frame++)
@@ -423,7 +421,7 @@ static qboolean R_LoadMD3(model_t* mod, int lod, void *buffer, int bufferSize, c
 
 	// swap all the tags
 	mdvModel->numTags = md3Model->numTags;
-	mdvModel->tags = tag = ri.Hunk_Alloc(sizeof(*tag) * (md3Model->numTags * md3Model->numFrames), h_low);
+	mdvModel->tags = tag = ri.Hunk_Alloc(sizeof(mdvTag_t) * (md3Model->numTags * md3Model->numFrames), h_low);
 
 	md3Tag_t* md3Tag = (md3Tag_t *) ((byte *) md3Model + md3Model->ofsTags);
 	for(i = 0; i < md3Model->numTags * md3Model->numFrames; i++, tag++, md3Tag++)
@@ -438,7 +436,7 @@ static qboolean R_LoadMD3(model_t* mod, int lod, void *buffer, int bufferSize, c
 	}
 
 
-	mdvModel->tagNames = tagName = ri.Hunk_Alloc(sizeof(*tagName) * (md3Model->numTags), h_low);
+	mdvModel->tagNames = tagName = ri.Hunk_Alloc(sizeof(mdvTagName_t) * (md3Model->numTags), h_low);
 
 	md3Tag = (md3Tag_t *) ((byte *) md3Model + md3Model->ofsTags);
 	for(i = 0; i < md3Model->numTags; i++, tagName++, md3Tag++)
@@ -448,7 +446,7 @@ static qboolean R_LoadMD3(model_t* mod, int lod, void *buffer, int bufferSize, c
 
 	// swap all the surfaces
 	mdvModel->numSurfaces = md3Model->numSurfaces;
-	mdvModel->surfaces = surf = ri.Hunk_Alloc(sizeof(*surf) * md3Model->numSurfaces, h_low);
+	mdvModel->surfaces = surf = ri.Hunk_Alloc(sizeof(mdvSurface_t) * md3Model->numSurfaces, h_low);
 
 	md3Surf = (md3Surface_t *) ((byte *) md3Model + md3Model->ofsSurfaces);
 	for(i = 0; i < md3Model->numSurfaces; i++)
@@ -532,7 +530,7 @@ static qboolean R_LoadMD3(model_t* mod, int lod, void *buffer, int bufferSize, c
 
 		// swap all the XyzNormals
 		surf->numVerts = md3Surf->numVerts;
-		surf->verts = v = ri.Hunk_Alloc(sizeof(*v) * (md3Surf->numVerts * md3Surf->numFrames), h_low);
+		surf->verts = v = ri.Hunk_Alloc(sizeof(mdvVertex_t) * (md3Surf->numVerts * md3Surf->numFrames), h_low);
 
 		md3xyz = (md3XyzNormal_t *) ((byte *) md3Surf + md3Surf->ofsXyzNormals);
 		for(j = 0; j < md3Surf->numVerts * md3Surf->numFrames; j++, md3xyz++, v++)

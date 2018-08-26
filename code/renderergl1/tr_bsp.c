@@ -1620,7 +1620,6 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump ) {
 }
 
 
-
 void R_LoadLightGrid( lump_t *l )
 {
 	int		i;
@@ -1748,9 +1747,7 @@ R_GetEntityToken
 =================
 */
 qboolean R_GetEntityToken( char *buffer, int size ) {
-	const char	*s;
-
-	s = COM_Parse( &s_worldData.entityParsePoint );
+	const char	*s = COM_ParseExt( &s_worldData.entityParsePoint, qtrue);
 	Q_strncpyz( buffer, s, size );
 	if ( !s_worldData.entityParsePoint && !s[0] ) {
 		s_worldData.entityParsePoint = s_worldData.entityString;

@@ -370,7 +370,7 @@ Cmd_Args
 Returns a single string containing argv(1) to argv(argc()-1)
 ============
 */
-char *Cmd_Args( void )
+char* Cmd_Args( void )
 {
 	static	char cmd_args[MAX_STRING_CHARS];
 	int		i;

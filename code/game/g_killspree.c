@@ -37,7 +37,7 @@ G_ReadAltKillSettings
 Since this is cvar dependent, it has to be placed in G_InitGame after cvars are registered.
 =================
 */
-qboolean G_ReadAltKillSettings( gentity_t *ent, int skiparg )
+qboolean G_ReadAltKillSettings(void)
 {
 	//Let's Initialize some Spree structs/objects
 	killspree_t     *k = NULL;

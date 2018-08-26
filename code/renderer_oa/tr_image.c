@@ -723,7 +723,7 @@ static void R_LoadImage(const char *name, unsigned char **pic, int *width, int *
 
     static const int numImageLoaders = ARRAY_LEN( imageLoaders );
     
-	qboolean orgNameFailed = qfalse;
+    // qboolean orgNameFailed = qfalse;
 	int orgLoader = -1;
 	int i;
 	char localName[ MAX_QPATH ];
@@ -757,7 +757,7 @@ static void R_LoadImage(const char *name, unsigned char **pic, int *width, int *
 			{
 				// Loader failed, most likely because the file isn't there;
 				// try again without the extension
-				orgNameFailed = qtrue;
+				// orgNameFailed = qtrue;
 				orgLoader = i;
 				COM_StripExtension( name, localName, MAX_QPATH );
 			}

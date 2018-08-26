@@ -2227,11 +2227,10 @@ Loads any of the supported image types into a canonical
 */
 void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum *picFormat, int *numMips )
 {
-	qboolean orgNameFailed = qfalse;
+	//qboolean orgNameFailed = qfalse;
 	int orgLoader = -1;
 	int i;
 	char localName[ MAX_QPATH ];
-	const char *ext;
 	char *altName;
 
 	*pic = NULL;
@@ -2242,14 +2241,14 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 
 	Q_strncpyz( localName, name, MAX_QPATH );
 
-	ext = COM_GetExtension( localName );
+	const char* ext = getExtension( localName );
 
 	// If compressed textures are enabled, try loading a DDS first, it'll load fastest
 	if (r_ext_compressed_textures->integer)
 	{
 		char ddsName[MAX_QPATH];
 
-		COM_StripExtension(name, ddsName, MAX_QPATH);
+		stripExtension(name, ddsName, MAX_QPATH);
 		Q_strcat(ddsName, MAX_QPATH, ".dds");
 
 		R_LoadDDS(ddsName, pic, width, height, picFormat, numMips);
@@ -2279,9 +2278,9 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 			{
 				// Loader failed, most likely because the file isn't there;
 				// try again without the extension
-				orgNameFailed = qtrue;
+				//orgNameFailed = qtrue;
 				orgLoader = i;
-				COM_StripExtension( name, localName, MAX_QPATH );
+				stripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{
@@ -2376,7 +2375,7 @@ image_t	*R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags )
 
 		normalFlags = (flags & ~IMGFLAG_GENNORMALMAP) | IMGFLAG_NOLIGHTSCALE;
 
-		COM_StripExtension(name, normalName, MAX_QPATH);
+		stripExtension(name, normalName, MAX_QPATH);
 		Q_strcat(normalName, MAX_QPATH, "_n");
 
 		// find normalmap in case it's there

@@ -1663,7 +1663,7 @@ void *Hunk_AllocDebug( int size, ha_pref preference, char *label, char *file, in
 #else
 void *Hunk_Alloc( int size, ha_pref preference ) {
 #endif
-	void	*buf;
+	void* buf;
 
 	if ( s_hunkData == NULL)
 	{
@@ -1737,10 +1737,10 @@ Multiple files can be loaded in temporary memory.
 When the files-in-use count reaches zero, all temp memory will be deleted
 =================
 */
-void *Hunk_AllocateTempMemory( int size )
+void* Hunk_AllocateTempMemory( int size )
 {
-	void		*buf;
-	hunkHeader_t	*hdr;
+	void* buf;
+	hunkHeader_t* hdr;
 
 	// return a Z_Malloc'd block if the hunk has not been initialized
 	// this allows the config and product id files ( journal files too ) to be loaded

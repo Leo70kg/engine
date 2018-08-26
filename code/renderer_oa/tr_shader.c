@@ -3593,12 +3593,9 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 	// LEILEI's DETAIL TEXTURE STUFFS
 	//
 	int wi, hi; // leilei - for determining detail texture size by uploaded texture
-	int detailScale; // leilei - detail scale hack
-	int detailLayer; // leilei - detail layer hack
-    
+	int detailLayer = 1; // leilei - detail layer hack, one usual layer
+
     // leilei - for adjusting detail textures
-    detailScale = 8;
-    detailLayer = 1; // one usual layer
     
     if (detailLayer > 6){
         detailLayer = 6; // limit 6 for now
@@ -4134,7 +4131,7 @@ a single large text block that can be scanned for shader names
 
 static void ScanAndLoadShaderFiles( void )
 {
-	char *buffers[MAX_SHADER_FILES]= {0};
+	void* buffers[MAX_SHADER_FILES]={0};
 	
 	int i;
 	char *token, *hashMem, *textEnd;
@@ -4146,7 +4143,6 @@ static void ScanAndLoadShaderFiles( void )
 	// scan for shader files
     int numShaderFiles = 0;
 
-
 	char** shaderFiles = ri.FS_ListFiles("scripts", ".shader", &numShaderFiles);
 
 	if ( (shaderFiles == NULL) || (numShaderFiles == 0) )
@@ -4154,7 +4150,6 @@ static void ScanAndLoadShaderFiles( void )
 		ri.Printf( PRINT_WARNING, "WARNING: no shader files found\n" );
 		return;
 	}
-
     
 	ri.Printf( PRINT_ALL, "\n-------- Scan And Load Shader Files, total %d -------- \n", numShaderFiles);
 
@@ -4162,14 +4157,17 @@ static void ScanAndLoadShaderFiles( void )
 	for ( i = 0; i < numShaderFiles; i++ )
 	{
 		char filename[MAX_QPATH];
-
 		snprintf( filename, sizeof( filename ), "scripts/%s", shaderFiles[i] );
-		ri.Printf( PRINT_ALL, "...loading '%s'\n", filename );
-		long int summand = ri.FS_ReadFile(filename, (void **)&buffers[i] );
+		ri.Printf(PRINT_ALL, "...loading '%s'\n", filename);
 		
+        long summand = ri.FS_ReadFile(filename, &buffers[i]);
+	
+        /*
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
-		
+		*/
+
+        
 		// Do a simple check on the shader structure in that file to make sure one bad shader file cannot fuck up all other shaders.
 		char* p = buffers[i];
 		COM_BeginParseSession(filename);
@@ -4185,7 +4183,7 @@ static void ScanAndLoadShaderFiles( void )
 
 			token = COM_ParseExt(&p, qtrue);
             
-			if(token[0] != '{' || token[1] != '\0')
+			if( (token[0] != '{') || (token[1] != '\0') )
 			{
 				ri.Printf(PRINT_WARNING, "WARNING: Ignoring shader file %s. Shader \"%s\" on line %d missing opening brace", filename, shaderName, shaderLine);
 				if (token[0])
@@ -4253,10 +4251,10 @@ static void ScanAndLoadShaderFiles( void )
 
 	size += MAX_SHADERTEXT_HASH;
 
-	hashMem = ri.Hunk_Alloc( size * sizeof(char *), h_low );
+	hashMem = ri.Hunk_Alloc(size * sizeof(char *), h_low);
 
 	for (i = 0; i < MAX_SHADERTEXT_HASH; i++)
-    {
+	{
 		shaderTextHashTable[i] = (char **) hashMem;
 		hashMem = ((char *) hashMem) + ((shaderTextHashTableSizes[i] + 1) * sizeof(char *));
 	}
