@@ -132,25 +132,31 @@ This program is free software; you can redistribute it and/or modify it under th
 
 ## extra ##
 
-* OpenGL2 renderer seems use more memory. 
-when i playing CTF on :F for stupid server with com\_hunkmegs = 128, the following errors occurs.
+* About com\_hunkmegs
+
+When i playing CTF on :F for stupid server with default com\_hunkmegs = 128 setting, the following errors occurs:
+`
 ERROR: Hunk\_Alloc failed on 739360: code/renderergl2/tr\_model.c, line: 535 (sizeof(*v) * (md3Surf->numVerts * md3Surf->numFrames)).
-Upping com\_hunkmegs to 256 will generally be OK.
+`
+OpenGL2 renderer seems use more memory, Upping com\_hunkmegs to 256 will generally be OK.
 
 
 * About -fno-strict-aliasing
-Build OA with -fno-strict-aliasing removed using clang:
+I am using GCC7.2 and clang6.0 on ubuntu18.04.
 
+Build OA using clang with -fno-strict-aliasing removed:
+`
 WARNING: light grid mismatch, l->filelen=103896, numGridPoints*8=95904
-this will cause renderergl2's R_LoadLightGrid abnormal.
-Problem solved with following line added in it.
+`
+This is printed by renderergl2's R_LoadLightGrid function.
+
+    Problem solved with following line added in it.
 `
 ri.Printf( PRINT_WARNING, "s_worldData.lightGridBounds[i]=%d\n", s_worldData.lightGridBounds[i]);
 ` 
-however this line do nothing but just printed the value of s_worldData.lightGridBounds[i]. I guess its a bug of clang.
+    However this line do nothing but just printed the value of s_worldData.lightGridBounds[i]. I guess its a bug of clang.
 
-Build OA with -fno-strict-aliasing removed using GCC without this issue.
-I am using GCC7.2 and clang6.0 on ubuntu18.04.
+    Build OA with GCC without this issue.
 
 
 * Use gprof to examine the performance of the program
