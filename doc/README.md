@@ -118,164 +118,149 @@ disadvantages
        using src*dst + dst*src.alpha
 
 ## Character lighting ##
-
-   Overbrightening
+    * Overbrightening
+      
       lighting program assumes a dynamic range 2x than normally exists
-      during rendering we set the hardware gamma ramp 
-       so that the back half of it is saturated to identity
-      net effect is that all textures are doubled in brightness
-       but only exhibit saturation artifacts if they exceed 50% intensity
+      during rendering we set the hardware gamma ramp so that the back half of it is saturated to identity
+      
+      net effect is that all textures are doubled in brightness but only exhibit saturation artifacts if they exceed 50% intensity
+      
       requires Get/SetDeviceGammaRamp
+      
       not available on NT4
+      
       requires 3Dfx extension on Voodoo2
+      
       we gain dynamic range in exchange for lower precision
 
-   Cheezy shadows
+    * Cheezy shadows
       project a polygon straight down
       alpha determined by height of object
       basically just a dynamic wall mark
 
-   Sunlight
+    * Sunlight
 
 
 ## Shader Architecture ##
 
-  actually materials
-  many special effects done with very little coding
-  descriptions in text (.shader) files
-  general information stored in the material definition body
+actually materials
+    many special effects done with very little coding
+    descriptions in text (.shader) files
+    general information stored in the material definition body
   
-  sound type
-  editor image
-  vertex deformation information
-  lighting information
-  misc other material global information
-  tessellation density (for brushes only)
-  sort bias
+    sound type
+    editor image
+    vertex deformation information
+    lighting information
+    misc other material global information
+    tessellation density (for brushes only)
+    sort bias
 
-  multiple stages can specify:
-  texture map (name or $lightmap)
-  texcoord source
-  environment mapping
-  texture coordinates
-  lightmap coordinates
+    multiple stages can specify:
+    texture map (name or $lightmap)
+    texcoord source
+    environment mapping
+    texture coordinates
+    lightmap coordinates
 
-  alpha and color sources
-  identity
-  waveform
-  client game
-  diffuse/specular lighting
-  alpha and color modifiers
-   unused right now
+    alpha and color sources
+    identity
+    waveform
+    client game
+    diffuse/specular lighting
+    alpha and color modifiers
+    unused right now
 
-  texture coordinate modifiers
-  rotate (degs/second)
-  clamp enable/disable
-  scroll (units/second per S & T)
-  turbulence
-  scale (waveform)
-  arbitrary transform
-  blend function
-  depth test and mask
-  alpha test
+    texture coordinate modifiers
+    rotate (degs/second)
+    clamp enable/disable
+    scroll (units/second per S & T)
+    turbulence
+    scale (waveform)
+    arbitrary transform
+    blend function
+    depth test and mask
+    alpha test
 
-  multitexture collapsing
-   depending on underlying multitexture capability
-   we can examine blend funcs and other relevant data
-   and collapse into multitexture appropriately
-  polygon offset
-   used for wall marks, cheezy shadows
+    multitexture collapsing
+    depending on underlying multitexture capability
+    we can examine blend funcs and other relevant data
+    and collapse into multitexture appropriately
+    polygon offset
+    used for wall marks, cheezy shadows
   
 
 ## Optimized for hardware acceleration ##
-  Triangle meshes have a sort key that encodes material state, sort type, etc
-  qsort on state before rendering
-  1.5M multitexture tris/second on ATI Rage128 on a PIII/500
-   with 50% of our time in the OpenGL driver
+    Triangle meshes have a sort key that encodes material state, sort type, etc
+    qsort on state before rendering
+    1.5M multitexture tris/second on ATI Rage128 on a PIII/500 with 50% of our time in the OpenGL driver
 
 ## Triangle renderer ##
-  Strip order, but not strips
-  32B aligned 1K vertex buffers
-  we have knowledge of all rendering data before we begin rendering
-   due to our sorting/batching of primitives
-  rescale Z range every frame for max precision in depth buffer
+    Strip order, but not strips
+    32B aligned 1K vertex buffers
+    we have knowledge of all rendering data before we begin rendering due to our sorting/batching of primitives
+    rescale Z range every frame for max precision in depth buffer
   
-  TessEnd_MultitexturedLightmapped
-  First texture unit in GL_REPLACE mode
-  Second texture unit in GL_MODULATE mode
-  Color arrays disabled
-  Uses ARB_multitexture extension
+    TessEnd_MultitexturedLightmapped
+    First texture unit in GL_REPLACE mode
+    Second texture unit in GL_MODULATE mode
+    Color arrays disabled
+    Uses ARB_multitexture extension
 
-  TessEnd_VertexLit
-  Handles models
-  Same as TessEnd_Generic, just less setup/application cruft on our side,
-   looks the same to the driver
+    TessEnd_VertexLit
+    Handles models
+    Same as TessEnd_Generic, just less setup/application cruft on our side, looks the same to the driver
 
 ## Scalability ##
-  Vertex light option (fill rate bound or lacking blending modes)
-  LOD bias for models (throughput bound)
-  Subdivision depth for curves (throughput bound)
-  Screen re-size (fill bound)
-  Dynamic lights can be disabled (CPU bound)
-  Supporting multiple CPU architectures
+    Vertex light option (fill rate bound or lacking blending modes)
+    LOD bias for models (throughput bound)
+    Subdivision depth for curves (throughput bound)
+    Screen re-size (fill bound)
+    Dynamic lights can be disabled (CPU bound)
+    Supporting multiple CPU architectures
 
 ## OpenGL support ##
-  Die, minidriver, die
-  No support for minidriver or D3D wrapper
-  Gave OpenGL an early boost
-  Gave OpenGL an anchor to future development
-  Wrote Quake III on Intergraph workstations,
-   typically dual processor PII/400 machines however 
-   with fairly slow (~60mpixel/second) fill rate to keep us honest
-  QGL dynamic loading bindings
-  LoadLibrary + wglGetProcAddress
-  Necessitated because of Voodoo & Voodoo2
-  ICD vs. minidriver vs. standalone driver
-  Allows us to log OpenGL calls
+    Die, minidriver, die
+    No support for minidriver or D3D wrapper
+    Gave OpenGL an early boost
+    Gave OpenGL an anchor to future development
+    Wrote Quake III on Intergraph workstations,
+    typically dual processor PII/400 machines however with fairly slow (~60mpixel/second) fill rate to keep us honest
+    QGL dynamic loading bindings
+    LoadLibrary + wglGetProcAddress
+    Necessitated because of Voodoo & Voodoo2 ICD vs. minidriver vs. standalone driver
+    Allows us to log OpenGL calls
 
 ## Transforms ##
-  We use the full OpenGL transform pipeline
-  We do not use the OpenGL lighting pipeline
-  We do not use OpenGL fog capabilities
+    We use the full OpenGL transform pipeline
+    We do not use the OpenGL lighting pipeline
+    We do not use OpenGL fog capabilities
 
 ## Extensions Supported ##
-  Written on vanilla OpenGL, extension support is completely optional
-  ARB_multitexture
-  texture environment extensions
-  S3_s3tc and other compressed texture extensions
-  EXT_swapinterval
-  3DFX_gamma_control
+    Written on vanilla OpenGL, extension support is completely optional
+    ARB\_multitexture
+    texture environment extensions
+    S3\_s3tc and other compressed texture extensions
+    EXT\_swapinterval
+    3DFX\_gamma\_control
 
 ## Specific hardware comments ##
-  Note to IHVs: Intel wants to work with you on hardware acceleration,
+  * Note to IHVs: Intel wants to work with you on hardware acceleration,
    contact Igor Sinyak (igor.sinyak@intel.com) if interested
-  Voodoo/V2/V3/Banshee
-   very good OpenGL driver, 16-bit
-  S3 Savage3D
-   good OpenGL driver, Savage4 has strong multitexture capability
-  ATI Rage Pro
-   poor image quality, low performance, but still supported
-   owns the market
-  ATI Rage 128
-   feature complete, very fast OpenGL
-  Rendition V2200
-   state of ICD is unknown at this point, but good hardware
-  Intel i740
-   16-bit, very high quality OpenGL drivers, AGP texturing, 
-   average image quality
-  Matrox G200/G400
-   looks like they have good hardware and recent strong ICD support
-  Nvidia Riva128(ZX)
-   good OpenGL driver, very poor image quality
-  Nvidia RivaTNT/TNT2
-   feature complete, very fast OpenGL
-  Recommendations
+  * Voodoo/V2/V3/Banshee, very good OpenGL driver, 16-bit
+  * S3 Savage3D, good OpenGL driver, Savage4 has strong multitexture capability
+  * ATI Rage Pro, poor image quality, low performance, but still supported owns the market
+  * ATI Rage 128, feature complete, very fast OpenGL Rendition V2200 state of ICD is unknown at this point, but good hardware
+  * Intel i740, 16-bit, very high quality OpenGL drivers, AGP texturing, average image quality
+  * Matrox G200/G400, looks like they have good hardware and recent strong ICD support
+  * Nvidia Riva128(ZX), good OpenGL driver, very poor image quality
+  * Nvidia RivaTNT/TNT2, feature complete, very fast OpenGL, Recommendations
 
 ## The Future: Content and Technology ##
-   technological advances are second order effects
-   technological advances need appropriate content
-   high resolution art with large dynamic range
-   level design that maximizes the given the triangle budget
-   lighting design that is effective and dramatic
-   game design that leverages the technology effectively
+   * technological advances are second order effects
+   * technological advances need appropriate content
+   * high resolution art with large dynamic range
+   * level design that maximizes the given the triangle budget
+   * lighting design that is effective and dramatic
+   * game design that leverages the technology effectively
 
