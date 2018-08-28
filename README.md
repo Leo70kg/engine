@@ -1,5 +1,32 @@
 # OpenArena Engine 
 This project is a fork of OpenArena with specific changes to the client and server.
+Some of the major features currently implemented are:
+
+  * SDL 2 backend
+  * OpenAL sound API support (multiple speaker support and better sound
+    quality)
+  * Full x86_64 support on Linux
+  * VoIP support, both in-game and external support through Mumble.
+  * MinGW compilation support on Windows and cross compilation support on Linux
+  * AVI video capture of demos
+  * Much improved console autocompletion
+  * Persistent console history
+  * Colorized terminal output
+  * Optional Ogg Vorbis support
+  * Much improved QVM tools
+  * Support for various esoteric operating systems
+  * cl_guid support
+  * HTTP/FTP download redirection (using cURL)
+  * Multiuser support on Windows systems (user specific game data
+    is stored in "%APPDATA%\OpenArena")
+  * PNG support
+  * Many, many bug fixes
+
+The original id software readme that accompanied the Q3 source release has been
+renamed to id-readme.txt so as to prevent confusion. Please refer to the
+website for updated status.
+
+
 
 ## Building on Ubuntu or Debian Linux ##
 
@@ -109,6 +136,21 @@ This program is free software; you can redistribute it and/or modify it under th
 when i playing CTF on :F for stupid server with com\_hunkmegs = 128, the following errors occurs.
 ERROR: Hunk\_Alloc failed on 739360: code/renderergl2/tr\_model.c, line: 535 (sizeof(*v) * (md3Surf->numVerts * md3Surf->numFrames)).
 Upping com\_hunkmegs to 256 will generally be OK.
+
+
+* About -fno-strict-aliasing
+Build OA with -fno-strict-aliasing removed using clang:
+
+WARNING: light grid mismatch, l->filelen=103896, numGridPoints*8=95904
+this will cause renderergl2's R_LoadLightGrid abnormal.
+Problem solved with following line added in it.
+`
+ri.Printf( PRINT_WARNING, "s_worldData.lightGridBounds[i]=%d\n", s_worldData.lightGridBounds[i]);
+` 
+however this line do nothing but just printed the value of s_worldData.lightGridBounds[i]. I guess its a bug of clang.
+
+Build OA with -fno-strict-aliasing removed using GCC without this issue.
+I am using GCC7.2 and clang6.0 on ubuntu18.04.
 
 
 * Use gprof to examine the performance of the program
