@@ -516,7 +516,7 @@ void _VectorScale( const vec3_t in, float scale, vec3_t out );
 void _VectorMA( const vec3_t veca, float scale, const vec3_t vecb, vec3_t vecc );
 
 float RadiusFromBounds( const vec3_t mins, const vec3_t maxs );
-void ClearBounds( vec3_t mins, vec3_t maxs );
+
 void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );
 
 

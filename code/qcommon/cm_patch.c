@@ -1172,7 +1172,7 @@ collision detection with a patch mesh.
 Points is packed as concatenated rows.
 ===================
 */
-struct patchCollide_s	*CM_GeneratePatchCollide( int width, int height, vec3_t *points ) {
+struct patchCollide_s* CM_GeneratePatchCollide( int width, int height, vec3_t *points ) {
 	patchCollide_t	*pf;
 	cGrid_t			grid;
 	int				i, j;
@@ -1216,8 +1216,13 @@ struct patchCollide_s	*CM_GeneratePatchCollide( int width, int height, vec3_t *p
 	// the aproximate surface defined by these points will be
 	// collided against
 	pf = Hunk_Alloc( sizeof( *pf ), h_high );
-	ClearBounds( pf->bounds[0], pf->bounds[1] );
-	for ( i = 0 ; i < grid.width ; i++ ) {
+	
+	pf->bounds[0][0] = pf->bounds[0][1] = pf->bounds[0][2] = 99999;
+	pf->bounds[1][0] = pf->bounds[1][1] = pf->bounds[1][2] = -99999;
+   
+
+    for ( i = 0 ; i < grid.width ; i++ )
+    {
 		for ( j = 0 ; j < grid.height ; j++ ) {
 			AddPointToBounds( grid.points[i][j], pf->bounds[0], pf->bounds[1] );
 		}

@@ -292,7 +292,7 @@ int R_CullBox(vec3_t worldBounds[2]) {
 	int             i;
 	cplane_t       *frust;
 	qboolean        anyClip;
-	int             r, numPlanes;
+	int             numPlanes;
 
 	numPlanes = (tr.viewParms.flags & VPF_FARPLANEFRUSTUM) ? 5 : 4;
 
@@ -302,7 +302,7 @@ int R_CullBox(vec3_t worldBounds[2]) {
 	{
 		frust = &tr.viewParms.frustum[i];
 
-		r = BoxOnPlaneSide(worldBounds[0], worldBounds[1], frust);
+		int r = BoxOnPlaneSide(worldBounds[0], worldBounds[1], frust);
 
 		if(r == 2)
 		{
@@ -1272,7 +1272,7 @@ DRAWSURF SORTING
 R_Radix
 ===============
 */
-static ID_INLINE void R_Radix( int byte, int size, drawSurf_t *source, drawSurf_t *dest )
+static void R_Radix( int byte, int size, drawSurf_t *source, drawSurf_t *dest )
 {
   int           count[ 256 ] = { 0 };
   int           index[ 256 ];

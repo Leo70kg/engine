@@ -370,11 +370,7 @@ void RE_BeginFrame( void ) {
     if(cmd)
     {
         cmd->commandId = RC_DRAW_BUFFER;
-
-        if (!Q_stricmp(r_drawBuffer->string, "GL_FRONT"))
-            cmd->buffer = (int)GL_FRONT;
-        else
-            cmd->buffer = (int)GL_BACK;
+        cmd->buffer = (int)GL_BACK;
     }
 	
 }

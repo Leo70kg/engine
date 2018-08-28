@@ -219,7 +219,7 @@ PARSING
 ============================================================================
 */
 
-static	char	com_token[MAX_TOKEN_CHARS];
+static char     com_token[MAX_TOKEN_CHARS];
 static	char	com_parsename[MAX_TOKEN_CHARS];
 static	int		com_lines;
 static	int		com_tokenline;
@@ -270,36 +270,6 @@ void COM_ParseWarning( char *format, ... )
 	Com_Printf("WARNING: %s, line %d: %s\n", com_parsename, COM_GetCurrentParseLine(), string);
 }
 
-/*
-==============
-COM_Parse
-
-Parse a token out of a string
-Will never return NULL, just empty strings
-
-If "allowLineBreaks" is qtrue then an empty
-string will be returned if the next token is
-a newline.
-==============
-*/
-static char* SkipWhitespace( char *data, qboolean *hasNewLines )
-{
-	int c;
-
-	while( (c = *data) <= ' ')
-    {
-		if( !c ) {
-			return NULL;
-		}
-		if( c == '\n' ) {
-			com_lines++;
-			*hasNewLines = qtrue;
-		}
-		data++;
-	}
-
-	return data;
-}
 
 
 int COM_Compress( char *data_p )
@@ -376,13 +346,27 @@ int COM_Compress( char *data_p )
 }
 
 
+/*
+==============
+COM_Parse
+
+Parse a token out of a string
+Will never return NULL, just empty strings
+
+If "allowLineBreaks" is qtrue then an empty
+string will be returned if the next token is
+a newline.
+==============
+*/
 char* COM_ParseExt(char** data_p, qboolean allowLineBreaks)
 {
-	int c = 0, len = 0;
-	qboolean hasNewLines = qfalse;
+
+    unsigned int len = 0;
 	char *data = *data_p;
 
-	com_token[0] = 0;
+    unsigned char c;
+  
+    com_token[0] = 0;
 	com_tokenline = 0;
 
 	// make sure incoming data is valid
@@ -392,52 +376,62 @@ char* COM_ParseExt(char** data_p, qboolean allowLineBreaks)
 		return com_token;
 	}
 
+
 	while ( 1 )
 	{
 		// skip whitespace
-		data = SkipWhitespace( data, &hasNewLines );
-		if ( !data )
-		{
-			*data_p = NULL;
-			return com_token;
-		}
-		if ( hasNewLines && !allowLineBreaks )
-		{
-			*data_p = data;
-			return com_token;
-		}
+		//data = SkipWhitespace( data, &hasNewLines );
 
-		c = *data;
+	    while( (c = *data) <= ' ')
+        {
+		    if( c == '\n' )
+            {
+			    com_lines++;
+		        if ( allowLineBreaks == qfalse )
+		        {
+			        *data_p = data;
+			        return com_token;
+		        }
+		    }
+            else if( c == 0 )
+            {
+			    *data_p = NULL;
+			    return com_token;
+		    }
+
+		    data++;
+	    }
 
 		// skip double slash comments
-		if ( (c == '/') && (data[1] == '/') )
-		{
-			data += 2;
-			while (*data && *data != '\n')
-            {
-				data++;
-			}
-		}
-		else if ( (c=='/') && (data[1] == '*') ) 
-		{   // skip /* */ comments
-			data += 2;
-			while ( *data && ( *data != '*' || data[1] != '/' ) ) 
-			{
-				if ( *data == '\n' )
-				{
-					com_lines++;
-				}
-				data++;
-			}
-			if ( *data ) 
-			{
+		if(data[0] == '/')
+        {    
+            if(data[1] == '/')
+		    {
+			    data += 2;
+			    while (*data && (*data != '\n'))
+                {
+				    data++;
+			    }
+		    }
+		    else if( data[1] == '*' ) 
+		    {   // skip /* */ comments
+			    data += 2;
+                // Assuming /* and */ occurs in pairs.
+			    while( (data[0] != '*') || (data[1] != '/') ) 
+			    {
+				    if ( data[0] == '\n' )
+				    {
+					    com_lines++;
+				    }
+				    data++;
+			    }
 				data += 2;
-			}
-		}
-		else
-		{
-			break;
-		}
+		    }
+		    else
+                break;
+        }
+        else
+            break;
 	}
 
 	// token starts on this line
@@ -450,16 +444,17 @@ char* COM_ParseExt(char** data_p, qboolean allowLineBreaks)
 		while (1)
 		{
 			c = *data++;
-			if (c=='\"' || !c)
+			if (c == '\"' || !c)
 			{
 				com_token[len] = 0;
 				*data_p = ( char * ) data;
 				return com_token;
 			}
-			if ( c == '\n' )
+            else if ( c == '\n' )
 			{
 				com_lines++;
 			}
+
 			if (len < MAX_TOKEN_CHARS - 1)
 			{
 				com_token[len] = c;
@@ -473,16 +468,15 @@ char* COM_ParseExt(char** data_p, qboolean allowLineBreaks)
 	{
 		if (len < MAX_TOKEN_CHARS - 1)
 		{
-			com_token[len] = c;
-			len++;
+			com_token[len++] = c;
 		}
-		data++;
-		c = *data;
-	} while (c>32);
+
+		c = *(++data);
+	} while(c > ' ');
 
 	com_token[len] = 0;
 
-	*data_p = ( char * ) data;
+	*data_p =  data;
 	return com_token;
 }
 

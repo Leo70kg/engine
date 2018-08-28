@@ -1370,7 +1370,6 @@ Q3R2OBJ = \
   $(B)/renderergl2/tr_cmds.o \
   $(B)/renderergl2/tr_curve.o \
   $(B)/renderergl2/tr_dsa.o \
-  $(B)/renderergl2/tr_extramath.o \
   $(B)/renderergl2/tr_fbo.o \
   $(B)/renderergl2/tr_flares.o \
   $(B)/renderergl2/tr_font.o \

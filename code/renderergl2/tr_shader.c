@@ -3585,13 +3585,12 @@ static void ScanAndLoadShaderFiles( void )
 	        
             char shaderName[MAX_QPATH];
 			Q_strncpyz(shaderName, token, sizeof(shaderName));
-			int shaderLine = COM_GetCurrentParseLine();
 
 			token = COM_ParseExt(&p, qtrue);
 			if(token[0] != '{' || token[1] != '\0')
 			{
 				ri.Printf(PRINT_WARNING, "WARNING: Ignoring shader file %s. Shader \"%s\" on line %d missing opening brace",
-							filename, shaderName, shaderLine);
+							filename, shaderName, COM_GetCurrentParseLine());
 				if (token[0])
 				{
 					ri.Printf(PRINT_WARNING, " (found \"%s\" on line %d)", token, COM_GetCurrentParseLine());
@@ -3605,7 +3604,7 @@ static void ScanAndLoadShaderFiles( void )
 			if(!SkipBracedSection(&p, 1))
 			{
 				ri.Printf(PRINT_WARNING, "WARNING: Ignoring shader file %s. Shader \"%s\" on line %d missing closing brace.\n",
-							filename, shaderName, shaderLine);
+							filename, shaderName, COM_GetCurrentParseLine());
 				ri.FS_FreeFile(buffers[i]);
 				buffers[i] = NULL;
 				break;

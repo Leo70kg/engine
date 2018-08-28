@@ -55,7 +55,6 @@ static cvar_t* r_depthbits;
 static cvar_t* r_displayRefresh;
 
 // not used cvar, keep it for backward compatibility
-static cvar_t* r_stereoSeparation;
 
 static cvar_t* r_displayIndex;
 
@@ -515,8 +514,6 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 	r_displayIndex = Cvar_Get( "r_displayIndex", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_displayRefresh = Cvar_Get( "r_displayRefresh", "60", CVAR_LATCH );
 	Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );
-
-	r_stereoSeparation = Cvar_Get( "r_stereoSeparation", "64", CVAR_ARCHIVE );
 
 	if( Cvar_VariableIntegerValue( "com_abnormalExit" ) )
 	{

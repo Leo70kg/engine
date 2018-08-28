@@ -450,7 +450,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 	if ( !tr.registered ) {
 		return;
 	}
-	// r_norefresh removed here ------ suijingfeng
+
 	qboolean customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
 	int startTime = ri.Milliseconds();
 
@@ -534,13 +534,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	parms.fovX = tr.refdef.fov_x;
 	parms.fovY = tr.refdef.fov_y;
-    if ( customscrn )
-    {
-        // undo vert-
-        parms.fovY = parms.fovX * (73.739792 / 90.0);
-        // recalculate the fov_x
-        parms.fovX = atan(tan(parms.fovY * (M_PI/360.0)) * glConfig.windowAspect) * (360.0/M_PI);
-    }
+
 	VectorCopy( fd->vieworg, parms.or.origin );
 	VectorCopy( fd->viewaxis[0], parms.or.axis[0] );
 	VectorCopy( fd->viewaxis[1], parms.or.axis[1] );

@@ -486,10 +486,6 @@ ID_INLINE float RadiusFromBounds( const vec3_t mins, const vec3_t maxs )
 }
 
 
-ID_INLINE void ClearBounds( vec3_t mins, vec3_t maxs ) {
-	mins[0] = mins[1] = mins[2] = 99999;
-	maxs[0] = maxs[1] = maxs[2] = -99999;
-}
 
 ID_INLINE void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs ) {
 	if ( v[0] < mins[0] ) {

@@ -318,8 +318,14 @@ The defaults for these variables differ depending on the target platform.
   in_joystickNo                     - select which joystick to use
   in_availableJoysticks             - list of available Joysticks
   com_altivec                       - enable use of altivec on PowerPC systems
-
-
+  r_drawBuffer
+  r_stereoSeparation;
+  r_stereoEnabled;
+  r_anaglyphMode;
+  r_anaglyphMode;
+  r_fullbright;			        	- avoid lightmap pass
+  r_norefresh;			            - bypasses the ref rendering
+  
 ```
 
 ## New commands
@@ -548,9 +554,9 @@ This program is free software; you can redistribute it and/or modify it under th
 * About com\_hunkmegs
 
 When i playing CTF on :F for stupid server with default com\_hunkmegs = 128 setting, the following errors occurs:
-`
+```
 ERROR: Hunk\_Alloc failed on 739360: code/renderergl2/tr\_model.c, line: 535 (sizeof(*v) * (md3Surf->numVerts * md3Surf->numFrames)).
-`
+```
 OpenGL2 renderer seems use more memory, Upping com\_hunkmegs to 256 will generally be OK.
 
 
@@ -558,15 +564,15 @@ OpenGL2 renderer seems use more memory, Upping com\_hunkmegs to 256 will general
 I am using GCC7.2 and clang6.0 on ubuntu18.04.
 
 Build OA using clang with -fno-strict-aliasing removed:
-`
+```
 WARNING: light grid mismatch, l->filelen=103896, numGridPoints*8=95904
-`
+```
 This is printed by renderergl2's R_LoadLightGrid function.
 
     Problem solved with following line added in it.
-`
+```
 ri.Printf( PRINT_WARNING, "s_worldData.lightGridBounds[i]=%d\n", s_worldData.lightGridBounds[i]);
-` 
+```
     However this line do nothing but just printed the value of s_worldData.lightGridBounds[i]. I guess its a bug of clang.
 
     Build OA with GCC without this issue.
