@@ -1,7 +1,7 @@
 # OpenArena Engine 
 This project is a fork of OpenArena with specific changes to the client and server.
 
-## Building on Ubuntu or Debian Linux##
+## Building on Ubuntu or Debian Linux ##
 
 
 Install the build dependencies.
