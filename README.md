@@ -7,7 +7,9 @@ This project is a fork of OpenArena with specific changes to the client and serv
 Install the build dependencies.
 
 ```sh
-$ sudo apt-get install libcurl4-gnutls-dev libgl1-mesa-dev libsdl2-dev libopus-dev libopusfile-dev libogg-dev zlib1g-dev libvorbis-dev libopenal-dev libjpeg-dev libfreetype6-dev libxmp-dev
+$ sudo apt-get install libcurl4-openssl-dev libsdl2-dev libopenal-dev
+$ sudo apt-get install libgl1-mesa-dev libopus-dev libopusfile-dev libogg-dev zlib1g-dev libvorbis-dev libjpeg-dev libfreetype6-dev libxmp-dev
+$ sudo apt-get install clang
 $ git clone https://github.com/suijingfeng/engine.git
 $ cd engine
 $ make
@@ -36,7 +38,9 @@ make ARCH=x86_64
 
 ## RUN ##
 First, download the map packages from http://openarena.ws/download.php
-Second, extract the data files on ~/.OpenArena/ (linux) or C:\Users\youname\AppData\Roaming\OpenArena\ (windows)
+Second, extract the data files at
+~/.OpenArena/ (on linux) 
+C:\Users\youname\AppData\Roaming\OpenArena\ (on windows)
 
 
 ```sh
@@ -44,13 +48,12 @@ $ cd /build/release-linux-x86_64/
 $ ./openarena.x86_64
 ```
 
-By default it load renderer\_openarena\_x86\_64.so (if build in linux).
 
 ## Switching renderers ##
 
 
-This feature is enabled by default. If you wish to disable it, set USE\_RENDERER\_DLOPEN=0 in Makefile, 
-this allow for build modular renderers and to select the renderer at runtime rather than compiling in one into the binary.
+This feature is disabled by default. If you wish to enable it, set USE\_RENDERER\_DLOPEN=1 in Makefile.
+This allow for build modular renderers and select the renderer at runtime rather than compiling into one binary.
 When you start OpenArena, you can pass the name of the dynamic library to load. 
 
 Example:
@@ -101,7 +104,7 @@ In particular the Open Arena Expanded topic: http://openarena.ws/board/index.php
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
 ## extra ##
-use gprof to examine the 
+use gprof to examine the performance of the program
 ```
 gprof openarena.x86_64 gmon.out > report.txt
 ```
