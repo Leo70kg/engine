@@ -104,7 +104,14 @@ In particular the Open Arena Expanded topic: http://openarena.ws/board/index.php
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
 ## extra ##
-use gprof to examine the performance of the program
+
+* OpenGL2 renderer seems use more memory. 
+when i playing CTF on :F for stupid server with com\_hunkmegs = 128, the following errors occurs.
+ERROR: Hunk\_Alloc failed on 739360: code/renderergl2/tr\_model.c, line: 535 (sizeof(*v) * (md3Surf->numVerts * md3Surf->numFrames)).
+Upping com\_hunkmegs to 256 will generally be OK.
+
+
+* Use gprof to examine the performance of the program
 ```
 gprof openarena.x86_64 gmon.out > report.txt
 ```
