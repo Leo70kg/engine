@@ -6,7 +6,7 @@ for original material please visit [here](http://www.bigpanda.com/trinity/articl
 
 ## Introduction
 
-This article will attempt to explain one of Quake 3’s most important graphics
+This article will attempt to explain one of Quake 3's most important graphics
 technologies. 
 
 When cheap 3D hardware acceleration began to proliferate, computer game designers
@@ -14,7 +14,7 @@ who don't understand graphics technology breathed a sigh of relief. "Finally,"
 they said, "all games will look equally good, and then gameplay will rule the
 marketplace." In May, 1998, these words bear a whiff of truth: games without new
 graphics technology regularly blow people away simply by supporting 3DFX. This will
-change utterly upon the release of id software’s "Quake 3", the first computer game
+change utterly upon the release of id software's "Quake 3", the first computer game
 engine known to grudgingly accept 3DFX as a minimum requirement.
 
 Light mapping is one Quake technology that changed the computer game industry
@@ -23,7 +23,7 @@ difficult to convey a sense of depth or realism, especially when texture maps
 repeat. Light mapping is also an early example of multitexture in computer games.
 Multitexture refers to the act of mixing two or more texture maps to create a new
 texture map. Multitexture is also the key to the Quake 3 graphics technology I will
-discuss. Let’s use light mapping to acquaint ourselves with multitexture:
+discuss. Let＊s use light mapping to acquaint ourselves with multitexture:
 
 A light map is multiplied with a texture map to produce shadows. It may not be clear
 what this means. At these times, it helps to think of colors as numbers between zero
@@ -34,7 +34,10 @@ the color to black. In a light map, shadows are black and the rest is bright.
 Therefore, when the light map is multiplied with the texture map, shadows become
 black and the rest stays essentially the same:
 
-Let’s look at what happens to one pixel when a light map is multiplied with a
+![smaller](https://github.com/suijingfeng/engine/blob/master/doc/whateverXone.png)
+
+
+Let's look at what happens to one pixel when a light map is multiplied with a
 texture map. In this example, I will use pseudocode because it is familiar to
 programmers. P stands for "pixel color", T for "texture color", and L for 
 "light map color":
@@ -48,18 +51,8 @@ Since we do this once for each pixel, we may say that we are multiplying the tex
 maps themselves.
 
 At this point, we should abandon pseudocode in favor of something with the same
-meaning – but a more compact form: 
+meaning, but a more compact form: 
 
 
 
-![twin_mode](image3.git)
-
-
-
-
-
-## notes
-
-* proliferate: 增殖, 扩散, 激增;
-* whiff: 一阵风, 轻轻地吹
-* grudgingly: 勉强地, 不情愿地
+![formular](https://github.com/suijingfeng/engine/blob/master/doc/Image3.gif)
