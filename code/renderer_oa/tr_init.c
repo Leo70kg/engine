@@ -341,7 +341,7 @@ static qboolean GLimp_GetProcAddresses( void )
 		qglUnlockArraysEXT = ( void ( APIENTRY * )( void ) ) ri.GLimpGetProcAddress( "glUnlockArraysEXT" );
 		if (!qglLockArraysEXT || !qglUnlockArraysEXT)
 		{
-			Com_Error(ERR_FATAL, "bad getprocaddress");
+			ri.Error(ERR_FATAL, "bad getprocaddress");
 		}
 	}
 	else

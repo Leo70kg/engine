@@ -36,7 +36,6 @@ void readFile_int( char **cnf, int *v )
 {
 	char *t;
 
-	//COM_MatchToken(cnf, "=");
 	t = COM_ParseExt( cnf, qfalse );
 	if( strequals( t, "=" ) )
 	{
@@ -60,7 +59,6 @@ void readFile_string( char **cnf, char *s, int size )
 {
 	char *t;
 
-	//COM_MatchToken(cnf, "=");
 	s[ 0 ] = '\0';
 	t = COM_ParseExt( cnf, qfalse );
 	if( !strequals( t, "=" ) )

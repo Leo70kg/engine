@@ -26,6 +26,31 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/tr_public.h"
 
 
+union uInt4bytes{
+    unsigned int i;
+    unsigned char uc[4];
+};
+
+union f32_u {
+	float f;
+	uint32_t ui;
+	struct {
+		unsigned int fraction:23;
+		unsigned int exponent:8;
+		unsigned int sign:1;
+	} pack;
+};
+
+union f16_u {
+	uint16_t ui;
+	struct {
+		unsigned int fraction:10;
+		unsigned int exponent:5;
+		unsigned int sign:1;
+	} pack;
+};
+
+
 typedef enum
 {
 	IMGTYPE_COLORALPHA, // for color, lightmap, diffuse, and specular
@@ -111,12 +136,26 @@ void R_LoadPCX( const char *name, byte **pic, int *width, int *height );
 void R_LoadPNG( const char *name, byte **pic, int *width, int *height );
 void R_LoadTGA( const char *name, byte **pic, int *width, int *height );
 
-// subroutines
+/*
+=============================================================
+
+//common subroutines for render
+
+=============================================================
+*/
+
+
 void PointRotateAroundVector(float* dst, const float* dir, const float* p, const float degrees);
 void FastNormalize1f(float v[3]);
 char *getExtension( const char *name );
 char *SkipPath(char *pathname);
 void stripExtension(const char *in, char *out, int destsize);
+
+char* R_ParseExt(char** data_p, qboolean allowLineBreaks);
+int R_Compress( char *data_p );
+int R_GetCurrentParseLine( void );
+void R_BeginParseSession(const char* name);
+
 
 // note: vector forward are NOT assumed to be nornalized,
 // unit: nornalized of forward,
@@ -127,7 +166,7 @@ float MakeTwoPerpVectors(const float forward[3], float right[3], float up[3]);
 unsigned int ColorBytes4 (float r, float g, float b, float a);
 void MatrixMultiply4x4(const float A[16], const float B[16], float out[16]);
 void ClearBounds( vec3_t mins, vec3_t maxs );
-
+qboolean SkipBracedSection (char **program, int depth);
 
 typedef vec_t mat4_t[16];
 typedef int ivec2_t[2];

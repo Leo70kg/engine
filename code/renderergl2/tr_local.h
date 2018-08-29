@@ -47,10 +47,6 @@ QGL_ARB_vertex_array_object_PROCS;
 QGL_EXT_direct_state_access_PROCS;
 #undef GLE
 
-union uInt4bytes{
-    unsigned int i;
-    unsigned char uc[4];
-};
 
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;

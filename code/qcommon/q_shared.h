@@ -612,9 +612,9 @@ typedef struct pc_token_s
 
 // data is an in/out parm, returns a parsed out token
 
-void	COM_MatchToken( char**buf_p, char *match );
+//void	COM_MatchToken( char**buf_p, char *match );
 
-qboolean SkipBracedSection (char **program, int depth);
+
 void SkipRestOfLine ( char **data );
 
 void Parse1DMatrix (char **buf_p, int x, float *m);

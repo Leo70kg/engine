@@ -35,13 +35,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 extern refimport_t ri;
 
 
-
-union uInt4bytes{
-    unsigned int i;
-    unsigned char uc[4];
-};
-
-
 typedef unsigned int glIndex_t;
 
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT

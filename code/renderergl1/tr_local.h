@@ -33,11 +33,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/qgl.h"
 
 
-union uInt4bytes{
-    unsigned int i;
-    unsigned char uc[4];
-};
-
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
 

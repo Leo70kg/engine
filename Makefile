@@ -1398,7 +1398,7 @@ Q3R2OBJ = \
   $(B)/renderergl2/tr_surface.o \
   $(B)/renderergl2/tr_vbo.o \
   $(B)/renderergl2/tr_world.o \
-  $(B)/renderergl2/tr_shared.o
+  $(B)/renderergl2/tr_common.o
 
 
 
@@ -1461,7 +1461,7 @@ Q3ROBJ = \
   $(B)/renderergl1/tr_sky.o \
   $(B)/renderergl1/tr_surface.o \
   $(B)/renderergl1/tr_world.o \
-  $(B)/renderergl1/tr_shared.o \
+  $(B)/renderergl1/tr_common.o
 
 Q3ROAOBJ = \
   $(B)/renderer_oa/tr_animation.o \
@@ -1490,27 +1490,24 @@ Q3ROAOBJ = \
   $(B)/renderer_oa/tr_sky.o \
   $(B)/renderer_oa/tr_surface.o \
   $(B)/renderer_oa/tr_world.o \
-  $(B)/renderer_oa/tr_shared.o \
+  $(B)/renderer_oa/tr_common.o
 
 
 ifneq ($(USE_RENDERER_DLOPEN), 0)
   Q3ROBJ += \
 	$(B)/renderergl1/q_shared.o \
 	$(B)/renderergl1/puff.o \
-	$(B)/renderergl1/q_math.o \
-	$(B)/renderergl1/tr_subs.o
+	$(B)/renderergl1/q_math.o
 
   Q3ROAOBJ += \
 	$(B)/renderer_oa/q_shared.o \
 	$(B)/renderer_oa/puff.o \
-	$(B)/renderer_oa/q_math.o \
-	$(B)/renderer_oa/tr_subs.o
+	$(B)/renderer_oa/q_math.o
 
   Q3R2OBJ += \
 	$(B)/renderergl2/q_shared.o \
 	$(B)/renderergl2/puff.o \
-	$(B)/renderergl2/q_math.o \
-	$(B)/renderergl2/tr_subs.o
+	$(B)/renderergl2/q_math.o
 endif
 
 ifneq ($(USE_INTERNAL_JPEG),0)

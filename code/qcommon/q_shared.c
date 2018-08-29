@@ -370,14 +370,14 @@ char* COM_ParseExt(char** data_p, qboolean allowLineBreaks)
 	com_tokenline = 0;
 
 	// make sure incoming data is valid
-	if ( !data )
+	if( !data )
 	{
 		*data_p = NULL;
 		return com_token;
 	}
 
 
-	while ( 1 )
+	while( 1 )
 	{
 		// skip whitespace
 		//data = SkipWhitespace( data, &hasNewLines );
@@ -387,7 +387,7 @@ char* COM_ParseExt(char** data_p, qboolean allowLineBreaks)
 		    if( c == '\n' )
             {
 			    com_lines++;
-		        if ( allowLineBreaks == qfalse )
+		        if( allowLineBreaks == qfalse )
 		        {
 			        *data_p = data;
 			        return com_token;
@@ -485,7 +485,7 @@ char* COM_ParseExt(char** data_p, qboolean allowLineBreaks)
 COM_MatchToken
 ==================
 */
-void COM_MatchToken( char **buf_p, char *match )
+static void COM_MatchToken( char **buf_p, char *match )
 {
 	char* token = COM_ParseExt( buf_p, qtrue );
 	if ( strcmp( token, match ) )
@@ -493,35 +493,6 @@ void COM_MatchToken( char **buf_p, char *match )
 }
 
 
-/*
-=================
-SkipBracedSection
-
-The next token should be an open brace or set depth to 1 if already parsed it.
-Skips until a matching close brace is found.
-Internal brace depths are properly skipped.
-=================
-*/
-qboolean SkipBracedSection (char **program, int depth)
-{
-	do
-    {
-		char* token = COM_ParseExt( program, qtrue );
-		if( token[1] == 0 )
-        {
-			if( token[0] == '{' )
-            {
-				depth++;
-			}
-			else if( token[0] == '}' )
-            {
-				depth--;
-			}
-		}
-	} while( depth && *program );
-
-	return ( depth == 0 );
-}
 
 /*
 =================

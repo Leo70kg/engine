@@ -112,13 +112,11 @@ disadvantages
       specular lighting is simply a hacked form of dynamic environment mapping
       specularity encoded in alpha channel of texture (mono-specular materials)
       color iterator stores the generated specular light value in iterated alpha
-      walls render lightmap then base texture 
-       using src*dst + dst*src.alpha
-      models render Gouraud only, then base texture 
-       using src*dst + dst*src.alpha
+      walls render lightmap then base texture using src*dst + dst*src.alpha
+      models render Gouraud only, then base texture using src*dst + dst*src.alpha
 
 ## Character lighting
-    * Overbrightening
+    Overbrightening
       
       lighting program assumes a dynamic range 2x than normally exists
       during rendering we set the hardware gamma ramp so that the back half of it is saturated to identity
@@ -133,12 +131,12 @@ disadvantages
       
       we gain dynamic range in exchange for lower precision
 
-    * Cheezy shadows
+    Cheezy shadows
       project a polygon straight down
       alpha determined by height of object
       basically just a dynamic wall mark
 
-    * Sunlight
+    Sunlight
 
 
 ## Shader Architecture 
