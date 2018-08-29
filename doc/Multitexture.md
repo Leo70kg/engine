@@ -1,8 +1,4 @@
-<html><head>
-
-</head>
-<body vlink="#800080" link="#0000ff" bgcolor="#ffffff">
-
+<html>
 
 Multitexture and the Quake 3 graphics engine
 
@@ -42,7 +38,7 @@ value one, multiplying it with any other color does not change the
 color:
 
 <center><table bgcolor="#f0f0f0">
-<tbody><tr><td align="center">![](Multitexture/smaller.jpg)</td><td align="center">X</td><td align="center">![](Multitexture/white.jpg)</td><td align="center">=</td><td align="center">![](Multitexture/smaller.jpg)</td></tr>
+<tbody><tr><td align="center">![](https://github.com/suijingfeng/engine/blob/master/doc/Multitexture/smaller.jpg)</td><td align="center">X</td><td align="center">![](https://github.com/suijingfeng/engine/blob/master/doc/Multitexture/white.jpg)</td><td align="center">=</td><td align="center">![](https://github.com/suijingfeng/engine/blob/master/doc/Multitexture/smaller.jpg)</td></tr>
 <tr><td align="center">whatever</td><td align="center">times</td><td align="center">one</td><td align="center">equals</td><td align="center">whatever</td></tr>
 </tbody></table></center>
 
@@ -331,4 +327,4 @@ the first time, your jaw will drop. Other game engines will seem like an
 
 </body></html>
 
-</ol>
+
