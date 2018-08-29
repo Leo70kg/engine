@@ -29,12 +29,22 @@ A light map is multiplied with a texture map to produce shadows. It may not be c
 what this means. At these times, it helps to think of colors as numbers between zero
 and one, with black having the value zero and white having the value one. Because
 white has the value one, multiplying it with any other color does not change the
-color. Because black has the value zero, multiplying it with any other color changes
-the color to black. In a light map, shadows are black and the rest is bright. 
+color:
+
+![smaller](https://github.com/suijingfeng/engine/blob/master/doc/whateverXone.png)
+
+
+Because black has the value zero, multiplying it with any other color changes
+the color to black: 
+
+![smaller](https://github.com/suijingfeng/engine/blob/master/doc/whareverXzero.png)
+
+
+In a light map, shadows are black and the rest is bright. 
 Therefore, when the light map is multiplied with the texture map, shadows become
 black and the rest stays essentially the same:
 
-![smaller](https://github.com/suijingfeng/engine/blob/master/doc/whateverXone.png)
+![smaller](https://github.com/suijingfeng/engine/blob/master/doc/whareverXlightmap.png)
 
 
 Let's look at what happens to one pixel when a light map is multiplied with a
