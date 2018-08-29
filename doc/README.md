@@ -19,7 +19,7 @@ New renderer with material based shaders (built over OpenGL1.1 Fixed Pipeline).
 Window system stuff is abstracted through an intermediate layer.
  
 
-## Incremental improvement on graphics technology ##
+## Incremental improvement on graphics technology
 
     Volumetric fog
     Portals/mirrors
@@ -53,13 +53,13 @@ disadvantages
     Triangle interpolation artifacts
     Excessive triangle count due to the heavy tessellation
 
-## Portals/mirrors ##
+## Portals/mirrors
 
     basically equivalent, only difference is location of the virtual viewpoint
     only a single portal/mirror is allowed at once to avoid infinite recursion
     insert PVS sample point at mirror location
 
-## Environment mapping ##
+## Environment mapping 
 
     Wall marks
 
@@ -75,7 +75,7 @@ disadvantages
          geometry or Gouraud shading on models
 
 
-## Rendering primitives ##
+## Rendering primitives 
 
    Quadratic Bezier patches
       Tessellated at load time to arbitrary detail level
@@ -83,7 +83,7 @@ disadvantages
       Simpler to manipulate than cubic Bezier patches
       Artifacts not very noticeable   
 
-## MD3 (arbitrary triangle meshes) ##
+## MD3 (arbitrary triangle meshes) 
       Multipart player models consisting of connect animated 
       vertex meshes created in 3DSMAX
       Post processed by Q3DATA into MD3 format
@@ -94,11 +94,11 @@ disadvantages
       Suitable technological progress given our time frame
       Spurred by need for convincing clouds and environment
 
-## standard Q2 sky box ##
+## standard Q2 sky box 
       projection of clouds onto hemisphere, multiple layers possible
       tessellated output feeds into standard shader pipeline
 
-## Lightmaps ##
+## Lightmaps
       Covers same world area as Q2, 1 lightmap texel covers 2 sq. ft., 
       which corresponds to one 32x32 texture block Generated using direct lighting, 
       not radiosity.
@@ -108,7 +108,7 @@ disadvantages
       Dynamic lights handled through three dynamically modified lightmaps
       uploaded with glTexSubImage2D, performance gain from using subimage.
 
-## Specular lighting ##
+## Specular lighting
       specular lighting is simply a hacked form of dynamic environment mapping
       specularity encoded in alpha channel of texture (mono-specular materials)
       color iterator stores the generated specular light value in iterated alpha
@@ -117,7 +117,7 @@ disadvantages
       models render Gouraud only, then base texture 
        using src*dst + dst*src.alpha
 
-## Character lighting ##
+## Character lighting
     * Overbrightening
       
       lighting program assumes a dynamic range 2x than normally exists
@@ -141,7 +141,7 @@ disadvantages
     * Sunlight
 
 
-## Shader Architecture ##
+## Shader Architecture 
 
 actually materials
     many special effects done with very little coding
@@ -190,12 +190,12 @@ actually materials
     used for wall marks, cheezy shadows
   
 
-## Optimized for hardware acceleration ##
+## Optimized for hardware acceleration
     Triangle meshes have a sort key that encodes material state, sort type, etc
     qsort on state before rendering
     1.5M multitexture tris/second on ATI Rage128 on a PIII/500 with 50% of our time in the OpenGL driver
 
-## Triangle renderer ##
+## Triangle renderer
     Strip order, but not strips
     32B aligned 1K vertex buffers
     we have knowledge of all rendering data before we begin rendering due to our sorting/batching of primitives
@@ -211,7 +211,7 @@ actually materials
     Handles models
     Same as TessEnd_Generic, just less setup/application cruft on our side, looks the same to the driver
 
-## Scalability ##
+## Scalability 
     Vertex light option (fill rate bound or lacking blending modes)
     LOD bias for models (throughput bound)
     Subdivision depth for curves (throughput bound)
@@ -219,7 +219,7 @@ actually materials
     Dynamic lights can be disabled (CPU bound)
     Supporting multiple CPU architectures
 
-## OpenGL support ##
+## OpenGL support 
     Die, minidriver, die
     No support for minidriver or D3D wrapper
     Gave OpenGL an early boost
@@ -231,12 +231,12 @@ actually materials
     Necessitated because of Voodoo & Voodoo2 ICD vs. minidriver vs. standalone driver
     Allows us to log OpenGL calls
 
-## Transforms ##
+## Transforms 
     We use the full OpenGL transform pipeline
     We do not use the OpenGL lighting pipeline
     We do not use OpenGL fog capabilities
 
-## Extensions Supported ##
+## Extensions Supported
     Written on vanilla OpenGL, extension support is completely optional
     ARB\_multitexture
     texture environment extensions
@@ -244,7 +244,7 @@ actually materials
     EXT\_swapinterval
     3DFX\_gamma\_control
 
-## Specific hardware comments ##
+## Specific hardware comments 
   * Note to IHVs: Intel wants to work with you on hardware acceleration,
    contact Igor Sinyak (igor.sinyak@intel.com) if interested
   * Voodoo/V2/V3/Banshee, very good OpenGL driver, 16-bit
@@ -256,7 +256,7 @@ actually materials
   * Nvidia Riva128(ZX), good OpenGL driver, very poor image quality
   * Nvidia RivaTNT/TNT2, feature complete, very fast OpenGL, Recommendations
 
-## The Future: Content and Technology ##
+## The Future: Content and Technology 
    * technological advances are second order effects
    * technological advances need appropriate content
    * high resolution art with large dynamic range
