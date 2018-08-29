@@ -3,13 +3,13 @@
 by Brian Hook, id Software Presentation at GDC 1999
 
 
-## Introduction ##
+## Introduction
 
 Note: this is an ASCII dump of the http://www.gdconf.com/1999/library/5301.ppt powerpoint file,
 This will give you bare bone scratchpad notes as one might have taken
 during the session, with bits and pieces missing or out of order.
 
-## Portability and OS Support ##
+## Portability and OS Support
    Win9x
    WinNT (AXP & x86)
    MacOS
