@@ -151,19 +151,20 @@ that is touched by one or more dlights, so try to throw out
 more dlights if possible.
 ====================
 */
-static int R_DlightSurface( msurface_t *surf, int dlightBits ) {
-	float       d;
+static int R_DlightSurface( msurface_t *surf, int dlightBits )
+{
 	int         i;
 	dlight_t    *dl;
 	
 	if ( surf->cullinfo.type & CULLINFO_PLANE )
 	{
-		for ( i = 0 ; i < tr.refdef.num_dlights ; i++ ) {
+		for ( i = 0; i < tr.refdef.num_dlights; i++)
+        {
 			if ( ! ( dlightBits & ( 1 << i ) ) ) {
 				continue;
 			}
 			dl = &tr.refdef.dlights[i];
-			d = DotProduct( dl->origin, surf->cullinfo.plane.normal ) - surf->cullinfo.plane.dist;
+			float d = DotProduct( dl->origin, surf->cullinfo.plane.normal ) - surf->cullinfo.plane.dist;
 			if ( d < -dl->radius || d > dl->radius ) {
 				// dlight doesn't reach the plane
 				dlightBits &= ~( 1 << i );
@@ -617,7 +618,8 @@ static mnode_t *R_PointInLeaf( const vec3_t p ) {
 R_ClusterPVS
 ==============
 */
-static const byte *R_ClusterPVS (int cluster) {
+static const byte *R_ClusterPVS (int cluster)
+{
 	if (!tr.world->vis || cluster < 0 || cluster >= tr.world->numClusters ) {
 		return NULL;
 	}

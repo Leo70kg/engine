@@ -202,29 +202,7 @@ ID_INLINE float Q_crandom( int *seed )
 
 
 
-/*
-=====================
-PlaneFromPoints
 
-Returns false if the triangle is degenrate.
-The normal will point out of the clock for clockwise ordered points
-=====================
-*/
-qboolean PlaneFromPoints( vec4_t plane, const vec3_t a, const vec3_t b, const vec3_t c )
-{
-	vec3_t d1, d2;
-
-	VectorSubtract( b, a, d1 );
-	VectorSubtract( c, a, d2 );
-	CrossProduct( d2, d1, plane );
-	if ( VectorNormalize( plane ) == 0 )
-    {
-		return qfalse;
-	}
-
-	plane[3] = DotProduct( a, plane );
-	return qtrue;
-}
 
 
 /*
@@ -237,15 +215,17 @@ This is not implemented very well...
 
 void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point,	float degrees )
 {
+    float d;
+    float k[3];
+
     float rad = DEG2RAD( degrees );
     float cos_th = cos( rad );
     float sin_th = sin( rad );
-    float d = (1 - cos_th);
-    float k[3];
+
 
     VectorNormalize2(dir, k);
 
-    d = d * (point[0] * k[0] + point[1] * k[1] + point[2] * k[2]);
+    d = (1 - cos_th) * (point[0] * k[0] + point[1] * k[1] + point[2] * k[2]);
 
 	CrossProduct(k, point, dst);
 
@@ -253,13 +233,10 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point,	
     dst[1] *= sin_th;
     dst[2] *= sin_th;
 
-    dst[0] += cos_th * point[0]; 
-    dst[1] += cos_th * point[1]; 
-    dst[2] += cos_th * point[2]; 
+    dst[0] += cos_th * point[0] + d * k[0]; 
+    dst[1] += cos_th * point[1] + d * k[1]; 
+    dst[2] += cos_th * point[2] + d * k[2]; 
 
-    dst[0] += d * k[0];
-    dst[1] += d * k[1];
-    dst[2] += d * k[2];
 }
 
 

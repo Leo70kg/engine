@@ -567,7 +567,6 @@ success:
     
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	IN_Init();
-
 }
 
 

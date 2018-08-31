@@ -469,7 +469,7 @@ int R_CullLocalBox(vec3_t bounds[2])
 	}
 
 	// transform into world space
-	for (i = 0 ; i < 8 ; i++)
+	for (i = 0; i < 8; i++)
     {
         vec3_t	v;
 

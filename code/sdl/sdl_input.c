@@ -39,7 +39,7 @@ static cvar_t *in_keyboardDebug = NULL;
 
 extern SDL_Window *SDL_window;
 
-cvar_t *in_nograb;
+static cvar_t *in_nograb;
 
 
 

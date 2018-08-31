@@ -225,8 +225,36 @@ float MakeTwoPerpVectors(const float forward[3], float right[3], float up[3])
 }
 
 
+/*
+=====================
+PlaneFromPoints
 
-unsigned ColorBytes4 (float r, float g, float b, float a)
+Returns false if the triangle is degenrate.
+The normal will point out of the clock for clockwise ordered points
+=====================
+*/
+qboolean PlaneFromPoints(vec4_t plane, const vec3_t a, const vec3_t b, const vec3_t c)
+{
+	vec3_t d1, d2;
+
+	VectorSubtract( b, a, d1 );
+	VectorSubtract( c, a, d2 );
+
+	VectorCross( d2, d1, plane );
+
+	plane[3] = a[0]*plane[0] + a[1]*plane[1] + a[2]*plane[2];
+
+	if((plane[0]*plane[0] + plane[1]*plane[1] + plane[2]*plane[2]) == 0)
+    {
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+
+
+unsigned ColorBytes4(float r, float g, float b, float a)
 {
 	union uInt4bytes cvt;
 
@@ -237,6 +265,7 @@ unsigned ColorBytes4 (float r, float g, float b, float a)
 
 	return cvt.i;
 }
+
 
 void MatrixMultiply4x4(const float A[16], const float B[16], float out[16])
 {
@@ -261,7 +290,8 @@ void MatrixMultiply4x4(const float A[16], const float B[16], float out[16])
     out[15] = A[12]*B[3] + A[13]*B[7] + A[14]*B[11] + A[15]*B[15];
 }
 
-void ClearBounds( vec3_t mins, vec3_t maxs )
+
+void ClearBounds(vec3_t mins, vec3_t maxs)
 {
 	mins[0] = mins[1] = mins[2] = 99999;
 	maxs[0] = maxs[1] = maxs[2] = -99999;
@@ -279,7 +309,7 @@ Skips until a matching close brace is found.
 Internal brace depths are properly skipped.
 =================
 */
-qboolean SkipBracedSection (char **program, int depth)
+qboolean SkipBracedSection(char **program, int depth)
 {
 	do
     {
@@ -761,7 +791,7 @@ char* R_ParseExt(char** data_p, qboolean allowLineBreaks)
 			if (c == '\"' || !c)
 			{
 				r_token[len] = 0;
-				*data_p = ( char * ) data;
+				*data_p = data;
 				return r_token;
 			}
             else if ( c == '\n' )
@@ -790,7 +820,6 @@ char* R_ParseExt(char** data_p, qboolean allowLineBreaks)
 
 	r_token[len] = 0;
 
-	*data_p =  data;
+	*data_p = data;
 	return r_token;
 }
-

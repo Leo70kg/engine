@@ -1336,9 +1336,9 @@ static void R_RenderView(viewParms_t *parms)
         {
             float v[3];
      
-            v[0] = tr.viewParms.visBounds[!(i&1)][0] - o[0];
-            v[1] = tr.viewParms.visBounds[!(i&2)][1] - o[1];
-            v[2] = tr.viewParms.visBounds[!(i&4)][2] - o[2];
+            v[0] = tr.viewParms.visBounds[(i&1)][0] - o[0];
+            v[1] = tr.viewParms.visBounds[((i>>1)&1)][1] - o[1];
+            v[2] = tr.viewParms.visBounds[((i>>2)&1)][2] - o[2];
 
             float distance = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
             if( distance > farthestCornerDistance )
