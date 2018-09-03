@@ -130,22 +130,27 @@ int VM_SymbolToValue( vm_t *vm, const char *symbol ) {
 ParseHex
 ===============
 */
-int	ParseHex( const char *text )
+inline static int ParseHex(const char* text)
 {
 	int	value = 0;
-	int	c;
+	unsigned char c = *text;
 
-	while ( ( c = *text++ ) != 0 ) {
-		if ( c >= '0' && c <= '9' ) {
-			value = value * 16 + c - '0';
+	while ( c != 0 )
+    {
+        c = *(++text);
+		if( (c >= '0') && (c <= '9') )
+        {
+			value = (value << 4) + c - '0';
 			continue;
 		}
-		if ( c >= 'a' && c <= 'f' ) {
-			value = value * 16 + 10 + c - 'a';
+		if ( (c >= 'A') && (c <= 'F') )
+        {
+			value = (value << 4) + 10 + c - 'A';
 			continue;
 		}
-		if ( c >= 'A' && c <= 'F' ) {
-			value = value * 16 + 10 + c - 'A';
+        if ( (c >= 'a') && (c <= 'f') )
+        {
+			value = (value << 4) + 10 + c - 'a';
 			continue;
 		}
 	}
@@ -163,6 +168,7 @@ void VM_LoadSymbols( vm_t *vm ) {
 		char	*c;
 		void	*v;
 	} mapfile;
+
 	char *text_p, *token;
 	char	name[MAX_QPATH];
 	char	symbols[MAX_QPATH];
@@ -594,14 +600,14 @@ vm_t* VM_Create(const char *module, intptr_t (*systemCalls)(intptr_t *), vmInter
 	}
 #endif
   
-/*   
+   
 	// VM_Compile may have reset vm->compiled if compilation failed
 	if (!vm->compiled)
 	{
 		VM_PrepareInterpreter( vm, header );
 	}
-*/
-	// free the original file
+	
+    // free the original file
 	FS_FreeFile( header );
 
 	// load the map file

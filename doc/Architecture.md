@@ -285,10 +285,10 @@ and [Server VM](https://github.com/id-Software/Quake-III-Arena/blob/master/code/
 
 System calls (VM -> Quake3) go out this way:
 
-1. The interpreter execute the VM opcodes one after an other (VM_CallInterpreted).
+1. The interpreter execute the VM opcodes one after an other (`VM_CallInterpreted`).
 2. When it encounters a CALLI4 opcode it checks the int method index.
 3. If the value is negative then it is a system call.
-4. The "system call function pointer" (int (*systemCall)( int *parms )) is called with the parameters.
+4. The "system call function pointer" (`int (*systemCall)( int *parms )`) is called with the parameters.
 5. The function pointed to by systemCall acts as a dispatch and route the system call to the right part of quake3.exe
 
 * Parameters are always very simple types: Either primitives types (char,int,float) or pointer to primitive types `(char* , int[])`. 
@@ -303,10 +303,10 @@ Some people still managed to fake it with preallocated buffer: [Malloc in QVM](h
 
 With such a long toolchain, developing VM code was difficult:
 
-    The toolchain was slow.
-    The toolchain was not integrated to Visual Studio.
-    Building a QVM involved using commandline tools. It was cumbersome and interrupted the workflow.
-    With so many elements in the toolchain it was hard to identify which part was at fault in case of bugs.
+* The toolchain was slow.
+* The toolchain was not integrated to Visual Studio.
+* Building a QVM involved using commandline tools. It was cumbersome and interrupted the workflow.
+* With so many elements in the toolchain it was hard to identify which part was at fault in case of bugs.
 
 So idTech3 also have the ability to load a native DLL for the VM parts and it solved everything:
 ![](https://github.com/suijingfeng/engine/blob/master/doc/vm_chain_dev.png)
@@ -392,3 +392,6 @@ intptr_t vmMain ( int command, int arg0, int arg1, ..., int arg11 )
 * Multiple passes to calculate offsets
 * Needs extra memory as native code is bigger
 * Need to be careful when optimizing jump targets
+
+## Reference Project
+* https://github.com/jnz/q3vm

@@ -193,7 +193,8 @@ void RE_AddRefEntityToScene( const refEntity_t *ent )
 	}
 	if ( Q_isnan(ent->origin[0]) || Q_isnan(ent->origin[1]) || Q_isnan(ent->origin[2]) ) {
 		static qboolean firstTime = qtrue;
-		if (firstTime) {
+		if (firstTime)
+        {
 			firstTime = qfalse;
 			ri.Printf( PRINT_WARNING, "RE_AddRefEntityToScene passed a refEntity which has an origin with a NaN component\n");
 		}
@@ -1032,101 +1033,7 @@ static void R_DebugGraphics( void )
 
 //==================================================================================
 
-/*
-static void R_SetupFrustum(void)
-{
-    // Set up the culling frustum planes for the current view using the results
-    // we got from computing the first two rows of the projection matrix.
-
-    // symmetric case can be simplified
-    unsigned char signbits;
-    float normal_op[3];
-    float normal_adj[3];
-    float N[3];
-
-    float ofsorigin[3];
-    VectorCopy(tr.viewParms.or.origin, ofsorigin);	
-
-    {
-        float adjleg = 1.0f / sqrtf(px * px + 1.0f);
-        float oppleg = px * adjleg;
-
-        VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
-        VectorScale(tr.viewParms.or.axis[1], adjleg, normal_adj);
-    }
-    ////
-    VectorAdd(normal_op, normal_adj, N);
-    VectorCopy(N, tr.viewParms.frustum[0].normal);
-    tr.viewParms.frustum[0].dist = DotProduct(ofsorigin, N);
-    tr.viewParms.frustum[0].type = PLANE_NON_AXIAL;
-	// for fast box on planeside test
-    signbits = 0;
-    if (N[0] < 0)
-        signbits |= 1;
-    if (N[1] < 0)
-        signbits |= 2;
-    if (N[2] < 0)
-        signbits |= 4;
-    tr.viewParms.frustum[0].signbits = signbits;
-
-
-    ////
-    VectorSubtract(normal_op, normal_adj, N);
-    VectorCopy(N, tr.viewParms.frustum[1].normal);
-    tr.viewParms.frustum[1].dist = DotProduct(ofsorigin, N);
-    tr.viewParms.frustum[1].type = PLANE_NON_AXIAL;
-	// for fast box on planeside test
-    signbits = 0;
-    if (N[0] < 0)
-        signbits |= 1;
-    if (N[1] < 0)
-        signbits |= 2;
-    if (N[2] < 0)
-        signbits |= 4;
-    tr.viewParms.frustum[1].signbits = signbits;
-
-    {
-        float adjleg = 1.0f / sqrtf(py * py + 1.0f);
-        float oppleg = py * adjleg;
-
-        VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
-        VectorScale(tr.viewParms.or.axis[2], adjleg, normal_adj);
-    }
-    
-    ////
-    VectorAdd(normal_op, normal_adj, N);
-    VectorCopy(N, tr.viewParms.frustum[2].normal);
-    tr.viewParms.frustum[2].dist = DotProduct(ofsorigin, N);
-    tr.viewParms.frustum[2].type = PLANE_NON_AXIAL;
-	// for fast box on planeside test
-    signbits = 0;
-    if (N[0] < 0)
-        signbits |= 1;
-    if (N[1] < 0)
-        signbits |= 2;
-    if (N[2] < 0)
-        signbits |= 4;
-    tr.viewParms.frustum[2].signbits = signbits;
-
-    
-    ////
-    VectorSubtract(normal_op, normal_adj, N);
-    VectorCopy(N, tr.viewParms.frustum[3].normal);
-    tr.viewParms.frustum[3].dist = DotProduct(ofsorigin, N);
-    tr.viewParms.frustum[3].type = PLANE_NON_AXIAL;
-	// for fast box on planeside test
-    signbits = 0;
-    if (N[0] < 0)
-        signbits |= 1;
-    if (N[1] < 0)
-        signbits |= 2;
-    if (N[2] < 0)
-        signbits |= 4;
-    tr.viewParms.frustum[3].signbits = signbits;
-}
-*/
-
-void R_SetupFrustum (void)
+void R_SetupFrustum2 (void)
 {
 	float	xs, xc;
 	float	ang;
@@ -1209,6 +1116,102 @@ void R_SetupFrustum (void)
 }
 
 
+void R_SetupFrustum (float px, float py)
+{
+
+	// Now that we have all the data for the projection matrix we can also setup the view frustum.
+	// R_SetupFrustum(dest, xmin, xmax, ymax, zProj, 0);
+    // Set up the culling frustum planes for the current view using the results
+    // we got from computing the first two rows of the projection matrix.
+
+    // symmetric case can be simplified
+    unsigned char signbits;
+    float normal_op[3];
+    float normal_adj[3];
+    float N[3];
+
+    float ofsorigin[3];
+    VectorCopy(tr.viewParms.or.origin, ofsorigin);	
+
+    {
+        float adjleg = 1 / sqrtf(px * px + 1);
+        float oppleg = px * adjleg;
+
+        VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
+        VectorScale(tr.viewParms.or.axis[1], adjleg, normal_adj);
+    }
+    ////
+    VectorAdd(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[0].normal);
+    tr.viewParms.frustum[0].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[0].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[0].signbits = signbits;
+
+
+    ////
+    VectorSubtract(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[1].normal);
+    tr.viewParms.frustum[1].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[1].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[1].signbits = signbits;
+
+    {
+        float adjleg = 1 / sqrtf(py * py + 1);
+        float oppleg = py * adjleg;
+
+        VectorScale(tr.viewParms.or.axis[0], oppleg, normal_op);
+        VectorScale(tr.viewParms.or.axis[2], adjleg, normal_adj);
+    }
+    
+    ////
+    VectorAdd(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[2].normal);
+    tr.viewParms.frustum[2].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[2].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[2].signbits = signbits;
+
+    
+    ////
+    VectorSubtract(normal_op, normal_adj, N);
+    VectorCopy(N, tr.viewParms.frustum[3].normal);
+    tr.viewParms.frustum[3].dist = DotProduct(ofsorigin, N);
+    tr.viewParms.frustum[3].type = PLANE_NON_AXIAL;
+	// for fast box on planeside test
+    signbits = 0;
+    if (N[0] < 0)
+        signbits |= 1;
+    if (N[1] < 0)
+        signbits |= 2;
+    if (N[2] < 0)
+        signbits |= 4;
+    tr.viewParms.frustum[3].signbits = signbits;
+}
+
+
 static void R_SetupProjection(void)
 {
 
@@ -1229,6 +1232,12 @@ static void R_SetupProjection(void)
     tr.viewParms.projectionMatrix[7] = 0;
     tr.viewParms.projectionMatrix[11] = -1;
     tr.viewParms.projectionMatrix[15] = 0;
+
+
+	// Now that we have all the data for the projection matrix 
+    // we can also setup the view frustum.
+	R_SetupFrustum(px, py);
+
 }
 
 
@@ -1282,9 +1291,6 @@ static void R_RenderView(viewParms_t *parms)
 
 	R_SetupProjection();
 
-	// Now that we have all the data for the projection matrix 
-    // we can also setup the view frustum.
-	R_SetupFrustum();
 
     //R_GenerateDrawSurfs();
 	if( !( tr.refdef.rdflags & RDF_NOWORLDMODEL ) )
@@ -1499,6 +1505,7 @@ void RE_RenderScene( const refdef_t *fd )
     // figure out our zoom or changed fov magnitiude from cg_fov and cg_zoomfov
     // try not to recalculate fov of ui and hud elements
     // && (parms.fovX > 1.3f * parms.fovY) && (tr.refdef.width * glConfig.vidHeight == glConfig.vidWidth * tr.refdef.height)
+
     if ( customscrn )
     {
         // undo vert-
@@ -1506,7 +1513,6 @@ void RE_RenderScene( const refdef_t *fd )
         // recalculate the fov_x
         parms.fovX = atan(tan(parms.fovY * (M_PI/360.0)) * glConfig.windowAspect) * (360.0/M_PI);
     }
-
 
 	if (customscrn){
 		// In Vert- FOV the horizontal FOV is unchanged, so we use it to

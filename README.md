@@ -519,11 +519,11 @@ directory, this restriction is lifted.
 
 # OpenArena gamecode
 
-## Description ##
+## Description
 It's non engine part of OA, includes game, cgame and ui.
 In mod form it is referred as OAX. 
 
-## Loading native dll(.so) ##
+## Loading native dll(.so)
 
 ```
 cd linux_scripts/
@@ -531,7 +531,7 @@ cd linux_scripts/
 ```
 
 
-## Links ##
+## Links
 Development documentation is located here: https://github.com/OpenArena/gamecode/wiki
 
 The development board on the OpenArena forum: http://openarena.ws/board/index.php?board=30.0
@@ -539,17 +539,21 @@ The development board on the OpenArena forum: http://openarena.ws/board/index.ph
 In particular the Open Arena Expanded topic: http://openarena.ws/board/index.php?topic=1908.0
 
 
+## similiar projects
+* https://github.com/FrozenSand/ioq3-for-UrbanTerror-4
 
-## Status ##
+
+
+## Status
 
 * Initial testing on Ubuntu16.04 and Ubuntu18.04, Win7 and Win10
 
 
-## License ##
+## License
 
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
-## extra ##
+## extra
 
 * About com\_hunkmegs
 
@@ -577,8 +581,9 @@ ri.Printf( PRINT_WARNING, "s_worldData.lightGridBounds[i]=%d\n", s_worldData.lig
 
     Build OA with GCC without this issue.
 
-
 * Use gprof to examine the performance of the program
 ```
 gprof openarena.x86_64 gmon.out > report.txt
 ```
+## bugs
+* E_AddRefEntityToScene passed a refEntity which has an origin with a NaN component

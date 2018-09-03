@@ -88,107 +88,118 @@ static	ELastCommand	LastCommand;
 
 static int iss8(int32_t v)
 {
-	return (SCHAR_MIN <= v && v <= SCHAR_MAX);
+	return ( (v >= SCHAR_MIN) && (v <= SCHAR_MAX) );
 }
 
 
-static int NextConstant4(void)
+inline static int Constant4( void )
 {
-	return (code[pc] | (code[pc+1]<<8) | (code[pc+2]<<16) | (code[pc+3]<<24));
-}
-
-static int	Constant4( void )
-{
-	int	v = NextConstant4();
+	int	v = (code[pc] | (code[pc+1]<<8) | (code[pc+2]<<16) | (code[pc+3]<<24));
 	pc += 4;
 	return v;
 }
 
-static int Constant1( void )
-{
-	int	v = code[pc];
-	pc += 1;
-	return v;
-}
 
-static void Emit1( int v ) 
-{
-	buf[ compiledOfs ] = v;
-	compiledOfs++;
 
+inline static void Emit1( int v ) 
+{
+	buf[ compiledOfs++ ] = v;
 	LastCommand = LAST_COMMAND_NONE;
 }
 
-static void Emit2(int v)
+inline static void Emit2(int v)
 {
-	Emit1(v & 255);
-	Emit1((v >> 8) & 255);
+    buf[ compiledOfs++ ] = v & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 8) & 0xFF;
+	LastCommand = LAST_COMMAND_NONE;
 }
 
 
-static void Emit4(int v)
+inline static void Emit4(int v)
 {
-	Emit1(v & 0xFF);
-	Emit1((v >> 8) & 0xFF);
-	Emit1((v >> 16) & 0xFF);
-	Emit1((v >> 24) & 0xFF);
+    buf[ compiledOfs++ ] = v & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 8) & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 16) & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 24) & 0xFF;
+	LastCommand = LAST_COMMAND_NONE;
 }
 
-static void EmitPtr(void *ptr)
+inline static void EmitPtr(void *ptr)
 {
 	intptr_t v = (intptr_t) ptr;
 	
-	Emit4(v);
+    buf[ compiledOfs++ ] = v & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 8) & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 16) & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 24) & 0xFF;
+
 #if idx64
-	Emit1((v >> 32) & 0xFF);
-	Emit1((v >> 40) & 0xFF);
-	Emit1((v >> 48) & 0xFF);
-	Emit1((v >> 56) & 0xFF);
+    buf[ compiledOfs++ ] = (v >> 32) & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 40) & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 48) & 0xFF;
+    buf[ compiledOfs++ ] = (v >> 56) & 0xFF;
 #endif
+
+    LastCommand = LAST_COMMAND_NONE;
 }
 
-static int Hex( int c )
+
+inline static int ch2Hex( unsigned char c )
 {
-	if ( c >= 'a' && c <= 'f' ) {
-		return 10 + c - 'a';
-	}
-	if ( c >= 'A' && c <= 'F' ) {
-		return 10 + c - 'A';
-	}
-	if ( c >= '0' && c <= '9' ) {
+
+	if( (c >= '0') && (c <= '9') )
+    {
 		return c - '0';
 	}
-
-	VMFREE_BUFFERS();
-	Com_Error( ERR_DROP, "Hex: bad char '%c'", c );
-
+	if( (c >= 'A') && (c <= 'F') )
+    {
+		return 10 + c - 'A';
+	}
+	if( (c >= 'a') && (c <= 'f') )
+    {
+		return 10 + c - 'a';
+	}
 	return 0;
 }
 
-static void EmitString( const char *string )
+
+
+inline static void EmitString(const char *string)
 {
-	int	v;
 
 	while ( 1 )
     {
-		v = ( Hex( (int)string[0] ) << 4 ) | Hex( (int)string[1] );
-		Emit1( v );
+		buf[ compiledOfs++ ] = (ch2Hex(string[0]) << 4) | ch2Hex(string[1]);
 
-		if ( !string[2] ) {
+		if ( 0 == string[2] )
 			break;
-		}
-		string += 3;
+        else
+		    string += 3;
 	}
+
+    LastCommand = LAST_COMMAND_NONE;
 }
 
-static void EmitRexString(unsigned char rex, const char *string)
+
+
+inline static void EmitRexString(unsigned char rex, const char *string)
 {
 #if idx64
 	if(rex)
-		Emit1(rex);
+    	buf[ compiledOfs++ ] = rex;
 #endif
 
-	EmitString(string);
+	while ( 1 )
+    {
+		buf[ compiledOfs++ ] = (ch2Hex(string[0]) << 4) | ch2Hex(string[1]);
+
+		if ( 0 == string[2] )
+			break;
+        else
+		    string += 3;
+	}
+
+    LastCommand = LAST_COMMAND_NONE;
 }
 
 
@@ -199,19 +210,6 @@ static void EmitRexString(unsigned char rex, const char *string)
 		Emit4((mask)); \
 	} while(0)
 
-// add bl, bytes
-#define STACK_PUSH(bytes) \
-	do { \
-		EmitString("80 C3"); \
-		Emit1(bytes); \
-	} while(0)
-
-// sub bl, bytes
-#define STACK_POP(bytes) \
-	do { \
-		EmitString("80 EB"); \
-		Emit1(bytes); \
-	} while(0)
 
 static void EmitCommand(ELastCommand command)
 {
@@ -222,11 +220,13 @@ static void EmitCommand(ELastCommand command)
 			break;
 
 		case LAST_COMMAND_SUB_BL_1:
-			STACK_POP(1);			// sub bl, 1
+			EmitString("80 EB");
+		    Emit1(1);			// sub bl, 1
 			break;
 
 		case LAST_COMMAND_SUB_BL_2:
-			STACK_POP(2);			// sub bl, 2
+			EmitString("80 EB");
+		    Emit1(2);			// sub bl, 2
 			break;
 		default:
 			break;
@@ -248,12 +248,15 @@ static void EmitPushStack(vm_t *vm)
 		{	// sub bl, 2
 			compiledOfs -= 3;
 			vm->instructionPointers[instruction - 1] = compiledOfs;
-			STACK_POP(1);		//	sub bl, 1
+			EmitString("80 EB");
+		    Emit1(1);	//	sub bl, 1
 			return;
 		}
 	}
 
-	STACK_PUSH(1);		// add bl, 1
+	// add bl, 1
+    EmitString("80 C3");
+	Emit1(1);
 }
 
 static void EmitMovEAXStack(vm_t *vm, int andit)
@@ -561,7 +564,8 @@ int EmitCallProcedure(vm_t *vm, int sysCallOfs)
 	int retval;
 
 	EmitString("8B 04 9F");		// mov eax, dword ptr [edi + ebx * 4]
-	STACK_POP(1);			// sub bl, 1
+	EmitString("80 EB");
+	Emit1(1);			// sub bl, 1
 	EmitString("85 C0");		// test eax, eax
 
 	// Jump to syscall code, 1 byte offset should suffice
@@ -599,7 +603,9 @@ int EmitCallProcedure(vm_t *vm, int sysCallOfs)
 	EmitCallRel(vm, sysCallOfs);
 
 	// have opStack reg point at return value
-	STACK_PUSH(1);			// add bl, 1
+	// add bl, 1
+    EmitString("80 C3");
+	Emit1(1);
 	EmitString("C3");		// ret
 
 	return retval;
@@ -888,7 +894,7 @@ qboolean ConstOptimize(vm_t *vm, int callProcOfsSyscall)
 		return qtrue;
 
 	case OP_LSH:
-		v = NextConstant4();
+		v = (code[pc] | (code[pc+1]<<8) | (code[pc+2]<<16) | (code[pc+3]<<24));
 		if(v < 0 || v > 31)
 			break;
 
@@ -902,7 +908,7 @@ qboolean ConstOptimize(vm_t *vm, int callProcOfsSyscall)
 		return qtrue;
 
 	case OP_RSHI:
-		v = NextConstant4();
+		v = (code[pc] | (code[pc+1]<<8) | (code[pc+2]<<16) | (code[pc+3]<<24));
 		if(v < 0 || v > 31)
 			break;
 			
@@ -916,7 +922,7 @@ qboolean ConstOptimize(vm_t *vm, int callProcOfsSyscall)
 		return qtrue;
 
 	case OP_RSHU:
-		v = NextConstant4();
+		v = (code[pc] | (code[pc+1]<<8) | (code[pc+2]<<16) | (code[pc+3]<<24));
 		if(v < 0 || v > 31)
 			break;
 			
@@ -1012,7 +1018,7 @@ qboolean ConstOptimize(vm_t *vm, int callProcOfsSyscall)
 
 	case OP_EQF:
 	case OP_NEF:
-		if(NextConstant4())
+		if(code[pc] | (code[pc+1]<<8) | (code[pc+2]<<16) | (code[pc+3]<<24))
 			break;
 		pc += 5;					// CONST + OP_EQF|OP_NEF
 
@@ -1089,17 +1095,21 @@ void VM_Compile(vm_t *vm, vmHeader_t *header)
 
 	// allocate a very large temp buffer, we will shrink it later
 	maxLength = header->codeLength * 8 + 64;
-	buf = Z_Malloc(maxLength);
-	jused = Z_Malloc(jusedSize);
-	code = Z_Malloc(header->codeLength+32);
 	
+    buf = Z_Malloc(maxLength);
+    memset(buf, 0, maxLength);
+
+	jused = Z_Malloc(jusedSize);
 	memset(jused, 0, jusedSize);
-	memset(buf, 0, maxLength);
+
+	code = Z_Malloc(header->codeLength+32);
+	memset(code, 0, header->codeLength+32);
+	
+
 
 	// copy code in larger buffer and put some zeros at the end
 	// so we can safely look ahead for a few instructions in it
 	// without a chance to get false-positive because of some garbage bytes
-	memset(code, 0, header->codeLength+32);
 	memcpy(code, (byte *)header + header->codeOffset, header->codeLength );
 
 	// ensure that the optimisation pass knows about all the jump
@@ -1135,7 +1145,7 @@ void VM_Compile(vm_t *vm, vmHeader_t *header)
 	{
 		if(compiledOfs > maxLength - 16)
 		{
-	        	VMFREE_BUFFERS();
+	        VMFREE_BUFFERS();
 			Com_Error(ERR_DROP, "VM_CompileX86: maxLength exceeded");
 		}
 
@@ -1154,9 +1164,10 @@ void VM_Compile(vm_t *vm, vmHeader_t *header)
 			Com_Error(ERR_DROP, "VM_CompileX86: pc > header->codeLength");
 		}
 
-		op = code[ pc ];
-		pc++;
-		switch ( op ) {
+		op = code[ pc++ ];
+	
+		switch ( op )
+        {
 		case 0:
 			break;
 		case OP_BREAK:
@@ -1191,7 +1202,7 @@ void VM_Compile(vm_t *vm, vmHeader_t *header)
 			EmitMovEAXStack(vm, 0);				// mov eax, dword ptr [edi + ebx * 4]
 			EmitString("8B D6");				// mov edx, esi
 			EmitString("81 C2");				// add edx, 0x12345678
-			Emit4((Constant1() & 0xFF));
+			Emit4(code[pc++]);
 			MASK_REG("E2", vm->dataMask);			// and edx, 0x12345678
 #if idx64
 			EmitRexString(0x41, "89 04 11");		// mov dword ptr [r9 + edx], eax
@@ -1699,7 +1710,6 @@ void VM_Compile(vm_t *vm, vmHeader_t *header)
 		vm->instructionPointers[i] += (intptr_t) vm->codeBase;
 	}
 }
-
 
 void VM_Destroy_Compiled(vm_t* self)
 {

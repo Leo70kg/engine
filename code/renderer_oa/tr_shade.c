@@ -726,7 +726,7 @@ static void RB_CalcDynamicColor( unsigned char (*colors)[4] )
 
 static void ComputeColors( shaderStage_t *pStage )
 {
-	int	i;
+	int	i, nVerts;
 
 	// rgbGen
 	switch ( pStage->rgbGen )
@@ -754,7 +754,9 @@ static void ComputeColors( shaderStage_t *pStage )
 			memcpy( tess.svars.colors, tess.vertexColors, tess.numVertexes * sizeof( tess.vertexColors[0] ) );
 			break;
 		case CGEN_CONST:
-			for ( i = 0; i < tess.numVertexes; i++ )
+            nVerts = tess.numVertexes;
+
+			for(i = 0; i < nVerts; i++)
             {
 				*(int *)tess.svars.colors[i] = *(int *)pStage->constantColor;
 			}
@@ -766,7 +768,9 @@ static void ComputeColors( shaderStage_t *pStage )
 			}
 			else
 			{
-				for ( i = 0; i < tess.numVertexes; i++ )
+                nVerts = tess.numVertexes;
+
+				for ( i = 0; i < nVerts; i++ )
 				{
 					tess.svars.colors[i][0] = tess.vertexColors[i][0] * tr.identityLight;
 					tess.svars.colors[i][1] = tess.vertexColors[i][1] * tr.identityLight;
@@ -806,9 +810,12 @@ static void ComputeColors( shaderStage_t *pStage )
 			VectorCopy( dcolor, backEnd.currentEntity->directedLight);			
 		}break;
 		case CGEN_ONE_MINUS_VERTEX:
+            
+            nVerts = tess.numVertexes;
+
 			if ( tr.identityLight == 1 )
 			{
-				for ( i = 0; i < tess.numVertexes; i++ )
+				for ( i = 0; i < nVerts; i++ )
 				{
 					tess.svars.colors[i][0] = 255 - tess.vertexColors[i][0];
 					tess.svars.colors[i][1] = 255 - tess.vertexColors[i][1];
@@ -817,7 +824,7 @@ static void ComputeColors( shaderStage_t *pStage )
 			}
 			else
 			{
-				for ( i = 0; i < tess.numVertexes; i++ )
+				for ( i = 0; i < nVerts; i++ )
 				{
 					tess.svars.colors[i][0] = ( 255 - tess.vertexColors[i][0] ) * tr.identityLight;
 					tess.svars.colors[i][1] = ( 255 - tess.vertexColors[i][1] ) * tr.identityLight;
@@ -829,7 +836,9 @@ static void ComputeColors( shaderStage_t *pStage )
 			{
 				fog_t* fog = tr.world->fogs + tess.fogNum;
 
-				for ( i = 0; i < tess.numVertexes; i++ )
+                nVerts = tess.numVertexes;
+
+				for ( i = 0; i < nVerts; i++ )
 				{
 					* ( int * )&tess.svars.colors[i] = fog->colorInt;
 				}
