@@ -1,3 +1,14 @@
+
+    ,-------------------------------------------------------------------------------------------------.
+    |    ____       ___      _______   ___     __   __      ____        _______   ___     __   __     |
+    |   / __ \     / _ \    / /____/  / /|\   / /  /  \    /  _ \      / /____/  / /|\   / /  /  \    |
+    |  / /  ) |   / /_| |  / /____   / / ||  / /  / /\ \   | (_) )    / /____   / / ||  / /  / /\ \   |
+    |  | \__/ )  / /___/  / /_____  / /  || / /  / /==\ \  | / \ \   / /_____  / /  || / /  / /==\ \  |
+    |   \____/  /_/      /_/_____/ /_/   |_/_/  /_/    \_\ |_|  \_\ /_/_____/ /_/   |_/_/  /_/    \_\ |
+    |                                                                                                 |
+    `--------------------------------------- http://openarena.ws -------------------------------------'
+
+
 # OpenArena Engine 
 This project is a fork of OpenArena with specific changes to the client and server.
 Some of the major features currently implemented are:
@@ -318,14 +329,13 @@ The defaults for these variables differ depending on the target platform.
   in_joystickNo                     - select which joystick to use
   in_availableJoysticks             - list of available Joysticks
   com_altivec                       - enable use of altivec on PowerPC systems
+  r_fullbright;                     - avoid lightmap pass
+  r_norefresh;                      - bypasses the ref rendering
   r_drawBuffer
   r_stereoSeparation;
   r_stereoEnabled;
   r_anaglyphMode;
-  r_anaglyphMode;
-  r_fullbright;			        	- avoid lightmap pass
-  r_norefresh;			            - bypasses the ref rendering
-  
+ 
 ```
 
 ## New commands

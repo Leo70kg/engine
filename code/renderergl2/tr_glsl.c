@@ -402,7 +402,7 @@ static int GLSL_CompileGPUShader(GLuint program, GLuint *prevShader, const GLcha
 static int GLSL_LoadGPUShaderText(const char *name, const char *fallback,
 	GLenum shaderType, char *dest, int destSize)
 {
-	char            filename[MAX_QPATH];
+	char        filename[MAX_QPATH];
 	GLchar      *buffer = NULL;
 	const GLchar *shaderText = NULL;
 	int             size;
@@ -417,8 +417,9 @@ static int GLSL_LoadGPUShaderText(const char *name, const char *fallback,
 		snprintf(filename, sizeof(filename), "glsl/%s_fp.glsl", name);
 	}
 
-	if ( r_externalGLSL->integer ) {
-		size = ri.FS_ReadFile(filename, (void **)&buffer);
+	if ( r_externalGLSL->integer )
+    {
+		size = ri.R_ReadFile(filename, &buffer);
 	} else {
 		size = 0;
 		buffer = NULL;

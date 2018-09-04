@@ -668,6 +668,8 @@ void	FS_FCloseFile( fileHandle_t f );
 
 long	FS_ReadFileDir(const char *qpath, void *searchPath, qboolean unpure, void **buffer);
 long	FS_ReadFile(const char *qpath, void **buffer);
+long    R_ReadFile(const char *qpath, char **buffer);
+
 // returns the length of the file
 // a null buffer will just return the file length without loading
 // as a quick check for existance. -1 length == not present

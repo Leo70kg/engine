@@ -769,8 +769,19 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 			}
 			
 			// Next Frame...
-			cframe = (mdrCompFrame_t *) &cframe->bones[j];
-			frame = (mdrFrame_t *) &frame->bones[j];
+			// cframe = (mdrCompFrame_t *) &cframe->bones[j];
+			// frame = (mdrFrame_t *) &frame->bones[j];
+            // this suppress GCC strict-aliasing warning 
+            {
+			    // Next Frame...
+                mdrCompBone_t *p = &(cframe->bones[j]);
+			    cframe = (mdrCompFrame_t *) p;
+            }
+
+            {
+                mdrBone_t *p = &frame->bones[j];
+                frame = (mdrFrame_t *) p;
+            }
 		}
 	}
 	else
@@ -795,13 +806,32 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 			frame->radius = LittleFloat(curframe->radius);
 			Q_strncpyz(frame->name, curframe->name, sizeof(frame->name));
 			
-			for (j = 0; j < (int) (mdr->numBones * sizeof(mdrBone_t) / 4); j++) 
+            // suppress GCC strict-aliasing warning 
+#if defined( Q3_BIG_ENDIAN )
+            for (j = 0; j < (int) (mdr->numBones * sizeof(mdrBone_t) / 4); j++) 
 			{
-				((float *)frame->bones)[j] = LittleFloat( ((float *)curframe->bones)[j] );
-			}
+			    ((float *)frame->bones)[j]=FloatSwap(&((float *)curframe->bones)[j]);
+            }
+#else
+            for (j = 0; j < mdr->numBones; j++) 
+			{
+                frame->bones[j] = curframe->bones[j];
+            }
+#endif		
 			
-			curframe = (mdrFrame_t *) &curframe->bones[mdr->numBones];
-			frame = (mdrFrame_t *) &frame->bones[mdr->numBones];
+			//curframe = (mdrFrame_t *) &curframe->bones[mdr->numBones];
+			//frame = (mdrFrame_t *) &frame->bones[mdr->numBones];
+            // suppress GCC strict-aliasing warning 
+            {
+			    mdrBone_t* p = &curframe->bones[mdr->numBones];
+                curframe = (mdrFrame_t *) p;
+            }
+
+            {
+                mdrBone_t* p = &frame->bones[mdr->numBones];
+                frame = (mdrFrame_t *) p;
+            }
+
 		}
 	}
 	

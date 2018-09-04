@@ -1085,22 +1085,16 @@ static void RB_SurfaceFlare(srfFlare_t *surf)
 void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 {
 	int				j, k;
-	float			frontlerp, backlerp;
+	float			backlerp;
 	
 	mdrBone_t		bones[MDR_MAX_BONES], *bonePtr;
 
 
 	// don't lerp if lerping off, or this is the only frame, or the last frame...
 	if (backEnd.currentEntity->e.oldframe == backEnd.currentEntity->e.frame) 
-	{
 		backlerp = 0;	// if backlerp is 0, lerping is off and frontlerp is never used
-		frontlerp = 1;
-	} 
 	else  
-	{
 		backlerp = backEnd.currentEntity->e.backlerp;
-		frontlerp = 1.0f - backlerp;
-	}
 
 	mdrHeader_t* header = (mdrHeader_t *)((unsigned char *)surface + surface->ofsHeader);
 
@@ -1135,10 +1129,37 @@ void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 	else 
 	{
 		bonePtr = bones;
-		
-		for ( j = 0 ; j < header->numBones*12 ; j++ ) 
-		{
-			((float *)bonePtr)[j] = frontlerp * ((float *)frame->bones)[j] + backlerp * ((float *)oldFrame->bones)[j];
+	    int nBones = header->numBones;
+        int n;
+        float tmp;
+		for ( n = 0 ; n < nBones; n++ ) 
+		{        
+            tmp = frame->bones[n].matrix[0][0];
+            bones[n].matrix[0][0] = tmp + backlerp * (oldFrame->bones[n].matrix[0][0] - tmp);
+            tmp = frame->bones[n].matrix[0][1];
+            bones[n].matrix[0][1] = tmp + backlerp * (oldFrame->bones[n].matrix[0][1] - tmp);
+            tmp = frame->bones[n].matrix[0][2];
+            bones[n].matrix[0][2] = tmp + backlerp * (oldFrame->bones[n].matrix[0][2] - tmp);
+            tmp = frame->bones[n].matrix[0][3];
+            bones[n].matrix[0][3] = tmp + backlerp * (oldFrame->bones[n].matrix[0][3] - tmp);
+
+            tmp = frame->bones[n].matrix[1][0];
+            bones[n].matrix[1][0] = tmp + backlerp * (oldFrame->bones[n].matrix[1][0] - tmp);
+            tmp = frame->bones[n].matrix[1][1];
+            bones[n].matrix[1][1] = tmp + backlerp * (oldFrame->bones[n].matrix[1][1] - tmp);
+            tmp = frame->bones[n].matrix[1][2];
+            bones[n].matrix[1][2] = tmp + backlerp * (oldFrame->bones[n].matrix[1][2] - tmp);
+            tmp = frame->bones[n].matrix[1][3];
+            bones[n].matrix[1][3] = tmp + backlerp * (oldFrame->bones[n].matrix[1][3] - tmp);
+
+            tmp = frame->bones[n].matrix[2][0];
+            bones[n].matrix[2][0] = tmp + backlerp * (oldFrame->bones[n].matrix[2][0] - tmp);
+            tmp = frame->bones[n].matrix[2][1];
+            bones[n].matrix[2][1] = tmp + backlerp * (oldFrame->bones[n].matrix[2][1] - tmp);
+            tmp = frame->bones[n].matrix[2][2];
+            bones[n].matrix[2][2] = tmp + backlerp * (oldFrame->bones[n].matrix[2][2] - tmp);
+            tmp = frame->bones[n].matrix[2][3];
+            bones[n].matrix[2][3] = tmp + backlerp * (oldFrame->bones[n].matrix[2][3] - tmp);
 		}
 	}
 
@@ -1178,11 +1199,17 @@ void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 		tess.texCoords[baseVertex + j][0][0] = v->texCoords[0];
 		tess.texCoords[baseVertex + j][0][1] = v->texCoords[1];
 
-		v = (mdrVertex_t *)&v->weights[v->numWeights];
+        
+		//v = (mdrVertex_t *)&v->weights[v->numWeights];
+        {
+            mdrWeight_t* pTmp = &v->weights[v->numWeights];
+            v = (mdrVertex_t *) pTmp;
+        }
 	}
 
 	tess.numVertexes += surface->numVerts;
-}
+
+ }
 
 
 void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) =

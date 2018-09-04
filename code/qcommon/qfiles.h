@@ -204,7 +204,7 @@ MDR file format
 
 typedef struct {
 	int			boneIndex;	// these are indexes into the boneReferences,
-	float		   boneWeight;		// not the global per-frame bone list
+	float		boneWeight;		// not the global per-frame bone list
 	vec3_t		offset;
 } mdrWeight_t;
 

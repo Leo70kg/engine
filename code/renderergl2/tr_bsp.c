@@ -315,7 +315,7 @@ static	void R_LoadLightmaps( lump_t *l, lump_t *surfs ) {
 		// if (tr.worldLightmapping)
 		{
 			char filename[MAX_QPATH*2];
-			byte *hdrLightmap = NULL;
+			char* hdrLightmap = NULL;
 			int size = 0;
 
 			// look for hdr lightmaps
@@ -324,12 +324,13 @@ static	void R_LoadLightmaps( lump_t *l, lump_t *surfs ) {
 				snprintf( filename, sizeof( filename ), "maps/%s/lm_%04d.hdr", s_worldData.baseName, i * (tr.worldDeluxeMapping ? 2 : 1) );
 				//ri.Printf(PRINT_ALL, "looking for %s\n", filename);
 
-				size = ri.FS_ReadFile(filename, (void **)&hdrLightmap);
+				size = ri.R_ReadFile(filename, &hdrLightmap);
 			}
 
 			if (hdrLightmap)
 			{
-				byte *p = hdrLightmap, *end = hdrLightmap + size;
+				char *p = hdrLightmap; 
+                char *end = hdrLightmap + size;
 				//ri.Printf(PRINT_ALL, "found!\n");
 				
 				/* FIXME: don't just skip over this header and actually parse it */
@@ -2210,7 +2211,7 @@ void R_LoadLightGrid( lump_t *l )
 
 		if (hdrLightGrid)
 		{
-			//ri.Printf(PRINT_ALL, "found!\n");
+			ri.Printf(PRINT_ALL, "found!\n");
 
 			if (size != sizeof(float) * 6 * numGridPoints)
 				ri.Error(ERR_DROP, "Bad size for %s (%i, expected %i)!", filename, size, (int)(sizeof(float)) * 6 * numGridPoints);
@@ -2697,10 +2698,8 @@ Called directly from cgame
 void RE_LoadWorldMap( const char *name ) {
 	int			i;
 	dheader_t	*header;
-	union {
-		byte *b;
-		void *v;
-	} buffer;
+	
+	char* buffer = NULL;
 	byte		*startMarker;
 
 	if ( tr.worldMapLoaded ) {
@@ -2733,8 +2732,8 @@ void RE_LoadWorldMap( const char *name ) {
 	tr.worldMapLoaded = qtrue;
 
 	// load it
-    ri.FS_ReadFile( name, &buffer.v );
-	if ( !buffer.b ) {
+    ri.R_ReadFile( name, &buffer );
+	if ( NULL == buffer ) {
 		ri.Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
 	}
 
@@ -2750,8 +2749,8 @@ void RE_LoadWorldMap( const char *name ) {
 
 	startMarker = ri.Hunk_Alloc(0, h_low);
 
-	header = (dheader_t *)buffer.b;
-	fileBase = (byte *)header;
+	header = (dheader_t *)buffer;
+	fileBase = (unsigned char *)buffer;
 
 	i = LittleLong (header->version);
 	if ( i != BSP_VERSION ) {
@@ -2779,7 +2778,7 @@ void RE_LoadWorldMap( const char *name ) {
 
 	// determine vertex light directions
 	R_CalcVertexLightDirs();
-
+/*
 	// determine which parts of the map are in sunlight
 	if (0)
 	{
@@ -2926,13 +2925,13 @@ void RE_LoadWorldMap( const char *name ) {
 				ibounds[1][1] = CLAMP(ibounds[1][1], 0, w->lightGridSize[1]);
 				ibounds[1][2] = CLAMP(ibounds[1][2], 0, w->lightGridSize[2]);
 
-				/*
+				
 				ri.Printf(PRINT_ALL, "surf %d bounds (%f %f %f)-(%f %f %f) ibounds (%d %d %d)-(%d %d %d)\n", i,
 					ci->bounds[0][0], ci->bounds[0][1], ci->bounds[0][2],
 					ci->bounds[1][0], ci->bounds[1][1], ci->bounds[1][2],
 					ibounds[0][0], ibounds[0][1], ibounds[0][2],
 					ibounds[1][0], ibounds[1][1], ibounds[1][2]);
-				*/
+				
 
 				goodSamples = 0;
 				numSamples = 0;
@@ -2966,7 +2965,8 @@ void RE_LoadWorldMap( const char *name ) {
 
 		ri.Free(primaryLightGrid);
 	}
-
+*/
+    
 	// load cubemaps
 	if (r_cubeMapping->integer)
 	{
@@ -3005,5 +3005,5 @@ void RE_LoadWorldMap( const char *name ) {
 		R_RenderMissingCubemaps();
 	}
 
-    ri.FS_FreeFile( buffer.v );
+    ri.FS_FreeFile( buffer );
 }

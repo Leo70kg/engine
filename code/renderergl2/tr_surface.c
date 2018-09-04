@@ -1276,8 +1276,8 @@ static void RB_SurfaceSkip( void *surf ) {
 
 void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 {
-	int				i, j, k;
-	float			frontlerp, backlerp;
+	int				j, k;
+	float			backlerp;
 	int				*triangles;
 	int				indexes;
 	int				baseIndex, baseVertex;
@@ -1294,12 +1294,10 @@ void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 	if (backEnd.currentEntity->e.oldframe == backEnd.currentEntity->e.frame) 
 	{
 		backlerp	= 0;	// if backlerp is 0, lerping is off and frontlerp is never used
-		frontlerp	= 1;
 	} 
 	else  
 	{
 		backlerp	= backEnd.currentEntity->e.backlerp;
-		frontlerp	= 1.0f - backlerp;
 	}
 
 	header = (mdrHeader_t *)((byte *)surface + surface->ofsHeader);
@@ -1336,10 +1334,37 @@ void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 	else 
 	{
 		bonePtr = bones;
-		
-		for ( i = 0 ; i < header->numBones*12 ; i++ ) 
-		{
-			((float *)bonePtr)[i] = frontlerp * ((float *)frame->bones)[i] + backlerp * ((float *)oldFrame->bones)[i];
+	    int nBones = header->numBones;
+        int n;
+        float tmp;
+		for ( n = 0 ; n < nBones; n++ ) 
+		{        
+            tmp = frame->bones[n].matrix[0][0];
+            bones[n].matrix[0][0] = tmp + backlerp * (oldFrame->bones[n].matrix[0][0] - tmp);
+            tmp = frame->bones[n].matrix[0][1];
+            bones[n].matrix[0][1] = tmp + backlerp * (oldFrame->bones[n].matrix[0][1] - tmp);
+            tmp = frame->bones[n].matrix[0][2];
+            bones[n].matrix[0][2] = tmp + backlerp * (oldFrame->bones[n].matrix[0][2] - tmp);
+            tmp = frame->bones[n].matrix[0][3];
+            bones[n].matrix[0][3] = tmp + backlerp * (oldFrame->bones[n].matrix[0][3] - tmp);
+
+            tmp = frame->bones[n].matrix[1][0];
+            bones[n].matrix[1][0] = tmp + backlerp * (oldFrame->bones[n].matrix[1][0] - tmp);
+            tmp = frame->bones[n].matrix[1][1];
+            bones[n].matrix[1][1] = tmp + backlerp * (oldFrame->bones[n].matrix[1][1] - tmp);
+            tmp = frame->bones[n].matrix[1][2];
+            bones[n].matrix[1][2] = tmp + backlerp * (oldFrame->bones[n].matrix[1][2] - tmp);
+            tmp = frame->bones[n].matrix[1][3];
+            bones[n].matrix[1][3] = tmp + backlerp * (oldFrame->bones[n].matrix[1][3] - tmp);
+
+            tmp = frame->bones[n].matrix[2][0];
+            bones[n].matrix[2][0] = tmp + backlerp * (oldFrame->bones[n].matrix[2][0] - tmp);
+            tmp = frame->bones[n].matrix[2][1];
+            bones[n].matrix[2][1] = tmp + backlerp * (oldFrame->bones[n].matrix[2][1] - tmp);
+            tmp = frame->bones[n].matrix[2][2];
+            bones[n].matrix[2][2] = tmp + backlerp * (oldFrame->bones[n].matrix[2][2] - tmp);
+            tmp = frame->bones[n].matrix[2][3];
+            bones[n].matrix[2][3] = tmp + backlerp * (oldFrame->bones[n].matrix[2][3] - tmp);
 		}
 	}
 
@@ -1378,7 +1403,11 @@ void RB_MDRSurfaceAnim( mdrSurface_t *surface )
 		tess.texCoords[baseVertex + j][0] = v->texCoords[0];
 		tess.texCoords[baseVertex + j][1] = v->texCoords[1];
 
-		v = (mdrVertex_t *)&v->weights[v->numWeights];
+        //supress GGC strict-alisaing warnning
+		{
+            mdrWeight_t* pTmp = &v->weights[v->numWeights];
+            v = (mdrVertex_t *) pTmp;
+        }
 	}
 
 	tess.numVertexes += surface->numVerts;

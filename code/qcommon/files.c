@@ -1923,6 +1923,96 @@ long FS_ReadFileDir(const char *qpath, void *searchPath, qboolean unpure, void *
 	return len;
 }
 
+
+
+/*
+============
+FS_ReadFile
+
+Filename are relative to the openarena search path
+a null buffer will just return the file length without loading
+RF = For Renderer, assuming not .cfg file buffer != NULL
+============
+*/
+long R_ReadFile(const char *qpath, char **buffer)
+{
+
+    long len;
+	fileHandle_t h;
+    fileHandle_t *file = &h;
+/////////////////////////////////////////////
+	searchpath_t *search;
+
+	for(search = fs_searchpaths; search; search = search->next)
+	{
+		len = FS_FOpenFileReadDir(qpath, search, file, qfalse, qfalse);
+
+		if(file == NULL)
+		{
+			if(len > 0)
+				goto HERE;
+		}
+		else
+		{
+			if(len >= 0 && *file)
+				goto HERE;
+		}
+	}
+	
+
+	if(file)
+	{
+		*file = 0;
+		len = -1;
+	}
+	else
+	{
+		// When file is NULL, we're querying the existance of the file
+		// If we've got here, it doesn't exist
+		len = 0;
+	}
+    
+HERE:
+///////////////////////////////////////////////////////////
+	if( h == 0 )
+    {
+		if ( buffer ) {
+			*buffer = NULL;
+		}
+
+		return -1;
+	}
+
+	if ( !buffer )
+    {
+		FS_FCloseFile(h);
+	}
+
+
+	fs_loadCount++;
+	fs_loadStack++;
+
+	char* buf = Hunk_AllocateTempMemory(len+1);
+	*buffer = buf;
+
+    FS_Read(buf, len, *file);
+
+    /////////////////////////////////////////////////
+    // int FS_Read( void *buffer, int len, fileHandle_t f )
+
+
+	// guarantee that it will have a trailing 0 for string operations
+	buf[len] = 0;
+	FS_FCloseFile( *file );
+
+
+	return len;
+}
+
+
+
+
+
 /*
 ============
 FS_ReadFile
@@ -2051,7 +2141,6 @@ long FS_ReadFile(const char *qpath, void **buffer)
 		FS_Flush( com_journalDataFile );
 	}
 	return len;
-
 }
 
 /*
