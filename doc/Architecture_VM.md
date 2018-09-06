@@ -1,89 +1,3 @@
-# Quake III Architecture Overview
-
-![](https://github.com/suijingfeng/engine/blob/master/doc/q3_workspace_architecture2.png)
-
-
-## Introduction
-
-Note: this is an ASCII dump of the http://fabiensanglard.net/quake3/index.php and 
-http://users.suse.com/%7Elnussel/talks/fosdem_talk_2013_q3.pdf. 
-
-
-Quake III engine is mostly an evolution of idTech2 but there are some interesting novelties. The key points can be summarized as follow: 
-
-
-* New dualcore renderer with material based shaders.
-* New Network model based on snapshots.
-* New Virtual Machines playing an essential part in the engine, 
-combining Quake1 portability/security with Quake2 speed. This is achieved by compiling the bytecode to x86 instruction on the fly.
-* New Artificial Intelligence for the bots.
-
-
- 
-Two important things to understand the design:
-
-1. Every single input (keyboard, win32 message, mouse, UDP socket) is converted into
-an event_t and placed in a centralized event queue (sysEvent_t eventQue[256]). This
-allows among other things to record (journalize) each inputs in order to recreate
-bugs. This design decision was discussed at length in John Carmack's .plan on 
-Oct 14, 1998.
-
-2. Explicit split of Client and Server. The explicit split of networking into a
-client presentation side and the server logical side was really the right thing
-to do. We backed away from that in Doom 3 and through most of Rage, but we are 
-migrating back towards it. All of the Tech3 licensees were forced to do somewhat
-more work to achieve single player effects with the split architecture, but it 
-turns out that the enforced discipline really did have a worthwhile payoff.
-
-3. The server side is responsible for maintaining the state of the game, 
-determine what is needed by clients and propagate it over the network. 
-It is statically linked against bot.lib which is a separate project
-
-
-## Memory allocation
-
-Two custom allocators at work here:
-
-* Zone Allocator: Responsible for runtime,small and short-term memory allocations.
-* Hunk Allocator: Responsible for on level load, big and long-term allocations from the pak files (geometry,map, textures, animations).
-
-
-
-## the Game Modules
-
-### Game
-* run on server side
-* maintain game state
-* compute bots
-* move objects
-
-### CGame
-* run on client side
-* predict player states
-* tell sound and gfx renderers what to show
-
-### UI
-* run on client side
-* show menus
-
-
-
-## The Quake III Way for Extensions a Program
-
-### Bytecode
-* compiled by special compiler (lcc)
-* byte code interpreted by a virtual machine
-* strict sandbox, strict memory limit
-* main program can catch exceptions and unload VM
-
-### Native
-* writen in C and compiler as shared library
-* must restrict to embedded libc subset
-* must not use external libs(such as malloc)
-
-
-
-
 ## The Virtual Machine Architecture
 
 If previous engines delegated only the gameplay to the Virtual Machine,
@@ -106,18 +20,102 @@ This is achieved by compiling the bytecode to x86 instruction on the fly.
 
 The virtual machine was initially supposed to be a plain bytecode interpreter 
 but performances were disappointing so the development team wrote a runtime x86 compiler.
-According to the .plan from Aug 16, 1999.
 
+
+According to the John Carmark's .plan from Nov 03, 1998:
+
+This was the most significant thing I talked about at The Frag, 
+so here it is for everyone else. The way the QA game architecture
+has been developed so far has been as two seperate binary dll¡¯s: 
+one for the server side game logic, and one for the client side
+presentation logic. While it was easiest to begin development like
+that, there are two crucial problems with shipping the game that
+way: security and portability.
+
+It¡¯s one thing to ask the people who run dedicated servers to make
+informed decisions about the safety of a given mod, but its a 
+completely different matter to auto-download a binary image to a 
+first time user connecting to a server they found. The quake 2 server
+crashing attacks have certainly proven that there are hackers that 
+enjoy attacking games, and shipping around binary code would be a 
+very tempting opening for them to do some very nasty things.
+
+With quake and Quake 2, all game modifications were strictly server side,
+so any port of the game could connect to any server without problems.
+With Quake 2¡¯s binary server dll¡¯s not all ports could necessarily run a
+server, but they could all play. With significant chunks of code now 
+running on the client side, if we stuck with binary dll¡¯s then the less
+popular systems would find that they could not connect to new servers 
+because the mod code hadn¡¯t been ported. I considered having things set
+up in such a way that client game dll¡¯s could be sort of forwards-compatable, 
+where they could always connect and play, but new commands and entity types
+just might now show up. We could also GPL the game code to force mod authors
+to release source with the binaries, but that would still be inconvenient to
+deal with all the porting.
+
+Related both issues is client side cheating. Certain cheats are easy to do
+if you can hack the code, so the server will need to verify which code the
+client is running. With multiple ported versions, it wouldn¡¯t be possible
+to do any binary verification.
+If we were willing to wed ourselves completely to the windows platform,
+we might have pushed ahead with some attempt at binary verification
+of dlls, but I ruled that option out. I want QuakeArena running on every
+platform that has hardware accelerated OpenGL and an internet connection.
+
+The only real solution to these problems is to use an interpreted language
+like Quake 1 did. I have reached the conclusion that the benefits of a
+standard language outweigh the benefits of a custom language for our
+purposes. I would not go back and extend QC, because that stretches
+the effort from simply system and interpreter design to include language
+design, and there is already plenty to do.
+
+
+I had been working under the assumption that Java was the right way to
+go, but recently I reached a better conclusion. The programming language
+for QuakeArena mods is interpreted ANSI C.  (well, I am dropping the double
+data type, but otherwise it should be pretty conformant)
+
+The game will have an interpreter for a virtual RISC-like CPU. This should
+have a minor speed benefit over a byte-coded, stack based java interpreter.
+Loads and stores are confined to a preset block of memory, and access to 
+all external system facilities is done with system traps to the main game
+code, so it is completely secure. The tools necessary for building mods 
+will all be freely available: a modified version of LCC and a new program
+called q3asm. LCC is a wonderful project - a cross platform, cross 
+compiling ANSI C compiler done in under 20K lines of code. Anyone interested
+in compilers should pick up a copy of ¡±A retargetable C compiler: design and
+implementation¡± by Fraser and Hanson.
+
+You can¡¯t link against any libraries, so every function must be resolved.
+Things like strcmp, memcpy, rand, etc. must all be implemented directly.
+I have code for all the ones I use, but some people may have to modify
+their coding styles or provide implementations for other functions.
+It is a fair amount of work to restructure all the interfaces to not share
+pointers between the system and the games, but it is a whole lot easier
+than porting everything to a new language. The client game code is about
+10k lines, and the server game code is about 20k lines.
+
+
+The drawback is performance. It will probably perform somewhat like
+QC. Most of the heavy lifting is still done in the builtin functions for path
+tracing and world sampling, but you could still hurt yourself by loop-
+ing over tons of objects every frame. Yes, this does mean more load on
+servers, but I am making some improvements in other parts that I hope
+will balance things to about the way Q2 was on previous generation hardware.
+
+There is also the amusing avenue of writing hand tuned virtual assembly
+assembly language for critical functions..
+I think this is The Right Thing.
+
+
+According to the .plan from Aug 16, 1999: 
 
 As I mentioned at quakecon, I decided to go ahead and try a dynamic
 code generator to speed up the game interpreters. I was uneasy about it,
 but the current performance was far enough off of my targets that I didn¡¯t
-see any other way. 
-
-At first, I was surprised at how quickly it was going. 
+see any other way. At first, I was surprised at how quickly it was going. 
 The first day, I worked out my system calling conventions and execution environment and
 implemented enough opcode translations to get ¡±hello world¡± executing.
-
 The second day I just plowed through opcode translations, tediously generating a lot of code like this:
 
 
@@ -143,6 +141,9 @@ case OP_DIVI:
     EmitString( "83 EF 04" );  // sub edi,4
     break;
 ```
+
+
+
 
 In Quake III a virtual machine is called a QVM: Three of them are loaded at any time:
 

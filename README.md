@@ -6,9 +6,9 @@
     | ((       ))  +====+  +===+    +====+  //  \\    || // +===+    +====+ ====+   |
     | ((       )) //   // //   \\  //   // //====\\   ||// //   \\  //   // ____\\  |
     |  \\_____// //===//  \\===// //   // //      \\  ||/  \\===// //   // //    \\ |
-    |   `-----' //         \\___ //   // //        \\ ||   \\___  //   //  \\____// |
+    |   `-----' //         \\___ //   // //        \\ ||    \\___ //   //  \\____// |
     |                                                                               |
-    `--------------------------------- http://openarena.ws -------------------------'
+    `------------------------------ http://openarena.ws ----------------------------'
 
 
 # OpenArena Engine 
@@ -599,3 +599,5 @@ gprof openarena.x86_64 gmon.out > report.txt
 ```
 ## bugs
 * E_AddRefEntityToScene passed a refEntity which has an origin with a NaN component
+* Unpure client detected. Invalid .PK3 files referenced!
+

@@ -211,27 +211,37 @@ inline static void EmitRexString(unsigned char rex, const char *string)
 	} while(0)
 
 
-static void EmitCommand(ELastCommand command)
+inline static void EmitCommand(ELastCommand command)
 {
 	switch(command)
 	{
 		case LAST_COMMAND_MOV_STACK_EAX:
-			EmitString("89 04 9F");		// mov dword ptr [edi + ebx * 4], eax
+			// EmitString("89 04 9F");		// mov dword ptr [edi + ebx * 4], eax
+            
+            buf[ compiledOfs++ ] = 0x89;
+            buf[ compiledOfs++ ] = 0x04;
+            buf[ compiledOfs++ ] = 0x9F;
 			break;
 
 		case LAST_COMMAND_SUB_BL_1:
-			EmitString("80 EB");
-		    Emit1(1);			// sub bl, 1
+			//EmitString("80 EB");
+		    buf[ compiledOfs++ ] = 0x80;
+            buf[ compiledOfs++ ] = 0xEB;
+            //Emit1(1);			// sub bl, 1
+            buf[ compiledOfs++ ] = 0x01;
 			break;
 
 		case LAST_COMMAND_SUB_BL_2:
-			EmitString("80 EB");
-		    Emit1(2);			// sub bl, 2
+			//EmitString("80 EB");
+		    buf[ compiledOfs++ ] = 0x80;
+            buf[ compiledOfs++ ] = 0xEB;
+            //Emit1(2);			// sub bl, 2
+            buf[ compiledOfs++ ] = 0x02;
 			break;
 		default:
 			break;
 	}
-	LastCommand = command;
+    LastCommand = command;
 }
 
 static void EmitPushStack(vm_t *vm)
@@ -248,15 +258,24 @@ static void EmitPushStack(vm_t *vm)
 		{	// sub bl, 2
 			compiledOfs -= 3;
 			vm->instructionPointers[instruction - 1] = compiledOfs;
-			EmitString("80 EB");
-		    Emit1(1);	//	sub bl, 1
+			//EmitString("80 EB");
+		    buf[ compiledOfs++ ] = 0x80;
+            buf[ compiledOfs++ ] = 0xEB;
+            //Emit1(1);			// sub bl, 1
+            buf[ compiledOfs++ ] = 0x01;
+	        LastCommand = LAST_COMMAND_NONE;
 			return;
 		}
 	}
 
 	// add bl, 1
-    EmitString("80 C3");
-	Emit1(1);
+    //EmitString("80 C3");
+	//Emit1(1);
+
+	buf[ compiledOfs++ ] = 0x80;
+    buf[ compiledOfs++ ] = 0xC3;
+    buf[ compiledOfs++ ] = 0x01;
+	LastCommand = LAST_COMMAND_NONE;
 }
 
 static void EmitMovEAXStack(vm_t *vm, int andit)
@@ -1737,8 +1756,8 @@ extern uint8_t qvmcall64(int *programStack, int *opStack, intptr_t *instructionP
 intptr_t VM_CallCompiled(vm_t *vm, int *args)
 {
 	unsigned char stack[OPSTACK_SIZE + 15];
-	//int	*opStack;
-	int	arg;
+	unsigned char* image;
+    int	arg;
 
 	currentVM = vm;
 
@@ -1748,9 +1767,8 @@ intptr_t VM_CallCompiled(vm_t *vm, int *args)
 	// we might be called recursively, so this might not be the very top
 	int programStack = vm->programStack;
     int stackOnEntry = vm->programStack;
-
 	// set up the stack frame 
-	unsigned char* image = vm->dataBase;
+	image = vm->dataBase;
 
 	programStack -= ( 8 + 4 * MAX_VMMAIN_ARGS );
 

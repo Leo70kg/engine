@@ -778,7 +778,8 @@ intptr_t QDECL VM_Call(struct vm_s *vm, int callnum, ... )
 
 		a.callnum = callnum;
 		va_start(ap, callnum);
-		for(i = 0; i < ARRAY_LEN(a.args); i++)
+		
+        for(i = 0; i < MAX_VMMAIN_ARGS-1; i++)
         {
 			a.args[i] = va_arg(ap, int);
 		}

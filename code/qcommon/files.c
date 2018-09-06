@@ -396,10 +396,12 @@ static long FS_HashFileName( const char *fname, int hashSize ) {
 	return hash;
 }
 
-static fileHandle_t	FS_HandleForFile(void) {
-	int		i;
+static fileHandle_t	FS_HandleForFile(void)
+{
+	int	i;
 
-	for ( i = 1 ; i < MAX_FILE_HANDLES ; i++ ) {
+	for ( i = 1; i < MAX_FILE_HANDLES; i++)
+    {
 		if ( fsh[i].handleFiles.file.o == NULL ) {
 			return i;
 		}
@@ -855,7 +857,8 @@ For some reason, other dll's can't just cal fclose()
 on files returned by FS_FOpenFile...
 ==============
 */
-void FS_FCloseFile( fileHandle_t f ) {
+void FS_FCloseFile( fileHandle_t f )
+{
 	if ( !fs_searchpaths ) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization" );
 	}
@@ -1937,69 +1940,39 @@ RF = For Renderer, assuming not .cfg file buffer != NULL
 long R_ReadFile(const char *qpath, char **buffer)
 {
 
-    long len;
-	fileHandle_t h;
+    long len = -1;
+	fileHandle_t h = 0;
     fileHandle_t *file = &h;
-/////////////////////////////////////////////
+
 	searchpath_t *search;
 
 	for(search = fs_searchpaths; search; search = search->next)
 	{
 		len = FS_FOpenFileReadDir(qpath, search, file, qfalse, qfalse);
 
-		if(file == NULL)
-		{
-			if(len > 0)
-				goto HERE;
-		}
-		else
-		{
-			if(len >= 0 && *file)
-				goto HERE;
-		}
+/////////////////////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////////////////////
+		if(len >= 0 && h)
+			break;
 	}
 	
 
-	if(file)
-	{
-		*file = 0;
-		len = -1;
-	}
-	else
-	{
-		// When file is NULL, we're querying the existance of the file
-		// If we've got here, it doesn't exist
-		len = 0;
-	}
-    
-HERE:
-///////////////////////////////////////////////////////////
 	if( h == 0 )
     {
-		if ( buffer ) {
+		if ( buffer )
 			*buffer = NULL;
-		}
-
 		return -1;
 	}
-
-	if ( !buffer )
-    {
-		FS_FCloseFile(h);
-	}
-
 
 	fs_loadCount++;
 	fs_loadStack++;
 
 	char* buf = Hunk_AllocateTempMemory(len+1);
 	*buffer = buf;
-
     FS_Read(buf, len, *file);
-
-    /////////////////////////////////////////////////
-    // int FS_Read( void *buffer, int len, fileHandle_t f )
-
 
 	// guarantee that it will have a trailing 0 for string operations
 	buf[len] = 0;

@@ -198,7 +198,7 @@ R_LoadLightmaps
 #define	DEFAULT_LIGHTMAP_SIZE	128
 static	void R_LoadLightmaps( lump_t *l, lump_t *surfs ) {
 	imgFlags_t  imgFlags = IMGFLAG_NOLIGHTSCALE | IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE;
-	byte		*buf, *buf_p;
+	unsigned char *buf, *buf_p;
 	dsurface_t  *surf;
 	int			len;
 	byte		*image;
@@ -347,7 +347,7 @@ static	void R_LoadLightmaps( lump_t *l, lump_t *surfs ) {
 				if (p >= end)
 					ri.Error(ERR_DROP, "Bad header for %s!", filename);
 
-				buf_p = p;
+				buf_p = (unsigned char*)p;
 
 #if 0 // HDRFILE_RGBE
 				if ((int)(end - hdrLightmap) != tr.lightmapSize * tr.lightmapSize * 4)
@@ -2445,41 +2445,38 @@ void R_LoadEnvironmentJson(const char *baseName)
 {
 	char filename[MAX_QPATH];
 
-	union {
-		char *c;
-		void *v;
-	} buffer;
-	char *bufferEnd;
+
+	char *buffer;
 
 	const char *cubemapArrayJson;
 	int filelen, i;
 
 	snprintf(filename, MAX_QPATH, "cubemaps/%s/env.json", baseName);
 
-	filelen = ri.FS_ReadFile(filename, &buffer.v);
-	if (!buffer.c)
+	filelen = ri.R_ReadFile(filename, &buffer);
+	if (!buffer)
 		return;
-	bufferEnd = buffer.c + filelen;
+	char * bufferEnd = buffer + filelen;
 
-	if (JSON_ValueGetType(buffer.c, bufferEnd) != JSONTYPE_OBJECT)
+	if (JSON_ValueGetType(buffer, bufferEnd) != JSONTYPE_OBJECT)
 	{
 		ri.Printf(PRINT_ALL, "Bad %s: does not start with a object\n", filename);
-		ri.FS_FreeFile(buffer.v);
+		ri.FS_FreeFile(buffer);
 		return;
 	}
 
-	cubemapArrayJson = JSON_ObjectGetNamedValue(buffer.c, bufferEnd, "Cubemaps");
+	cubemapArrayJson = JSON_ObjectGetNamedValue(buffer, bufferEnd, "Cubemaps");
 	if (!cubemapArrayJson)
 	{
 		ri.Printf(PRINT_ALL, "Bad %s: no Cubemaps\n", filename);
-		ri.FS_FreeFile(buffer.v);
+		ri.FS_FreeFile(buffer);
 		return;
 	}
 
 	if (JSON_ValueGetType(cubemapArrayJson, bufferEnd) != JSONTYPE_ARRAY)
 	{
 		ri.Printf(PRINT_ALL, "Bad %s: Cubemaps not an array\n", filename);
-		ri.FS_FreeFile(buffer.v);
+		ri.FS_FreeFile(buffer);
 		return;
 	}
 
@@ -2510,7 +2507,7 @@ void R_LoadEnvironmentJson(const char *baseName)
 			cubemap->parallaxRadius = JSON_ValueGetFloat(keyValueJson, bufferEnd);
 	}
 
-	ri.FS_FreeFile(buffer.v);
+	ri.FS_FreeFile(buffer);
 }
 
 void R_LoadCubemapEntities(char *cubemapEntityName)
