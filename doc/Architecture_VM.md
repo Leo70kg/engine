@@ -18,7 +18,7 @@ but performances were disappointing so the development team wrote a runtime x86 
 
 According to the John Carmark's .plan from Nov 03, 1998:
 
-> 
+<blockquote>
 This was the most significant thing I talked about at The Frag, 
 so here it is for everyone else. The way the QA game architecture
 has been developed so far has been as two seperate binary dll¡¯s: 
@@ -101,7 +101,7 @@ will balance things to about the way Q2 was on previous generation hardware.
 There is also the amusing avenue of writing hand tuned virtual assembly
 assembly language for critical functions..
 I think this is The Right Thing.
-
+</blockquote>
 
 According to the .plan from Aug 16, 1999: 
 
