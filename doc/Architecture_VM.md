@@ -23,9 +23,8 @@ This was the most significant thing I talked about at The Frag,
 so here it is for everyone else. The way the QA game architecture
 has been developed so far has been as two seperate binary dll¡¯s: 
 one for the server side game logic, and one for the client side
-presentation logic. While it was easiest to begin development like
-that, there are two crucial problems with shipping the game that
-way: security and portability.
+presentation logic. While it was easiest to begin development like that, 
+there are two crucial problems with shipping the game that way: security and portability.
 
 
 It¡¯s one thing to ask the people who run dedicated servers to make
@@ -112,7 +111,7 @@ I think this is The Right Thing.
 
 According to the .plan from Aug 16, 1999: 
 
->
+<blockquote>
 As I mentioned at quakecon, I decided to go ahead and try a dynamic
 code generator to speed up the game interpreters. I was uneasy about it,
 but the current performance was far enough off of my targets that I didn¡¯t
@@ -120,6 +119,7 @@ see any other way. At first, I was surprised at how quickly it was going.
 The first day, I worked out my system calling conventions and execution environment and
 implemented enough opcode translations to get ¡±hello world¡± executing.
 The second day I just plowed through opcode translations, tediously generating a lot of code like this:
+</blockquote>
 
 
 ```
