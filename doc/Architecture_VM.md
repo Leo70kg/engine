@@ -27,6 +27,7 @@ presentation logic. While it was easiest to begin development like
 that, there are two crucial problems with shipping the game that
 way: security and portability.
 
+
 It¡¯s one thing to ask the people who run dedicated servers to make
 informed decisions about the safety of a given mod, but its a 
 completely different matter to auto-download a binary image to a 
@@ -34,6 +35,7 @@ first time user connecting to a server they found. The quake 2 server
 crashing attacks have certainly proven that there are hackers that 
 enjoy attacking games, and shipping around binary code would be a 
 very tempting opening for them to do some very nasty things.
+
 
 With quake and Quake 2, all game modifications were strictly server side,
 so any port of the game could connect to any server without problems.
@@ -48,6 +50,7 @@ just might now show up. We could also GPL the game code to force mod authors
 to release source with the binaries, but that would still be inconvenient to
 deal with all the porting.
 
+
 Related both issues is client side cheating. Certain cheats are easy to do
 if you can hack the code, so the server will need to verify which code the
 client is running. With multiple ported versions, it wouldn¡¯t be possible
@@ -56,6 +59,7 @@ If we were willing to wed ourselves completely to the windows platform,
 we might have pushed ahead with some attempt at binary verification
 of dlls, but I ruled that option out. I want QuakeArena running on every
 platform that has hardware accelerated OpenGL and an internet connection.
+
 
 The only real solution to these problems is to use an interpreted language
 like Quake 1 did. I have reached the conclusion that the benefits of a
@@ -70,6 +74,7 @@ go, but recently I reached a better conclusion. The programming language
 for QuakeArena mods is interpreted ANSI C.  (well, I am dropping the double
 data type, but otherwise it should be pretty conformant)
 
+
 The game will have an interpreter for a virtual RISC-like CPU. This should
 have a minor speed benefit over a byte-coded, stack based java interpreter.
 Loads and stores are confined to a preset block of memory, and access to 
@@ -80,6 +85,7 @@ called q3asm. LCC is a wonderful project - a cross platform, cross
 compiling ANSI C compiler done in under 20K lines of code. Anyone interested
 in compilers should pick up a copy of ¡±A retargetable C compiler: design and
 implementation¡± by Fraser and Hanson.
+
 
 You can¡¯t link against any libraries, so every function must be resolved.
 Things like strcmp, memcpy, rand, etc. must all be implemented directly.
@@ -100,6 +106,7 @@ will balance things to about the way Q2 was on previous generation hardware.
 
 There is also the amusing avenue of writing hand tuned virtual assembly
 assembly language for critical functions..
+
 I think this is The Right Thing.
 </blockquote>
 
