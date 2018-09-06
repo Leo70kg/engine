@@ -3,12 +3,6 @@
 If previous engines delegated only the gameplay to the Virtual Machine,
 idtech3 heavily rely on them for essential tasks. Among other things: 
 
-* 32bit addressing, little endian
-* 32bit floats
-* about 60 instructions
-* separate memory addressing for code and data
-* no dynamic memory allocations
-* no GP registers, load/store on opstack
 * Rendition is triggered from the Client VM.
 * The lag compensation mechanism is entirely in the Client VM.
 
@@ -24,6 +18,7 @@ but performances were disappointing so the development team wrote a runtime x86 
 
 According to the John Carmark's .plan from Nov 03, 1998:
 
+> 
 This was the most significant thing I talked about at The Frag, 
 so here it is for everyone else. The way the QA game architecture
 has been developed so far has been as two seperate binary dll¡¯s: 
@@ -110,6 +105,7 @@ I think this is The Right Thing.
 
 According to the .plan from Aug 16, 1999: 
 
+>
 As I mentioned at quakecon, I decided to go ahead and try a dynamic
 code generator to speed up the game interpreters. I was uneasy about it,
 but the current performance was far enough off of my targets that I didn¡¯t
@@ -319,14 +315,14 @@ Overall the VM system is very versatile since a Virtual Machine is capable of ru
 * Code compiled as a Windows DLL
 
 
-## opStack vs Program Stack
+##  opStack
 
-### Program stack
-* local variables
-* function parameters
-* saved program counter
-
-### opStack
+* 32bit addressing, little endian
+* 32bit floats
+* about 60 instructions
+* separate memory addressing for code and data
+* no dynamic memory allocations
+* no GP registers, load/store on opstack
 
 * arguments for instructions, results
 ```
