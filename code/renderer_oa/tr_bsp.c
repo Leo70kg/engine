@@ -1768,21 +1768,19 @@ Called directly from cgame
 */
 void RE_LoadWorldMap( const char *name )
 {
-	union {
-		unsigned char* b;
-		void *v;
-	} buffer;
+	
+	unsigned char* buffer;
 
 	if ( tr.worldMapLoaded )
 		ri.Error( ERR_DROP, "ERROR: attempted to redundantly load world map" );
 
 
 	// load it
-    ri.FS_ReadFile( name, &buffer.v );
-	if ( NULL == buffer.b )
+    ri.R_ReadFile( name, &buffer );
+	if ( NULL == buffer )
 		ri.Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
 
-    fileBase = buffer.b;
+    fileBase = buffer;
 	
 	// set default sun direction to be used if it isn't overridden by a shader
     // why put here
@@ -1804,7 +1802,7 @@ void RE_LoadWorldMap( const char *name )
 	unsigned char* startMarker = ri.Hunk_Alloc(0, h_low);
     
 	
-    dheader_t* header = (dheader_t *)buffer.b;
+    dheader_t* header = (dheader_t *)buffer;
 #if defined( Q3_BIG_ENDIAN )
     int i = LittleLong (header->version);
 
@@ -1838,5 +1836,5 @@ void RE_LoadWorldMap( const char *name )
 	// only set tr.world now that we know the entire level has loaded properly
 	tr.world = &s_worldData;
 	tr.worldMapLoaded = qtrue;
-    ri.FS_FreeFile( buffer.v );
+    ri.FS_FreeFile( buffer );
 }

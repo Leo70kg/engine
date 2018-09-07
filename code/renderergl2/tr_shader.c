@@ -3525,7 +3525,7 @@ a single large text block that can be scanned for shader names
 #define	MAX_SHADER_FILES	1024
 static void ScanAndLoadShaderFiles( void )
 {
-	void *buffers[MAX_SHADER_FILES] = {NULL};
+	char *buffers[MAX_SHADER_FILES] = {NULL};
 
 	int numShaderFiles;
 	int i;
@@ -3552,6 +3552,7 @@ static void ScanAndLoadShaderFiles( void )
 	{
 		char filename[MAX_QPATH];
 
+
 		// look for a .mtr file first
 		{
 			char *ext;
@@ -3561,14 +3562,14 @@ static void ScanAndLoadShaderFiles( void )
 				strcpy(ext, ".mtr");
 			}
 
-			if ( ri.FS_ReadFile( filename, NULL ) <= 0 )
+			if ( ri.R_ReadFile( filename, NULL ) <= 0 )
 			{
 				snprintf( filename, sizeof( filename ), "scripts/%s", shaderFiles[i] );
 			}
 		}
-		
+        
 		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
-		long summand = ri.FS_ReadFile(filename, &buffers[i]);
+		long summand = ri.R_ReadFile(filename, &buffers[i]);
 		
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );

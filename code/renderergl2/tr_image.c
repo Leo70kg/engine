@@ -2998,10 +2998,7 @@ qhandle_t RE_RegisterSkin( const char *name ) {
 	qhandle_t	hSkin;
 	skin_t		*skin;
 	skinSurface_t	*surf;
-	union {
-		char *c;
-		void *v;
-	} text;
+	char *text;
 	char		*text_p;
 	char		*token;
 	char		surfName[MAX_QPATH];
@@ -3051,13 +3048,13 @@ qhandle_t RE_RegisterSkin( const char *name ) {
 	}
 
 	// load and parse the skin file
-    ri.FS_ReadFile( name, &text.v );
-	if ( !text.c ) {
+    ri.R_ReadFile( name, &text );
+	if ( !text ) {
 		return 0;
 	}
 
 	totalSurfaces = 0;
-	text_p = text.c;
+	text_p = text;
 	while ( text_p && *text_p ) {
 		// get surface name
 		token = CommaParse( &text_p );
@@ -3090,7 +3087,7 @@ qhandle_t RE_RegisterSkin( const char *name ) {
 		totalSurfaces++;
 	}
 
-	ri.FS_FreeFile( text.v );
+	ri.FS_FreeFile(text);
 
 	if ( totalSurfaces > MAX_SKIN_SURFACES ) {
 		ri.Printf( PRINT_WARNING, "WARNING: Ignoring excess surfaces (found %d, max is %d) in skin '%s'!\n",

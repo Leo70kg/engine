@@ -1728,7 +1728,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 		snprintf( filename, sizeof( filename ), "maps/%s/vertlight.raw", s_worldData.baseName);
 		ri.Printf(PRINT_ALL, "looking for %s\n", filename);
 
-		size = ri.FS_ReadFile(filename, (void **)&hdrVertColors);
+		size = ri.R_ReadFile(filename, &hdrVertColors);
 
 		if (hdrVertColors)
 		{
@@ -2207,7 +2207,7 @@ void R_LoadLightGrid( lump_t *l )
 		snprintf( filename, sizeof( filename ), "maps/%s/lightgrid.raw", s_worldData.baseName);
 		ri.Printf(PRINT_ALL, "looking for %s\n", filename);
 
-		size = ri.FS_ReadFile(filename, (void **)&hdrLightGrid);
+		size = ri.R_ReadFile(filename, &hdrLightGrid);
 
 		if (hdrLightGrid)
 		{

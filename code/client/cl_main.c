@@ -1373,8 +1373,11 @@ void CL_Disconnect( qboolean showMainMenu )
 		FS_FCloseFile( clc.download );
 		clc.download = 0;
 	}
-	*clc.downloadTempName = *clc.downloadName = 0;
-	Cvar_Set( "cl_downloadName", "" );
+	
+    *clc.downloadTempName = 0;
+    *clc.downloadName = 0;
+	
+    Cvar_Set( "cl_downloadName", "" );
 
 #ifdef USE_MUMBLE
 	if (cl_useMumble->integer && mumble_islinked()) {

@@ -4132,7 +4132,7 @@ a single large text block that can be scanned for shader names
 
 static void ScanAndLoadShaderFiles( void )
 {
-	void* buffers[MAX_SHADER_FILES]={0};
+	char* buffers[MAX_SHADER_FILES]={0};
 	
 	int i;
 	char *token, *hashMem, *textEnd;
@@ -4161,12 +4161,9 @@ static void ScanAndLoadShaderFiles( void )
 		snprintf( filename, sizeof( filename ), "scripts/%s", shaderFiles[i] );
 		ri.Printf(PRINT_ALL, "...loading '%s'\n", filename);
 		
-        long summand = ri.FS_ReadFile(filename, &buffers[i]);
-	
-        /*
+        long summand = ri.R_ReadFile(filename, &buffers[i]);
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
-		*/
 
         
 		// Do a simple check on the shader structure in that file to make sure one bad shader file cannot fuck up all other shaders.
