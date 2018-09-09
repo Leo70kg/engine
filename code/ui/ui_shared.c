@@ -408,7 +408,8 @@ qboolean Int_Parse(char **p, int *i) {
 PC_Int_Parse
 =================
  */
-qboolean PC_Int_Parse(int handle, int *i) {
+qboolean PC_Int_Parse(int handle, int *i)
+{
 	pc_token_t token;
 	int negative = qfalse;
 
@@ -6286,9 +6287,11 @@ qboolean MenuParse_name(itemDef_t *item, int handle) {
 	return qtrue;
 }
 
-qboolean MenuParse_fullscreen(itemDef_t *item, int handle) {
+qboolean MenuParse_fullscreen(itemDef_t *item, int handle)
+{
 	menuDef_t *menu = (menuDef_t*) item;
-	if (!PC_Int_Parse(handle, (int*) &menu->fullScreen)) { // bk001206 - cast qboolean
+	if (!PC_Int_Parse(handle, &menu->fullScreen))
+    { // bk001206 - cast qboolean
 		return qfalse;
 	}
 	return qtrue;

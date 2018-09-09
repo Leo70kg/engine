@@ -67,10 +67,16 @@ void trap_Cvar_Set( const char *var_name, const char *value ) {
 	syscall( UI_CVAR_SET, var_name, value );
 }
 
-float trap_Cvar_VariableValue( const char *var_name ) {
-	int temp;
-	temp = syscall( UI_CVAR_VARIABLEVALUE, var_name );
-	return (*(float*)&temp);
+float trap_Cvar_VariableValue( const char *var_name )
+{
+    union f32_i {
+	    float f;
+	    int i;
+    }fi;
+    
+    fi.i = syscall( UI_CVAR_VARIABLEVALUE, var_name );
+	
+    return fi.f;
 }
 
 void trap_Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize ) {

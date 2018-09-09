@@ -319,7 +319,7 @@ typedef struct itemDef_s {
 typedef struct {
 	Window window;
 	const char *font; // font
-	qboolean fullScreen; // covers entire screen 
+	int fullScreen; // covers entire screen 
 	int itemCount; // number of items;
 	int fontIndex; // 
 	int cursorItem; // which item as the cursor

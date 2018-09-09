@@ -196,12 +196,12 @@ typedef struct
 	menuaction_s		railgun;
 	menuaction_s		plasma;
 	menuaction_s		bfg;
-        menuaction_s		grapple;
-        //New in Beta 23
-        menuaction_s		nailgun;
-        menuaction_s		proxmine;
-        menuaction_s		chaingun;
-        //New in 23 end
+    menuaction_s		grapple;
+    //New in Beta 23
+    menuaction_s		nailgun;
+    menuaction_s		proxmine;
+    menuaction_s		chaingun;
+    //New in 23 end
 	menuaction_s		attack;
 	menuaction_s		prevweapon;
 	menuaction_s		nextweapon;
@@ -322,67 +322,69 @@ static configcvar_t g_configcvars[] =
 
 static menucommon_s *g_movement_controls[] =
 {
-	(menucommon_s *)&s_controls.alwaysrun,     
-	(menucommon_s *)&s_controls.run,            
-	(menucommon_s *)&s_controls.walkforward,
-	(menucommon_s *)&s_controls.backpedal,
-	(menucommon_s *)&s_controls.stepleft,      
-	(menucommon_s *)&s_controls.stepright,     
-	(menucommon_s *)&s_controls.moveup,        
-	(menucommon_s *)&s_controls.movedown,      
-	(menucommon_s *)&s_controls.turnleft,      
-	(menucommon_s *)&s_controls.turnright,     
-	(menucommon_s *)&s_controls.sidestep,
+	&s_controls.alwaysrun.generic,     
+	&s_controls.run.generic,            
+	&s_controls.walkforward.generic,
+	&s_controls.backpedal.generic,
+	&s_controls.stepleft.generic,      
+	&s_controls.stepright.generic,     
+	&s_controls.moveup.generic,        
+	&s_controls.movedown.generic,      
+	&s_controls.turnleft.generic,      
+	&s_controls.turnright.generic,     
+	&s_controls.sidestep.generic,
 	NULL
 };
 
-static menucommon_s *g_weapons_controls[] = {
-	(menucommon_s *)&s_controls.attack,           
-	(menucommon_s *)&s_controls.nextweapon,
-	(menucommon_s *)&s_controls.prevweapon,
-	(menucommon_s *)&s_controls.autoswitch,    
-	(menucommon_s *)&s_controls.chainsaw,         
-	(menucommon_s *)&s_controls.machinegun,
-	(menucommon_s *)&s_controls.shotgun,          
-	(menucommon_s *)&s_controls.grenadelauncher,
-	(menucommon_s *)&s_controls.rocketlauncher,   
-	(menucommon_s *)&s_controls.lightning,   
-	(menucommon_s *)&s_controls.railgun,          
-	(menucommon_s *)&s_controls.plasma,           
-	(menucommon_s *)&s_controls.bfg,
-        (menucommon_s *)&s_controls.grapple,
-        (menucommon_s *)&s_controls.nailgun,
-        (menucommon_s *)&s_controls.proxmine,
-        (menucommon_s *)&s_controls.chaingun,
+
+static menucommon_s *g_weapons_controls[] =
+{
+	&s_controls.attack.generic,           
+	&s_controls.nextweapon.generic,
+	&s_controls.prevweapon.generic,
+    &s_controls.autoswitch.generic,    
+	&s_controls.chainsaw.generic,         
+	&s_controls.machinegun.generic,
+    &s_controls.shotgun.generic,          
+	&s_controls.grenadelauncher.generic,
+	&s_controls.rocketlauncher.generic,   
+	&s_controls.lightning.generic,   
+	&s_controls.railgun.generic,          
+	&s_controls.plasma.generic,           
+	&s_controls.bfg.generic,
+    &s_controls.grapple.generic,
+    &s_controls.nailgun.generic,
+    &s_controls.proxmine.generic,
+    &s_controls.chaingun.generic,
 	NULL,
 };
 
 static menucommon_s *g_looking_controls[] = {
-	(menucommon_s *)&s_controls.sensitivity,
-	(menucommon_s *)&s_controls.smoothmouse,
-	(menucommon_s *)&s_controls.invertmouse,
-	(menucommon_s *)&s_controls.lookup,
-	(menucommon_s *)&s_controls.lookdown,
-	(menucommon_s *)&s_controls.mouselook,
-	(menucommon_s *)&s_controls.freelook,
-	(menucommon_s *)&s_controls.centerview,
-	(menucommon_s *)&s_controls.zoomview,
-	(menucommon_s *)&s_controls.joyenable,
-	(menucommon_s *)&s_controls.joythreshold,
+	&s_controls.sensitivity.generic,
+	&s_controls.smoothmouse.generic,
+	&s_controls.invertmouse.generic,
+	&s_controls.lookup.generic,
+	&s_controls.lookdown.generic,
+	&s_controls.mouselook.generic,
+	&s_controls.freelook.generic,
+	&s_controls.centerview.generic,
+	&s_controls.zoomview.generic,
+	&s_controls.joyenable.generic,
+	&s_controls.joythreshold.generic,
 	NULL,
 };
 
 static menucommon_s *g_misc_controls[] = {
-	(menucommon_s *)&s_controls.showscores, 
-	(menucommon_s *)&s_controls.showacc, 
-	(menucommon_s *)&s_controls.useitem,
-	(menucommon_s *)&s_controls.gesture,
-	(menucommon_s *)&s_controls.chat,
-	(menucommon_s *)&s_controls.chat2,
-	(menucommon_s *)&s_controls.chat3,
-	(menucommon_s *)&s_controls.chat4,
-        (menucommon_s *)&s_controls.voip_talk,
-        (menucommon_s *)&s_controls.voip_teamonly,
+	&s_controls.showscores.generic, 
+	&s_controls.showacc.generic, 
+	&s_controls.useitem.generic,
+	&s_controls.gesture.generic,
+	&s_controls.chat.generic,
+    &s_controls.chat2.generic,
+	&s_controls.chat3.generic,
+	&s_controls.chat4.generic,
+    &s_controls.voip_talk.generic,
+    &s_controls.voip_teamonly.generic,
 	NULL,
 };
 

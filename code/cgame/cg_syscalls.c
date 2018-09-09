@@ -36,10 +36,16 @@ Q_EXPORT void dllEntry( intptr_t (QDECL  *syscallptr)( intptr_t arg,... ) ) {
 }
 
 
-static int PASSFLOAT( float x ) {
-	float	floatTemp;
-	floatTemp = x;
-	return *(int *)&floatTemp;
+static int PASSFLOAT( float x )
+{
+
+    union f32_i {
+	    float f;
+	    int i;
+    }fi;
+
+    fi.f = x;
+	return fi.i;
 }
 
 void	trap_Print( const char *fmt ) {
