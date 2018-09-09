@@ -1432,22 +1432,20 @@ void RE_RenderScene( const refdef_t *fd )
 	tr.refdef.areamaskModified = qfalse;
 	if ( customscrn )
     {
-		int	i;
+		int		areaDiff = 0;
+		int		i;
+
 		// compare the area bits
-		for (i = 0; i < sizeof(tr.refdef.areamask); i++)
-        {
-			if(tr.refdef.areamask[i] ^ fd->areamask[i])
-			{
-			    // a door just opened or something
-			    tr.refdef.areamaskModified = qtrue;
-                break;
-		    }
+		for (i = 0 ; i < MAX_MAP_AREA_BYTES; i++)
+		{
+			areaDiff |= tr.refdef.areamask[i] ^ fd->areamask[i];
+			tr.refdef.areamask[i] = fd->areamask[i];
 		}
 
-        if(tr.refdef.areamaskModified)
-        {
-            memcpy(tr.refdef.areamask, fd->areamask, sizeof(tr.refdef.areamask));
-        }
+		if ( areaDiff ) {
+			// a door just opened or something
+			tr.refdef.areamaskModified = qtrue;
+		}
 	}
 
 

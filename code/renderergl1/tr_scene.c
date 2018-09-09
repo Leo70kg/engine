@@ -282,9 +282,10 @@ void RE_RenderScene( const refdef_t *fd ) {
 	if ( !tr.registered ) {
 		return;
 	}
-	qboolean	customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
-	int	startTime = ri.Milliseconds();
 
+	int	startTime = ri.Milliseconds();
+	qboolean customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
+	
 	if (!tr.world && customscrn ) {
 		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
 	}
@@ -310,14 +311,14 @@ void RE_RenderScene( const refdef_t *fd ) {
 	// will force a reset of the visible leafs even if the view hasn't moved
 	tr.refdef.areamaskModified = qfalse;
 	if ( customscrn) {
-		int		areaDiff;
+		int		areaDiff = 0;
 		int		i;
 
 		// compare the area bits
-		areaDiff = 0;
-		for (i = 0 ; i < MAX_MAP_AREA_BYTES/4 ; i++) {
-			areaDiff |= ((int *)tr.refdef.areamask)[i] ^ ((int *)fd->areamask)[i];
-			((int *)tr.refdef.areamask)[i] = ((int *)fd->areamask)[i];
+		for (i = 0 ; i < MAX_MAP_AREA_BYTES; i++)
+		{
+			areaDiff |= tr.refdef.areamask[i] ^ fd->areamask[i];
+			tr.refdef.areamask[i] = fd->areamask[i];
 		}
 
 		if ( areaDiff ) {

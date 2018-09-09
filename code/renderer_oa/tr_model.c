@@ -51,9 +51,8 @@ static const int numModelLoaders = ARRAY_LEN(modelLoaders);
 static qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 {
 	
-	unsigned* buf;
+	char* buf;
 	int			lod;
-	int			ident;
 	qboolean	loaded = qfalse;
 	int			numLoaded;
 	char filename[MAX_QPATH], namebuf[MAX_QPATH+20];
@@ -82,8 +81,11 @@ static qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 		ri.R_ReadFile( namebuf, &buf );
 		if(!buf)
 			continue;
-		
-		ident = LittleLong(* buf);
+#if defined( Q3_BIG_ENDIAN )		
+		int ident = LittleLong(*(int *)buf);
+#else
+		int ident = *(int *)buf;
+#endif		
 		if (ident == MD3_IDENT)
 			loaded = R_LoadMD3(mod, lod, buf, name);
 		else
@@ -122,8 +124,7 @@ static qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 
 static qhandle_t R_RegisterMDR(const char *name, model_t *mod)
 {
-	unsigned * buf;
-	int	ident;
+	char* buf;
 	qboolean loaded = qfalse;
 	int filesize;
 
@@ -134,7 +135,11 @@ static qhandle_t R_RegisterMDR(const char *name, model_t *mod)
 		return 0;
 	}
 	
-	ident = LittleLong(*(unsigned *)buf);
+#if defined( Q3_BIG_ENDIAN )		
+	int ident = LittleLong(*(int *)buf);
+#else
+	int ident = *(int *)buf;
+#endif	
 	if(ident == MDR_IDENT)
 		loaded = R_LoadMDR(mod, buf, filesize, name);
 
@@ -153,11 +158,9 @@ static qhandle_t R_RegisterMDR(const char *name, model_t *mod)
 
 static qhandle_t R_RegisterIQM(const char *name, model_t *mod)
 {	
-	unsigned *buf;
+	char* buf;
 	qboolean loaded = qfalse;
-	int filesize;
-
-	filesize = ri.R_ReadFile(name, &buf);
+	int filesize = ri.R_ReadFile(name, &buf);
 	if(!buf)
 	{
 		mod->type = MOD_BAD;
@@ -686,6 +689,7 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 			
 			for(j = 0; j < mdr->numBones; j++)
 			{
+#if defined( Q3_BIG_ENDIAN )
 				for(k = 0; k < (sizeof(cframe->bones[j].Comp) / 2); k++)
 				{
 					// Do swapping for the uncompressing functions. They seem to use shorts
@@ -695,7 +699,7 @@ static qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char 
 					((unsigned short *)(cframe->bones[j].Comp))[k] =
 						LittleShort( ((unsigned short *)(cframe->bones[j].Comp))[k] );
 				}
-				
+#endif				
 				/* Now do the actual uncompressing */
 				MC_UnCompress(frame->bones[j].matrix, cframe->bones[j].Comp);
 			}

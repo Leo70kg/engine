@@ -1719,6 +1719,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 	s_worldData.surfacesDlightBits = ri.Hunk_Alloc ( count * sizeof(*s_worldData.surfacesDlightBits), h_low );
 	s_worldData.surfacesPshadowBits = ri.Hunk_Alloc ( count * sizeof(*s_worldData.surfacesPshadowBits), h_low );
 
+/*
 	// load hdr vertex colors
 	if (r_hdr->integer)
 	{
@@ -1737,7 +1738,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 				ri.Error(ERR_DROP, "Bad size for %s (%i, expected %i)!", filename, size, (int)((sizeof(float)) * 3 * (verts->filelen / sizeof(*dv))));
 		}
 	}
-
+*/
 
 	// Two passes, allocate surfaces first, then load them full of data
 	// This ensures surfaces are close together to reduce L2 cache misses when using VAOs,
@@ -2197,6 +2198,7 @@ void R_LoadLightGrid( lump_t *l )
 		R_ColorShiftLightingBytes( &s_worldData.lightGridData[i*8+3], &s_worldData.lightGridData[i*8+3] );
 	}
 
+/*	
 	// load hdr lightgrid
 	if (r_hdr->integer)
 	{
@@ -2258,6 +2260,7 @@ void R_LoadLightGrid( lump_t *l )
 		if (hdrLightGrid)
 			ri.FS_FreeFile(hdrLightGrid);
 	}
+*/	
 }
 
 /*

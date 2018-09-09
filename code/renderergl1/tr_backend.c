@@ -405,10 +405,6 @@ static const void *RB_StretchPic( const void *data )
 	tess.indexes[ numIndexes + 4 ] = numVerts + 0;
 	tess.indexes[ numIndexes + 5 ] = numVerts + 1;
 
-	*(int *)tess.vertexColors[ numVerts ] =
-		*(int *)tess.vertexColors[ numVerts + 1 ] =
-		*(int *)tess.vertexColors[ numVerts + 2 ] =
-		*(int *)tess.vertexColors[ numVerts + 3 ] = *(int *)backEnd.color2D;
 
 	tess.xyz[ numVerts ][0] = cmd->x;
 	tess.xyz[ numVerts ][1] = cmd->y;
@@ -417,26 +413,53 @@ static const void *RB_StretchPic( const void *data )
 	tess.texCoords[ numVerts ][0][0] = cmd->s1;
 	tess.texCoords[ numVerts ][0][1] = cmd->t1;
 
-	tess.xyz[ numVerts + 1 ][0] = cmd->x + cmd->w;
-	tess.xyz[ numVerts + 1 ][1] = cmd->y;
-	tess.xyz[ numVerts + 1 ][2] = 0;
+	tess.vertexColors[numVerts][0] = backEnd.color2D[0];
+	tess.vertexColors[numVerts][1] = backEnd.color2D[1];
+	tess.vertexColors[numVerts][2] = backEnd.color2D[2];
+	tess.vertexColors[numVerts][3] = backEnd.color2D[3];
 
-	tess.texCoords[ numVerts + 1 ][0][0] = cmd->s2;
-	tess.texCoords[ numVerts + 1 ][0][1] = cmd->t1;
 
-	tess.xyz[ numVerts + 2 ][0] = cmd->x + cmd->w;
-	tess.xyz[ numVerts + 2 ][1] = cmd->y + cmd->h;
-	tess.xyz[ numVerts + 2 ][2] = 0;
+	//
+	numVerts++;
+	tess.xyz[numVerts][0] = cmd->x + cmd->w;
+	tess.xyz[numVerts][1] = cmd->y;
+	tess.xyz[numVerts][2] = 0;
 
-	tess.texCoords[ numVerts + 2 ][0][0] = cmd->s2;
-	tess.texCoords[ numVerts + 2 ][0][1] = cmd->t2;
+	tess.texCoords[numVerts][0][0] = cmd->s2;
+	tess.texCoords[numVerts][0][1] = cmd->t1;
 
-	tess.xyz[ numVerts + 3 ][0] = cmd->x;
-	tess.xyz[ numVerts + 3 ][1] = cmd->y + cmd->h;
-	tess.xyz[ numVerts + 3 ][2] = 0;
+	tess.vertexColors[numVerts][0] = backEnd.color2D[0];
+	tess.vertexColors[numVerts][1] = backEnd.color2D[1];
+	tess.vertexColors[numVerts][2] = backEnd.color2D[2];
+	tess.vertexColors[numVerts][3] = backEnd.color2D[3];
 
-	tess.texCoords[ numVerts + 3 ][0][0] = cmd->s1;
-	tess.texCoords[ numVerts + 3 ][0][1] = cmd->t2;
+	//
+	numVerts++;
+	tess.xyz[ numVerts ][0] = cmd->x + cmd->w;
+	tess.xyz[ numVerts ][1] = cmd->y + cmd->h;
+	tess.xyz[ numVerts ][2] = 0;
+
+	tess.texCoords[ numVerts ][0][0] = cmd->s2;
+	tess.texCoords[ numVerts ][0][1] = cmd->t2;
+
+	tess.vertexColors[numVerts][0] = backEnd.color2D[0];
+	tess.vertexColors[numVerts][1] = backEnd.color2D[1];
+	tess.vertexColors[numVerts][2] = backEnd.color2D[2];
+	tess.vertexColors[numVerts][3] = backEnd.color2D[3];
+
+	//
+	numVerts++;
+	tess.xyz[ numVerts ][0] = cmd->x;
+	tess.xyz[ numVerts ][1] = cmd->y + cmd->h;
+	tess.xyz[ numVerts ][2] = 0;
+
+	tess.texCoords[ numVerts ][0][0] = cmd->s1;
+	tess.texCoords[ numVerts ][0][1] = cmd->t2;
+
+	tess.vertexColors[numVerts][0] = backEnd.color2D[0];
+	tess.vertexColors[numVerts][1] = backEnd.color2D[1];
+	tess.vertexColors[numVerts][2] = backEnd.color2D[2];
+	tess.vertexColors[numVerts][3] = backEnd.color2D[3];
 
 	return (const void *)(cmd + 1);
 }

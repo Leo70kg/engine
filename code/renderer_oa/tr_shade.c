@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 
+
 extern void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
 extern void (APIENTRYP qglUnlockArraysEXT) (void);
 extern void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
@@ -513,9 +514,17 @@ static void RB_FogPass( void )
 	qglTexCoordPointer( 2, GL_FLOAT, 0, tess.svars.texcoords[0] );
 
 	fog = tr.world->fogs + tess.fogNum;
+	
+	union uInt4bytes cvt;
+	cvt.i = fog->colorInt;
 
-	for ( i = 0; i < tess.numVertexes; i++ ) {
-		* ( int * )&tess.svars.colors[i] = fog->colorInt;
+
+	for ( i = 0; i < tess.numVertexes; i++ )
+	{
+		tess.svars.colors[i][0] = cvt.uc[0];
+		tess.svars.colors[i][1] = cvt.uc[1];
+		tess.svars.colors[i][2] = cvt.uc[2];
+		tess.svars.colors[i][3] = cvt.uc[3];
 	}
 
 	RB_CalcFogTexCoords( ( float * ) tess.svars.texcoords[0] );
@@ -758,7 +767,10 @@ static void ComputeColors( shaderStage_t *pStage )
 
 			for(i = 0; i < nVerts; i++)
             {
-				*(int *)tess.svars.colors[i] = *(int *)pStage->constantColor;
+				tess.svars.colors[i][0] = pStage->constantColor[0];
+				tess.svars.colors[i][1] = pStage->constantColor[1];
+				tess.svars.colors[i][2] = pStage->constantColor[2];
+				tess.svars.colors[i][3] = pStage->constantColor[3];
 			}
 			break;
 		case CGEN_VERTEX:
@@ -838,9 +850,16 @@ static void ComputeColors( shaderStage_t *pStage )
 
                 nVerts = tess.numVertexes;
 
+				union uInt4bytes cvt;
+				cvt.i = fog->colorInt;
+
+
 				for ( i = 0; i < nVerts; i++ )
 				{
-					* ( int * )&tess.svars.colors[i] = fog->colorInt;
+					tess.svars.colors[i][0] = cvt.uc[0];
+					tess.svars.colors[i][1] = cvt.uc[1];
+					tess.svars.colors[i][2] = cvt.uc[2];
+					tess.svars.colors[i][3] = cvt.uc[3];
 				}
 			}
 			break;

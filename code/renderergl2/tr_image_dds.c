@@ -216,7 +216,7 @@ typedef enum DXGI_FORMAT {
 void R_LoadDDS ( const char *filename, byte **pic, int *width, int *height, GLenum *picFormat, int *numMips )
 {
 	
-	byte * buffer;
+	char* buffer;
 	int len;
 	ddsHeader_t *ddsHeader = NULL;
 	ddsHeaderDxt10_t *ddsHeaderDxt10 = NULL;
@@ -242,7 +242,7 @@ void R_LoadDDS ( const char *filename, byte **pic, int *width, int *height, GLen
 	//
 	// load the file
 	//
-	len = ri.R_ReadFile( ( char * ) filename, &buffer);
+	len = ri.R_ReadFile( filename, &buffer);
 	if (!buffer || len < 0) {
 		return;
 	}
@@ -281,12 +281,12 @@ void R_LoadDDS ( const char *filename, byte **pic, int *width, int *height, GLen
 		}
 
 		ddsHeaderDxt10 = (ddsHeaderDxt10_t *)(buffer + 4 + sizeof(ddsHeader_t));
-		data = buffer + 4 + sizeof(*ddsHeader) + sizeof(*ddsHeaderDxt10);
+		data = (unsigned char*)buffer + 4 + sizeof(*ddsHeader) + sizeof(*ddsHeaderDxt10);
 		len -= 4 + sizeof(*ddsHeader) + sizeof(*ddsHeaderDxt10);
 	}
 	else
 	{
-		data = buffer + 4 + sizeof(*ddsHeader);
+		data = (unsigned char*)buffer + 4 + sizeof(*ddsHeader);
 		len -= 4 + sizeof(*ddsHeader);
 	}
 

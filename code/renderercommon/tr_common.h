@@ -34,6 +34,7 @@ union uInt4bytes{
 union f32_u {
 	float f;
 	uint32_t ui;
+    unsigned char uc[4];
 	struct {
 		unsigned int fraction:23;
 		unsigned int exponent:8;

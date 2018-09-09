@@ -64,6 +64,8 @@ void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, flo
 	RB_CHECKOVERFLOW( 4, 6 );
 
 	int ndx = tess.numVertexes;
+	// constant normal all the way around
+	VectorSubtract( vec3_origin, backEnd.viewParms.or.axis[0], normal );
 
 	// triangle indexes for a simple quad
 	tess.indexes[ tess.numIndexes ] = ndx;
@@ -74,51 +76,71 @@ void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, flo
 	tess.indexes[ tess.numIndexes + 4 ] = ndx + 1;
 	tess.indexes[ tess.numIndexes + 5 ] = ndx + 2;
 
+
+	tess.normal[ndx][0] = normal[0];
+	tess.normal[ndx][1] = normal[1];
+	tess.normal[ndx][2] = normal[2];
+	// standard square texture coordinates
+	tess.texCoords[ndx][0][0] = tess.texCoords[ndx][1][0] = s1;
+	tess.texCoords[ndx][0][1] = tess.texCoords[ndx][1][1] = t1;
+	tess.vertexColors[ndx][0] = color[0];
+	tess.vertexColors[ndx][1] = color[1];
+	tess.vertexColors[ndx][2] = color[2];
+	tess.vertexColors[ndx][3] = color[3];
 	tess.xyz[ndx][0] = origin[0] + left[0] + up[0];
 	tess.xyz[ndx][1] = origin[1] + left[1] + up[1];
 	tess.xyz[ndx][2] = origin[2] + left[2] + up[2];
 
-	tess.xyz[ndx+1][0] = origin[0] - left[0] + up[0];
-	tess.xyz[ndx+1][1] = origin[1] - left[1] + up[1];
-	tess.xyz[ndx+1][2] = origin[2] - left[2] + up[2];
 
-	tess.xyz[ndx+2][0] = origin[0] - left[0] - up[0];
-	tess.xyz[ndx+2][1] = origin[1] - left[1] - up[1];
-	tess.xyz[ndx+2][2] = origin[2] - left[2] - up[2];
-
-	tess.xyz[ndx+3][0] = origin[0] + left[0] - up[0];
-	tess.xyz[ndx+3][1] = origin[1] + left[1] - up[1];
-	tess.xyz[ndx+3][2] = origin[2] + left[2] - up[2];
-
-
-	// constant normal all the way around
-	VectorSubtract( vec3_origin, backEnd.viewParms.or.axis[0], normal );
-
-	tess.normal[ndx][0] = tess.normal[ndx+1][0] = tess.normal[ndx+2][0] = tess.normal[ndx+3][0] = normal[0];
-	tess.normal[ndx][1] = tess.normal[ndx+1][1] = tess.normal[ndx+2][1] = tess.normal[ndx+3][1] = normal[1];
-	tess.normal[ndx][2] = tess.normal[ndx+1][2] = tess.normal[ndx+2][2] = tess.normal[ndx+3][2] = normal[2];
-	
-	// standard square texture coordinates
-	tess.texCoords[ndx][0][0] = tess.texCoords[ndx][1][0] = s1;
+	// 
+	ndx++;
+	tess.normal[ndx][0] = normal[0];
+	tess.normal[ndx][1] = normal[1];
+	tess.normal[ndx][2] = normal[2];
+	tess.texCoords[ndx][0][0] = tess.texCoords[ndx][1][0] = s2;
 	tess.texCoords[ndx][0][1] = tess.texCoords[ndx][1][1] = t1;
+	tess.vertexColors[ndx][0] = color[0];
+	tess.vertexColors[ndx][1] = color[1];
+	tess.vertexColors[ndx][2] = color[2];
+	tess.vertexColors[ndx][3] = color[3];
+	tess.xyz[ndx][0] = origin[0] - left[0] + up[0];
+	tess.xyz[ndx][1] = origin[1] - left[1] + up[1];
+	tess.xyz[ndx][2] = origin[2] - left[2] + up[2];
 
-	tess.texCoords[ndx+1][0][0] = tess.texCoords[ndx+1][1][0] = s2;
-	tess.texCoords[ndx+1][0][1] = tess.texCoords[ndx+1][1][1] = t1;
 
-	tess.texCoords[ndx+2][0][0] = tess.texCoords[ndx+2][1][0] = s2;
-	tess.texCoords[ndx+2][0][1] = tess.texCoords[ndx+2][1][1] = t2;
+	// 
+	ndx++;
+	tess.normal[ndx][0] = normal[0];
+	tess.normal[ndx][1] = normal[1];
+  	tess.normal[ndx][2] = normal[2];
+	tess.texCoords[ndx][0][0] = tess.texCoords[ndx][1][0] = s2;
+	tess.texCoords[ndx][0][1] = tess.texCoords[ndx][1][1] = t2;
+	tess.vertexColors[ndx][0] = color[0];
+	tess.vertexColors[ndx][1] = color[1];
+	tess.vertexColors[ndx][2] = color[2];
+	tess.vertexColors[ndx][3] = color[3];
+	tess.xyz[ndx][0] = origin[0] - left[0] - up[0];
+	tess.xyz[ndx][1] = origin[1] - left[1] - up[1];
+	tess.xyz[ndx][2] = origin[2] - left[2] - up[2];
 
-	tess.texCoords[ndx+3][0][0] = tess.texCoords[ndx+3][1][0] = s1;
-	tess.texCoords[ndx+3][0][1] = tess.texCoords[ndx+3][1][1] = t2;
+
+	// 
+	ndx++;
+	tess.normal[ndx][0] = normal[0];
+	tess.normal[ndx][1] = normal[1];
+   	tess.normal[ndx][2] = normal[2];
+	tess.texCoords[ndx][0][0] = tess.texCoords[ndx][1][0] = s1;
+	tess.texCoords[ndx][0][1] = tess.texCoords[ndx][1][1] = t2;
+	tess.vertexColors[ndx][0] = color[0];
+	tess.vertexColors[ndx][1] = color[1];
+	tess.vertexColors[ndx][2] = color[2];
+	tess.vertexColors[ndx][3] = color[3];
+	tess.xyz[ndx][0] = origin[0] + left[0] - up[0];
+	tess.xyz[ndx][1] = origin[1] + left[1] - up[1];
+	tess.xyz[ndx][2] = origin[2] + left[2] - up[2];
 
 	// constant color all the way around
 	// should this be identity and let the shader specify from entity?
-	* ( unsigned int * ) &tess.vertexColors[ndx] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+1] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+2] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+3] = 
-		* ( unsigned int * )color;
-
 
 	tess.numVertexes += 4;
 	tess.numIndexes += 6;
@@ -181,7 +203,11 @@ static void RB_SurfacePolychain( srfPoly_t *p )
 		VectorCopy( p->verts[i].xyz, tess.xyz[numv] );
 		tess.texCoords[numv][0][0] = p->verts[i].st[0];
 		tess.texCoords[numv][0][1] = p->verts[i].st[1];
-		*(int *)&tess.vertexColors[numv] = *(int *)p->verts[ i ].modulate;
+			
+		tess.vertexColors[numv][0] = p->verts[ i ].modulate[0];
+		tess.vertexColors[numv][1] = p->verts[ i ].modulate[1];
+		tess.vertexColors[numv][2] = p->verts[ i ].modulate[2];
+		tess.vertexColors[numv][3] = p->verts[ i ].modulate[3];
 
 		numv++;
 	}
@@ -247,7 +273,10 @@ static void RB_SurfaceTriangles( srfTriangles_t *srf )
 		texCoords[2] = dv->lightmap[0];
 		texCoords[3] = dv->lightmap[1];
 
-		*(int *)color = *(int *)dv->color;
+		color[0] = dv->color[0];
+		color[1] = dv->color[1];
+		color[2] = dv->color[2];
+		color[3] = dv->color[3];
 	}
 
 	for ( i = 0 ; i < srf->numVerts ; i++ )
@@ -804,7 +833,15 @@ static void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
 		tess.texCoords[ndx][0][1] = v[4];
 		tess.texCoords[ndx][1][0] = v[5];
 		tess.texCoords[ndx][1][1] = v[6];
-		* ( unsigned int * ) &tess.vertexColors[ndx] = * ( unsigned int * ) &v[7];
+		// * ( unsigned int * ) &tess.vertexColors[ndx] = * ( unsigned int * ) &v[7];
+		
+		union f32_u	cvt;
+		cvt.f = v[7];
+		tess.vertexColors[ndx][0] = cvt.uc[0];
+		tess.vertexColors[ndx][1] = cvt.uc[1];
+		tess.vertexColors[ndx][2] = cvt.uc[2];
+		tess.vertexColors[ndx][3] = cvt.uc[3];
+
 		tess.vertexDlightBits[ndx] = dlightBits;
 	}
 
@@ -953,7 +990,10 @@ static void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 					normal[1] = dv->normal[1];
 					normal[2] = dv->normal[2];
 				}
-				* ( unsigned int * ) color = * ( unsigned int * ) dv->color;
+				color[0] = dv->color[0];
+				color[1] = dv->color[1];
+				color[2] = dv->color[2];
+				color[3] = dv->color[3];
 				*vDlightBits++ = dlightBits;
 				xyz += 4;
 				normal += 4;

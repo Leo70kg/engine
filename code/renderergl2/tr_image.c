@@ -530,7 +530,17 @@ static void RGBAtoNormal(const byte *in, byte *out, int width, int height, qbool
 	}
 }
 
-#define COPYSAMPLE(a,b) *(unsigned int *)(a) = *(unsigned int *)(b)
+//#define COPYSAMPLE(a,b) *(unsigned int *)(a) = *(unsigned int *)(b)
+
+static inline void COPYSAMPLE(unsigned char* a, unsigned char* b)
+{
+	a[0] = b[0];
+	a[1] = b[1];
+	a[2] = b[2];
+	a[3] = b[3];
+}	
+
+
 
 // based on Fast Curve Based Interpolation
 // from Fast Artifacts-Free Image Interpolation (http://www.andreagiachetti.it/icbi/)

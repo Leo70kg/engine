@@ -298,14 +298,14 @@ void RE_BeginScene(const refdef_t *fd)
 	// will force a reset of the visible leafs even if the view hasn't moved
 	tr.refdef.areamaskModified = qfalse;
 	if ( ! (tr.refdef.rdflags & RDF_NOWORLDMODEL) ) {
-		int		areaDiff;
-		int		i;
+		int	areaDiff = 0;
+		int	i;
 
 		// compare the area bits
-		areaDiff = 0;
-		for (i = 0 ; i < MAX_MAP_AREA_BYTES/4 ; i++) {
-			areaDiff |= ((int *)tr.refdef.areamask)[i] ^ ((int *)fd->areamask)[i];
-			((int *)tr.refdef.areamask)[i] = ((int *)fd->areamask)[i];
+		for (i = 0 ; i < MAX_MAP_AREA_BYTES; i++)
+		{
+			areaDiff |= tr.refdef.areamask[i] ^ fd->areamask[i];
+			tr.refdef.areamask[i] = fd->areamask[i];
 		}
 
 		if ( areaDiff ) {

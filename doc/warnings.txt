@@ -217,3 +217,42 @@ CL_InitCGame:  1.06 seconds
 8 msec to draw all images
 Com_TouchMemory: 0 msec
 
+
+
+WARNING: R_FindImageFile could not find 'models/players/smarine/l_legs' in shader 'models/players/smarine/l_legs'
+Shader models/players/smarine/l_legs has a stage with no image
+WARNING: R_FindImageFile could not find 'models/players/smarine/u_torso' in shader 'models/players/smarine/u_torso'
+Shader models/players/smarine/u_torso has a stage with no image
+WARNING: R_FindImageFile could not find 'models/players/smarine/h_head' in shader 'models/players/smarine/h_head'
+Shader models/players/smarine/h_head has a stage with no image
+
+WARNING: reused image textures/flares/flarey.tga with mixed flags (67 vs 3)
+WARNING: R_FindImageFile could not find 'gfx/2d/crosshairk.tga' in shader 'gfx/2d/crosshair27'
+Shader gfx/2d/crosshair27 has a stage with no image
+R_RegisterMD3: couldn't load models/flag2/flagpole.md3
+R_RegisterMD3: couldn't load models/flag2/flagflap3.md3
+R_RegisterMD3: couldn't load models/powerups/shield/shield.md3
+R_RegisterMD3: couldn't load models/powerups/armor/shard_sphere.md3
+R_RegisterMD3: couldn't load models/weapons2/gauntlet/gauntlet_flash.md3
+R_RegisterMD3: couldn't load models/weapons2/gauntlet/gauntlet_hand.md3
+R_RegisterMD3: couldn't load models/weapons2/shotgun/shotgun_barrel.md3
+R_RegisterMD3: couldn't load models/weapons2/rocketl/rocketl_barrel.md3
+Shader rocketThrust has a stage with no image
+R_RegisterMD3: couldn't load models/weapons2/lightning/lightning_barrel.md3
+R_RegisterMD3: couldn't load models/weapons2/lightning/lightning_hand.md3
+R_RegisterMD3: couldn't load models/weapons2/railgun/railgun_barrel.md3
+R_RegisterMD3: couldn't load models/weapons2/railgun/railgun_hand.md3
+R_RegisterMD3: couldn't load models/weapons2/plasma/plasma_barrel.md3
+R_RegisterMD3: couldn't load models/weapons2/plasma/plasma_hand.md3
+R_RegisterMD3: couldn't load models/weapons/nailgun/nailgun_barrel.md3
+R_RegisterMD3: couldn't load models/weapons/nailgun/nailgun_hand.md3
+R_RegisterMD3: couldn't load models/players/james/lower.md3
+R_RegisterMD3: couldn't load models/players/characters/james/lower.md3
+Failed to load model file models/players/characters/james/lower.md3
+Failed to load model file models/players/characters/james/lower.md3
+WARNING: Failed to open sound music/sonic1.wav!
+
+
+R_RegisterMD3: couldn't load models/players/neko/lower.md3
+R_RegisterMD3: couldn't load models/players/characters/neko/lower.md3
+

@@ -1769,7 +1769,7 @@ Called directly from cgame
 void RE_LoadWorldMap( const char *name )
 {
 	
-	unsigned char* buffer;
+	char* buffer;
 
 	if ( tr.worldMapLoaded )
 		ri.Error( ERR_DROP, "ERROR: attempted to redundantly load world map" );
@@ -1780,7 +1780,7 @@ void RE_LoadWorldMap( const char *name )
 	if ( NULL == buffer )
 		ri.Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
 
-    fileBase = buffer;
+    fileBase = (unsigned char*)buffer;
 	
 	// set default sun direction to be used if it isn't overridden by a shader
     // why put here
