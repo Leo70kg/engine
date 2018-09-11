@@ -198,7 +198,12 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 			VectorSubtract( v->xyz, origin, delta );
 			v->st[0] = 0.5 + DotProduct( delta, axis[1] ) * texCoordScale;
 			v->st[1] = 0.5 + DotProduct( delta, axis[2] ) * texCoordScale;
-			*(int *)v->modulate = *(int *)colors;
+			
+            v->modulate[0] = colors[0];
+            v->modulate[1] = colors[1];
+            v->modulate[2] = colors[2];
+            v->modulate[3] = colors[3];
+
 		}
 
 		// if it is a temporary (shadow) mark, add it immediately and forget about it

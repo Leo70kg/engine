@@ -1509,7 +1509,7 @@ void R_Init(void)
 	int i;
 	unsigned char *ptr;
 
-	ri.Printf( PRINT_ALL, "-------- R_Init --------\n" );
+	ri.Printf( PRINT_ALL, "-------- RendererOA Init --------\n" );
 
     r_ext_texture_filter_anisotropic = ri.Cvar_Get( "r_ext_texture_filter_anisotropic", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "2", CVAR_ARCHIVE | CVAR_LATCH );

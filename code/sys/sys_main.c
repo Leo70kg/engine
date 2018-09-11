@@ -479,7 +479,9 @@ void *Sys_LoadDll(const char *name, qboolean useSystemLib)
 			}
 			
 			if(!dllhandle)
-				Com_Printf("Loading \"%s\" failed\n", name);
+				Com_Printf("Loading \"%s\" failed.\n", name);
+            else
+				Com_Printf("Loading \"%s\" succeed.\n", name);
 		}
 	}
 	

@@ -42,7 +42,7 @@ typedef struct freeMemNode_s {
 	struct freeMemNode_s *prev, *next;
 } freeMemNode_t;
 
-static char memoryPool[POOLSIZE];
+
 static freeMemNode_t *freeHead;
 static int freeMem;
 
@@ -158,9 +158,10 @@ void BG_Free(void *ptr) {
 	freeHead = fmn;
 }
 
-void BG_InitMemory(void) {
+void BG_InitMemory(void)
+{
 	// Set up the initial node
-
+    static char memoryPool[POOLSIZE];
 	freeHead = (freeMemNode_t *) memoryPool;
 	freeHead->cookie = FREEMEMCOOKIE;
 	freeHead->size = POOLSIZE;

@@ -3090,6 +3090,9 @@ void CL_ShutdownRef( void )
 		Sys_UnloadLibrary( rendererLib );
 		rendererLib = NULL;
 	}
+
+    Com_Printf("%s","...Unload renderer dll...\n");
+
 #endif
 }
 
@@ -3105,6 +3108,8 @@ This is the only place that any of these functions are called from
 */
 void CL_StartHunkUsers( qboolean rendererOnly )
 {
+    Com_Printf("CL_StartHunkUsers(%d)\n", rendererOnly==qtrue?1:0);
+
 	if (!com_cl_running || !com_cl_running->integer) {
 		return;
 	}
@@ -3179,20 +3184,34 @@ void CL_InitRef(void)
 
 	Com_sprintf(dllName, sizeof(dllName), "renderer_%s_" ARCH_STRING DLL_EXT, cl_renderer->string);
 
-	if(!(rendererLib = Sys_LoadDll(dllName, qfalse)) && strcmp(cl_renderer->string, cl_renderer->resetString))
-	{
-		Com_Printf("failed:\n\"%s\"\n", Sys_LibraryError());
-		Cvar_ForceReset("cl_renderer");
-
-		Com_sprintf(dllName, sizeof(dllName), "renderer_opengl1_" ARCH_STRING DLL_EXT);
-		rendererLib = Sys_LoadDll(dllName, qfalse);
-	}
+    rendererLib = Sys_LoadDll(dllName, qfalse);
 
 	if(!rendererLib)
-	{
-		Com_Printf("failed:\n\"%s\"\n", Sys_LibraryError());
-		Com_Error(ERR_FATAL, "Failed to load renderer");
+	{        
+        if(strcmp(cl_renderer->string, cl_renderer->resetString))
+        {   
+		    Com_Printf("failed:\n\"%s\"\n", Sys_LibraryError());
+		    Cvar_ForceReset("cl_renderer");
+        
+		    Com_sprintf(dllName, sizeof(dllName), "renderer_opengl1_" ARCH_STRING DLL_EXT);
+		    rendererLib = Sys_LoadDll(dllName, qfalse);
+        }
+
+        if(!rendererLib)
+	    {
+		    Com_Printf("failed:\n\"%s\"\n", Sys_LibraryError());
+		    Com_Error(ERR_FATAL, "Failed to load renderer");
+	    }
+        else
+        {
+            Com_Printf("Loading %s success.\n", dllName);
+        }
 	}
+    else
+    {
+        Com_Printf("Loading %s success.\n", dllName);
+    }
+
 
 	GetRefAPI = Sys_LoadFunction(rendererLib, "GetRefAPI");
 	if(!GetRefAPI)
@@ -3278,7 +3297,7 @@ void CL_InitRef(void)
 	// unpause so the cgame definately gets a snapshot and renders a frame
 	Cvar_Set("cl_paused", "0");
 
-    Com_Printf(" CL_InitRef() finished. \n");
+    Com_Printf("CL_InitRef() finished.\n");
 }
 
 

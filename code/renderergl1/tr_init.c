@@ -163,15 +163,13 @@ qboolean GLimp_GetProcAddresses( void )
 	const char *version;
     int qglMajorVersion, qglMinorVersion;
 
-#ifdef __SDL_NOGETPROCADDR__
-#define GLE( ret, name, ... ) qgl##name = gl#name;
-#else
-#define GLE( ret, name, ... ) qgl##name = (name##proc *) ri.GLimpGetProcAddress("gl" #name); \
+#define GLE( ret, name, ... ) \
+    qgl##name = (name##proc *) ri.GLimpGetProcAddress("gl" #name); \
 	if ( qgl##name == NULL ) { \
 		ri.Error(ERR_FATAL, "Missing OpenGL function %s\n", "gl" #name ); \
 		success = qfalse; \
 	}
-#endif
+
 
 	// OpenGL 1.0 and OpenGL ES 1.0
 	GLE(const GLubyte *, GetString, GLenum name)
@@ -182,9 +180,11 @@ qboolean GLimp_GetProcAddresses( void )
 
 	version = (const char *)qglGetString( GL_VERSION );
 
-	if ( !version ) {
+	if ( !version )
 		ri.Error( ERR_FATAL, "GL_VERSION is NULL\n" );
-	}
+    else
+       	ri.Printf( PRINT_ALL, "GL_VERSION is %s\n", version); 
+
 
     sscanf( version, "%d.%d", &qglMajorVersion, &qglMinorVersion );
 
@@ -372,7 +372,11 @@ static void InitOpenGL( void )
             GLimp_ClearProcAddresses();
             ri.GLimpDeleteCtx();
             ri.GLimpDestroyWin();
-        }       
+        }
+        else
+        {
+            ri.Printf(PRINT_ALL, "GLimp_GetProcAddresses() successed\n" );
+        }
 
         qglClearColor( 0, 0, 0, 1 );
         qglClear( GL_COLOR_BUFFER_BIT );
@@ -385,15 +389,6 @@ static void InitOpenGL( void )
         // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
         glConfig.deviceSupportsGamma = qtrue ;
 
-        // get our config strings
-        Q_strncpyz( glConfig.vendor_string, (char *) qglGetString (GL_VENDOR), sizeof( glConfig.vendor_string ) );
-        Q_strncpyz( glConfig.renderer_string, (char *) qglGetString (GL_RENDERER), sizeof( glConfig.renderer_string ) );
-        if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
-            glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;
-        Q_strncpyz( glConfig.version_string, (char *) qglGetString (GL_VERSION), sizeof( glConfig.version_string ) );
-        
-
-        Q_strncpyz( glConfig.extensions_string, (char *)qglGetString(GL_EXTENSIONS), sizeof( glConfig.extensions_string ) );
 
 
         GLimp_InitExtensions(&glConfig);
@@ -1242,7 +1237,7 @@ void R_Init( void ) {
 	int i;
 	byte *ptr;
 
-	ri.Printf( PRINT_ALL, "----- R_Init -----\n" );
+	ri.Printf( PRINT_ALL, "----- RendererGL1 Init -----\n" );
 
 	// clear all our internal state
 	memset( &tr, 0, sizeof( tr ) );

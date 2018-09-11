@@ -45,14 +45,12 @@ typedef struct {
 	unsigned short	palette_type;
 	unsigned short	hscreensize, vscreensize;
 	char	filler[54];
-	unsigned char	data[];
+	char	data[];
 } pcx_t;
 
 void R_LoadPCX ( const char *filename, byte **pic, int *width, int *height)
 {
-	unsigned char* raw;
-	unsigned char	*end;
-	pcx_t	*pcx;
+	char* raw;
 	unsigned char	dataByte = 0, runLength = 0;
 	unsigned char	*out, *pix;
 	unsigned short w, h;
@@ -86,8 +84,8 @@ void R_LoadPCX ( const char *filename, byte **pic, int *width, int *height)
 	//
 	// parse the PCX file
 	//
-	pcx = (pcx_t *)raw;
-	end = raw+len;
+	pcx_t* pcx = (pcx_t *)raw;
+	unsigned char* end = (unsigned char*)raw+len;
 
 	w = LittleShort(pcx->xmax)+1;
 	h = LittleShort(pcx->ymax)+1;
@@ -117,13 +115,13 @@ void R_LoadPCX ( const char *filename, byte **pic, int *width, int *height)
 			continue;
 		}
 
-		if(raw+1 > end)
+		if((unsigned char*)raw+1 > end)
 			break;
 		dataByte = *raw++;
 
 		if((dataByte & 0xC0) == 0xC0)
 		{
-			if(raw+1 > end)
+			if((unsigned char*)raw+1 > end)
 				break;
 			runLength = dataByte & 0x3F;
 			dataByte = *raw++;

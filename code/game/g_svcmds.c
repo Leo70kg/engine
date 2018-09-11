@@ -60,8 +60,8 @@ still, you should rely on PB for banning instead
 */
 
 typedef struct ipFilter_s {
-	unsigned	mask;
-	unsigned	compare;
+	unsigned int mask;
+	unsigned int compare;
 } ipFilter_t;
 
 #define	MAX_IPFILTERS	1024
@@ -78,13 +78,14 @@ static qboolean StringToFilter (char *s, ipFilter_t *f)
 {
 	char	num[128];
 	int		i, j;
-	byte	b[4];
-	byte	m[4];
 
-	for (i=0 ; i<4 ; i++) {
-		b[i] = 0;
-		m[i] = 0;
-	}
+    union uInt4bytes{
+        unsigned int ui;
+        unsigned char uc[4];
+    }b, m;
+
+    b.ui = 0;
+    m.ui = 0;
 
 	for (i=0 ; i<4 ; i++) {
 		if (*s < '0' || *s > '9') {
@@ -105,16 +106,16 @@ static qboolean StringToFilter (char *s, ipFilter_t *f)
 			num[j++] = *s++;
 		}
 		num[j] = 0;
-		b[i] = atoi(num);
-		m[i] = 255;
+		b.uc[i] = atoi(num);
+		m.uc[i] = 255;
 
 		if (!*s)
 			break;
 		s++;
 	}
 
-	f->mask = *(unsigned *)m;
-	f->compare = *(unsigned *)b;
+	f->mask = m.ui;
+	f->compare = b.ui;
 
 	return qtrue;
 }
@@ -126,9 +127,14 @@ UpdateIPBans
 */
 static void UpdateIPBans (void)
 {
-	byte	b[4];
-	byte	m[4];
-	int		i,j;
+    union uInt4bytes{
+        unsigned int ui;
+        unsigned char uc[4];
+    }b, m;
+
+
+    
+    int		i,j;
 	char	iplist_final[MAX_CVAR_VALUE_STRING];
 	char	ip[64];
 
@@ -137,14 +143,14 @@ static void UpdateIPBans (void)
 		if (ipFilters[i].compare == 0xffffffff)
 			continue;
 
-		*(unsigned *)b = ipFilters[i].compare;
-		*(unsigned *)m = ipFilters[i].mask;
+		b.ui = ipFilters[i].compare;
+		m.ui = ipFilters[i].mask;
 		*ip = 0;
 		for (j = 0 ; j < 4 ; j++) {
-			if (m[j]!=255)
+			if (m.uc[j]!=255)
 				Q_strcat(ip, sizeof(ip), "*");
 			else
-				Q_strcat(ip, sizeof(ip), va("%i", b[j]));
+				Q_strcat(ip, sizeof(ip), va("%i", b.uc[j]));
 			Q_strcat(ip, sizeof(ip), (j<3) ? "." : " ");
 		}
 		if (strlen(iplist_final)+strlen(ip) < MAX_CVAR_VALUE_STRING) {
@@ -167,27 +173,34 @@ G_FilterPacket
 qboolean G_FilterPacket (char *from)
 {
 	int		i;
-	unsigned	in;
-	byte m[4];
-	char *p;
+
+    union uInt4bytes{
+        unsigned int ui;
+        unsigned char uc[4];
+    }m;
+
+//	unsigned	in;
+//	byte m[4];
+
 
 	i = 0;
-	p = from;
-	while (*p && i < 4) {
-		m[i] = 0;
-		while (*p >= '0' && *p <= '9') {
-			m[i] = m[i]*10 + (*p - '0');
-			p++;
+
+	while (*from && i < 4)
+    {
+		m.uc[i] = 0;
+		while ( (from[0] >= '0') && (from[0] <= '9'))
+        {
+			m.uc[i] = m.uc[i]*10 + from[0] - '0';
+			from++;
 		}
-		if (!*p || *p == ':')
+		if (!from[0] || from[0] == ':')
 			break;
-		i++, p++;
+
+		i++, from++;
 	}
 
-	in = *(unsigned *)m;
-
-	for (i=0 ; i<numIPFilters ; i++)
-		if ( (in & ipFilters[i].mask) == ipFilters[i].compare)
+	for (i=0; i<numIPFilters; i++)
+		if ( (m.ui & ipFilters[i].mask) == ipFilters[i].compare)
 			return g_filterBan.integer != 0;
 
 	return g_filterBan.integer == 0;

@@ -1807,7 +1807,7 @@ void R_Init( void )
 	int i;
 	byte *ptr;
 
-	ri.Printf( PRINT_ALL, "----- R_Init -----\n" );
+	ri.Printf( PRINT_ALL, "----- RendererGL2 Init -----\n" );
 
 	// clear all our internal state
 	memset( &tr, 0, sizeof( tr ) );
@@ -1935,6 +1935,7 @@ void RE_Shutdown( qboolean destroyWindow ) {
 
 	R_DoneFreeType();
 	tr.registered = qfalse;
+
 
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow )

@@ -123,9 +123,10 @@ void GLimp_Shutdown( void )
     GLimp_DeleteGLContext();
     GLimp_DestroyWindow();
 
-    Com_Printf("GL Window and Context deleted. \n");
 	IN_Shutdown();
 	SDL_QuitSubSystem( SDL_INIT_VIDEO );
+
+    Com_Printf("...Delete GL Window and Context...\n");
 }
 
 /*
@@ -257,7 +258,7 @@ static void GLimp_DetectAvailableModes(void)
 GLimp_SetMode
 ===============
 */
-static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qboolean coreContext)
+static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glCfg, qboolean coreContext)
 {
 	static SDL_DisplayMode desktopMode;
 
@@ -270,6 +271,20 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 
 	if ( r_allowResize->integer )
 		flags |= SDL_WINDOW_RESIZABLE;
+#ifdef USE_ICON
+SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
+			(void *)CLIENT_WINDOW_ICON.pixel_data,
+			CLIENT_WINDOW_ICON.width,
+			CLIENT_WINDOW_ICON.height,
+			CLIENT_WINDOW_ICON.bytes_per_pixel * 8,
+			CLIENT_WINDOW_ICON.bytes_per_pixel * CLIENT_WINDOW_ICON.width,
+#ifdef Q3_LITTLE_ENDIAN
+			0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
+#else
+			0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF
+#endif
+			);
+#endif
 
 
 	//Let SDL_GetDisplayMode handle this
@@ -297,37 +312,37 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 	}
 
 
-	glConfig->refresh_rate = desktopMode.refresh_rate;
+	glCfg->refresh_rate = desktopMode.refresh_rate;
 
 
 	if (mode == -2)
 	{
         // use desktop video resolution
-        glConfig->vidWidth = desktopMode.w;
-        glConfig->vidHeight = desktopMode.h;
-        glConfig->windowAspect = (float)desktopMode.w / (float)desktopMode.h;
-        glConfig->refresh_rate = desktopMode.refresh_rate;
+        glCfg->vidWidth = desktopMode.w;
+        glCfg->vidHeight = desktopMode.h;
+        glCfg->windowAspect = (float)desktopMode.w / (float)desktopMode.h;
+        glCfg->refresh_rate = desktopMode.refresh_rate;
     }
 	else if(mode == -1)
 	{
 		// custom. 
-		glConfig->vidWidth = r_customwidth->integer;
-		glConfig->vidHeight = r_customheight->integer;
-		glConfig->windowAspect = glConfig->vidWidth / (float)glConfig->vidHeight;
-        glConfig->refresh_rate = r_displayRefresh->integer;
+		glCfg->vidWidth = r_customwidth->integer;
+		glCfg->vidHeight = r_customheight->integer;
+		glCfg->windowAspect = glCfg->vidWidth / (float)glCfg->vidHeight;
+        glCfg->refresh_rate = r_displayRefresh->integer;
 	}
 	else if((mode >= 0) && (mode < s_numVidModes))
 	{
-        glConfig->vidWidth = r_vidModes[mode].width;
-        glConfig->vidHeight = r_vidModes[mode].height;
-        glConfig->windowAspect = (float)glConfig->vidWidth * r_vidModes[mode].pixelAspect / (float)glConfig->vidHeight;
+        glCfg->vidWidth = r_vidModes[mode].width;
+        glCfg->vidHeight = r_vidModes[mode].height;
+        glCfg->windowAspect = (float)glCfg->vidWidth * r_vidModes[mode].pixelAspect / (float)glCfg->vidHeight;
     }
     else
     {
-        glConfig->vidWidth = 640;
-        glConfig->vidHeight = 480;
-        glConfig->windowAspect = (float)glConfig->vidWidth / (float)glConfig->vidHeight;
-        glConfig->refresh_rate = 60;
+        glCfg->vidWidth = 640;
+        glCfg->vidHeight = 480;
+        glCfg->windowAspect = (float)glCfg->vidWidth / (float)glCfg->vidHeight;
+        glCfg->refresh_rate = 60;
     }
     
     Com_Printf("Display mode: %d\n", mode);
@@ -336,8 +351,8 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 	// Center window
 	if(!fullscreen)
 	{
-		x = ( desktopMode.w / 2 ) - ( glConfig->vidWidth / 2 );
-		y = ( desktopMode.h / 2 ) - ( glConfig->vidHeight / 2 );
+		x = ( desktopMode.w / 2 ) - ( glCfg->vidWidth / 2 );
+		y = ( desktopMode.h / 2 ) - ( glCfg->vidHeight / 2 );
 	}
 
 	// Destroy existing state if it exists
@@ -359,11 +374,11 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 	{
 		flags |= SDL_WINDOW_FULLSCREEN;
 		flags |= SDL_WINDOW_BORDERLESS;
-		glConfig->isFullscreen = qtrue;
+		glCfg->isFullscreen = qtrue;
 	}
 	else
 	{
-		glConfig->isFullscreen = qfalse;
+		glCfg->isFullscreen = qfalse;
 	}
 
 
@@ -384,11 +399,12 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 
 
 	SDL_window = SDL_CreateWindow( CLIENT_WINDOW_TITLE, x, y,
-						glConfig->vidWidth, glConfig->vidHeight, flags );
+						glCfg->vidWidth, glCfg->vidHeight, flags );
 	if( SDL_window == NULL )
-	{
 		Com_Error(ERR_FATAL,"SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
-	}
+    else
+        Com_Printf("SDL_CreateWindow successed.\n");
+	
 
 
 	if (coreContext)
@@ -419,19 +435,21 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 			Com_Printf("SDL_GL_CreateContext succeeded.\n");
 		}
 	}
-	else
-	{
-        SDL_glContext = NULL;
-	}
 
 
-    if(!SDL_glContext)
+
+    if(NULL == SDL_glContext)
     {
-        if(( SDL_glContext = SDL_GL_CreateContext( SDL_window ) ) == NULL)
+        SDL_glContext = SDL_GL_CreateContext( SDL_window );
+        if(SDL_glContext == NULL)
         {
             Com_Printf("SDL_GL_CreateContext failed: %s\n", SDL_GetError( ));
             SDL_DestroyWindow(SDL_window);
             SDL_window = NULL;
+        }
+        else
+        {
+            Com_Printf("Create fixed pipelined Context succeeded.\n");
         }
     }
 
@@ -445,29 +463,16 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 	SDL_GL_GetAttribute( SDL_GL_RED_SIZE, &realColorBits[0] );
 	SDL_GL_GetAttribute( SDL_GL_GREEN_SIZE, &realColorBits[1] );
 	SDL_GL_GetAttribute( SDL_GL_BLUE_SIZE, &realColorBits[2] );
-	SDL_GL_GetAttribute( SDL_GL_DEPTH_SIZE, &glConfig->depthBits );
-	SDL_GL_GetAttribute( SDL_GL_STENCIL_SIZE, &glConfig->stencilBits );
+	SDL_GL_GetAttribute( SDL_GL_DEPTH_SIZE, &glCfg->depthBits );
+	SDL_GL_GetAttribute( SDL_GL_STENCIL_SIZE, &glCfg->stencilBits );
 
-	glConfig->colorBits = realColorBits[0] + realColorBits[1] + realColorBits[2];
+	glCfg->colorBits = realColorBits[0] + realColorBits[1] + realColorBits[2];
 
 	Com_Printf( "Using %d color bits, %d depth, %d stencil display.\n",
-			glConfig->colorBits, glConfig->depthBits, glConfig->stencilBits );
+			glCfg->colorBits, glCfg->depthBits, glCfg->stencilBits );
 
 
 #ifdef USE_ICON
-	SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
-			(void *)CLIENT_WINDOW_ICON.pixel_data,
-			CLIENT_WINDOW_ICON.width,
-			CLIENT_WINDOW_ICON.height,
-			CLIENT_WINDOW_ICON.bytes_per_pixel * 8,
-			CLIENT_WINDOW_ICON.bytes_per_pixel * CLIENT_WINDOW_ICON.width,
-#ifdef Q3_LITTLE_ENDIAN
-			0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
-#else
-			0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF
-#endif
-			);
-
 	SDL_SetWindowIcon( SDL_window, icon );
     SDL_FreeSurface( icon );
 #endif
@@ -489,9 +494,9 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glConfig, qb
 /*
  * This routine is responsible for initializing the OS specific portions of OpenGL
  */
-void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
+void GLimp_Init(glconfig_t *glCfg, qboolean coreContext)
 {
-    Com_Printf("\n-------- Glimp_Init() started! --------\n");
+    Com_Printf("-------- Glimp_Init(%p, %d) started! --------\n",glCfg, coreContext);
     const char *fsstrings[] = {
 		"windowed",
 		"fullscreen"
@@ -523,7 +528,7 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 	}
 
     Cmd_AddCommand("modelist", R_ModeList_f);
-	Cmd_AddCommand("in_restart", IN_Init );
+	Cmd_AddCommand("in_restart", IN_Init);
 	// Create the window and set up the context
     
 	if (!SDL_WasInit(SDL_INIT_VIDEO))
@@ -540,7 +545,7 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 
 
     
-	if( RSERR_OK == GLimp_SetMode(r_mode->integer, r_fullscreen->integer, glConfig, coreContext) )
+	if( RSERR_OK == GLimp_SetMode(r_mode->integer, r_fullscreen->integer, glCfg, coreContext) )
 	{
         goto success;
 	}
@@ -549,7 +554,7 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
         Com_Printf("Setting r_mode=%d, r_fullscreen=%d failed, falling back on r_mode=%d\n",
                 r_mode->integer, r_fullscreen->integer, 3 );
 
-        if( RSERR_OK == GLimp_SetMode(3, qfalse, glConfig, coreContext) )
+        if( RSERR_OK == GLimp_SetMode(3, qfalse, glCfg, coreContext) )
         {
             goto success;
         }
@@ -562,7 +567,7 @@ void GLimp_Init(glconfig_t *glConfig, qboolean coreContext)
 
 success:
 
-	Com_Printf( "MODE: %s, %d x %d, refresh rate: %dhz\n", fsstrings[r_fullscreen->integer == 1], glConfig->vidWidth, glConfig->vidHeight, glConfig->refresh_rate);
+	Com_Printf( "MODE: %s, %d x %d, refresh rate: %dhz\n", fsstrings[r_fullscreen->integer == 1], glCfg->vidWidth, glCfg->vidHeight, glCfg->refresh_rate);
 
     
 	// This depends on SDL_INIT_VIDEO, hence having it here

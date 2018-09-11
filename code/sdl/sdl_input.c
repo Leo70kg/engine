@@ -551,6 +551,7 @@ void IN_Frame(void)
 
 void IN_Init(void)
 {
+    Com_Printf("...IN_Init...\n");
 	int appState;
 
 	if( !SDL_WasInit( SDL_INIT_VIDEO ) )
