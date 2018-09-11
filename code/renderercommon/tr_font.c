@@ -348,7 +348,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font)
 	float dpi = 72;
 	float glyphScale;
 #endif
-	void *faceData;
+	char *faceData;
 	int i;
 	char name[1024];
 
@@ -376,11 +376,11 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font)
 		}
 	}
 
-	int len = ri.FS_ReadFile(name, NULL);
+	int len = ri.R_ReadFile(name, NULL);
 	if (len == sizeof(fontInfo_t)) {
-		ri.FS_ReadFile(name, &faceData);
+		ri.R_ReadFile(name, &faceData);
 		fdOffset = 0;
-		fdFile = faceData;
+		fdFile = (unsigned char*)faceData;
 		for(i=0; i<GLYPHS_PER_FONT; i++) {
 			font->glyphs[i].height		= readInt();
 			font->glyphs[i].top			= readInt();
@@ -418,7 +418,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font)
 		return;
 	}
 
-	len = ri.FS_ReadFile(fontName, &faceData);
+	len = ri.R_ReadFile(fontName, &faceData);
 	if (len <= 0) {
 		ri.Printf(PRINT_WARNING, "RE_RegisterFont: Unable to read font file '%s'\n", fontName);
 		return;

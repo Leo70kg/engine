@@ -50,10 +50,8 @@ void R_LoadBMP( const char *name, byte **pic, int *width, int *height )
 	int		row, column;
 	byte	*buf_p;
 	byte	*end;
-	union {
-		byte *b;
-		void *v;
-	} buffer;
+
+	char * buffer;
 	int		length;
 	BMPHeader_t bmpHeader;
 	byte		*bmpRGBA;
@@ -69,8 +67,8 @@ void R_LoadBMP( const char *name, byte **pic, int *width, int *height )
 	//
 	// load the file
 	//
-	length = ri.FS_ReadFile( ( char * ) name, &buffer.v);
-	if (!buffer.b || length < 0) {
+	length = ri.R_ReadFile( name, &buffer);
+	if (!buffer || length < 0) {
 		return;
 	}
 
@@ -79,8 +77,8 @@ void R_LoadBMP( const char *name, byte **pic, int *width, int *height )
 		ri.Error( ERR_DROP, "LoadBMP: header too short (%s)", name );
 	}
 
-	buf_p = buffer.b;
-	end = buffer.b + length;
+	buf_p = (unsigned char*)buffer;
+	end = (unsigned char*)buffer + length;
 
 	bmpHeader.id[0] = *buf_p++;
 	bmpHeader.id[1] = *buf_p++;
@@ -121,12 +119,12 @@ void R_LoadBMP( const char *name, byte **pic, int *width, int *height )
 		memcpy( bmpHeader.palette, buf_p, sizeof( bmpHeader.palette ) );
 	}
 
-	if (buffer.b + bmpHeader.bitmapDataOffset > end)
+	if ((unsigned char*)buffer + bmpHeader.bitmapDataOffset > end)
 	{
 		ri.Error( ERR_DROP, "LoadBMP: invalid offset value in header (%s)", name );
 	}
 
-	buf_p = buffer.b + bmpHeader.bitmapDataOffset;
+	buf_p = (unsigned char*)buffer + bmpHeader.bitmapDataOffset;
 
 	if ( bmpHeader.id[0] != 'B' && bmpHeader.id[1] != 'M' ) 
 	{
@@ -233,6 +231,6 @@ void R_LoadBMP( const char *name, byte **pic, int *width, int *height )
 		}
 	}
 
-	ri.FS_FreeFile( buffer.v );
+	ri.FS_FreeFile( buffer );
 
 }

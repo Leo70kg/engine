@@ -1767,10 +1767,7 @@ Called directly from cgame
 void RE_LoadWorldMap( const char *name ) {
 	int			i;
 	dheader_t	*header;
-	union {
-		unsigned char* b;
-		void *v;
-	} buffer;
+	char* buffer;
 	byte		*startMarker;
 
 	if ( tr.worldMapLoaded )
@@ -1778,8 +1775,8 @@ void RE_LoadWorldMap( const char *name ) {
 
 
 	// load it
-    ri.FS_ReadFile( name, &buffer.v );
-	if ( NULL == buffer.b )
+    ri.R_ReadFile( name, &buffer );
+	if ( NULL == buffer )
 		ri.Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
 
 	// clear tr.world so if the level fails to load, the next
@@ -1801,7 +1798,7 @@ void RE_LoadWorldMap( const char *name ) {
 
 	startMarker = ri.Hunk_Alloc(0, h_low);
 
-	header = (dheader_t *)buffer.b;
+	header = (dheader_t *)buffer;
 	fileBase = (byte *)header;
 
 	i = LittleLong (header->version);
@@ -1833,5 +1830,5 @@ void RE_LoadWorldMap( const char *name ) {
 	// only set tr.world now that we know the entire level has loaded properly
 	tr.world = &s_worldData;
 	tr.worldMapLoaded = qtrue;
-    ri.FS_FreeFile( buffer.v );
+    ri.FS_FreeFile( buffer );
 }

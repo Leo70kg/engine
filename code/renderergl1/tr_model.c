@@ -35,12 +35,9 @@ R_RegisterMD3
 */
 qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 {
-	union {
-		unsigned *u;
-		void *v;
-	} buf;
+	
+	char* buf;
 	int			lod;
-	int			ident;
 	qboolean	loaded = qfalse;
 	int			numLoaded;
 	char filename[MAX_QPATH], namebuf[MAX_QPATH+20];
@@ -66,17 +63,21 @@ qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 		else
 			snprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
 
-		ri.FS_ReadFile( namebuf, &buf.v );
-		if(!buf.u)
+		ri.R_ReadFile( namebuf, &buf );
+		if(!buf)
 			continue;
 		
-		ident = LittleLong(* (unsigned *) buf.u);
+#if defined( Q3_BIG_ENDIAN )		
+		int ident = LittleLong(*(int *)buf);
+#else
+		int ident = *(int *)buf;
+#endif
 		if (ident == MD3_IDENT)
-			loaded = R_LoadMD3(mod, lod, buf.u, name);
+			loaded = R_LoadMD3(mod, lod, buf, name);
 		else
 			ri.Printf(PRINT_WARNING,"R_RegisterMD3: unknown fileid for %s\n", name);
 		
-		ri.FS_FreeFile(buf.v);
+		ri.FS_FreeFile(buf);
 
 		if(loaded)
 		{
@@ -156,23 +157,21 @@ R_RegisterIQM
 */
 qhandle_t R_RegisterIQM(const char *name, model_t *mod)
 {
-	union {
-		unsigned *u;
-		void *v;
-	} buf;
+	char* buf;
+	
 	qboolean loaded = qfalse;
 	int filesize;
 
-	filesize = ri.FS_ReadFile(name, (void **) &buf.v);
-	if(!buf.u)
+	filesize = ri.R_ReadFile(name, &buf);
+	if(!buf)
 	{
 		mod->type = MOD_BAD;
 		return 0;
 	}
 	
-	loaded = R_LoadIQM(mod, buf.u, filesize, name);
+	loaded = R_LoadIQM(mod, buf, filesize, name);
 
-	ri.FS_FreeFile (buf.v);
+	ri.FS_FreeFile (buf);
 	
 	if(!loaded)
 	{

@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // vm_x86.c -- load time compiler and execution environment for x86
 
+
 #include "vm_local.h"
 
 #ifdef _WIN32
@@ -40,6 +41,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
     #define MAP_ANONYMOUS MAP_ANON
   #endif
 #endif
+
 
 static void VM_Destroy_Compiled(vm_t* self);
 
@@ -173,8 +175,8 @@ inline static void EmitString(const char *string)
 
 		if ( 0 == string[2] )
 			break;
-        else
-		    string += 3;
+        
+		string += 3;
 	}
 
     LastCommand = LAST_COMMAND_NONE;
@@ -195,8 +197,8 @@ inline static void EmitRexString(unsigned char rex, const char *string)
 
 		if ( 0 == string[2] )
 			break;
-        else
-		    string += 3;
+        
+		string += 3;
 	}
 
     LastCommand = LAST_COMMAND_NONE;

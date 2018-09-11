@@ -45,10 +45,7 @@ void R_LoadTGA ( const char *name, byte **pic, int *width, int *height)
 	int		row, column;
 	byte	*buf_p;
 	byte	*end;
-	union {
-		byte *b;
-		void *v;
-	} buffer;
+	char * buffer;
 	TargaHeader	targa_header;
 	byte		*targa_rgba;
 	int length;
@@ -63,8 +60,8 @@ void R_LoadTGA ( const char *name, byte **pic, int *width, int *height)
 	//
 	// load the file
 	//
-	length = ri.FS_ReadFile ( ( char * ) name, &buffer.v);
-	if (!buffer.b || length < 0) {
+	length = ri.R_ReadFile ( name, &buffer);
+	if (!buffer || length < 0) {
 		return;
 	}
 
@@ -73,8 +70,8 @@ void R_LoadTGA ( const char *name, byte **pic, int *width, int *height)
 		ri.Error( ERR_DROP, "LoadTGA: header too short (%s)", name );
 	}
 
-	buf_p = buffer.b;
-	end = buffer.b + length;
+	buf_p = (unsigned char*)buffer;
+	end = (unsigned char*)buffer + length;
 
 	targa_header.id_length = buf_p[0];
 	targa_header.colormap_type = buf_p[1];
@@ -319,5 +316,5 @@ void R_LoadTGA ( const char *name, byte **pic, int *width, int *height)
 
   *pic = targa_rgba;
 
-  ri.FS_FreeFile (buffer.v);
+  ri.FS_FreeFile (buffer);
 }

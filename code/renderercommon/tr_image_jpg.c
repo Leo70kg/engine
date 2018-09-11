@@ -104,10 +104,7 @@ void R_LoadJPG(const char *filename, unsigned char **pic, int *width, int *heigh
   unsigned int sindex, dindex;
   byte *out;
   int len;
-	union {
-		byte *b;
-		void *v;
-	} fbuffer;
+  char * fbuffer;
   byte  *buf;
 
   /* In this example we want to open the input file before doing anything else,
@@ -116,8 +113,8 @@ void R_LoadJPG(const char *filename, unsigned char **pic, int *width, int *heigh
    * requires it in order to read binary files.
    */
 
-  len = ri.FS_ReadFile ( ( char * ) filename, &fbuffer.v);
-  if (!fbuffer.b || len < 0) {
+  len = ri.R_ReadFile ( filename, &fbuffer);
+  if (!fbuffer || len < 0) {
 	return;
   }
 
@@ -139,7 +136,7 @@ void R_LoadJPG(const char *filename, unsigned char **pic, int *width, int *heigh
      * We need to clean up the JPEG object, close the input file, and return.
      */
     jpeg_destroy_decompress(&cinfo);
-    ri.FS_FreeFile(fbuffer.v);
+    ri.FS_FreeFile(fbuffer);
 
     /* Append the filename to the error for easier debugging */
     ri.Printf(PRINT_ALL, ", loading file %s\n", filename);
@@ -151,7 +148,7 @@ void R_LoadJPG(const char *filename, unsigned char **pic, int *width, int *heigh
 
   /* Step 2: specify data source (eg, a file) */
 
-  jpeg_mem_src(&cinfo, fbuffer.b, len);
+  jpeg_mem_src(&cinfo, (unsigned char*)fbuffer, len);
 
   /* Step 3: read file parameters with jpeg_read_header() */
 
@@ -193,7 +190,7 @@ void R_LoadJPG(const char *filename, unsigned char **pic, int *width, int *heigh
     )
   {
     // Free the memory to make sure we don't leak memory
-    ri.FS_FreeFile (fbuffer.v);
+    ri.FS_FreeFile (fbuffer);
     jpeg_destroy_decompress(&cinfo);
   
     ri.Error(ERR_DROP, "LoadJPG: %s has an invalid image format: %dx%d*4=%d, components: %d", filename,
@@ -257,7 +254,7 @@ void R_LoadJPG(const char *filename, unsigned char **pic, int *width, int *heigh
    * so as to simplify the setjmp error logic above.  (Actually, I don't
    * think that jpeg_destroy can do an error exit, but why assume anything...)
    */
-  ri.FS_FreeFile (fbuffer.v);
+  ri.FS_FreeFile (fbuffer);
 
   /* At this point you may want to check to see whether any corrupt-data
    * warnings occurred (test whether jerr.pub.num_warnings is nonzero).
