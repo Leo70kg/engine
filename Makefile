@@ -800,9 +800,6 @@ BASE_CFLAGS += -Wmissing-format-attribute
 BASE_CFLAGS += -Wdisabled-optimization
 BASE_CFLAGS += -Werror-implicit-function-declaration
 
-#####################################
-BASE_CFLAGS += -Wstrict-aliasing=2
-####################################
 ifeq ($(V),1)
 echo_cmd=@:
 Q=
