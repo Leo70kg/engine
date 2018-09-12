@@ -3086,13 +3086,12 @@ void CL_ShutdownRef( void )
 	memset( &re, 0, sizeof( re ) );
 
 #ifdef USE_RENDERER_DLOPEN
-	if ( rendererLib ) {
+	if ( rendererLib )
+    {
+        Com_Printf("...Unloading renderer dll: %p ...\n", rendererLib);
 		Sys_UnloadLibrary( rendererLib );
 		rendererLib = NULL;
 	}
-
-    Com_Printf("%s","...Unload renderer dll...\n");
-
 #endif
 }
 
@@ -3180,7 +3179,7 @@ void CL_InitRef(void)
     
     Com_Printf("\n-------- USE_RENDERER_DLOPEN --------\n");
 
-	cl_renderer = Cvar_Get("cl_renderer", "openarena", CVAR_ARCHIVE | CVAR_LATCH);
+	cl_renderer = Cvar_Get("cl_renderer", "opengl2", CVAR_ARCHIVE | CVAR_LATCH | CVAR_PROTECTED);
 
 	Com_sprintf(dllName, sizeof(dllName), "renderer_%s_" ARCH_STRING DLL_EXT, cl_renderer->string);
 
@@ -3279,9 +3278,8 @@ void CL_InitRef(void)
 
     ri.GLimpDeleteCtx = GLimp_DeleteGLContext;
     ri.GLimpDestroyWin = GLimp_DestroyWindow;
-
     ri.GLimpGetProcAddress = GLimp_GetProcAddress;
-//    ri.GLimpExtensionSupported = GLimp_ExtensionSupported;
+
 
 	ret = GetRefAPI(REF_API_VERSION, &ri);
 

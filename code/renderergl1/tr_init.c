@@ -135,18 +135,16 @@ static cvar_t* r_ext_texture_filter_anisotropic;
 static cvar_t* r_ext_max_anisotropy;
 
 
-void (APIENTRYP qglActiveTextureARB) (GLenum texture) = NULL;
-void (APIENTRYP qglClientActiveTextureARB) (GLenum texture) = NULL;
-void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t) = NULL;
-
-void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count) = NULL;
-void (APIENTRYP qglUnlockArraysEXT) (void) = NULL;
+void (APIENTRYP qglActiveTextureARB) (GLenum texture);
+void (APIENTRYP qglClientActiveTextureARB) (GLenum texture);
+void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
+void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
+void (APIENTRYP qglUnlockArraysEXT) (void);
 
 #define GLE(ret, name, ...) name##proc * qgl##name;
 QGL_1_1_PROCS;
 QGL_DESKTOP_1_1_PROCS;
 QGL_1_3_PROCS;
-QGL_1_5_PROCS;
 #undef GLE
 
 
@@ -157,7 +155,7 @@ GLimp_GetProcAddresses
 Get addresses for OpenGL functions.
 ===============
 */
-qboolean GLimp_GetProcAddresses( void )
+static qboolean GLimp_GetProcAddresses( void )
 {
 	qboolean success = qtrue;
 	const char *version;
@@ -177,7 +175,7 @@ qboolean GLimp_GetProcAddresses( void )
 	if ( !qglGetString ) {
 		ri.Error( ERR_FATAL, "glGetString is NULL" );
 	}
-
+//
 	version = (const char *)qglGetString( GL_VERSION );
 
 	if ( !version )
@@ -193,7 +191,6 @@ qboolean GLimp_GetProcAddresses( void )
 		QGL_1_1_PROCS;
 		QGL_DESKTOP_1_1_PROCS;
         QGL_1_3_PROCS;
-        QGL_1_5_PROCS;
 	}
     else {
 		ri.Error( ERR_FATAL, "Unsupported OpenGL Version: %s\n", version );
@@ -217,7 +214,13 @@ void GLimp_ClearProcAddresses( void )
     QGL_1_1_PROCS;
     QGL_DESKTOP_1_1_PROCS;
     QGL_1_3_PROCS;
-    QGL_1_5_PROCS;
+
+    qglActiveTextureARB = NULL;
+	qglClientActiveTextureARB = NULL;
+	qglMultiTexCoord2fARB = NULL;
+
+	qglLockArraysEXT = NULL;
+	qglUnlockArraysEXT = NULL;
 #undef GLE
 }
 
@@ -233,7 +236,7 @@ static qboolean GLimp_HaveExtension(const char *ext)
 }
 
 
-void GLimp_InitExtensions( glconfig_t *glConfig )
+void GLimp_InitExtensions( void )
 {
 	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "2", CVAR_ARCHIVE | CVAR_LATCH );
     r_ext_texture_filter_anisotropic = ri.Cvar_Get( "r_ext_texture_filter_anisotropic", "0", CVAR_ARCHIVE | CVAR_LATCH );
@@ -242,17 +245,17 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 
 
 	// GL_EXT_texture_env_add
-	glConfig->textureEnvAddAvailable = qfalse;
+	glConfig.textureEnvAddAvailable = qfalse;
 	if ( GLimp_HaveExtension( "EXT_texture_env_add" ) )
 	{
 		if ( GLimp_HaveExtension( "GL_EXT_texture_env_add" ) )
 		{
-			glConfig->textureEnvAddAvailable = qtrue;
+			glConfig.textureEnvAddAvailable = qtrue;
 			ri.Printf( PRINT_ALL, "...using GL_EXT_texture_env_add\n" );
 		}
 		else
 		{
-			glConfig->textureEnvAddAvailable = qfalse;
+			glConfig.textureEnvAddAvailable = qfalse;
 			ri.Printf( PRINT_ALL, "...ignoring GL_EXT_texture_env_add\n" );
 		}
 	}
@@ -275,8 +278,8 @@ void GLimp_InitExtensions( glconfig_t *glConfig )
 		{
 			GLint glint = 0;
 			qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &glint );
-			glConfig->numTextureUnits = (int) glint;
-			if ( glConfig->numTextureUnits > 1 )
+			glConfig.numTextureUnits = (int) glint;
+			if ( glConfig.numTextureUnits > 1 )
 			{
 				ri.Printf( PRINT_ALL, "...using GL_ARB_multitexture\n" );
 			}
@@ -378,22 +381,21 @@ static void InitOpenGL( void )
             ri.Printf(PRINT_ALL, "GLimp_GetProcAddresses() successed\n" );
         }
 
-        qglClearColor( 0, 0, 0, 1 );
+        qglClearColor( 0, 1, 0, 1 );
         qglClear( GL_COLOR_BUFFER_BIT );
         ri.GLimpEndFrame();
         
-        // These values force the UI to disable driver selection
-        glConfig.driverType = GLDRV_ICD;
-        glConfig.hardwareType = GLHW_GENERIC;
+        // get our config strings
+        Q_strncpyz( glConfig.vendor_string, (char *) qglGetString (GL_VENDOR), sizeof( glConfig.vendor_string ) );
+        Q_strncpyz( glConfig.renderer_string, (char *) qglGetString (GL_RENDERER), sizeof( glConfig.renderer_string ) );
+        if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
+            glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;
+        Q_strncpyz( glConfig.version_string, (char *) qglGetString (GL_VERSION), sizeof( glConfig.version_string ) );
+        Q_strncpyz( glConfig.extensions_string, (char *)qglGetString(GL_EXTENSIONS), sizeof( glConfig.extensions_string ) );
 
-        // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
-        glConfig.deviceSupportsGamma = qtrue ;
+        GLimp_InitExtensions();
 
-
-
-        GLimp_InitExtensions(&glConfig);
-
-		strcpy( renderer_buffer, glConfig.renderer_string );
+        strcpy( renderer_buffer, glConfig.renderer_string );
 		Q_strlwr( renderer_buffer );
 
 		// OpenGL driver constants
@@ -1351,6 +1353,7 @@ void RE_Shutdown( qboolean destroyWindow ) {
 
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {
+
 		ri.GLimpShutdown();
 
 		memset( &glConfig, 0, sizeof( glConfig ) );

@@ -225,7 +225,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // OpenGL 3.0 specific
 #define QGL_3_0_PROCS \
-	GLE(const GLubyte *, GetStringi, GLenum name, GLuint index) \
+	GLE(const GLubyte *, GetStringi, GLenum name, GLuint index)
 
 // GL_ARB_framebuffer_object, built-in to OpenGL 3.0
 #define QGL_ARB_framebuffer_object_PROCS \
@@ -302,7 +302,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define GLE(ret, name, ...) typedef ret APIENTRY name##proc(__VA_ARGS__);
 QGL_1_1_PROCS;
 QGL_DESKTOP_1_1_PROCS;
-QGL_ES_1_1_PROCS;
+//QGL_ES_1_1_PROCS;
 QGL_1_3_PROCS;
 QGL_1_5_PROCS;
 QGL_2_0_PROCS;

@@ -222,7 +222,7 @@ void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
 void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
 void (APIENTRYP qglUnlockArraysEXT) (void);
 
-qboolean q_gl_version_at_least_3_2;
+static qboolean q_gl_version_at_least_3_2;
 
 /*
 ===============
@@ -265,6 +265,9 @@ qboolean GLimp_GetProcAddresses( void )
 	if ( (qglMajorVersion > 1) || ( ( qglMajorVersion == 1) && (qglMinorVersion >= 2 ) ) ) {
 		QGL_1_1_PROCS;
 		QGL_DESKTOP_1_1_PROCS;
+        QGL_1_3_PROCS;
+		QGL_1_5_PROCS;
+		QGL_2_0_PROCS;
 	}else {
 		ri.Error( ERR_FATAL, "Unsupported OpenGL Version: %s\n", version );
 	}
@@ -305,6 +308,13 @@ void GLimp_ClearProcAddresses( void )
     QGL_ARB_vertex_array_object_PROCS;
     QGL_EXT_direct_state_access_PROCS;
     QGL_3_0_PROCS;
+
+    qglMultiTexCoord2fARB = NULL;
+	qglActiveTextureARB = NULL;
+	qglClientActiveTextureARB = NULL;
+
+    qglLockArraysEXT = NULL;
+	qglUnlockArraysEXT = NULL;
 #undef GLE
 }
 
@@ -750,16 +760,10 @@ static void InitOpenGL( void )
             */
         }
 
-        qglClearColor( 0, 0, 0, 1 );
+        qglClearColor( 0, 0, 1, 1 );
         qglClear( GL_COLOR_BUFFER_BIT );
 	    ri.GLimpEndFrame();
 
-        // These values force the UI to disable driver selection
-        glConfig.driverType = GLDRV_ICD;
-        glConfig.hardwareType = GLHW_GENERIC;
-
-        // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
-        glConfig.deviceSupportsGamma = qtrue;
 
         // get our config strings
         Q_strncpyz( glConfig.vendor_string, (char *) qglGetString (GL_VENDOR), sizeof( glConfig.vendor_string ) );
@@ -1907,8 +1911,8 @@ void R_Init( void )
 RE_Shutdown
 ===============
 */
-void RE_Shutdown( qboolean destroyWindow ) {	
-
+void RE_Shutdown( qboolean destroyWindow )
+{	
 	ri.Printf( PRINT_ALL, "RE_Shutdown( %i )\n", destroyWindow );
 
 	ri.Cmd_RemoveCommand( "imagelist" );
@@ -1940,6 +1944,9 @@ void RE_Shutdown( qboolean destroyWindow ) {
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow )
     {
+        ri.GLimpDeleteCtx();
+        ri.GLimpDestroyWin();
+
         ri.GLimpShutdown();
 		memset( &glConfig, 0, sizeof( glConfig ) );
 		memset( &glRefConfig, 0, sizeof( glRefConfig ) );
@@ -1947,7 +1954,6 @@ void RE_Shutdown( qboolean destroyWindow ) {
 
         GLimp_ClearProcAddresses();
 	}
-
 }
 
 

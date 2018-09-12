@@ -55,7 +55,7 @@ static cvar_t* r_depthbits;
 static cvar_t* r_displayRefresh;
 
 // not used cvar, keep it for backward compatibility
-
+static cvar_t *r_sdlDriver;
 static cvar_t* r_displayIndex;
 
 typedef struct vidmode_s {
@@ -260,7 +260,7 @@ GLimp_SetMode
 */
 static int GLimp_SetMode(int mode, qboolean fullscreen, glconfig_t *glCfg, qboolean coreContext)
 {
-	static SDL_DisplayMode desktopMode;
+	SDL_DisplayMode desktopMode;
 
     int samples = 0;
 
@@ -288,7 +288,7 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 
 
 	//Let SDL_GetDisplayMode handle this
-	SDL_Init(SDL_INIT_VIDEO);
+	//SDL_Init(SDL_INIT_VIDEO);
 	//Com_Printf("SDL_GetNumVideoDisplays(): %d\n", SDL_GetNumVideoDisplays());
     SDL_GetNumVideoDisplays();
 
@@ -382,7 +382,7 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 	}
 
 
-	int realColorBits[3];
+
 	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
 	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
@@ -402,10 +402,12 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 						glCfg->vidWidth, glCfg->vidHeight, flags );
 	if( SDL_window == NULL )
 		Com_Error(ERR_FATAL,"SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
-    else
+    else{
         Com_Printf("SDL_CreateWindow successed.\n");
-	
-
+    }
+#ifdef USE_ICON
+	SDL_SetWindowIcon( SDL_window, icon );
+#endif
 
 	if (coreContext)
 	{
@@ -435,10 +437,13 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 			Com_Printf("SDL_GL_CreateContext succeeded.\n");
 		}
 	}
+	else
+	{
+		SDL_glContext = NULL;
+	}
 
 
-
-    if(NULL == SDL_glContext)
+    if(!SDL_glContext )
     {
         SDL_glContext = SDL_GL_CreateContext( SDL_window );
         if(SDL_glContext == NULL)
@@ -459,7 +464,7 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 	{
 		Com_Printf("SDL_GL_SetSwapInterval failed: %s\n", SDL_GetError( ) );
 	}
-
+	int realColorBits[3];
 	SDL_GL_GetAttribute( SDL_GL_RED_SIZE, &realColorBits[0] );
 	SDL_GL_GetAttribute( SDL_GL_GREEN_SIZE, &realColorBits[1] );
 	SDL_GL_GetAttribute( SDL_GL_BLUE_SIZE, &realColorBits[2] );
@@ -473,7 +478,6 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 
 
 #ifdef USE_ICON
-	SDL_SetWindowIcon( SDL_window, icon );
     SDL_FreeSurface( icon );
 #endif
 
@@ -506,7 +510,7 @@ void GLimp_Init(glconfig_t *glCfg, qboolean coreContext)
 
 	r_mode = Cvar_Get( "r_mode", "-2", CVAR_ARCHIVE | CVAR_LATCH ); // leilei - -2 is so convenient for modern day PCs
 	
-
+	r_sdlDriver = Cvar_Get( "r_sdlDriver", "", CVAR_ROM );
 	r_fullscreen = Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE );
 	r_customwidth = Cvar_Get( "r_customwidth", "1920", CVAR_ARCHIVE | CVAR_LATCH );
 	r_customheight = Cvar_Get( "r_customheight", "1080", CVAR_ARCHIVE | CVAR_LATCH );
@@ -533,6 +537,7 @@ void GLimp_Init(glconfig_t *glCfg, qboolean coreContext)
     
 	if (!SDL_WasInit(SDL_INIT_VIDEO))
 	{
+        const char *driverName;
 		if (SDL_Init(SDL_INIT_VIDEO) != 0)
 		{
 			Com_Printf("SDL_Init( SDL_INIT_VIDEO ) FAILED (%s)\n", SDL_GetError());
@@ -541,6 +546,10 @@ void GLimp_Init(glconfig_t *glCfg, qboolean coreContext)
         {
     		Com_Printf(" SDL using driver \"%s\"\n", SDL_GetCurrentVideoDriver( ));
         }
+        
+        driverName = SDL_GetCurrentVideoDriver( );
+        Com_Printf( "SDL using driver \"%s\"\n", driverName );
+		Cvar_Set( "r_sdlDriver", driverName );
     }
 
 
@@ -566,6 +575,14 @@ void GLimp_Init(glconfig_t *glCfg, qboolean coreContext)
 
 
 success:
+
+        // These values force the UI to disable driver selection
+        glCfg->driverType = GLDRV_ICD;
+        glCfg->hardwareType = GLHW_GENERIC;
+
+        // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
+        glCfg->deviceSupportsGamma = qtrue ;
+
 
 	Com_Printf( "MODE: %s, %d x %d, refresh rate: %dhz\n", fsstrings[r_fullscreen->integer == 1], glCfg->vidWidth, glCfg->vidHeight, glCfg->refresh_rate);
 

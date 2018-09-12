@@ -17,6 +17,7 @@
 
 
 void GLimp_Init(glconfig_t *glConfig, qboolean coreContext);
+
 void GLimp_Shutdown(void);
 void GLimp_EndFrame(void);
 

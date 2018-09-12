@@ -151,16 +151,15 @@ static cvar_t* r_ext_compressed_textures;
 QGL_1_1_PROCS;
 QGL_DESKTOP_1_1_PROCS;
 QGL_1_3_PROCS;
-QGL_1_5_PROCS;
 #undef GLE
 
 
-void (APIENTRYP qglActiveTextureARB) (GLenum texture) = NULL;
-void (APIENTRYP qglClientActiveTextureARB) (GLenum texture) = NULL;
-void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t) = NULL;
+void (APIENTRYP qglActiveTextureARB) (GLenum texture);
+void (APIENTRYP qglClientActiveTextureARB) (GLenum texture);
+void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
 
-void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count) = NULL;
-void (APIENTRYP qglUnlockArraysEXT) (void) = NULL;
+void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
+void (APIENTRYP qglUnlockArraysEXT) (void);
 
 
 
@@ -215,32 +214,31 @@ static qboolean GLimp_GetProcAddresses( void )
 		QGL_1_1_PROCS;
 		QGL_DESKTOP_1_1_PROCS;
         QGL_1_3_PROCS;
-        QGL_1_5_PROCS;
 	} else {
 		ri.Error( ERR_FATAL, "Unsupported OpenGL Version: %s\n", pStr);
 	}
-
 #undef GLE
-	ri.Printf( PRINT_ALL, "\n...Using OpenGL %s\n", pStr);
-
 
     // get our config strings
 
     strcpy( glConfig.version_string, pStr);
     glConfig.version_string[strlen(pStr)+1] = 0;
+	ri.Printf( PRINT_ALL, "GL_VERSION: %s\n", pStr);
 
     pStr = (char *) qglGetString(GL_VENDOR);
     strcpy(glConfig.vendor_string, pStr);
     glConfig.renderer_string[strlen(pStr)+1] = 0;
+	ri.Printf( PRINT_ALL, "GL_VENDOR: %s\n", pStr);
 
     pStr = (char *) qglGetString(GL_RENDERER);
     strcpy(glConfig.renderer_string, pStr);
     glConfig.renderer_string[strlen(pStr)+1] = 0;
+	ri.Printf( PRINT_ALL, "GL_RENDERER: %s\n", pStr);
 
     pStr = (char *)qglGetString(GL_EXTENSIONS);
     strcpy(glConfig.extensions_string, pStr);
     glConfig.extensions_string[strlen(pStr)+1] = 0;
-
+	ri.Printf( PRINT_ALL, "GL_EXTENSIONS: %s\n", pStr);
 
 	ri.Printf( PRINT_ALL,  "\n...Initializing OpenGL extensions\n" );
 
@@ -382,7 +380,14 @@ static void GLimp_ClearProcAddresses(void)
     QGL_1_1_PROCS;
     QGL_DESKTOP_1_1_PROCS;
     QGL_1_3_PROCS;
-    QGL_1_5_PROCS;
+    
+    qglActiveTextureARB = NULL;
+	qglClientActiveTextureARB = NULL;
+	qglMultiTexCoord2fARB = NULL;
+
+	qglLockArraysEXT = NULL;
+	qglUnlockArraysEXT = NULL;
+
 #undef GLE
 }
 
@@ -540,15 +545,7 @@ static void InitOpenGL(void)
             ri.GLimpDestroyWin();
         }
 
-        // These values force the UI to disable driver selection
-        glConfig.driverType = GLDRV_ICD;
-        glConfig.hardwareType = GLHW_GENERIC;
-
-        // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
-        glConfig.deviceSupportsGamma = qtrue;
-
-
-        qglClearColor( 0, 0, 0, 1 );
+        qglClearColor( 1, 0, 0, 1 );
         qglClear( GL_COLOR_BUFFER_BIT );
         ri.GLimpEndFrame();
         
@@ -567,7 +564,7 @@ static void InitOpenGL(void)
 	GL_SetDefaultState();
     
     // print info
-	GfxInfo_f();
+	//GfxInfo_f();
 }
 
 

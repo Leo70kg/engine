@@ -1440,7 +1440,7 @@ void R_InitImages(void)
 	memset(hashTable, 0, sizeof(hashTable));
 	// build brightness translation tables
 	
-    r_texturebits = ri.Cvar_Get( "r_texturebits", "32", CVAR_ARCHIVE | CVAR_LATCH );
+    r_texturebits = ri.Cvar_Get("r_texturebits", "32", CVAR_ARCHIVE | CVAR_LATCH);
     ri.Printf( PRINT_ALL, "texture bits: %d\n", r_texturebits->integer );
 
     r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
