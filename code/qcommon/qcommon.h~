@@ -1089,7 +1089,7 @@ char	*Sys_Cwd( void );
 void CON_Shutdown( void );
 void CON_Init( void );
 char *CON_Input( void );
-unsigned int CON_LogSize( void );
+//unsigned int CON_LogSize( void );
 
 unsigned int CON_LogRead( char *out, unsigned int outSize );
 void CON_Print( const char *message );

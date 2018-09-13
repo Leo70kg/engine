@@ -30,7 +30,7 @@ static unsigned int  writePos = 0;
 static unsigned int  readPos = 0;
 
 
-unsigned int CON_LogSize( void )
+static unsigned int CON_LogSize( void )
 {
 	if( readPos <= writePos )
 		return writePos - readPos;
