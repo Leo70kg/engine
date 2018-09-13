@@ -918,12 +918,6 @@ void Sys_PlatformInit( void )
 {
 	const char* term = getenv( "TERM" );
 
-	signal( SIGHUP, Sys_SigHandler );
-	signal( SIGQUIT, Sys_SigHandler );
-	signal( SIGTRAP, Sys_SigHandler );
-	signal( SIGABRT, Sys_SigHandler );
-	signal( SIGBUS, Sys_SigHandler );
-
 	// rounding toward nearest
 	fesetround(FE_TONEAREST);
 

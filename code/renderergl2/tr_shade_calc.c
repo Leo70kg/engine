@@ -355,7 +355,7 @@ static void AutospriteDeform( void ) {
 	int		i;
 	int		oldVerts;
 	float	*xyz;
-	vec3_t	mid, delta;
+	vec3_t	mid;
 	float	radius;
 	vec3_t	left, up;
 	vec3_t	leftDir, upDir;
@@ -380,7 +380,9 @@ static void AutospriteDeform( void ) {
 		VectorCopy( backEnd.viewParms.or.axis[2], upDir );
 	}
 
-	for ( i = 0 ; i < oldVerts ; i+=4 ) {
+	for ( i = 0 ; i < oldVerts ; i+=4 )
+    {
+        float delta[3];
 		vec4_t color;
 		// find the midpoint
 		xyz = tess.xyz[i];
@@ -390,26 +392,29 @@ static void AutospriteDeform( void ) {
 		mid[2] = 0.25f * (xyz[2] + xyz[6] + xyz[10] + xyz[14]);
 
 		VectorSubtract( xyz, mid, delta );
-		radius = VectorLength( delta ) * 0.707f;		// / sqrt(2)
+		radius = sqrtf( delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2]) * 0.707f;		// / sqrt(2)
 
 		VectorScale( leftDir, radius, left );
 		VectorScale( upDir, radius, up );
 
 		if ( backEnd.viewParms.isMirror ) {
-			VectorSubtract( vec3_origin, left, left );
+			VectorSubtract( ORIGIN, left, left );
 		}
 
 	  // compensate for scale in the axes if necessary
-  	if ( backEnd.currentEntity->e.nonNormalizedAxes ) {
-      float axisLength;
-		  axisLength = VectorLength( backEnd.currentEntity->e.axis[0] );
-  		if ( !axisLength ) {
-	  		axisLength = 0;
-  		} else {
-	  		axisLength = 1.0f / axisLength;
-  		}
-      VectorScale(left, axisLength, left);
-      VectorScale(up, axisLength, up);
+  	if ( backEnd.currentEntity->e.nonNormalizedAxes )
+    {
+        float square = backEnd.currentEntity->e.axis[0][0] * backEnd.currentEntity->e.axis[0][0]
+            + backEnd.currentEntity->e.axis[0][1] * backEnd.currentEntity->e.axis[0][1] 
+            + backEnd.currentEntity->e.axis[0][2] * backEnd.currentEntity->e.axis[0][2];
+        
+        float axisLength = 0;
+
+        if(square)
+            axisLength = 1.0f / sqrtf(square);
+
+        VectorScale(left, axisLength, left);
+        VectorScale(up, axisLength, up);
     }
 
 		VectorScale4(tess.color[i], 1.0f / 65535.0f, color);

@@ -23,28 +23,25 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 
-// Console
-void CON_Shutdown( void );
-void CON_Init( void );
-char *CON_Input( void );
-void CON_Print( const char *message );
-qboolean IsStdinATTY( void );
 
-unsigned int CON_LogSize( void );
-unsigned int CON_LogWrite( const char *in );
-unsigned int CON_LogRead( char *out, unsigned int outSize );
 
 #ifdef MACOS_X
 char *Sys_StripAppBundle( char *pwd );
 #endif
 
-void Sys_GLimpSafeInit( void );
-void Sys_GLimpInit( void );
 void Sys_PlatformInit( void );
 void Sys_PlatformExit( void );
-void Sys_SigHandler( int signal ) __attribute__ ((noreturn));
-void Sys_ErrorDialog( const char *error );
-void Sys_AnsiColorPrint( const char *msg );
 
+
+// signals
+void Sys_InitSignal(void);
+void Sys_SigHandler( int signal ) __attribute__ ((noreturn));
+
+
+// error, log, exception, exit
+void Sys_Exit( int exitCode );
+void Sys_ErrorDialog( const char *error );
+
+//
 int Sys_PID( void );
 qboolean Sys_PIDIsRunning( int pid );

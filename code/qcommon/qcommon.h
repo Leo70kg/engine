@@ -775,21 +775,7 @@ MISC
 // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=470
 extern char cl_cdkey[34];
 
-// returned by Sys_GetProcessorFeatures
-typedef enum
-{
-  CF_RDTSC      = 1 << 0,
-  CF_MMX        = 1 << 1,
-  CF_MMX_EXT    = 1 << 2,
-  CF_3DNOW      = 1 << 3,
-  CF_3DNOW_EXT  = 1 << 4,
-  CF_SSE        = 1 << 5,
-  CF_SSE2       = 1 << 6,
-  CF_SSE3       = 1 << 7,
-  CF_SSE41       = 1 << 8,
-  CF_SSE42       = 1 << 9,
-  CF_ALTIVEC    = 1 << 10
-} cpuFeatures_t;
+
 
 // centralized and cleaned, that's the max string you can send to a Com_Printf / Com_DPrintf (above gets truncated)
 #define	MAXPRINTMSG	4096
@@ -1064,12 +1050,7 @@ NON-PORTABLE SYSTEM SERVICES
 ==============================================================
 */
 
-void	Sys_Init (void);
 
-// general development dll loading for virtual machine testing
-void	* QDECL Sys_LoadGameDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
-				  intptr_t (QDECL *systemcalls)(intptr_t, ...) );
-void	Sys_UnloadDll( void *dllHandle );
 
 char	*Sys_GetCurrentUser( void );
 
@@ -1078,7 +1059,7 @@ void	Sys_Quit (void) __attribute__ ((noreturn));
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
 
 void	Sys_Print( const char *msg );
-
+void    Sys_AnsiColorPrint( const char *msg );
 // Sys_Milliseconds should only be used for profiling purposes,
 // any game related timing information should come from event timestamps
 int		Sys_Milliseconds (void);
@@ -1087,8 +1068,6 @@ qboolean Sys_RandomBytes( byte *string, int len );
 
 // the system console is shown when a dedicated server is running
 void	Sys_DisplaySystemConsole( qboolean show );
-
-cpuFeatures_t Sys_GetProcessorFeatures( void );
 
 void	Sys_SetErrorText( const char *text );
 
@@ -1104,18 +1083,18 @@ FILE	*Sys_FOpen( const char *ospath, const char *mode );
 qboolean Sys_Mkdir( const char *path );
 FILE	*Sys_Mkfifo( const char *ospath );
 char	*Sys_Cwd( void );
-void	Sys_SetDefaultInstallPath(const char *path);
-char	*Sys_DefaultInstallPath(void);
 
-#ifdef MACOS_X
-char    *Sys_DefaultAppPath(void);
-#endif
 
-void  Sys_SetDefaultHomePath(const char *path);
-const char *Sys_DefaultHomePath(void);
-const char *Sys_Dirname( char *path );
-const char *Sys_Basename( char *path );
-char *Sys_ConsoleInput(void);
+// Console
+void CON_Shutdown( void );
+void CON_Init( void );
+char *CON_Input( void );
+//unsigned int CON_LogSize( void );
+
+unsigned int CON_LogRead( char *out, unsigned int outSize );
+void CON_Print( const char *message );
+unsigned int CON_LogWrite( const char *in );
+
 
 char **Sys_ListFiles( const char *directory, const char *extension, char *filter, int *numfiles, qboolean wantsubs );
 void	Sys_FreeFileList( char **list );

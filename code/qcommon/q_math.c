@@ -379,67 +379,6 @@ ID_INLINE float	AngleMod(float a)
 //============================================================
 
 
-/*
-=================
-SetPlaneSignbits
-=================
-*/
-void SetPlaneSignbits (cplane_t *out) {
-	int	bits = 0;
-    int j;
-
-	// for fast box on planeside test
-	for (j=0 ; j<3 ; j++) {
-		if (out->normal[j] < 0) {
-			bits |= 1<<j;
-		}
-	}
-	out->signbits = bits;
-}
-
-
-/*
-==================
-BoxOnPlaneSide
-
-Returns 1, 2, or 1 + 2
-==================
-*/
-int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *p)
-{
-	float	dist[2];
-	int		sides, b, i;
-
-	// fast axial cases
-	if (p->type < 3)
-	{
-		if (p->dist <= emins[p->type])
-			return 1;
-		if (p->dist >= emaxs[p->type])
-			return 2;
-		return 3;
-	}
-
-	// general case
-	dist[0] = dist[1] = 0;
-	if (p->signbits < 8) // >= 8: default case is original code (dist[0]=dist[1]=0)
-	{
-		for (i=0 ; i<3 ; i++)
-		{
-			b = (p->signbits >> i) & 1;
-			dist[ b] += p->normal[i]*emaxs[i];
-			dist[!b] += p->normal[i]*emins[i];
-		}
-	}
-
-	sides = 0;
-	if (dist[0] >= p->dist)
-		sides = 1;
-	if (dist[1] < p->dist)
-		sides |= 2;
-
-	return sides;
-}
 
 
 /*
@@ -653,21 +592,6 @@ float Q_rsqrt( float number )
 }
 
 
-/*
-=================
-Matrix4Compare
-=================
-*/
-ID_INLINE qboolean Matrix4Compare(const float a[16], const float b[16])
-{
-	int i;
-
-	for ( i = 0; i < 16; i++ )
-		if ( a[i] != b[i] )
-			return qfalse;
-
-	return qtrue;
-}
 
 
 
@@ -757,23 +681,6 @@ void PerpendicularVector( vec3_t dst, const vec3_t src )
 	VectorNormalize( dst );
 }
 
-/*
-================
-Q_isnan
-
-Don't pass doubles to this
-================
-*/
-ID_INLINE int Q_isnan( float x )
-{
-	floatint_t fi;
-
-	fi.f = x;
-	fi.ui &= 0x7FFFFFFF;
-	fi.ui = 0x7F800000 - fi.ui;
-
-	return (int)( (unsigned int)fi.ui >> 31 );
-}
 //------------------------------------------------------------------------
 //
 

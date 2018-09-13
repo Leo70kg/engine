@@ -447,11 +447,6 @@ struct cplane_s;
 extern	vec3_t	vec3_origin;
 extern	vec3_t	axisDefault[3];
 
-#define	nanmask (255<<23)
-
-#define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
-
-int Q_isnan(float x);
 
 void qsnapvectorsse(vec3_t vec);
 
@@ -541,8 +536,8 @@ void AnglesToAxis( const vec3_t angles, vec3_t axis[3] );
 void AxisClear( vec3_t axis[3] );
 void AxisCopy( vec3_t in[3], vec3_t out[3] );
 
-void SetPlaneSignbits( struct cplane_s *out );
-int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
+
+
 
 qboolean BoundsIntersect(const vec3_t mins, const vec3_t maxs,
 		const vec3_t mins2, const vec3_t maxs2);

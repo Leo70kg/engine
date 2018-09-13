@@ -132,7 +132,7 @@ static void MakeMeshNormals( int width, int height, drawVert_t ctrl[MAX_GRID_SIZ
 	for ( i = 0 ; i < height ; i++ )
     {
 		VectorSubtract( ctrl[i][0].xyz, ctrl[i][width-1].xyz, delta );
-		len = VectorLengthSquared( delta );
+		len = delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2];
 		if ( len > 1.0 )
 			break;
 	}
@@ -143,7 +143,7 @@ static void MakeMeshNormals( int width, int height, drawVert_t ctrl[MAX_GRID_SIZ
 	for ( i = 0 ; i < width ; i++ )
     {
 		VectorSubtract( ctrl[0][i].xyz, ctrl[height-1][i].xyz, delta );
-		len = VectorLengthSquared( delta );
+		len = delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2];
 		if ( len > 1.0 )
 			break;
 	}
@@ -324,7 +324,7 @@ static srfGridMesh_t *R_CreateSurfaceGridMesh(int width, int height, drawVert_t 
 	VectorAdd( grid->meshBounds[0], grid->meshBounds[1], grid->localOrigin );
 	VectorScale( grid->localOrigin, 0.5f, grid->localOrigin );
 	VectorSubtract( grid->meshBounds[0], grid->localOrigin, tmpVec );
-	grid->meshRadius = VectorLength( tmpVec );
+	grid->meshRadius = VectorLen( tmpVec );
 
 	VectorCopy( grid->localOrigin, grid->lodOrigin );
 	grid->lodRadius = grid->meshRadius;
@@ -391,7 +391,7 @@ srfGridMesh_t *R_SubdividePatchToGrid( int width, int height, drawVert_t points[
 				d = DotProduct( midxyz, dir );
 				VectorScale( dir, d, projected );
 				VectorSubtract( midxyz, projected, midxyz2);
-				len = VectorLengthSquared( midxyz2 );			// we will do the sqrt later
+				len = midxyz2[0] * midxyz2[0] + midxyz2[1] * midxyz2[1] + midxyz2[2] * midxyz2[2];			// we will do the sqrt later
 				if ( len > maxLen ) {
 					maxLen = len;
 				}

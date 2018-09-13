@@ -31,9 +31,4 @@ void GLimp_DestroyWindow(void);
 
 void* GLimp_GetProcAddress(const char* fun);
 
-
-
-void IN_Init(void);
-void IN_Frame(void);
-void IN_Shutdown(void);
 #endif

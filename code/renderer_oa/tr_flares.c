@@ -731,7 +731,7 @@ void RB_DrawSunFlare( void )
 	float size = dist * 0.4;
 
 	VectorScale( tr.sunDirection, dist, origin );
-	PerpendicularVector( vec1, tr.sunDirection );
+	VectorPerp( tr.sunDirection,vec1 );
 	CrossProduct( tr.sunDirection, vec1, vec2 );
 
 	VectorScale( vec1, size, vec1 );

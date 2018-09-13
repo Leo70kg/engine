@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sdl_icon.h"
 #include "glimp.h"
-
+#include "input.h"
 
 typedef enum
 {

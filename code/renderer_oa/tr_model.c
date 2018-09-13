@@ -1004,10 +1004,7 @@ static void R_GetAnimTag( mdrHeader_t *mod, int framenum, const char *tagName, m
 			return;
 		}
 	}
-
-	AxisClear( dest->axis );
-	VectorClear( dest->origin );
-	strcpy(dest->name,"");
+    memset(dest, 0, sizeof(md3Tag_t));
 }
 
 
@@ -1108,9 +1105,7 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 					startFrame, endFrame,
 					frac, tagName );
 		} else {
-
-			AxisClear( tag->axis );
-			VectorClear( tag->origin );
+            memset(tag, 0, sizeof(orientation_t));
 			return qfalse;
 
 		}
@@ -1121,8 +1116,8 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 		end = R_GetTag( model->md3[0], endFrame, tagName );
 
 		if ( !start || !end ) {
-			AxisClear( tag->axis );
-			VectorClear( tag->origin );
+            memset(tag, 0, sizeof(orientation_t));
+
 			return qfalse;
 		}
 	}

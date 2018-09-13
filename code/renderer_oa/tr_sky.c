@@ -83,7 +83,7 @@ static void AddSkyPolygon (int nump, vec3_t vecs)
 	};
 
 	// decide which face it maps to
-	VectorCopy (vec3_origin, v);
+	VectorCopy (ORIGIN, v);
 	for (i=0, vp=vecs ; i<nump ; i++, vp+=3)
 	{
 		VectorAdd (vp, v, v);
@@ -679,19 +679,19 @@ void RB_DrawSun( void )
 	coll[2]=tr.sunLight[2]/128;
 
 
-	if (coll[0] > 1)
-        coll[0] = 1;
-	if (coll[1] > 1)
-        coll[1] = 1;
-	if (coll[2] > 1)
-        coll[2] = 1;
+	if (coll[0] > 1){
+        coll[0] = 1;}
+    if (coll[1] > 1){
+        coll[1] = 1;}
+	if (coll[2] > 1){
+        coll[2] = 1;}
 
 	// also, ajdust the size of the sun depending how bright it is.
 
 	size *= (coll[0] + coll[1] + coll[2] * 0.333) / 4;
 
 	VectorScale( tr.sunDirection, dist, origin );
-	PerpendicularVector( vec1, tr.sunDirection );
+	VectorPerp( tr.sunDirection, vec1 );
 	CrossProduct( tr.sunDirection, vec1, vec2 );
 
 	VectorScale( vec1, size, vec1 );

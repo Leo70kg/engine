@@ -28,6 +28,7 @@ extern refimport_t ri;
 
 
 
+
 char* SkipPath(char *pathname)
 {
 	char *last = pathname;
@@ -111,79 +112,90 @@ void FastNormalize2f( const float* v, float* out)
 }
 
 // use Rodrigue's rotation formula
-void PointRotateAroundVector(float* sum, const float* dir, const float* p, const float degrees)
+// dir are not assumed to be unit vector
+void PointRotateAroundVector(float* res, const float* vec, const float* p, const float degrees)
 {
     float rad = DEG2RAD( degrees );
     float cos_th = cos( rad );
     float sin_th = sin( rad );
-    float d = (1 - cos_th);
     float k[3];
 
-    FastNormalize2f(dir, k);
+	// writing it this way allows gcc to recognize that rsqrt can be used
+    float invLen = 1.0f / sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+ 	k[0] = vec[0] * invLen;
+	k[1] = vec[1] * invLen;
+	k[2] = vec[2] * invLen;
 
-    d = d * (p[0] * k[0] + p[1] * k[1] + p[2] * k[2]);
+    float d = (1 - cos_th) * (p[0] * k[0] + p[1] * k[1] + p[2] * k[2]);
 
-	VectorCross(k, p, sum);
+	res[0] = sin_th * (k[1]*p[2] - k[2]*p[1]);
+	res[1] = sin_th * (k[2]*p[0] - k[0]*p[2]);
+	res[2] = sin_th * (k[0]*p[1] - k[1]*p[0]);
 
-    sum[0] *= sin_th;
-    sum[1] *= sin_th;
-    sum[2] *= sin_th;
-
-    sum[0] += cos_th * p[0]; 
-    sum[1] += cos_th * p[1]; 
-    sum[2] += cos_th * p[2]; 
-
-    sum[0] += d * k[0];
-    sum[1] += d * k[1];
-    sum[2] += d * k[2];
+    res[0] += cos_th * p[0] + d * k[0]; 
+    res[1] += cos_th * p[1] + d * k[1]; 
+    res[2] += cos_th * p[2] + d * k[2]; 
 }
+
+// vector k are assumed to be unit
+void RotateAroundUnitVector(float* res, const float* k, const float* p, const float degrees)
+{
+    float rad = DEG2RAD( degrees );
+    float cos_th = cos( rad );
+    float sin_th = sin( rad );
+ 
+    float d = (1 - cos_th) * (p[0] * k[0] + p[1] * k[1] + p[2] * k[2]);
+
+	res[0] = sin_th * (k[1]*p[2] - k[2]*p[1]);
+	res[1] = sin_th * (k[2]*p[0] - k[0]*p[2]);
+	res[2] = sin_th * (k[0]*p[1] - k[1]*p[0]);
+
+    res[0] += cos_th * p[0] + d * k[0]; 
+    res[1] += cos_th * p[1] + d * k[1]; 
+    res[2] += cos_th * p[2] + d * k[2]; 
+}
+
 
 // note: vector forward are NOT assumed to be nornalized,
 // unit: nornalized of forward,
-// right: perpendicular of forward 
-void MakePerpVectors(const float forward[3], float unit[3], float right[3])
+// dst: unit vector which perpendicular of forward(src) 
+void VectorPerp( const vec3_t src, vec3_t dst )
 {
-	// this rotate and negate guarantees a vector not colinear with the original
-    if(forward[0])
+    float unit[3];
+    
+    float sqlen = src[0]*src[0] + src[1]*src[1] + src[2]*src[2];
+    if(0 == sqlen)
     {
-        right[0] = 0;
-	    right[1] = 1;
-	    right[2] = 0;
-    }
-    else if(forward[1])
-    {
-        right[0] = 0;
-	    right[1] = 0;
-	    right[2] = 1;
-    }
-    else if(forward[2])
-    {
-        right[0] = 1;
-	    right[1] = 0;
-	    right[2] = 0;
+        ri.Printf( PRINT_WARNING, "MakePerpVectors: zero vertor input!\n");
         return;
     }
 
-    float sqlen = forward[0]*forward[0] + forward[1]*forward[1] + forward[2]*forward[2];
+  	dst[1] = -src[0];
+	dst[2] = src[1];
+	dst[0] = src[2];
+	// this rotate and negate try to make a vector not colinear with the original
+    // actually can not guarantee, for example
+    // forward = (1/sqrt(3), 1/sqrt(3), -1/sqrt(3)),
+    // then right = (-1/sqrt(3), -1/sqrt(3), 1/sqrt(3))
+
+
     float invLen = 1.0f / sqrtf(sqlen);
- 
-    unit[0] = forward[0] * invLen;
-    unit[1] = forward[1] * invLen;
-    unit[2] = forward[2] * invLen;
+    unit[0] = src[0] * invLen;
+    unit[1] = src[1] * invLen;
+    unit[2] = src[2] * invLen;
 
     
-    float d = DotProduct(unit, right);
-	right[0] -= d*unit[0];
-	right[1] -= d*unit[1];
-	right[2] -= d*unit[2];
+    float d = DotProduct(unit, dst);
+	dst[0] -= d*unit[0];
+	dst[1] -= d*unit[1];
+	dst[2] -= d*unit[2];
 
     // normalize the result
-    sqlen = right[0]*right[0] + right[1]*right[1] + right[2]*right[2];
-    invLen = 1.0f / sqrtf(sqlen);
+    invLen = 1.0f / sqrtf(dst[0]*dst[0] + dst[1]*dst[1] + dst[2]*dst[2]);
 
-    right[0] *= invLen;
-    right[1] *= invLen;
-    right[2] *= invLen;
+    dst[0] *= invLen;
+    dst[1] *= invLen;
+    dst[2] *= invLen;
 }
 
 // Given a normalized forward vector, create two other perpendicular vectors
@@ -252,7 +264,61 @@ qboolean PlaneFromPoints(vec4_t plane, const vec3_t a, const vec3_t b, const vec
 	return qtrue;
 }
 
+void SetPlaneSignbits (cplane_t *out) {
+	int	bits = 0;
+    int j;
 
+	// for fast box on planeside test
+	for (j=0 ; j<3 ; j++) {
+		if (out->normal[j] < 0) {
+			bits |= 1<<j;
+		}
+	}
+	out->signbits = bits;
+}
+
+/*
+==================
+BoxOnPlaneSide
+
+Returns 1, 2, or 1 + 2
+==================
+*/
+int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *p)
+{
+	float	dist[2];
+	int		sides, b, i;
+
+	// fast axial cases
+	if (p->type < 3)
+	{
+		if (p->dist <= emins[p->type])
+			return 1;
+		if (p->dist >= emaxs[p->type])
+			return 2;
+		return 3;
+	}
+
+	// general case
+	dist[0] = dist[1] = 0;
+	if (p->signbits < 8) // >= 8: default case is original code (dist[0]=dist[1]=0)
+	{
+		for (i=0 ; i<3 ; i++)
+		{
+			b = (p->signbits >> i) & 1;
+			dist[ b] += p->normal[i]*emaxs[i];
+			dist[!b] += p->normal[i]*emins[i];
+		}
+	}
+
+	sides = 0;
+	if (dist[0] >= p->dist)
+		sides = 1;
+	if (dist[1] < p->dist)
+		sides |= 2;
+
+	return sides;
+}
 
 unsigned ColorBytes4(float r, float g, float b, float a)
 {
@@ -498,7 +564,7 @@ void BoundingSphereOfSpheres(vec3_t origin1, float radius1, vec3_t origin2, floa
 	VectorMA(origin3, 0.5f, origin2, origin3);
 
 	VectorSubtract(origin1, origin2, diff);
-	*radius3 = VectorLength(diff) * 0.5f + MAX(radius1, radius2);
+	*radius3 = VectorLen(diff) * 0.5f + MAX(radius1, radius2);
 }
 
 int NextPowerOfTwo(int in)

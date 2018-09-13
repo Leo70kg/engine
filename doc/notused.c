@@ -1,3 +1,23 @@
+
+/*
+================
+Q_isnan
+
+Don't pass doubles to this
+================
+*/
+ID_INLINE int Q_isnan( float x )
+{
+	floatint_t fi;
+
+	fi.f = x;
+	fi.ui &= 0x7FFFFFFF;
+	fi.ui = 0x7F800000 - fi.ui;
+
+	return (int)( (unsigned int)fi.ui >> 31 );
+}
+
+
 /*
 ===================
 ParseStageSimple
@@ -9,6 +29,7 @@ leilei - the purpose of this is to load textures after processing their blending
 	 A lot of things are stripped out (like GLSL and multitexture stuff)
 ===================
 */
+
 
  
 qboolean ParseStageSimple( shaderStage_t *stage, char **text )
@@ -966,4 +987,19 @@ void myGlMultMatrix(const float *a, const float *b, float *out )
 	}
 }
 
+/*
+=================
+Matrix4Compare
+=================
 
+ID_INLINE qboolean Matrix4Compare(const float a[16], const float b[16])
+{
+	int i;
+
+	for ( i = 0; i < 16; i++ )
+		if ( a[i] != b[i] )
+			return qfalse;
+
+	return qtrue;
+}
+*/

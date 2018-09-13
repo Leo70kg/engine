@@ -23,23 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "cm_local.h"
 
-#ifdef BSPC
-
-#include "../bspc/l_qfiles.h"
-
-void SetPlaneSignbits (cplane_t *out) {
-	int	bits, j;
-
-	// for fast box on planeside test
-	bits = 0;
-	for (j=0 ; j<3 ; j++) {
-		if (out->normal[j] < 0) {
-			bits |= 1<<j;
-		}
-	}
-	out->signbits = bits;
-}
-#endif //BSPC
 
 // to allow boxes to be treated as brush models, we allocate
 // some extra indexes along with those needed by the map
@@ -788,7 +771,18 @@ void CM_InitBoxHull (void)
 		VectorClear (p->normal);
 		p->normal[i>>1] = -1;
 
-		SetPlaneSignbits( p );
+        {
+	        int	bits, j;
+
+	        // for fast box on planeside test
+	        bits = 0;
+	        for (j=0 ; j<3 ; j++) {
+	        	if (p->normal[j] < 0) {
+		    	bits |= 1<<j;
+	    	}
+	        }
+	        p->signbits = bits;
+        }
 	}	
 }
 

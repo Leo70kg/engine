@@ -191,13 +191,9 @@ void RE_AddRefEntityToScene( const refEntity_t *ent )
 		ri.Printf(PRINT_DEVELOPER, "RE_AddRefEntityToScene: Dropping refEntity, reached MAX_REFENTITIES\n");
 		return;
 	}
-	if ( Q_isnan(ent->origin[0]) || Q_isnan(ent->origin[1]) || Q_isnan(ent->origin[2]) ) {
-		static qboolean firstTime = qtrue;
-		if (firstTime)
-        {
-			firstTime = qfalse;
-			ri.Printf( PRINT_WARNING, "RE_AddRefEntityToScene passed a refEntity which has an origin with a NaN component\n");
-		}
+	if ( isnan(ent->origin[0]) || isnan(ent->origin[1]) || isnan(ent->origin[2]) )
+    {
+		ri.Printf( PRINT_WARNING, "RE_AddRefEntityToScene passed a refEntity which has an origin with a NaN component\n");
 		return;
 	}
 	if ( (int)ent->reType < 0 || ent->reType >= RT_MAX_REF_ENTITY_TYPE ) {
@@ -436,7 +432,7 @@ static qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 	}
 
 	VectorCopy( plane.normal, surface->axis[0] );
-	PerpendicularVector( surface->axis[1], surface->axis[0] );
+	VectorPerp( plane.normal, surface->axis[1] );
 	CrossProduct( surface->axis[0], surface->axis[1], surface->axis[2] );
 
 	// locate the portal entity closest to this plane.
@@ -464,7 +460,7 @@ static qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 			e->e.oldorigin[2] == e->e.origin[2] ) {
 			VectorScale( plane.normal, plane.dist, surface->origin );
 			VectorCopy( surface->origin, camera->origin );
-			VectorSubtract( vec3_origin, surface->axis[0], camera->axis[0] );
+			VectorSubtract( ORIGIN, surface->axis[0], camera->axis[0] );
 			VectorCopy( surface->axis[1], camera->axis[1] );
 			VectorCopy( surface->axis[2], camera->axis[2] );
 
@@ -479,9 +475,12 @@ static qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 			
 		// now get the camera origin and orientation
 		VectorCopy( e->e.oldorigin, camera->origin );
-		AxisCopy( e->e.axis, camera->axis );
-		VectorSubtract( vec3_origin, camera->axis[0], camera->axis[0] );
-		VectorSubtract( vec3_origin, camera->axis[1], camera->axis[1] );
+		VectorCopy( e->e.axis[0], camera->axis[0] );
+		VectorCopy( e->e.axis[1], camera->axis[1] );
+		VectorCopy( e->e.axis[2], camera->axis[2] );
+
+		VectorSubtract( ORIGIN, camera->axis[0], camera->axis[0] );
+		VectorSubtract( ORIGIN, camera->axis[1], camera->axis[1] );
 
 		// optionally rotate
 		if ( e->e.oldframe )
@@ -669,7 +668,7 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 
 		VectorSubtract( tess.xyz[tess.indexes[i]], tr.viewParms.or.origin, normal );
 
-		len = VectorLengthSquared( normal );			// lose the sqrt
+		len = normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2];	// lose the sqrt
 		if ( len < shortest )
 		{
 			shortest = len;
@@ -790,7 +789,7 @@ static qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
 
 	R_MirrorPoint(oldParms.or.origin, &surface, &camera, newParms.or.origin );
 
-	VectorSubtract( vec3_origin, camera.axis[0], newParms.portalPlane.normal );
+	VectorSubtract( ORIGIN, camera.axis[0], newParms.portalPlane.normal );
 	newParms.portalPlane.dist = DotProduct( camera.origin, newParms.portalPlane.normal );
 	
 	R_MirrorVector(oldParms.or.axis[0], &surface, &camera, newParms.or.axis[0]);
@@ -1612,7 +1611,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 	// compensate for scale in the axes if necessary
 	if( ent->e.nonNormalizedAxes )
     {
-		axisLength = VectorLength( ent->e.axis[0] );
+		axisLength = VectorLen( ent->e.axis[0] );
 		if ( axisLength != 0 ) {
 			axisLength = 1.0f / axisLength;
 		}

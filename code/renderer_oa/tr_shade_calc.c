@@ -483,19 +483,19 @@ static void AutospriteDeform( void ) {
 		mid[2] = 0.25f * (xyz[2] + xyz[6] + xyz[10] + xyz[14]);
 
 		VectorSubtract( xyz, mid, delta );
-		radius = VectorLength( delta ) * 0.707f;		// / sqrt(2)
+		radius = VectorLen( delta ) * 0.707f;		// / sqrt(2)
 
 		VectorScale( leftDir, radius, left );
 		VectorScale( upDir, radius, up );
 
 		if ( backEnd.viewParms.isMirror ) {
-			VectorSubtract( vec3_origin, left, left );
+			VectorSubtract( ORIGIN, left, left );
 		}
 
 	  // compensate for scale in the axes if necessary
   	if ( backEnd.currentEntity->e.nonNormalizedAxes ) {
       float axisLength;
-		  axisLength = VectorLength( backEnd.currentEntity->e.axis[0] );
+		  axisLength = VectorLen( backEnd.currentEntity->e.axis[0] );
   		if ( !axisLength ) {
 	  		axisLength = 0;
   		} else {
@@ -1051,7 +1051,7 @@ void RB_CalcEnvironmentTexCoordsR( float *st )
 	size = dist * 0.4;
 
 	VectorScale( tr.sunDirection, dist, sundy);
-	PerpendicularVector( vec1, tr.sunDirection );
+	VectorPerp( tr.sunDirection, vec1 );
 	CrossProduct( tr.sunDirection, vec1, vec2 );
 
 	VectorScale( vec1, size, vec1 );

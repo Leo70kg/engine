@@ -111,7 +111,7 @@ void RB_AddQuadStampExt(vec3_t origin, vec3_t left, vec3_t up, float color[4], f
 
 
 	// constant normal all the way around
-	VectorSubtract( vec3_origin, backEnd.viewParms.or.axis[0], normal );
+	VectorSubtract( ORIGIN, backEnd.viewParms.or.axis[0], normal );
 
 	R_VaoPackNormal(iNormal, normal);
 
@@ -239,7 +239,7 @@ static void RB_SurfaceSprite( void )
 
 	if ( backEnd.viewParms.isMirror )
 	{
-		VectorSubtract( vec3_origin, left, left );
+		VectorSubtract( ORIGIN, left, left );
 	}
 
 	float colors[4];
@@ -452,8 +452,7 @@ static void RB_SurfaceBeam( void )
 #define NUM_BEAM_SEGS 6
 	refEntity_t *e;
 	shaderProgram_t *sp = &tr.textureColorShader;
-	int	i;
-	vec3_t perpvec;
+
 	vec3_t direction, normalized_direction;
 	vec3_t	start_points[NUM_BEAM_SEGS], end_points[NUM_BEAM_SEGS];
 	vec3_t oldorigin, origin;
@@ -468,20 +467,35 @@ static void RB_SurfaceBeam( void )
 	origin[1] = e->origin[1];
 	origin[2] = e->origin[2];
 
-	normalized_direction[0] = direction[0] = oldorigin[0] - origin[0];
-	normalized_direction[1] = direction[1] = oldorigin[1] - origin[1];
-	normalized_direction[2] = direction[2] = oldorigin[2] - origin[2];
+    float perpvec[3];
+	perpvec[1] = normalized_direction[0] = direction[0] = oldorigin[0] - origin[0];
+	perpvec[2] = normalized_direction[1] = direction[1] = oldorigin[1] - origin[1];
+	perpvec[0] = normalized_direction[2] = direction[2] = oldorigin[2] - origin[2];
 
-	if ( VectorNormalize( normalized_direction ) == 0 )
+    float square = direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2];
+	if ( square == 0 )
 		return;
+    float inv = 1.0f / sqrtf(square);
+    normalized_direction[0] *= inv;
+    normalized_direction[1] *= inv;
+    normalized_direction[2] *= inv;
 
-	PerpendicularVector( perpvec, normalized_direction );
+	//Perpendicular  Vector of normalized_direction
+    float d = DotProduct(perpvec, normalized_direction);
+	perpvec[0] -= d*normalized_direction[0];
+	perpvec[1] -= d*normalized_direction[1];
+	perpvec[2] -= d*normalized_direction[2];
 
-	VectorScale( perpvec, 4, perpvec );
+    //normalize and scare the result
+    inv = 4.0f / sqrtf(perpvec[0]*perpvec[0] + perpvec[1]*perpvec[1] + perpvec[2]*perpvec[2]);
+	perpvec[0] *= inv;
+	perpvec[1] *= inv;
+	perpvec[2] *= inv;
 
+	int	i;
 	for ( i = 0; i < NUM_BEAM_SEGS ; i++ )
 	{
-		PointRotateAroundVector( start_points[i], normalized_direction, perpvec, (360.0/NUM_BEAM_SEGS)*i );
+		RotateAroundUnitVector( start_points[i], normalized_direction, perpvec, (360.0/NUM_BEAM_SEGS)*i );
 //		VectorAdd( start_points[i], origin, start_points[i] );
 		VectorAdd( start_points[i], direction, end_points[i] );
 	}

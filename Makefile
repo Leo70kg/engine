@@ -795,7 +795,7 @@ else
 endif
 
 BASE_CFLAGS += -DPRODUCT_VERSION=\\\"$(VERSION)\\\"
-BASE_CFLAGS += -Wformat=2 -Wno-format-zero-length -Wformat-security -Wno-format-nonliteral
+BASE_CFLAGS += -Wformat=2 -Wformat-security -Wno-format-nonliteral
 BASE_CFLAGS += -Wmissing-format-attribute
 BASE_CFLAGS += -Wdisabled-optimization
 BASE_CFLAGS += -Werror-implicit-function-declaration
@@ -1773,6 +1773,10 @@ ifeq ($(HAVE_VM_COMPILED),true)
   endif
 endif
 
+Q3OBJ += \
+	$(B)/client/signals.o \
+	$(B)/client/sys_loadlib.o
+
 ifdef MINGW
   Q3OBJ += \
 	$(B)/client/win_resource.o \
@@ -1916,8 +1920,10 @@ Q3DOBJ = \
   $(B)/ded/null_snddma.o \
   \
   $(B)/ded/con_log.o \
-  $(B)/ded/sys_main.o
-
+  $(B)/ded/sys_main.o \
+  $(B)/ded/signals.o \
+  $(B)/ded/sys_loadlib.o
+  
 ifeq ($(ARCH),x86)
   Q3DOBJ += \
 	$(B)/ded/snd_mixa.o \

@@ -19,6 +19,10 @@ along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
+#ifndef SYS_LOADLIB_H_
+#define SYS_LOADLIB_H_
+
+#include "q_shared.h"
 
 #ifdef DEDICATED
     #ifdef _WIN32
@@ -48,4 +52,31 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
     #define Sys_LibraryError()          SDL_GetError()
 #endif
 
-void * QDECL Sys_LoadDll(const char *name, qboolean useSystemLib);
+
+void Sys_SetBinaryPath(const char *path);
+char* Sys_GetBinaryPath(void);
+void Sys_SetDefaultInstallPath(const char *path);
+char* Sys_DefaultInstallPath(void);
+
+#ifdef MACOS_X
+char* Sys_DefaultAppPath(void);
+#endif
+
+//void  Sys_SetDefaultHomePath(const char *path);
+const char *Sys_DefaultHomePath(void);
+
+const char *Sys_Dirname( char *path );
+const char *Sys_Basename( char *path );
+
+
+
+void* QDECL Sys_LoadDll(const char *name, qboolean useSystemLib);
+
+// general development dll loading for virtual machine testing
+void* QDECL Sys_LoadGameDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
+				  intptr_t (QDECL *systemcalls)(intptr_t, ...) );
+
+void Sys_UnloadDll( void *dllHandle );
+
+
+#endif

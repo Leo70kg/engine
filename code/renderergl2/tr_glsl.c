@@ -762,10 +762,12 @@ void GLSL_SetUniformVec3(shaderProgram_t *program, int uniformNum, const vec3_t 
 		return;
 	}
 
-	if (VectorCompare(v, compare))
-	{
+
+    if ((v[0] == compare[0]) && (v[1] == compare[1]) && (v[2] == compare[2]))
+    {
 		return;
-	}
+	}			
+
 
 	VectorCopy(v, compare);
 
@@ -786,10 +788,10 @@ void GLSL_SetUniformVec4(shaderProgram_t *program, int uniformNum, const vec4_t 
 		return;
 	}
 
-	if (VectorCompare4(v, compare))
-	{
+    if ((v[0] == compare[0]) && (v[1] == compare[1]) && (v[2] == compare[2]) && (v[3] == compare[3]) )
+    {
 		return;
-	}
+	}		
 
 	VectorCopy4(v, compare);
 
@@ -810,10 +812,10 @@ void GLSL_SetUniformFloat5(shaderProgram_t *program, int uniformNum, const vec5_
 		return;
 	}
 
-	if (VectorCompare5(v, compare))
-	{
+    if ((v[0] == compare[0]) && (v[1] == compare[1]) && (v[2] == compare[2]) && (v[3] == compare[3]) && (v[4] == compare[4]) )
+    {
 		return;
-	}
+	}		
 
 	VectorCopy5(v, compare);
 

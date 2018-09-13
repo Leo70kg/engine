@@ -78,7 +78,7 @@ static void AddSkyPolygon (int nump, vec3_t vecs)
 	};
 
 	// decide which face it maps to
-	VectorCopy (vec3_origin, v);
+	VectorCopy (ORIGIN, v);
 	for (i=0, vp=vecs ; i<nump ; i++, vp+=3)
 	{
 		VectorAdd (vp, v, v);
@@ -813,7 +813,7 @@ void RB_DrawSun( float scale, shader_t *shader ) {
 	size = dist * scale;
 
 	VectorScale( tr.sunDirection, dist, origin );
-	PerpendicularVector( vec1, tr.sunDirection );
+	VectorPerp( tr.sunDirection, vec1);
 	CrossProduct( tr.sunDirection, vec1, vec2 );
 
 	VectorScale( vec1, size, vec1 );

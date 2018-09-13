@@ -1223,8 +1223,30 @@ struct patchCollide_s* CM_GeneratePatchCollide( int width, int height, vec3_t *p
 
     for ( i = 0 ; i < grid.width ; i++ )
     {
-		for ( j = 0 ; j < grid.height ; j++ ) {
-			AddPointToBounds( grid.points[i][j], pf->bounds[0], pf->bounds[1] );
+		for ( j = 0 ; j < grid.height ; j++ )
+        {
+
+            const float *v = grid.points[i][j];
+    	    if ( v[0] < pf->bounds[0][0] ) {
+    	    	pf->bounds[0][0] = v[0];
+    	    }
+        	if ( v[0] > pf->bounds[1][0]) {
+	         	pf->bounds[1][0] = v[0];
+        	}
+
+        	if ( v[1] < pf->bounds[0][1] ) {
+        		pf->bounds[0][1] = v[1];
+    	    }
+    	    if ( v[1] > pf->bounds[1][1]) {
+    	    	pf->bounds[1][1] = v[1];
+    	    }
+
+        	if ( v[2] < pf->bounds[0][2] ) {
+        		pf->bounds[0][2] = v[2];
+        	}
+        	if ( v[2] > pf->bounds[1][2]) {
+	         	pf->bounds[1][2] = v[2];
+        	}
 		}
 	}
 

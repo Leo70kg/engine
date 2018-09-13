@@ -25,6 +25,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 #include "../renderercommon/tr_public.h"
 
+static const float ORIGIN[3] = {0,0,0};
+
 
 union uInt4bytes{
     unsigned int i;
@@ -147,6 +149,8 @@ void R_LoadTGA( const char *name, byte **pic, int *width, int *height );
 
 
 void PointRotateAroundVector(float* dst, const float* dir, const float* p, const float degrees);
+void RotateAroundUnitVector(float* res, const float* k, const float* p, const float degrees);
+
 void FastNormalize1f(float v[3]);
 char *getExtension( const char *name );
 char *SkipPath(char *pathname);
@@ -157,11 +161,11 @@ int R_Compress( char *data_p );
 int R_GetCurrentParseLine( void );
 void R_BeginParseSession(const char* name);
 
+void SetPlaneSignbits( struct cplane_s *out );
+int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
 
-// note: vector forward are NOT assumed to be nornalized,
-// unit: nornalized of forward,
-// right: perpendicular of forward 
-void MakePerpVectors(const float forward[3], float unit[3], float right[3]);
+
+void VectorPerp( const vec3_t src, vec3_t dst );
 float MakeTwoPerpVectors(const float forward[3], float right[3], float up[3]);
 
 unsigned int ColorBytes4 (float r, float g, float b, float a);
@@ -201,6 +205,7 @@ void Mat4SimpleInverse( const mat4_t in, mat4_t out);
 #define ByteToFloat(a)          ((float)(a) * 1.0f/255.0f)
 #define FloatToByte(a)          (byte)((a) * 255.0f)
 
+/*
 static ID_INLINE int VectorCompare4(const vec4_t v1, const vec4_t v2)
 {
 	if(v1[0] != v2[0] || v1[1] != v2[1] || v1[2] != v2[2] || v1[3] != v2[3])
@@ -218,9 +223,12 @@ static ID_INLINE int VectorCompare5(const vec5_t v1, const vec5_t v2)
 	}
 	return 1;
 }
-
+*/
 void VectorLerp( vec3_t a, vec3_t b, float lerp, vec3_t c);
-
+static inline float VectorLen( const float v[3] )
+{
+	return sqrtf(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+}
 
 qboolean SpheresIntersect(vec3_t origin1, float radius1, vec3_t origin2, float radius2);
 void BoundingSphereOfSpheres(vec3_t origin1, float radius1, vec3_t origin2, float radius2, vec3_t origin3, float *radius3);

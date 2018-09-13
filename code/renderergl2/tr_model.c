@@ -1400,9 +1400,9 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 		end = R_GetTag( model->mdv[0], endFrame, tagName );
 	}
 
-	if ( !start || !end ) {
-		AxisClear( tag->axis );
-		VectorClear( tag->origin );
+	if ( !start || !end )
+    {
+        memset(tag, 0, sizeof(orientation_t));
 		return qfalse;
 	}
 

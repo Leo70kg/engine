@@ -742,7 +742,7 @@ static void ComputeColors( shaderStage_t *pStage )
 				vec3_t v;
 
 				VectorSubtract( tess.xyz[i], backEnd.viewParms.or.origin, v );
-				len = VectorLength( v );
+				len = VectorLen( v );
 
 				len /= tess.shader->portalRange;
 

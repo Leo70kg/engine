@@ -1168,12 +1168,9 @@ typedef struct shaderCommands_s
 	int			vertexDlightBits[SHADER_MAX_VERTEXES] QALIGN(16);
 
 	//stageVars_t	svars QALIGN(16);
+    unsigned char colors[SHADER_MAX_VERTEXES][4];
+    float		texcoords[NUM_TEXTURE_BUNDLES][SHADER_MAX_VERTEXES][2];
 
-    struct stageVars
-    {
-        unsigned char colors[SHADER_MAX_VERTEXES][4];
-        vec2_t		texcoords[NUM_TEXTURE_BUNDLES][SHADER_MAX_VERTEXES];
-    } svars QALIGN(16);
 
 	unsigned char constantColor255[SHADER_MAX_VERTEXES][4] QALIGN(16);
 

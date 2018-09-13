@@ -847,7 +847,7 @@ static void ParseMesh ( dsurface_t *ds, drawVert_t *verts, float *hdrVertColors,
 	VectorAdd( bounds[0], bounds[1], bounds[1] );
 	VectorScale( bounds[1], 0.5f, grid->lodOrigin );
 	VectorSubtract( bounds[0], grid->lodOrigin, tmpVec );
-	grid->lodRadius = VectorLength( tmpVec );
+	grid->lodRadius = sqrtf( tmpVec[0]*tmpVec[0] + tmpVec[1]*tmpVec[1] + tmpVec[2]*tmpVec[2] );
 
 	surf->cullinfo.type = CULLINFO_BOX | CULLINFO_SPHERE;
 	VectorCopy(grid->cullBounds[0], surf->cullinfo.bounds[0]);
@@ -2147,7 +2147,7 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump ) {
 		} else {
 			out->hasSurface = qtrue;
 			planeNum = LittleLong( sides[ firstSide + sideNum ].planeNum );
-			VectorSubtract( vec3_origin, s_worldData.planes[ planeNum ].normal, out->surface );
+			VectorSubtract( ORIGIN, s_worldData.planes[ planeNum ].normal, out->surface );
 			out->surface[3] = -s_worldData.planes[ planeNum ].dist;
 		}
 

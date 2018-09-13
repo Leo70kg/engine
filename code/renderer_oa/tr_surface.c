@@ -73,7 +73,7 @@ void RB_AddQuadStampExt(vec3_t origin, vec3_t left, vec3_t up, byte *color, floa
 
 	// constant normal all the way around
 	vec3_t normal;
-	VectorSubtract( vec3_origin, backEnd.viewParms.or.axis[0], normal );
+	VectorSubtract( ORIGIN, backEnd.viewParms.or.axis[0], normal );
 
 	// triangle indexes for a simple quad
 	tess.indexes[ nInd++ ] = ndx;
@@ -195,7 +195,7 @@ static void RB_SurfaceSprite( void )
 
 	if ( backEnd.viewParms.isMirror )
     {
-		VectorSubtract( vec3_origin, left, left );
+		VectorSubtract(ORIGIN, left, left );
 	}
 
 	RB_AddQuadStamp( backEnd.currentEntity->e.origin, left, up, backEnd.currentEntity->e.shaderRGBA );
@@ -320,13 +320,37 @@ static void RB_SurfaceBeam( void )
 	direction[1] = backEnd.currentEntity->e.oldorigin[1] - backEnd.currentEntity->e.origin[1];
 	direction[2] = backEnd.currentEntity->e.oldorigin[2] - backEnd.currentEntity->e.origin[2];
 
-    MakePerpVectors(direction, normalized_direction, perpvec);
 
-	VectorScale( perpvec, 4, perpvec );
+	// this rotate and negate guarantees a vector not colinear with the original
+  	perpvec[1] = -direction[0];
+	perpvec[2] = direction[1];
+	perpvec[0] = direction[2];
+    // actually can not guarantee,
+    // assume forward = (1/sqrt(3), 1/sqrt(3), -1/sqrt(3)),
+    // then right = (-1/sqrt(3), -1/sqrt(3), 1/sqrt(3))
+    
+    float sqlen = direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2];
+    if(0 == sqlen)
+    {
+        return;
+    }
+
+    float invLen = 1.0f / sqrtf(sqlen);
+    normalized_direction[0] = direction[0] * invLen;
+    normalized_direction[1] = direction[1] * invLen;
+    normalized_direction[2] = direction[2] * invLen;
+
+
+    float d = DotProduct(normalized_direction, perpvec);
+	perpvec[0] -= d*normalized_direction[0];
+	perpvec[1] -= d*normalized_direction[1];
+	perpvec[2] -= d*normalized_direction[2];
+
+    VectorScale( perpvec, 4, perpvec );
 
 	for ( i = 0; i < NUM_BEAM_SEGS ; i++ )
 	{
-		PointRotateAroundVector( start_points[i], normalized_direction, perpvec, (360.0/NUM_BEAM_SEGS)*i );
+		RotateAroundUnitVector( start_points[i], normalized_direction, perpvec, (360.0/NUM_BEAM_SEGS)*i );
         //VectorAdd( start_points[i], origin, start_points[i] );
 		VectorAdd( start_points[i], direction, end_points[i] );
 	}
@@ -524,51 +548,57 @@ static void DoLightningCore( const vec3_t start, const vec3_t end, const vec3_t 
 
 	RB_CHECKOVERFLOW( 4, 6 );
 
-	int vbase = tess.numVertexes;
-	
+    int nVert = tess.numVertexes;
+    tess.numVertexes += 4; 
+
+    int nIdx = tess.numIndexes;
+    tess.numIndexes += 6;
+
+	tess.indexes[nIdx++] = nVert;
+	tess.indexes[nIdx++] = nVert + 1;
+	tess.indexes[nIdx++] = nVert + 2;
+
+	tess.indexes[nIdx++] = nVert + 2;
+	tess.indexes[nIdx++] = nVert + 1;
+	tess.indexes[nIdx++] = nVert + 3;
+
     const int spanWidth = 8;
 
+    float temp[3];
+    VectorScale(up, spanWidth, temp);
+
 	// FIXME: use quad stamp?
-	VectorMA( start, spanWidth, up, tess.xyz[tess.numVertexes] );
-	tess.texCoords[tess.numVertexes][0][0] = 0;
-	tess.texCoords[tess.numVertexes][0][1] = 0;
-	tess.vertexColors[tess.numVertexes][0] = backEnd.currentEntity->e.shaderRGBA[0] * 0.25;
-	tess.vertexColors[tess.numVertexes][1] = backEnd.currentEntity->e.shaderRGBA[1] * 0.25;
-	tess.vertexColors[tess.numVertexes][2] = backEnd.currentEntity->e.shaderRGBA[2] * 0.25;
-	tess.numVertexes++;
+	VectorAdd( start, temp, tess.xyz[nVert] );
+	tess.texCoords[nVert][0][0] = 0;
+	tess.texCoords[nVert][0][1] = 0;
+	tess.vertexColors[nVert][0] = backEnd.currentEntity->e.shaderRGBA[0] * 0.25;
+	tess.vertexColors[nVert][1] = backEnd.currentEntity->e.shaderRGBA[1] * 0.25;
+	tess.vertexColors[nVert][2] = backEnd.currentEntity->e.shaderRGBA[2] * 0.25;
+	
 
-	VectorMA( start, -spanWidth, up, tess.xyz[tess.numVertexes] );
-	tess.texCoords[tess.numVertexes][0][0] = 0;
-	tess.texCoords[tess.numVertexes][0][1] = 1;
-	tess.vertexColors[tess.numVertexes][0] = backEnd.currentEntity->e.shaderRGBA[0];
-	tess.vertexColors[tess.numVertexes][1] = backEnd.currentEntity->e.shaderRGBA[1];
-	tess.vertexColors[tess.numVertexes][2] = backEnd.currentEntity->e.shaderRGBA[2];
-	tess.numVertexes++;
+    nVert++;
+	VectorSubtract( start, temp, tess.xyz[nVert] );
+	tess.texCoords[nVert][0][0] = 0;
+	tess.texCoords[nVert][0][1] = 1;
+	tess.vertexColors[nVert][0] = backEnd.currentEntity->e.shaderRGBA[0];
+	tess.vertexColors[nVert][1] = backEnd.currentEntity->e.shaderRGBA[1];
+	tess.vertexColors[nVert][2] = backEnd.currentEntity->e.shaderRGBA[2];
 
-	VectorMA( end, spanWidth, up, tess.xyz[tess.numVertexes] );
+    nVert++;
+	VectorAdd( end, temp, tess.xyz[nVert] );
+	tess.texCoords[nVert][0][0] = t;
+	tess.texCoords[nVert][0][1] = 0;
+	tess.vertexColors[nVert][0] = backEnd.currentEntity->e.shaderRGBA[0];
+	tess.vertexColors[nVert][1] = backEnd.currentEntity->e.shaderRGBA[1];
+	tess.vertexColors[nVert][2] = backEnd.currentEntity->e.shaderRGBA[2];
 
-	tess.texCoords[tess.numVertexes][0][0] = t;
-	tess.texCoords[tess.numVertexes][0][1] = 0;
-	tess.vertexColors[tess.numVertexes][0] = backEnd.currentEntity->e.shaderRGBA[0];
-	tess.vertexColors[tess.numVertexes][1] = backEnd.currentEntity->e.shaderRGBA[1];
-	tess.vertexColors[tess.numVertexes][2] = backEnd.currentEntity->e.shaderRGBA[2];
-	tess.numVertexes++;
-
-	VectorMA( end, -spanWidth, up, tess.xyz[tess.numVertexes] );
-	tess.texCoords[tess.numVertexes][0][0] = t;
-	tess.texCoords[tess.numVertexes][0][1] = 1;
-	tess.vertexColors[tess.numVertexes][0] = backEnd.currentEntity->e.shaderRGBA[0];
-	tess.vertexColors[tess.numVertexes][1] = backEnd.currentEntity->e.shaderRGBA[1];
-	tess.vertexColors[tess.numVertexes][2] = backEnd.currentEntity->e.shaderRGBA[2];
-	tess.numVertexes++;
-
-	tess.indexes[tess.numIndexes++] = vbase;
-	tess.indexes[tess.numIndexes++] = vbase + 1;
-	tess.indexes[tess.numIndexes++] = vbase + 2;
-
-	tess.indexes[tess.numIndexes++] = vbase + 2;
-	tess.indexes[tess.numIndexes++] = vbase + 1;
-	tess.indexes[tess.numIndexes++] = vbase + 3;
+    nVert++;
+	VectorSubtract( end, temp, tess.xyz[nVert] );
+	tess.texCoords[nVert][0][0] = t;
+	tess.texCoords[nVert][0][1] = 1;
+	tess.vertexColors[nVert][0] = backEnd.currentEntity->e.shaderRGBA[0];
+	tess.vertexColors[nVert][1] = backEnd.currentEntity->e.shaderRGBA[1];
+	tess.vertexColors[nVert][2] = backEnd.currentEntity->e.shaderRGBA[2];
 }
 
 
@@ -576,21 +606,23 @@ static void RB_SurfaceLightningBolt( void )
 {
 	vec3_t		right;
 	vec3_t		vec;
-	vec3_t		start, end;
 	vec3_t		v1, v2;
 	int			i;
     float       len;
-
-	VectorCopy( backEnd.currentEntity->e.oldorigin, end );
-	VectorCopy( backEnd.currentEntity->e.origin, start );
-
 	// compute variables
-	VectorSubtract( end, start, vec );
-    len = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
-
+	VectorSubtract( backEnd.currentEntity->e.oldorigin, backEnd.currentEntity->e.origin, vec );
+    
+    // normalize vec
+    float square = vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2];
+    len = 1.0f / sqrtf(square);
+    vec[0] *= len;
+    vec[1] *= len;
+    vec[2] *= len;
+    len *= square;
+    
 	// compute side vector
-	VectorSubtract( start, backEnd.viewParms.or.origin, v1 );
-	VectorSubtract( end, backEnd.viewParms.or.origin, v2 );
+	VectorSubtract( backEnd.currentEntity->e.origin, backEnd.viewParms.or.origin, v1 );
+	VectorSubtract( backEnd.currentEntity->e.oldorigin, backEnd.viewParms.or.origin, v2 );
 	CrossProduct( v1, v2, right );
 	FastNormalize1f( right );
     
@@ -598,9 +630,9 @@ static void RB_SurfaceLightningBolt( void )
     {
 		vec3_t	temp;
 
-		DoLightningCore( start, end, right, len );
+		DoLightningCore( backEnd.currentEntity->e.origin, backEnd.currentEntity->e.oldorigin, right, len );
         
-		PointRotateAroundVector( temp, vec, right, 45 );
+		RotateAroundUnitVector( temp, vec, right, 45 );
 		VectorCopy( temp, right );
 	}
 }

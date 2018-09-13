@@ -1198,8 +1198,7 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 	}
 
 	if ( !start || !end ) {
-		AxisClear( tag->axis );
-		VectorClear( tag->origin );
+        memset(tag, 0, sizeof(orientation_t));
 		return qfalse;
 	}
 

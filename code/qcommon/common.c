@@ -30,7 +30,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #else
 #include <winsock.h>
 #endif
-#include "../sdl/glimp.h"
+
+#include "../sdl/input.h"
 
 #define MAX_NUM_ARGVS	50
 
@@ -141,6 +142,78 @@ void Com_EndRedirect (void)
 	rd_buffer = NULL;
 	rd_buffersize = 0;
 	rd_flush = NULL;
+}
+
+/*
+ * Transform Q3 colour codes to ANSI escape sequences
+ */
+void Sys_AnsiColorPrint( const char *msg )
+{
+	static char buffer[ MAXPRINTMSG ];
+	int length = 0;
+	static int  q3ToAnsi[ 8 ] =
+	{
+		30, // COLOR_BLACK
+		31, // COLOR_RED
+		32, // COLOR_GREEN
+		33, // COLOR_YELLOW
+		34, // COLOR_BLUE
+		36, // COLOR_CYAN
+		35, // COLOR_MAGENTA
+		0   // COLOR_WHITE
+	};
+
+	while( *msg )
+	{
+		if( Q_IsColorString( msg ) || *msg == '\n' )
+		{
+			// First empty the buffer
+			if( length > 0 )
+			{
+				buffer[ length ] = '\0';
+				fputs( buffer, stderr );
+				length = 0;
+			}
+
+			if( *msg == '\n' )
+			{
+				// Issue a reset and then the newline
+				fputs("\033[0m\n", stderr );
+				msg++;
+			}
+			else
+			{
+				// Print the color code
+				Com_sprintf( buffer, sizeof( buffer ), "\033[%dm", q3ToAnsi[ ColorIndex( *( msg + 1 ) ) ] );
+				fputs( buffer, stderr );
+				msg += 2;
+			}
+		}
+		else
+		{
+			if( length >= MAXPRINTMSG - 1 )
+				break;
+
+			buffer[ length ] = *msg;
+			length++;
+			msg++;
+		}
+	}
+
+	// Empty anything still left in the buffer
+	if( length > 0 )
+	{
+		buffer[ length ] = '\0';
+		fputs( buffer, stderr );
+	}
+}
+
+
+
+void Sys_Print( const char *msg )
+{
+	CON_LogWrite( msg );
+	CON_Print( msg );
 }
 
 /*
@@ -1969,8 +2042,9 @@ sysEvent_t Com_GetSystemEvent( void )
 		return eventQueue[ ( eventTail - 1 ) & MASK_QUEUED_EVENTS ];
 	}
 
+    // Handle new console input
 	// check for console commands
-	s = Sys_ConsoleInput();
+	s = CON_Input();
 	if ( s )
 	{
 		char  *b;
@@ -2684,7 +2758,8 @@ void Com_Init(char *commandLine )
 #endif
 	Cvar_Get("protocol", com_protocol->string, CVAR_ROM);
 
-	Sys_Init();
+	Cvar_Set( "arch", OS_STRING " " ARCH_STRING );
+	Cvar_Set( "username", Sys_GetCurrentUser( ) );
 
 	if( Sys_WritePIDFile( ) ) {
 #ifndef DEDICATED
