@@ -179,15 +179,11 @@ void ByteToDir( int b, vec3_t dir )
 
 //==============================================================
 
-ID_INLINE int Q_rand( int *seed )
-{
-	*seed = (69069 * (*seed) + 1);
-	return *seed;
-}
 
 ID_INLINE float Q_random( int *seed )
 {
-	return ( Q_rand( seed ) & 0xffff ) / (float)0x10000;
+	*seed = (69069 * (*seed) + 1);
+	return ( *seed & 0xffff ) / (float)0x10000;
 }
 
 ID_INLINE float Q_crandom( int *seed )
@@ -196,10 +192,6 @@ ID_INLINE float Q_crandom( int *seed )
 }
 
 //=======================================================
-
-
-
-
 
 
 
@@ -236,7 +228,6 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point,	
     dst[0] += cos_th * point[0] + d * k[0]; 
     dst[1] += cos_th * point[1] + d * k[1]; 
     dst[2] += cos_th * point[2] + d * k[2]; 
-
 }
 
 
@@ -403,28 +394,7 @@ ID_INLINE float RadiusFromBounds( const vec3_t mins, const vec3_t maxs )
 
 
 
-ID_INLINE void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs ) {
-	if ( v[0] < mins[0] ) {
-		mins[0] = v[0];
-	}
-	if ( v[0] > maxs[0]) {
-		maxs[0] = v[0];
-	}
 
-	if ( v[1] < mins[1] ) {
-		mins[1] = v[1];
-	}
-	if ( v[1] > maxs[1]) {
-		maxs[1] = v[1];
-	}
-
-	if ( v[2] < mins[2] ) {
-		mins[2] = v[2];
-	}
-	if ( v[2] > maxs[2]) {
-		maxs[2] = v[2];
-	}
-}
 
 ID_INLINE qboolean BoundsIntersect(const vec3_t mins, const vec3_t maxs,
 		const vec3_t mins2, const vec3_t maxs2)

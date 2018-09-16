@@ -1595,9 +1595,11 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump ) {
 
 		out->parms = shader->fogParms;
 
-		out->colorInt = ColorBytes4 ( shader->fogParms.color[0] * tr.identityLight, 
-			                          shader->fogParms.color[1] * tr.identityLight, 
-			                          shader->fogParms.color[2] * tr.identityLight, 1.0 );
+
+        out->colorRGBA[0] = shader->fogParms.color[0] * tr.identityLight * 255;
+        out->colorRGBA[1] = shader->fogParms.color[1] * tr.identityLight * 255;
+        out->colorRGBA[2] = shader->fogParms.color[2] * tr.identityLight * 255;
+        out->colorRGBA[3] = 255;
 
 		d = shader->fogParms.depthForOpaque < 1 ? 1 : shader->fogParms.depthForOpaque;
 		out->tcScale = 1.0f / ( d * 8 );

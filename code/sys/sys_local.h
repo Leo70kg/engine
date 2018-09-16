@@ -35,7 +35,7 @@ void Sys_PlatformExit( void );
 
 // signals
 void Sys_InitSignal(void);
-void Sys_SigHandler( int signal ) __attribute__ ((noreturn));
+void Sys_SigHandler( int signal );
 
 
 // error, log, exception, exit

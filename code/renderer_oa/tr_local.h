@@ -69,10 +69,9 @@ typedef struct
 	qboolean	lightingCalculated;
 	vec3_t		lightDir;		// normalized direction towards light
 	vec3_t		ambientLight;	// color normalized to 0-255
-	unsigned int ambientLightInt;	// 32 bit rgba packed
 	vec3_t		directedLight;
 	vec3_t		dynamicLight;
-	float		lightDistance;
+    unsigned char ambientLightRGBA[4];	// 32 bit rgba packed
 } trRefEntity_t;
 
 
@@ -324,9 +323,6 @@ typedef struct {
 
 	int             isBlend;		// leilei - for leifx
 
-	int             imgWidth;
-	int             imgHeight;		//leilei for glsl shaders
-
 } shaderStage_t;
 
 struct shaderCommands_s;
@@ -497,7 +493,7 @@ typedef struct {
 	int			originalBrushNumber;
 	vec3_t		bounds[2];
 
-	unsigned	colorInt;				// in packed byte format
+	unsigned char colorRGBA[4];			// in packed byte format
 	float		tcScale;				// texture coordinate vector scales
 	fogParms_t	parms;
 
@@ -1046,7 +1042,6 @@ extern cvar_t	*r_verbose;				// used for verbose debug spew
 extern cvar_t	*r_ignoreFastPath;		// allows us to ignore our Tess fast paths
 
 extern cvar_t	*r_znear;				// near Z clip plane
-//extern cvar_t	*r_zproj;				// z distance of projection plane
 
 extern cvar_t	*r_measureOverdraw;		// enables stencil buffer overdraw measurement
 

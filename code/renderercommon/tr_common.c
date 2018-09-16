@@ -320,16 +320,29 @@ int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *p)
 	return sides;
 }
 
-unsigned ColorBytes4(float r, float g, float b, float a)
+
+void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs )
 {
-	union uInt4bytes cvt;
+	if ( v[0] < mins[0] ) {
+		mins[0] = v[0];
+	}
+	if ( v[0] > maxs[0]) {
+		maxs[0] = v[0];
+	}
 
-    cvt.uc[0] = r * 255;
-    cvt.uc[1] = g * 255;
-    cvt.uc[2] = b * 255;
-    cvt.uc[3] = a * 255;
+	if ( v[1] < mins[1] ) {
+		mins[1] = v[1];
+	}
+	if ( v[1] > maxs[1]) {
+		maxs[1] = v[1];
+	}
 
-	return cvt.i;
+	if ( v[2] < mins[2] ) {
+		mins[2] = v[2];
+	}
+	if ( v[2] > maxs[2]) {
+		maxs[2] = v[2];
+	}
 }
 
 

@@ -458,11 +458,10 @@ static void ComputeShaderColors( shaderStage_t *pStage, vec4_t baseColor, vec4_t
 			break;
 		case CGEN_FOG:
 			fog = tr.world->fogs + tess.fogNum;
-
-			baseColor[0] = ((unsigned char *)(&fog->colorInt))[0] / 255.0f;
-			baseColor[1] = ((unsigned char *)(&fog->colorInt))[1] / 255.0f;
-			baseColor[2] = ((unsigned char *)(&fog->colorInt))[2] / 255.0f;
-			baseColor[3] = ((unsigned char *)(&fog->colorInt))[3] / 255.0f;
+			baseColor[0] = fog->colorRGBA[0] / 255.0f;
+			baseColor[1] = fog->colorRGBA[1] / 255.0f;
+			baseColor[2] = fog->colorRGBA[2] / 255.0f;
+			baseColor[3] = fog->colorRGBA[3] / 255.0f;
 			break;
 		case CGEN_WAVEFORM:
 			baseColor[0] = 
@@ -906,10 +905,13 @@ static void RB_FogPass( void ) {
 		GLSL_SetUniformFloat(sp, UNIFORM_TIME, tess.shaderTime);
 	}
 
-	color[0] = ((unsigned char *)(&fog->colorInt))[0] / 255.0f;
-	color[1] = ((unsigned char *)(&fog->colorInt))[1] / 255.0f;
-	color[2] = ((unsigned char *)(&fog->colorInt))[2] / 255.0f;
-	color[3] = ((unsigned char *)(&fog->colorInt))[3] / 255.0f;
+    
+	color[0] = fog->colorRGBA[0] / 255.0f;
+	color[1] = fog->colorRGBA[1] / 255.0f;
+	color[2] = fog->colorRGBA[2] / 255.0f;
+	color[3] = fog->colorRGBA[3] / 255.0f;
+
+
 	GLSL_SetUniformVec4(sp, UNIFORM_COLOR, color);
 
 	ComputeFogValues(fogDistanceVector, fogDepthVector, &eyeT);
@@ -1040,7 +1042,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		else
 		{
 			sp = GLSL_GetGenericShaderProgram(stage);
-
 			backEnd.pc.c_genericDraws++;
 		}
 

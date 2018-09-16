@@ -916,6 +916,7 @@ All of the parts of a door have been spawned, so create
 a trigger that encloses all of them
 ======================
 */
+
 void Think_SpawnNewDoorTrigger( gentity_t *ent )
 {
 	gentity_t		*other;
@@ -931,9 +932,55 @@ void Think_SpawnNewDoorTrigger( gentity_t *ent )
 	VectorCopy (ent->r.absmin, mins);
 	VectorCopy (ent->r.absmax, maxs);
 
-	for (other = ent->teamchain ; other ; other=other->teamchain) {
-		AddPointToBounds (other->r.absmin, mins, maxs);
-		AddPointToBounds (other->r.absmax, mins, maxs);
+	for (other = ent->teamchain ; other ; other=other->teamchain)
+    {
+
+		//AddPointToBounds (other->r.absmin, mins, maxs);
+        const float* v = other->r.absmin; 
+		if ( v[0] < mins[0] ) {
+		    mins[0] = v[0];
+	    }
+	    if ( v[0] > maxs[0]) {
+		    maxs[0] = v[0];
+    	}
+
+    	if ( v[1] < mins[1] ) {
+    		mins[1] = v[1];
+    	}
+    	if ( v[1] > maxs[1]) {
+    		maxs[1] = v[1];
+    	}
+
+	    if ( v[2] < mins[2] ) {
+	    	mins[2] = v[2];
+	    }
+	    if ( v[2] > maxs[2]) {
+		    maxs[2] = v[2];
+	    }
+
+        //AddPointToBounds (other->r.absmax, mins, maxs);
+        v = other->r.absmax;
+
+    	if ( v[0] < mins[0] ) {
+	    	mins[0] = v[0];
+    	}
+	    if ( v[0] > maxs[0]) {
+		    maxs[0] = v[0];
+	    }
+
+	    if ( v[1] < mins[1] ) {
+		    mins[1] = v[1];
+	    }
+	    if ( v[1] > maxs[1]) {
+		    maxs[1] = v[1];
+    	}
+
+	    if ( v[2] < mins[2] ) {
+		    mins[2] = v[2];
+    	}
+	    if ( v[2] > maxs[2]) {
+		    maxs[2] = v[2];
+    	}
 	}
 
 	// find the thinnest axis, which will be the one we expand

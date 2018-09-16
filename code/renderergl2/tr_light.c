@@ -177,7 +177,8 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent, world_t *world ) {
 		+ pos[1] * gridStep[1] + pos[2] * gridStep[2];
 
 	totalFactor = 0;
-	for ( i = 0 ; i < 8 ; i++ ) {
+	for ( i = 0 ; i < 8 ; i++ )
+    {
 		float	factor;
 		byte	*data;
 		int		lat, lng;
@@ -278,7 +279,9 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent, world_t *world ) {
 	VectorScale( ent->ambientLight, r_ambientScale->value, ent->ambientLight );
 	VectorScale( ent->directedLight, r_directedScale->value, ent->directedLight );
 
-	VectorNormalize2( direction, ent->lightDir );
+//	VectorCopy( direction, ent->lightDir );
+//  why normalize zero vectors ???
+    VectorNorm2( direction, ent->lightDir );
 }
 
 
@@ -319,7 +322,8 @@ Calculates all the lighting values that will be used
 by the Calc_* functions
 =================
 */
-void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
+void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent )
+{
 	int				i;
 	dlight_t		*dl;
 	float			power;
@@ -347,14 +351,11 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// if NOWORLDMODEL, only use dynamic lights (menu system, etc)
-	if ( !(refdef->rdflags & RDF_NOWORLDMODEL ) 
-		&& tr.world->lightGridData ) {
+	if ( !(refdef->rdflags & RDF_NOWORLDMODEL ) && tr.world->lightGridData ) {
 		R_SetupEntityLightingGrid( ent, tr.world );
 	} else {
-		ent->ambientLight[0] = ent->ambientLight[1] = 
-			ent->ambientLight[2] = tr.identityLight * 150;
-		ent->directedLight[0] = ent->directedLight[1] = 
-			ent->directedLight[2] = tr.identityLight * 150;
+		ent->ambientLight[0] = ent->ambientLight[1] = ent->ambientLight[2] = tr.identityLight * 150;
+		ent->directedLight[0] = ent->directedLight[1] = ent->directedLight[2] = tr.identityLight * 150;
 		VectorCopy( tr.sunDirection, ent->lightDir );
 	}
 
@@ -372,10 +373,23 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	d = VectorLen( ent->directedLight );
 	VectorScale( ent->lightDir, d, lightDir );
 
-	for ( i = 0 ; i < refdef->num_dlights ; i++ ) {
+	for ( i = 0 ; i < refdef->num_dlights ; i++ )
+    {
 		dl = &refdef->dlights[i];
 		VectorSubtract( dl->origin, lightOrigin, dir );
-		d = VectorNormalize( dir );
+		//d = VectorNormalize( dir );
+
+	    d = dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2];
+        if(d != 0)
+        {
+		    float sq = 1.0f / sqrtf(d);
+	        dir[0] *= sq;
+	        dir[1] *= sq;
+	        dir[2] *= sq;
+            d *= sq;
+        }
+
+        /* writing it this way allows gcc to recognize that rsqrt can be used */
 
 		power = DLIGHT_AT_RADIUS * ( dl->radius * dl->radius );
 		if ( d < DLIGHT_MINIMUM_RADIUS ) {
@@ -428,15 +442,13 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// save out the byte packet version
-    union uInt4bytes cvt;
-    cvt.uc[0] =(unsigned char)(ent->ambientLight[0]);
-    cvt.uc[1] = (unsigned char)(ent->ambientLight[1]);
-    cvt.uc[2] = (unsigned char)(ent->ambientLight[2]);
-    cvt.uc[3] = 255;
-    ent->ambientLightInt = cvt.i;
+    ent->ambientLightRGBA[0] = (unsigned char)ent->ambientLight[0];
+    ent->ambientLightRGBA[1] = (unsigned char)ent->ambientLight[1];
+    ent->ambientLightRGBA[2] = (unsigned char)ent->ambientLight[2];
+    ent->ambientLightRGBA[3] = 255;
 	
 	// transform the direction to local space
-	VectorNormalize( lightDir );
+	VectorNorm( lightDir );
 	ent->modelLightDir[0] = DotProduct( lightDir, ent->e.axis[0] );
 	ent->modelLightDir[1] = DotProduct( lightDir, ent->e.axis[1] );
 	ent->modelLightDir[2] = DotProduct( lightDir, ent->e.axis[2] );

@@ -3793,14 +3793,6 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 	}
 	
 
-	// leilei - handle image height
-    int y;
-    for(y=0;y<MAX_SHADER_STAGES;y++)
-    {
-        stages[y].imgWidth = 128;
-        stages[y].imgHeight = 128;
-    }
-
 	return FinishShader();
 }
 

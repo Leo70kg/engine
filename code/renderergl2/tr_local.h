@@ -1,4 +1,4 @@
-/*
+            /*
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
 
@@ -97,8 +97,9 @@ typedef struct {
 	vec3_t		lightDir;		// normalized direction towards light, in world space
 	vec3_t      modelLightDir;  // normalized direction towards light, in model space
 	vec3_t		ambientLight;	// color normalized to 0-255
-	int			ambientLightInt;	// 32 bit rgba packed
 	vec3_t		directedLight;
+    unsigned char ambientLightRGBA[4];
+
 } trRefEntity_t;
 
 
@@ -778,7 +779,7 @@ typedef struct {
 	int			originalBrushNumber;
 	vec3_t		bounds[2];
 
-	unsigned	colorInt;				// in packed byte format
+	unsigned char colorRGBA[4];	
 	float		tcScale;				// texture coordinate vector scales
 	fogParms_t	parms;
 
@@ -1628,7 +1629,6 @@ extern cvar_t	*r_ignore;				// used for debugging anything
 extern cvar_t	*r_verbose;				// used for verbose debug spew
 
 extern cvar_t	*r_znear;				// near Z clip plane
-extern cvar_t	*r_zproj;				// z distance of projection plane
 
 extern cvar_t	*r_measureOverdraw;		// enables stencil buffer overdraw measurement
 
@@ -1692,8 +1692,6 @@ extern	cvar_t	*r_portalOnly;
 extern	cvar_t	*r_subdivisions;
 extern	cvar_t	*r_lodCurveError;
 extern	cvar_t	*r_skipBackEnd;
-
-extern  cvar_t  *r_externalGLSL;
 
 extern  cvar_t  *r_hdr;
 extern  cvar_t  *r_floatLightmap;

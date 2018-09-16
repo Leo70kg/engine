@@ -63,8 +63,9 @@ typedef struct {
 	qboolean	lightingCalculated;
 	vec3_t		lightDir;		// normalized direction towards light
 	vec3_t		ambientLight;	// color normalized to 0-255
-	int			ambientLightInt;	// 32 bit rgba packed
 	vec3_t		directedLight;
+    unsigned char ambientLightRGBA[4];	// 32 bit rgba packed
+
 } trRefEntity_t;
 
 
@@ -431,7 +432,7 @@ typedef struct {
 	int			originalBrushNumber;
 	vec3_t		bounds[2];
 
-	unsigned	colorInt;				// in packed byte format
+	unsigned char colorRGBA[4];			// in packed byte format
 	float		tcScale;				// texture coordinate vector scales
 	fogParms_t	parms;
 

@@ -1368,9 +1368,9 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 	}
 
 	// decide which agens we can skip
-	if ( stage->alphaGen == AGEN_IDENTITY ) {
-		if ( stage->rgbGen == CGEN_IDENTITY
-			|| stage->rgbGen == CGEN_LIGHTING_DIFFUSE ) {
+	if ( stage->alphaGen == AGEN_IDENTITY )
+    {
+		if ( stage->rgbGen == CGEN_IDENTITY || stage->rgbGen == CGEN_LIGHTING_DIFFUSE ) {
 			stage->alphaGen = AGEN_SKIP;
 		}
 	}
@@ -1733,12 +1733,9 @@ will optimize it.
 */
 static qboolean ParseShader( char **text )
 {
-	char *token;
-	int s;
+	int s = 0;
+	char* token = R_ParseExt( text, qtrue );
 
-	s = 0;
-
-	token = R_ParseExt( text, qtrue );
 	if ( token[0] != '{' )
 	{
 		ri.Printf( PRINT_WARNING, "WARNING: expecting '{', found '%s' instead in shader '%s'\n", token, shader.name );
@@ -3155,15 +3152,18 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 	// attempt to define shader from an explicit parameter file
 	//
 	shaderText = FindShaderInShaderText( strippedName );
-	if ( shaderText ) {
+	if ( shaderText )
+    {
 		// enable this when building a pak file to get a global list
 		// of all explicit shaders
 		if ( r_printShaders->integer ) {
 			ri.Printf( PRINT_ALL, "*SHADER* %s\n", name );
 		}
 
-		if ( !ParseShader( &shaderText ) ) {
-			// had errors, so use default shader
+		if ( !ParseShader( &shaderText ) )
+        {
+            ri.Printf( PRINT_WARNING, "!ParseShader %s had errors, so use default shader.\n", name );
+
 			shader.defaultShader = qtrue;
 		}
 		sh = FinishShader();

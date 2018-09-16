@@ -523,7 +523,6 @@ int Q_log2(int val);
 
 float Q_acos(float c);
 
-int		Q_rand( int *seed );
 float	Q_random( int *seed );
 float	Q_crandom( int *seed );
 

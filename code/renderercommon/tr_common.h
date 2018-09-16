@@ -163,12 +163,12 @@ void R_BeginParseSession(const char* name);
 
 void SetPlaneSignbits( struct cplane_s *out );
 int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
+void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );
 
 
 void VectorPerp( const vec3_t src, vec3_t dst );
 float MakeTwoPerpVectors(const float forward[3], float right[3], float up[3]);
 
-unsigned int ColorBytes4 (float r, float g, float b, float a);
 void MatrixMultiply4x4(const float A[16], const float B[16], float out[16]);
 void ClearBounds( vec3_t mins, vec3_t maxs );
 qboolean SkipBracedSection (char **program, int depth);
@@ -205,25 +205,41 @@ void Mat4SimpleInverse( const mat4_t in, mat4_t out);
 #define ByteToFloat(a)          ((float)(a) * 1.0f/255.0f)
 #define FloatToByte(a)          (byte)((a) * 255.0f)
 
-/*
-static ID_INLINE int VectorCompare4(const vec4_t v1, const vec4_t v2)
+static inline void VectorNorm( vec3_t v )
 {
-	if(v1[0] != v2[0] || v1[1] != v2[1] || v1[2] != v2[2] || v1[3] != v2[3])
-	{
-		return 0;
-	}
-	return 1;
+	float length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+
+    if(length == 0)
+    {
+//		ri.Printf( PRINT_WARNING, "VectorNorm: Trying to normalize zero vector!\n");
+        return;
+    }
+
+	/* writing it this way allows gcc to recognize that rsqrt can be used */
+	length = 1.0f / sqrtf (length);
+	v[0] *= length;
+	v[1] *= length;
+	v[2] *= length;
 }
 
-static ID_INLINE int VectorCompare5(const vec5_t v1, const vec5_t v2)
+static inline void VectorNorm2(const vec3_t v, vec3_t out)
 {
-	if(v1[0] != v2[0] || v1[1] != v2[1] || v1[2] != v2[2] || v1[3] != v2[3] || v1[4] != v2[4])
-	{
-		return 0;
-	}
-	return 1;
+	float ilength = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+
+    if(ilength == 0)
+    {
+//		ri.Printf( PRINT_WARNING, "VectorNorm2: Trying to normalize zero vector!\n");
+        return;
+    }
+
+	/* writing it this way allows gcc to recognize that rsqrt can be used */
+	ilength = 1.0f / sqrtf(ilength);
+	out[0] = v[0]*ilength;
+	out[1] = v[1]*ilength;
+	out[2] = v[2]*ilength;
 }
-*/
+
+
 void VectorLerp( vec3_t a, vec3_t b, float lerp, vec3_t c);
 static inline float VectorLen( const float v[3] )
 {

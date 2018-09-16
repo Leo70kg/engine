@@ -1057,8 +1057,9 @@ void RB_CalcSpecularAlpha( unsigned char *alphas ) {
 }
 
 
-static void RB_CalcDiffuseColor_scalar(unsigned char (*colors)[4])
+void RB_CalcDiffuseColor( unsigned char (*colors)[4] )
 {
+
 	trRefEntity_t* ent = backEnd.currentEntity;
 
     vec3_t abtLit;
@@ -1075,8 +1076,12 @@ static void RB_CalcDiffuseColor_scalar(unsigned char (*colors)[4])
     litDir[0] = ent->lightDir[0];
     litDir[1] = ent->lightDir[1];
     litDir[2] = ent->lightDir[2];
-
-    unsigned int ambLitInt = ent->ambientLightInt;
+    
+    unsigned char ambLitRGBA[4];  
+    ambLitRGBA[0] = ent->ambientLightRGBA[0];
+    ambLitRGBA[1] = ent->ambientLightRGBA[1];
+    ambLitRGBA[2] = ent->ambientLightRGBA[2];
+    ambLitRGBA[3] = ent->ambientLightRGBA[3];
 
     int numVertexes = tess.numVertexes;
 	int	i;
@@ -1086,38 +1091,21 @@ static void RB_CalcDiffuseColor_scalar(unsigned char (*colors)[4])
 		
         if( incoming <= 0 )
         {
-			*(unsigned int *)colors[i] = ambLitInt;
-			continue;
+			colors[i][0] = ambLitRGBA[0];
+            colors[i][1] = ambLitRGBA[1];
+			colors[i][2] = ambLitRGBA[2];
+			colors[i][3] = ambLitRGBA[3];
 		}
-        
-		unsigned int r = abtLit[0] + incoming * drtLit[0];
-		if ( r > 255 )
-			colors[i][0] = 255;
         else
-            colors[i][0] = r;
-
-
-		unsigned int g = abtLit[1] + incoming * drtLit[1];
-		if ( g > 255 )
-			colors[i][1] = 255;
-        else
-		    colors[i][1] = g;
-
-		unsigned int b = abtLit[2] + incoming * drtLit[2];
-		if ( b > 255 )
-			colors[i][2] = 255;
-        else
-		    colors[i][2] = b;
-
-		colors[i][3] = 255;
+        {
+            unsigned int r = abtLit[0] + incoming * drtLit[0];
+            colors[i][0] = (r <= 255 ? r : 255);
+            unsigned int g = abtLit[1] + incoming * drtLit[1];
+            colors[i][1] = (g <= 255 ? g : 255);
+            unsigned int b = abtLit[2] + incoming * drtLit[2];
+            colors[i][2] = (b <= 255 ? b : 255);
+            colors[i][3] = 255;
+        }
 	}
-}
-
-
-
-void RB_CalcDiffuseColor( unsigned char (*colors)[4] )
-{
-
-	RB_CalcDiffuseColor_scalar( colors );
 }
 

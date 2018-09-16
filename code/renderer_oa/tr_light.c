@@ -375,7 +375,6 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent )
 
 		VectorMA( ent->directedLight, d, dl->color, ent->directedLight );
 		VectorMA( ent->dynamicLight, d, dl->color, ent->dynamicLight );
-		ent->lightDistance = d;
 		VectorMA( lightDir, d, dir, lightDir );
 	}
 
@@ -391,14 +390,12 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent )
 	}
 
 	// save out the byte packet version
-    union uInt4bytes cvt;
-    cvt.uc[0] = ((unsigned char)(ent->ambientLight[0]));
-    cvt.uc[1] = ((unsigned char)(ent->ambientLight[1]));
-    cvt.uc[2] = ((unsigned char)(ent->ambientLight[2]));
-    cvt.uc[3] = 255;
-    ent->ambientLightInt = cvt.i;
+    ent->ambientLightRGBA[0] = (unsigned char)ent->ambientLight[0];
+    ent->ambientLightRGBA[1] = (unsigned char)ent->ambientLight[1];
+    ent->ambientLightRGBA[2] = (unsigned char)ent->ambientLight[2];
+    ent->ambientLightRGBA[3] = 255;
 	
-	// transform the direction to local space
+    // transform the direction to local space
 	VectorNormalize( lightDir );
 	ent->lightDir[0] = DotProduct( lightDir, ent->e.axis[0] );
 	ent->lightDir[1] = DotProduct( lightDir, ent->e.axis[1] );

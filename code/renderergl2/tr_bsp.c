@@ -2132,9 +2132,10 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump ) {
 
 		out->parms = shader->fogParms;
 
-		out->colorInt = ColorBytes4 ( shader->fogParms.color[0],
-			                          shader->fogParms.color[1],
-			                          shader->fogParms.color[2], 1.0 );
+        out->colorRGBA[0] = shader->fogParms.color[0] * 255;
+        out->colorRGBA[1] = shader->fogParms.color[1] * 255;
+        out->colorRGBA[2] = shader->fogParms.color[2] * 255;
+        out->colorRGBA[3] = 255;
 
 		d = shader->fogParms.depthForOpaque < 1 ? 1 : shader->fogParms.depthForOpaque;
 		out->tcScale = 1.0f / ( d * 8 );
@@ -2658,11 +2659,11 @@ void R_RenderMissingCubemaps(void)
 void R_CalcVertexLightDirs( void )
 {
 	int i, k;
-	msurface_t *surface;
+	//msurface_t *surface = &s_worldData.surfaces[0];
 
-	for(k = 0, surface = &s_worldData.surfaces[0]; k < s_worldData.numsurfaces /* s_worldData.numWorldSurfaces */; k++, surface++)
+	for(k = 0; k < s_worldData.numsurfaces /* s_worldData.numWorldSurfaces */; k++)
 	{
-		srfBspSurface_t *bspSurf = (srfBspSurface_t *) surface->data;
+		srfBspSurface_t *bspSurf = (srfBspSurface_t *) s_worldData.surfaces[k].data;
 
 		switch(bspSurf->surfaceType)
 		{
@@ -2711,11 +2712,9 @@ void RE_LoadWorldMap( const char *name ) {
 
 	// set default sun direction to be used if it isn't
 	// overridden by a shader
-	tr.sunDirection[0] = 0.45f;
+	tr.sunDirection[0] = 0.316227766f;
 	tr.sunDirection[1] = 0.3f;
 	tr.sunDirection[2] = 0.9f;
-
-	VectorNormalize( tr.sunDirection );
 
 	// set default autoexposure settings
 	tr.autoExposureMinMax[0] = -2.0f;

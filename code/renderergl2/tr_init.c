@@ -87,8 +87,6 @@ cvar_t  *r_ext_direct_state_access;
 
 cvar_t  *r_cameraExposure;
 
-cvar_t  *r_externalGLSL;
-
 cvar_t  *r_hdr;
 cvar_t  *r_floatLightmap;
 cvar_t  *r_postProcess;
@@ -1631,7 +1629,6 @@ void R_Register( void )
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
 	r_subdivisions = ri.Cvar_Get ("r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH);
 
-	r_externalGLSL = ri.Cvar_Get( "r_externalGLSL", "0", CVAR_LATCH );
 
 	r_hdr = ri.Cvar_Get( "r_hdr", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_floatLightmap = ri.Cvar_Get( "r_floatLightmap", "0", CVAR_ARCHIVE | CVAR_LATCH );
