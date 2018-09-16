@@ -165,7 +165,7 @@ vec4 CalcColor(vec3 position, vec3 normal)
 	
 	vec3 viewer = u_LocalViewOrigin - position;
 
-	if (true)
+	if (u_AlphaGen == AGEN_LIGHTING_SPECULAR)
 	{
 		vec3 lightDir = normalize(vec3(-960.0, 1980.0, 96.0) - position);
 		vec3 reflected = -reflect(lightDir, normal);
