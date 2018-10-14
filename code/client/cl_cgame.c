@@ -691,14 +691,18 @@ CL_InitCGame: Should only be called by CL_StartHunkUsers
 */
 void CL_InitCGame( void )
 {
+
 	const char	*info;
 	const char	*mapname;
 	int			t1, t2;
-	vmInterpret_t interpret;
+	
+    vmInterpret_t interpret;
 
 	t1 = Sys_Milliseconds();
-
-	// put away the console
+	
+    Com_Printf("...CL_InitCGame()...\n");
+	
+    // put away the console
 	Con_Close();
 
 	// find the current mapname

@@ -158,20 +158,11 @@ typedef struct {
 	void	(*Sys_SetEnv)( const char *name, const char *value );
 	qboolean (*Sys_LowPhysicalMemory)( void );
 
-    // GLimp
-	void (*GLimpInit)(glconfig_t *glConfig, qboolean context);
-    void (*GLimpShutdown)(void);
-    void (*GLimpEndFrame)(void);
-    void (*GLimpMinimize)(void);
-    void (*GLimpSetGamma)(unsigned char red[256], unsigned char green[256], unsigned char blue[256]);
+// input event handling
+	void (* IN_Init)( void* , unsigned int);
+	void (* IN_Shutdown)( void );
+	void (* IN_Restart)( void );
 
-
-    void (*GLimpDeleteCtx)(void);
-    void (*GLimpDestroyWin)(void);
-
-    void* (*GLimpGetProcAddress)(const char* fun);
-//  qboolean (*GLimpExtensionSupported)(const char* fun);
-    
 } refimport_t;
 
 

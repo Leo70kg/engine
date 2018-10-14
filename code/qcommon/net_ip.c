@@ -1590,6 +1590,7 @@ void NET_Init( void )
 	NET_Config( qtrue );
 	
 	Cmd_AddCommand ("net_restart", NET_Restart_f);
+	Com_Printf("--- NET_Init finished ---\n");
 }
 
 

@@ -24,6 +24,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef TR_LOCAL_H
 #define TR_LOCAL_H
 
+
+
+
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qfiles.h"
 
@@ -32,6 +35,22 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/tr_public.h"
 #include "../renderercommon/tr_common.h"
 
+
+#define GLE(ret, name, ...) extern name##proc * qgl##name;
+QGL_1_1_PROCS;
+QGL_DESKTOP_1_1_PROCS;
+QGL_1_3_PROCS;
+#undef GLE
+
+void GLimp_Init(glconfig_t *glConfig, qboolean coreContext);
+void GLimp_Shutdown(void);
+void GLimp_EndFrame(void);
+void GLimp_LogComment(char *comment);
+void GLimp_Minimize(void);
+void GLimp_SetGamma(unsigned char red[256], unsigned char green[256], unsigned char blue[256]);
+void* GLimp_GetProcAddress(const char* fun);
+void GLimp_DeleteGLContext(void);
+void GLimp_DestroyWindow(void);
 
 extern refimport_t ri;
 
@@ -325,7 +344,6 @@ typedef struct {
 
 } shaderStage_t;
 
-struct shaderCommands_s;
 
 typedef enum {
 	CT_FRONT_SIDED,
@@ -1299,12 +1317,11 @@ extern glstate_t glState;
 #define	MAX_POLYS		600
 #define	MAX_POLYVERTS	3000
 
-extern int max_polys;
-extern int max_polyverts;
+
 
 // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=516
 
-const void *RB_TakeVideoFrameCmd( const void *data );
+const void* RB_TakeVideoFrameCmd( const void *data );
 
 //void	RE_Shutdown( qboolean destroyWindow );
 //void	RE_BeginRegistration( glconfig_t *glconfig );
@@ -1415,8 +1432,7 @@ void    R_SetColorMappings( void );
 void    R_GammaCorrect(unsigned char *buffer, int bufSize);
 void	R_InitFogTable( void );
 float	R_FogFactor( float s, float t );
-
-
+image_t *R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags );
 
 /////////////////////////// tr_bsp.c ////////////////////////////////////
 void        RE_LoadWorldMap( const char *mapname );
@@ -1585,7 +1601,6 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 
 
 
-
 /////////////////////////  tr_shade_calc  //////////////////////////////////////////
 void	RB_DeformTessGeometry( void );
 
@@ -1617,13 +1632,5 @@ void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
 void	RB_CalcFlatAmbient( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcFlatDirect( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcNormal( unsigned char *colors ); // leilei - normal hack
-
-
-#define GLE(ret, name, ...) extern name##proc * qgl##name;
-QGL_1_1_PROCS;
-QGL_DESKTOP_1_1_PROCS;
-QGL_1_3_PROCS;
-QGL_1_5_PROCS;
-#undef GLE
 
 #endif //TR_LOCAL_H

@@ -578,7 +578,7 @@ static const void* RB_SwapBuffers( const void *data )
 		qglFinish();
 	}
 
-	ri.GLimpEndFrame();
+	GLimp_EndFrame();
 
 	backEnd.projection2D = qfalse;
 

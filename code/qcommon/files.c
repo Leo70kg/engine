@@ -968,16 +968,16 @@ FS_FCreateOpenPipeFile
 
 ===========
 */
-fileHandle_t FS_FCreateOpenPipeFile( const char *filename ) {
+fileHandle_t FS_FCreateOpenPipeFile( const char *filename )
+{
 	char	    		*ospath;
 	FILE					*fifo;
-	fileHandle_t	f;
 	
     if ( !fs_searchpaths ) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization" );
 	}
 
-	f = FS_HandleForFile();
+	fileHandle_t f = FS_HandleForFile();
 	fsh[f].zipFile = qfalse;
 
 	Q_strncpyz( fsh[f].name, filename, sizeof( fsh[f].name ) );

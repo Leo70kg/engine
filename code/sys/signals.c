@@ -30,6 +30,7 @@ void Sys_SigHandler( int signal )
 	if( signalcaught )
 	{
 		fprintf( stderr, "DOUBLE SIGNAL FAULT: Received signal %d, exiting...\n", signal );
+        exit( 1 );
 	}
 	else
 	{

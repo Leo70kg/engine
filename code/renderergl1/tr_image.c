@@ -783,7 +783,6 @@ static void R_LoadImage(const char *name, unsigned char **pic, int *width, int *
 }
 
 
-
 /*
 ===============
 R_FindImageFile
@@ -1108,7 +1107,7 @@ void R_SetColorMappings( void ) {
 
 	if ( glConfig.deviceSupportsGamma )
 	{
-		ri.GLimpSetGamma( s_gammatable, s_gammatable, s_gammatable );
+		GLimp_SetGamma( s_gammatable, s_gammatable, s_gammatable );
 	}
 }
 

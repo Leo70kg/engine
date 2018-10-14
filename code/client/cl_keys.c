@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #include "client.h"
-
+#include "../sdl/input.h"
 /*
 
 key up events are sent even if in console mode

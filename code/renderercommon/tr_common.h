@@ -26,7 +26,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/tr_public.h"
 
 static const float ORIGIN[3] = {0,0,0};
-
+// outside of TR since it shouldn't be cleared during ref re-init
+extern refimport_t ri;
+extern glconfig_t glConfig;	
+// These variables should live inside glConfig but can't because of
+// compatibility issues to the original ID vms.  If you release a stand-alone
+// game and your mod uses tr_types.h from this build you can safely move them
+// to the glconfig_t struct.
 
 union uInt4bytes{
     unsigned int i;
@@ -74,6 +80,7 @@ typedef enum
 	IMGFLAG_GENNORMALMAP   = 0x0080,
 } imgFlags_t;
 
+
 typedef struct image_s {
 	char		imgName[MAX_QPATH];		// game path, including extension
 	int			width, height;				// source image
@@ -84,12 +91,16 @@ typedef struct image_s {
 
 	int			internalFormat;
 	int			TMU;				// only needed for voodoo2
-
+    int         index;
 	imgType_t   type;
 	imgFlags_t  flags;
 
+    int			wrapClampMode;		// GL_CLAMP or GL_REPEAT, for vulkan
+    qboolean    mipmap;             // for vulkan
+    qboolean    allowPicmip;        // for vulkan
 	struct image_s*	next;
 } image_t;
+
 
 // any change in the LIGHTMAP_* defines here MUST be reflected in
 // R_FindShader() in tr_bsp.c
@@ -98,21 +109,15 @@ typedef struct image_s {
 #define LIGHTMAP_WHITEIMAGE -2
 #define LIGHTMAP_NONE       -1
 
-// outside of TR since it shouldn't be cleared during ref re-init
-extern refimport_t ri;
-extern glconfig_t glConfig;	
-// These variables should live inside glConfig but can't because of
-// compatibility issues to the original ID vms.  If you release a stand-alone
-// game and your mod uses tr_types.h from this build you can safely move them
-// to the glconfig_t struct.
+
 
 
 
 float R_NoiseGet4f( float x, float y, float z, float t );
 void  R_NoiseInit( void );
 
-image_t *R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags );
-image_t *R_CreateImage(const char *name, unsigned char* pic, int width, int height, imgType_t type, imgFlags_t flags, int internalFormat);
+//image_t *R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags );
+//image_t *R_CreateImage(const char *name, unsigned char* pic, int width, int height, imgType_t type, imgFlags_t flags, int internalFormat);
 
 void R_IssuePendingRenderCommands( void );
 qhandle_t RE_RegisterShaderLightMap( const char *name, int lightmapIndex );

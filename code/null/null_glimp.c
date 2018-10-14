@@ -27,7 +27,6 @@ void ( * qglMultiTexCoord2fARB )( GLenum texture, float s, float t );
 void ( * qglActiveTextureARB )( GLenum texture );
 void ( * qglClientActiveTextureARB )( GLenum texture );
 
-
 void ( * qglLockArraysEXT)( int, int);
 void ( * qglUnlockArraysEXT) ( void );
 

@@ -30,6 +30,11 @@ ifndef BUILD_MISSIONPACK
   BUILD_MISSIONPACK= 1
 endif
 
+ifndef BUILD_WITH_SDL
+  BUILD_WITH_SDL = 1
+endif
+
+
 ifndef USE_RENDERER_DLOPEN
 USE_RENDERER_DLOPEN=1
 endif
@@ -177,7 +182,7 @@ USE_MUMBLE=1
 endif
 
 ifndef USE_VOIP
-USE_VOIP=1
+USE_VOIP=0
 endif
 
 ifndef USE_FREETYPE
@@ -231,6 +236,8 @@ RCOMMONDIR=$(MOUNT_DIR)/renderercommon
 RGL1DIR=$(MOUNT_DIR)/renderergl1
 RGL2DIR=$(MOUNT_DIR)/renderergl2
 ROADIR=$(MOUNT_DIR)/renderer_oa
+RVULKANDIR=$(MOUNT_DIR)/renderer_vulkan
+RMYDEVDIR=$(MOUNT_DIR)/renderer_mydev
 CMDIR=$(MOUNT_DIR)/qcommon
 SDLDIR=$(MOUNT_DIR)/sdl
 SYSDIR=$(MOUNT_DIR)/sys
@@ -267,14 +274,21 @@ ifneq ($(BUILD_CLIENT),0)
 	CURL_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs libcurl)
 	OPENAL_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags openal)
 	OPENAL_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs openal)
+
+ifeq ($(BUILD_WITH_SDL), 1)
 	SDL_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags sdl2|sed 's/-Dmain=SDL_main//')
 	SDL_LIBS ?= $(shell PKG_CONFIG --silence-errors --libs sdl2)
+endif
+
 	FREETYPE_CFLAGS ?= $(shell PKG_CONFIG --silence-errors --cflags freetype2)
   else
 	# assume they're in the system default paths (no -I or -L needed)
 	CURL_LIBS ?= -lcurl
 	OPENAL_LIBS ?= -lopenal
   endif
+
+ifeq ($(BUILD_WITH_SDL), 1)
+
   # Use sdl2-config if all else fails
   ifeq ($(SDL_CFLAGS),)
 	ifneq ($(call bin_path, sdl2-config),)
@@ -282,6 +296,7 @@ ifneq ($(BUILD_CLIENT),0)
 	  SDL_LIBS ?= $(shell sdl2-config --libs)
 	endif
   endif
+endif
 endif
 
 
@@ -328,7 +343,12 @@ endif
   LIBS=-ldl -lm
 
   CLIENT_LIBS=$(SDL_LIBS)
-  RENDERER_LIBS = -lGL
+
+#  XCB_CFLAGS = $(shell PKG_CONFIG --silence-errors --cflags xcb)
+  XCB_LIBS = $(shell pkg-config --libs xcb)
+
+
+  RENDERER_LIBS = -lGL $(XCB_LIBS)
 
   CLIENT_CFLAGS += $(CURL_CFLAGS)
   CLIENT_LIBS += $(CURL_LIBS)
@@ -630,8 +650,10 @@ ifneq ($(BUILD_CLIENT),0)
   ifneq ($(USE_RENDERER_DLOPEN),0)
 	TARGETS += $(B)/$(CLIENTBIN)$(FULLBINEXT)
 	TARGETS += $(B)/renderer_openarena_$(SHLIBNAME) $(B)/renderer_opengl1_$(SHLIBNAME) $(B)/renderer_opengl2_$(SHLIBNAME)
+	TARGETS += $(B)/renderer_vulkan_$(SHLIBNAME) $(B)/renderer_mydev_$(SHLIBNAME)
   else
 	TARGETS += $(B)/$(CLIENTBIN)$(FULLBINEXT) $(B)/$(CLIENTBIN)_opengl1$(FULLBINEXT) $(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT)
+	TARGETS += $(B)/$(CLIENTBIN)_vulkan$(FULLBINEXT) $(B)/$(CLIENTBIN)_mydev$(FULLBINEXT)
   endif
 endif
 
@@ -1025,6 +1047,8 @@ makedirs:
 	@if [ ! -d $(B)/renderergl2 ];then $(MKDIR) $(B)/renderergl2;fi
 	@if [ ! -d $(B)/renderergl2/glsl ];then $(MKDIR) $(B)/renderergl2/glsl;fi
 	@if [ ! -d $(B)/renderer_oa ];then $(MKDIR) $(B)/renderer_oa;fi
+	@if [ ! -d $(B)/renderer_vulkan ];then $(MKDIR) $(B)/renderer_vulkan;fi
+	@if [ ! -d $(B)/renderer_mydev ];then $(MKDIR) $(B)/renderer_mydev;fi
 	@if [ ! -d $(B)/ded ];then $(MKDIR) $(B)/ded;fi
 	@if [ ! -d $(B)/$(BASEGAME) ];then $(MKDIR) $(B)/$(BASEGAME);fi
 	@if [ ! -d $(B)/$(BASEGAME)/cgame ];then $(MKDIR) $(B)/$(BASEGAME)/cgame;fi
@@ -1337,15 +1361,27 @@ Q3OBJ = \
   $(B)/client/l_precomp.o \
   $(B)/client/l_script.o \
   $(B)/client/l_struct.o \
-  \
-  $(B)/client/sdl_input.o \
-  $(B)/client/sdl_snd.o \
-  $(B)/client/sdl_gamma.o \
-  $(B)/client/sdl_glimp.o \
-  \
   $(B)/client/con_log.o \
   $(B)/client/sys_main.o
 
+ifeq ($(BUILD_WITH_SDL), 1)
+
+Q3OBJ += \
+  $(B)/client/sdl_input.o \
+  $(B)/client/sdl_snd.o \
+  $(B)/client/sdl_getClipboardData.o
+
+
+else
+Q3OBJ += \
+  $(B)/client/input_linux.o \
+  $(B)/client/sound_linux.o \
+  $(B)/client/gamma_linux.o \
+  $(B)/client/glimp_linux.o \
+  $(B)/client/x11_randr.o \
+  $(B)/client/x11_vidmode.o \
+  $(B)/client/getClipboardData_linux.o
+endif
 
 
 ifdef MINGW
@@ -1391,8 +1427,8 @@ Q3R2OBJ = \
   $(B)/renderergl2/tr_surface.o \
   $(B)/renderergl2/tr_vbo.o \
   $(B)/renderergl2/tr_world.o \
-  $(B)/renderergl2/tr_common.o
-
+  $(B)/renderergl2/tr_common.o \
+  $(B)/renderergl2/sdl_glimp.o
 
 
 Q3R2STRINGOBJ = \
@@ -1454,7 +1490,9 @@ Q3ROBJ = \
   $(B)/renderergl1/tr_sky.o \
   $(B)/renderergl1/tr_surface.o \
   $(B)/renderergl1/tr_world.o \
-  $(B)/renderergl1/tr_common.o
+  $(B)/renderergl1/tr_common.o \
+  $(B)/renderergl1/sdl_glimp.o
+
 
 Q3ROAOBJ = \
   $(B)/renderer_oa/tr_animation.o \
@@ -1483,8 +1521,113 @@ Q3ROAOBJ = \
   $(B)/renderer_oa/tr_sky.o \
   $(B)/renderer_oa/tr_surface.o \
   $(B)/renderer_oa/tr_world.o \
-  $(B)/renderer_oa/tr_common.o
+  $(B)/renderer_oa/tr_common.o \
+  $(B)/renderer_oa/sdl_glimp.o
 
+
+######################  MYDEV  ######################
+
+Q3MYDEVOBJ = \
+  $(B)/renderer_mydev/tr_animation.o \
+  $(B)/renderer_mydev/tr_backend.o \
+  $(B)/renderer_mydev/tr_bsp.o \
+  $(B)/renderer_mydev/tr_cmds.o \
+  $(B)/renderer_mydev/tr_curve.o \
+  $(B)/renderer_mydev/tr_font.o \
+  $(B)/renderer_mydev/tr_image.o \
+  $(B)/renderer_mydev/tr_image_png.o \
+  $(B)/renderer_mydev/tr_image_jpg.o \
+  $(B)/renderer_mydev/tr_image_bmp.o \
+  $(B)/renderer_mydev/tr_image_tga.o \
+  $(B)/renderer_mydev/tr_image_pcx.o \
+  $(B)/renderer_mydev/tr_init.o \
+  $(B)/renderer_mydev/tr_light.o \
+  $(B)/renderer_mydev/tr_main.o \
+  $(B)/renderer_mydev/tr_marks.o \
+  $(B)/renderer_mydev/tr_mesh.o \
+  $(B)/renderer_mydev/tr_model.o \
+  $(B)/renderer_mydev/tr_noise.o \
+  $(B)/renderer_mydev/tr_scene.o \
+  $(B)/renderer_mydev/tr_shade.o \
+  $(B)/renderer_mydev/tr_shade_calc.o \
+  $(B)/renderer_mydev/tr_shader.o \
+  $(B)/renderer_mydev/tr_shadows.o \
+  $(B)/renderer_mydev/tr_sky.o \
+  $(B)/renderer_mydev/tr_surface.o \
+  $(B)/renderer_mydev/tr_world.o \
+  $(B)/renderer_mydev/tr_common.o \
+  $(B)/renderer_mydev/qgl.o \
+  $(B)/renderer_mydev/qgl_log.o \
+  $(B)/renderer_mydev/loadImage.o \
+  $(B)/renderer_mydev/sdl_glimp.o
+
+######################  VULKAN  ######################
+
+Q3VKOBJ = \
+  $(B)/renderer_vulkan/tr_animation.o \
+  $(B)/renderer_vulkan/tr_backend.o \
+  $(B)/renderer_vulkan/tr_bsp.o \
+  $(B)/renderer_vulkan/tr_cmds.o \
+  $(B)/renderer_vulkan/tr_curve.o \
+  $(B)/renderer_vulkan/tr_font.o \
+  $(B)/renderer_vulkan/tr_image.o \
+  $(B)/renderer_vulkan/tr_image_png.o \
+  $(B)/renderer_vulkan/tr_image_jpg.o \
+  $(B)/renderer_vulkan/tr_image_bmp.o \
+  $(B)/renderer_vulkan/tr_image_tga.o \
+  $(B)/renderer_vulkan/tr_image_pcx.o \
+  $(B)/renderer_vulkan/tr_init.o \
+  $(B)/renderer_vulkan/tr_light.o \
+  $(B)/renderer_vulkan/tr_main.o \
+  $(B)/renderer_vulkan/tr_marks.o \
+  $(B)/renderer_vulkan/tr_mesh.o \
+  $(B)/renderer_vulkan/tr_model.o \
+  $(B)/renderer_vulkan/tr_noise.o \
+  $(B)/renderer_vulkan/tr_scene.o \
+  $(B)/renderer_vulkan/tr_shade.o \
+  $(B)/renderer_vulkan/tr_shade_calc.o \
+  $(B)/renderer_vulkan/tr_shader.o \
+  $(B)/renderer_vulkan/tr_shadows.o \
+  $(B)/renderer_vulkan/tr_sky.o \
+  $(B)/renderer_vulkan/tr_surface.o \
+  $(B)/renderer_vulkan/tr_world.o \
+  $(B)/renderer_vulkan/tr_common.o \
+  $(B)/renderer_vulkan/qvk.o \
+  $(B)/renderer_vulkan/loadImage.o \
+  \
+  $(B)/renderer_vulkan/vk_clear_attachments.o \
+  $(B)/renderer_vulkan/vk_create_image.o \
+  $(B)/renderer_vulkan/vk_create_pipeline.o \
+  $(B)/renderer_vulkan/vk_frame.o \
+  $(B)/renderer_vulkan/vk_read_pixels.o \
+  $(B)/renderer_vulkan/vk_shade_geometry.o \
+  $(B)/renderer_vulkan/vk_upload_image_data.o \
+  $(B)/renderer_vulkan/vk_update_descriptor_set.o \
+  $(B)/renderer_vulkan/vk_release_resources.o \
+  $(B)/renderer_vulkan/vk_initialize.o \
+  $(B)/renderer_vulkan/vk_bind_geometry.o \
+  \
+  $(B)/renderer_vulkan/multi_texture_add_frag.o \
+  $(B)/renderer_vulkan/multi_texture_clipping_plane_vert.o \
+  $(B)/renderer_vulkan/multi_texture_mul_frag.o \
+  $(B)/renderer_vulkan/multi_texture_vert.o \
+  $(B)/renderer_vulkan/single_texture_clipping_plane_vert.o \
+  $(B)/renderer_vulkan/single_texture_frag.o \
+  $(B)/renderer_vulkan/single_texture_vert.o
+
+ifeq ($(BUILD_WITH_SDL), 1)
+  Q3VKOBJ += $(B)/renderer_vulkan/sdl_vkimp.o
+ else
+  Q3VKOBJ += $(B)/renderer_vulkan/VKimpl.o
+ endif
+
+
+#  $(B)/renderer_vulkan/x11_randr.o \
+  $(B)/renderer_vulkan/x11_vidmode.o \
+  $(B)/renderer_vulkan/glimp_linux.o \
+  $(B)/renderer_vulkan/gamma_linux.o \
+
+######################################################
 
 ifneq ($(USE_RENDERER_DLOPEN), 0)
   Q3ROBJ += \
@@ -1501,6 +1644,17 @@ ifneq ($(USE_RENDERER_DLOPEN), 0)
 	$(B)/renderergl2/q_shared.o \
 	$(B)/renderergl2/puff.o \
 	$(B)/renderergl2/q_math.o
+
+  Q3VKOBJ += \
+	$(B)/renderer_vulkan/q_shared.o \
+	$(B)/renderer_vulkan/puff.o \
+	$(B)/renderer_vulkan/q_math.o
+
+  Q3MYDEVOBJ += \
+	$(B)/renderer_mydev/q_shared.o \
+	$(B)/renderer_mydev/puff.o \
+	$(B)/renderer_mydev/q_math.o
+
 endif
 
 ifneq ($(USE_INTERNAL_JPEG),0)
@@ -1801,36 +1955,71 @@ $(B)/$(CLIENTBIN)$(FULLBINEXT): $(Q3OBJ) $(JPGOBJ) $(LIBSDLMAIN)
 $(B)/renderer_opengl2_$(SHLIBNAME): $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ) \
-		$(THREAD_LIBS) $(RENDERER_LIBS) $(LIBS)
+		$(THREAD_LIBS) $(RENDERER_LIBS) $(SDL_LIBS) $(LIBS)
 
 $(B)/renderer_openarena_$(SHLIBNAME): $(Q3ROAOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(Q3ROAOBJ) $(JPGOBJ) \
-		$(THREAD_LIBS) $(RENDERER_LIBS) $(LIBS)
+		$(THREAD_LIBS) $(RENDERER_LIBS) $(SDL_LIBS) $(LIBS)
 
 $(B)/renderer_opengl1_$(SHLIBNAME): $(Q3ROBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(Q3ROBJ) $(JPGOBJ) \
+		$(THREAD_LIBS) $(RENDERER_LIBS) $(SDL_LIBS) $(LIBS)
+
+
+######################## MYDEV ##############################
+
+# remember to remove SDL lib dependence
+# this mean to use glx/glw
+
+$(B)/renderer_mydev_$(SHLIBNAME): $(Q3MYDEVOBJ) $(JPGOBJ)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(Q3MYDEVOBJ) $(JPGOBJ) \
 		$(THREAD_LIBS) $(RENDERER_LIBS) $(LIBS)
 
 
+######################## VULKAN ##############################
+
+$(B)/renderer_vulkan_$(SHLIBNAME): $(Q3VKOBJ) $(JPGOBJ)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(Q3VKOBJ) $(JPGOBJ) \
+		$(THREAD_LIBS) $(RENDERER_LIBS) $(LIBS)
+
+##############################################################
+
 else
 
-$(B)/$(CLIENTBIN)$(FULLBINEXT): $(Q3OBJ) $(Q3ROAOBJ) $(JPGOBJ)
+$(B)/$(CLIENTBIN)$(FULLBINEXT): $(Q3OBJ)  $(Q3ROAOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) \
-		-o $@ $(Q3OBJ) $(Q3ROAOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+		-o $@ $(Q3OBJ)  $(Q3ROAOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
 
-$(B)/$(CLIENTBIN)_opengl1$(FULLBINEXT): $(Q3OBJ) $(Q3ROBJ)  $(JPGOBJ)
+$(B)/$(CLIENTBIN)_opengl1$(FULLBINEXT): $(Q3OBJ)  $(Q3ROBJ)  $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
-		-o $@ $(Q3OBJ) $(Q3ROBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+		-o $@ $(Q3OBJ)  $(Q3ROBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
 										
-$(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT): $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ)
+$(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT): $(Q3OBJ)  $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
-		-o $@ $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+		-o $@ $(Q3OBJ)  $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
 
+
+######################## MYDEV ##############################
+$(B)/$(CLIENTBIN)_mydev$(FULLBINEXT): $(Q3OBJ)  $(Q3MYDEVOBJ) $(JPGOBJ)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
+		-o $@ $(Q3OBJ)  $(Q3MYDEVOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+
+
+######################## VULKAN ##############################
+$(B)/$(CLIENTBIN)_vulkan$(FULLBINEXT): $(Q3OBJ) $(Q3VKOBJ) $(JPGOBJ)
+	$(echo_cmd) "LD $@"
+	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
+		-o $@ $(Q3OBJ) $(Q3VKOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS) 
+
+##############################################################
 
 endif
 
@@ -2343,6 +2532,46 @@ $(B)/client/%.o: $(SYSDIR)/%.rc
 	$(DO_WINDRES)
 
 
+############### MYDEV ######################
+
+$(B)/renderer_mydev/%.o: $(CMDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_mydev/%.o: $(SDLDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_mydev/%.o: $(JPDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_mydev/%.o: $(RCOMMONDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_mydev/%.o: $(RMYDEVDIR)/%.c
+	$(DO_REF_CC)
+
+
+############### VULKAN ######################
+
+$(B)/renderer_vulkan/%.o: $(CMDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_vulkan/%.o: $(SDLDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_vulkan/%.o: $(JPDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_vulkan/%.o: $(RCOMMONDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_vulkan/%.o: $(RVULKANDIR)/%.c
+	$(DO_REF_CC)
+
+$(B)/renderer_vulkan/%.o: $(MOUNT_DIR)/renderer_vulkan/shaders/Compiled/%.c
+	$(DO_REF_CC)
+
+
+###########################################
 	
 $(B)/renderer_oa/%.o: $(CMDIR)/%.c
 	$(DO_REF_CC)
@@ -2516,7 +2745,7 @@ $(B)/$(MISSIONPACK)/qcommon/%.asm: $(CMDIR)/%.c $(Q3LCC)
 # MISC
 #############################################################################
 
-OBJ = $(Q3OBJ) $(Q3ROBJ) $(Q3R2OBJ) $(Q3ROAOBJ) $(Q3DOBJ) $(JPGOBJ) \
+OBJ = $(Q3OBJ)  $(Q3ROBJ) $(Q3R2OBJ) $(Q3ROAOBJ) $(Q3DOBJ) $(JPGOBJ) \
   $(MPGOBJ) $(Q3GOBJ) $(Q3CGOBJ) $(MPCGOBJ) $(Q3UIOBJ) $(MPUIOBJ) \
   $(MPGVMOBJ) $(Q3GVMOBJ) $(Q3CGVMOBJ) $(MPCGVMOBJ) $(Q3UIVMOBJ) $(MPUIVMOBJ)
 TOOLSOBJ = $(LBURGOBJ) $(Q3CPPOBJ) $(Q3RCCOBJ) $(Q3LCCOBJ) $(Q3ASMOBJ)

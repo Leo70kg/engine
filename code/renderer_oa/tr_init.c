@@ -187,7 +187,7 @@ static qboolean GLimp_GetProcAddresses( void )
 #ifdef __SDL_NOGETPROCADDR__
 #define GLE( ret, name, ... ) qgl##name = gl#name;
 #else
-#define GLE( ret, name, ... ) qgl##name = (name##proc *) ri.GLimpGetProcAddress("gl" #name); \
+#define GLE( ret, name, ... ) qgl##name = (name##proc *) GLimp_GetProcAddress("gl" #name); \
 	if ( qgl##name == NULL ) { \
 		ri.Error(ERR_FATAL, "Missing OpenGL function %s\n", "gl" #name ); \
 	}
@@ -291,9 +291,9 @@ static qboolean GLimp_GetProcAddresses( void )
 	qglClientActiveTextureARB = NULL;
 	if ( GLimp_HaveExtension( "GL_ARB_multitexture" ) )
 	{
-		qglMultiTexCoord2fARB = ri.GLimpGetProcAddress( "glMultiTexCoord2fARB" );
-		qglActiveTextureARB = ri.GLimpGetProcAddress( "glActiveTextureARB" );
-		qglClientActiveTextureARB = ri.GLimpGetProcAddress( "glClientActiveTextureARB" );
+		qglMultiTexCoord2fARB = GLimp_GetProcAddress( "glMultiTexCoord2fARB" );
+		qglActiveTextureARB = GLimp_GetProcAddress( "glActiveTextureARB" );
+		qglClientActiveTextureARB = GLimp_GetProcAddress( "glClientActiveTextureARB" );
 
 		if ( qglActiveTextureARB )
 		{
@@ -322,8 +322,8 @@ static qboolean GLimp_GetProcAddresses( void )
 	if ( GLimp_HaveExtension( "GL_EXT_compiled_vertex_array" ) )
 	{
 		ri.Printf( PRINT_ALL,  "...using GL_EXT_compiled_vertex_array\n" );
-		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) ri.GLimpGetProcAddress( "glLockArraysEXT" );
-		qglUnlockArraysEXT = ( void ( APIENTRY * )( void ) ) ri.GLimpGetProcAddress( "glUnlockArraysEXT" );
+		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) GLimp_GetProcAddress( "glLockArraysEXT" );
+		qglUnlockArraysEXT = ( void ( APIENTRY * )( void ) ) GLimp_GetProcAddress( "glUnlockArraysEXT" );
 		if (!qglLockArraysEXT || !qglUnlockArraysEXT)
 		{
 			ri.Error(ERR_FATAL, "bad getprocaddress");
@@ -535,19 +535,19 @@ static void InitOpenGL(void)
 
 	if ( glConfig.vidWidth == 0 )
 	{
-        ri.GLimpInit(&glConfig, qfalse);
+        GLimp_Init(&glConfig, qfalse);
         
         if ( !GLimp_GetProcAddresses() )
         {
             ri.Error(ERR_FATAL, "GLimp_GetProcAddresses() failed\n" );
             GLimp_ClearProcAddresses();
-            ri.GLimpDeleteCtx();
-            ri.GLimpDestroyWin();
+            GLimp_DeleteGLContext();
+            GLimp_DestroyWindow();
         }
 
         qglClearColor( 1, 0, 0, 1 );
         qglClear( GL_COLOR_BUFFER_BIT );
-        ri.GLimpEndFrame();
+        GLimp_EndFrame();
         
         // OpenGL driver constants
         qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
@@ -1187,7 +1187,7 @@ static void R_Register( void )
 	ri.Cmd_AddCommand( "screenshot", R_ScreenShot_f );
 	ri.Cmd_AddCommand( "screenshotJPEG", R_ScreenShotJPEG_f );
 	ri.Cmd_AddCommand( "gfxinfo", GfxInfo_f );
-	ri.Cmd_AddCommand( "minimize", ri.GLimpMinimize );
+	ri.Cmd_AddCommand( "minimize", GLimp_Minimize );
 }
 
 
@@ -1486,7 +1486,7 @@ void RE_Shutdown( qboolean destroyWindow )
 	// shut down platform specific OpenGL stuff
 	if( destroyWindow )
     {
-		ri.GLimpShutdown();
+		GLimp_Shutdown();
 
 		memset(&glConfig, 0, sizeof( glConfig ));
 		memset(&glState, 0, sizeof( glState ));
@@ -1619,7 +1619,7 @@ refexport_t* GetRefAPI(int apiVersion, refimport_t *rimp)
 	ri = *rimp;
 
 	if( apiVersion != REF_API_VERSION )
-    {
+	{
 		ri.Printf(PRINT_ALL, "Mismatched REF_API_VERSION: expected %i, got %i\n", REF_API_VERSION, apiVersion );
 		return NULL;
 	}
@@ -1638,12 +1638,12 @@ refexport_t* GetRefAPI(int apiVersion, refimport_t *rimp)
 	re.LoadWorld = RE_LoadWorldMap;
 	re.SetWorldVisData = RE_SetWorldVisData;
 	re.EndRegistration = RE_EndRegistration;
-    re.ClearScene = RE_ClearScene;
-    re.AddRefEntityToScene = RE_AddRefEntityToScene;
-    re.AddPolyToScene = RE_AddPolyToScene;
+	re.ClearScene = RE_ClearScene;
+	re.AddRefEntityToScene = RE_AddRefEntityToScene;
+	re.AddPolyToScene = RE_AddPolyToScene;
 	re.LightForPoint = R_LightForPoint;
-    re.AddLightToScene = RE_AddLightToScene;
-    re.AddAdditiveLightToScene = RE_AddAdditiveLightToScene;
+	re.AddLightToScene = RE_AddLightToScene;
+	re.AddAdditiveLightToScene = RE_AddAdditiveLightToScene;
 
 	re.RenderScene = RE_RenderScene;
 	re.SetColor = RE_SetColor;

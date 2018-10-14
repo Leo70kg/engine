@@ -162,7 +162,7 @@ static qboolean GLimp_GetProcAddresses( void )
     int qglMajorVersion, qglMinorVersion;
 
 #define GLE( ret, name, ... ) \
-    qgl##name = (name##proc *) ri.GLimpGetProcAddress("gl" #name); \
+    qgl##name = (name##proc *) GLimp_GetProcAddress("gl" #name); \
 	if ( qgl##name == NULL ) { \
 		ri.Error(ERR_FATAL, "Missing OpenGL function %s\n", "gl" #name ); \
 		success = qfalse; \
@@ -270,9 +270,9 @@ void GLimp_InitExtensions( void )
 	qglClientActiveTextureARB = NULL;
 	if ( GLimp_HaveExtension( "GL_ARB_multitexture" ) )
 	{
-		qglMultiTexCoord2fARB = ri.GLimpGetProcAddress( "glMultiTexCoord2fARB" );
-		qglActiveTextureARB = ri.GLimpGetProcAddress( "glActiveTextureARB" );
-		qglClientActiveTextureARB = ri.GLimpGetProcAddress( "glClientActiveTextureARB" );
+		qglMultiTexCoord2fARB = GLimp_GetProcAddress( "glMultiTexCoord2fARB" );
+		qglActiveTextureARB = GLimp_GetProcAddress( "glActiveTextureARB" );
+		qglClientActiveTextureARB = GLimp_GetProcAddress( "glClientActiveTextureARB" );
 
 		if ( qglActiveTextureARB )
 		{
@@ -301,8 +301,8 @@ void GLimp_InitExtensions( void )
 	if ( GLimp_HaveExtension( "GL_EXT_compiled_vertex_array" ) )
 	{
 		ri.Printf( PRINT_ALL,  "...using GL_EXT_compiled_vertex_array\n" );
-		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) ri.GLimpGetProcAddress( "glLockArraysEXT" );
-		qglUnlockArraysEXT = ( void ( APIENTRY * )( void ) ) ri.GLimpGetProcAddress( "glUnlockArraysEXT" );
+		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) GLimp_GetProcAddress( "glLockArraysEXT" );
+		qglUnlockArraysEXT = ( void ( APIENTRY * )( void ) ) GLimp_GetProcAddress( "glUnlockArraysEXT" );
 		if (!qglLockArraysEXT || !qglUnlockArraysEXT)
 		{
 			ri.Error(ERR_FATAL, "bad getprocaddress");
@@ -367,14 +367,14 @@ static void InitOpenGL( void )
 	{
 		GLint		temp;
 		
-		ri.GLimpInit(&glConfig, qfalse);
+		GLimp_Init(&glConfig, qfalse);
         
         if ( !GLimp_GetProcAddresses() )
         {
             ri.Error(ERR_FATAL, "GLimp_GetProcAddresses() failed\n" );
             GLimp_ClearProcAddresses();
-            ri.GLimpDeleteCtx();
-            ri.GLimpDestroyWin();
+            GLimp_DeleteGLContext();
+            GLimp_DestroyWindow();
         }
         else
         {
@@ -383,7 +383,7 @@ static void InitOpenGL( void )
 
         qglClearColor( 0, 1, 0, 1 );
         qglClear( GL_COLOR_BUFFER_BIT );
-        ri.GLimpEndFrame();
+        GLimp_EndFrame();
         
         // get our config strings
         Q_strncpyz( glConfig.vendor_string, (char *) qglGetString (GL_VENDOR), sizeof( glConfig.vendor_string ) );
@@ -1226,7 +1226,7 @@ void R_Register( void )
 	ri.Cmd_AddCommand( "screenshot", R_ScreenShot_f );
 	ri.Cmd_AddCommand( "screenshotJPEG", R_ScreenShotJPEG_f );
 	ri.Cmd_AddCommand( "gfxinfo", GfxInfo_f );
-	ri.Cmd_AddCommand( "minimize", ri.GLimpMinimize );
+	ri.Cmd_AddCommand( "minimize", GLimp_Minimize );
 }
 
 /*
@@ -1325,11 +1325,8 @@ void R_Init( void ) {
 	ri.Printf( PRINT_ALL, "----- finished R_Init -----\n" );
 }
 
-/*
-===============
-RE_Shutdown
-===============
-*/
+
+
 void RE_Shutdown( qboolean destroyWindow ) {	
 
 	ri.Printf( PRINT_ALL, "RE_Shutdown( %i )\n", destroyWindow );
@@ -1354,7 +1351,7 @@ void RE_Shutdown( qboolean destroyWindow ) {
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {
 
-		ri.GLimpShutdown();
+		GLimp_Shutdown();
 
 		memset( &glConfig, 0, sizeof( glConfig ) );
 		memset( &glState, 0, sizeof( glState ) );

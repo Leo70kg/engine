@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../sys/sys_local.h"
 #include "../qcommon/sys_loadlib.h"
-#include "../sdl/glimp.h"
+#include "../sdl/input.h"
 #ifdef USE_MUMBLE
 #include "libmumblelink.h"
 #endif
@@ -51,6 +51,7 @@ cvar_t	*cl_voip;
 #ifdef USE_RENDERER_DLOPEN
 cvar_t	*cl_renderer;
 #endif
+
 
 cvar_t	*cl_nodelta;
 cvar_t	*cl_debugMove;
@@ -1967,7 +1968,7 @@ void CL_Vid_Restart_f( void )
 		CL_StartHunkUsers(qfalse);
 
 		// start the cgame if connected
-		if(clc.state > CA_CONNECTED && clc.state != CA_CINEMATIC)
+		if( (clc.state > CA_CONNECTED) && (clc.state != CA_CINEMATIC) )
 		{
 			cls.cgameStarted = qtrue;
 			CL_InitCGame();
@@ -3269,7 +3270,9 @@ void CL_InitRef(void)
 	ri.Sys_SetEnv = Sys_SetEnv;
 	ri.Sys_LowPhysicalMemory = Sys_LowPhysicalMemory;
 
+
     // GLimp
+/*  
     ri.GLimpEndFrame = GLimp_EndFrame;
     ri.GLimpInit = GLimp_Init;
     ri.GLimpShutdown = GLimp_Shutdown;
@@ -3279,7 +3282,18 @@ void CL_InitRef(void)
     ri.GLimpDeleteCtx = GLimp_DeleteGLContext;
     ri.GLimpDestroyWin = GLimp_DestroyWindow;
     ri.GLimpGetProcAddress = GLimp_GetProcAddress;
+    ri.GLimpLogComment = GLimp_LogComment;
+    ri.GLimpRendererSleep = GLimp_RendererSleep;
+    ri.GLimpSpawnRenderThread = GLimp_SpawnRenderThread;
+    ri.GLimpWakeRenderer = GLimp_WakeRenderer;
+    ri.GLimpFrontEndSleep = GLimp_FrontEndSleep;
 
+    ri.GLimpGetProcAddress = GLimp_GetProcAddress;
+*/    
+    // 
+	ri.IN_Init = IN_Init;
+	ri.IN_Shutdown = IN_Shutdown;
+	ri.IN_Restart = IN_Restart;
 
 	ret = GetRefAPI(REF_API_VERSION, &ri);
 

@@ -2891,30 +2891,27 @@ void Com_WriteConfiguration( void )
 {
 
     // if we are quiting without fully initializing, make sure we don't write out anything
-	if ( !com_fullyInitialized )
-		return;
+	if ( (cvar_modifiedFlags & CVAR_ARCHIVE ) && com_fullyInitialized )
+    {
 
+	    cvar_modifiedFlags &= ~CVAR_ARCHIVE;
 
-	if ( !(cvar_modifiedFlags & CVAR_ARCHIVE ) )
-		return;
+	    Com_WriteConfigToFile( Q3CONFIG_CFG );
 
-	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
-
-	Com_WriteConfigToFile( Q3CONFIG_CFG );
-
-	// not needed for dedicated or standalone
+	    // not needed for dedicated or standalone
 #if !defined(DEDICATED) && !defined(STANDALONE)
-	cvar_t* fs = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
+	    cvar_t* fs = Cvar_Get ("fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
 
-	if(!com_standalone->integer)
-	{
-		if (UI_usesUniqueCDKey() && fs && fs->string[0] != 0) {
-			Com_WriteCDKey( fs->string, &cl_cdkey[16] );
-		} else {
+	    if(!com_standalone->integer)
+    	{
+	    	if (UI_usesUniqueCDKey() && fs && fs->string[0] != 0) {
+			    Com_WriteCDKey( fs->string, &cl_cdkey[16] );
+	    	} else {
 			Com_WriteCDKey( BASEGAME, cl_cdkey );
-		}
-	}
+		    }
+    	}
 #endif
+    }
 }
 
 /*
@@ -3083,7 +3080,6 @@ void Com_Frame(void)
 	} while(Com_TimeVal(minMsec));
 	
 	IN_Frame(); // youurayy input lag fix
-
 	lastTime = com_frameTime;
 	com_frameTime = Com_EventLoop();
 	
@@ -3174,7 +3170,7 @@ void Com_Frame(void)
 		extern	int c_traces, c_brush_traces, c_patch_traces;
 		extern	int	c_pointcontents;
 
-		Com_Printf ("%4i traces  (%ib %ip) %4i points\n", c_traces,	c_brush_traces, c_patch_traces, c_pointcontents);
+		Com_Printf ("%4i traces (%ib %ip) %4i points\n", c_traces,	c_brush_traces, c_patch_traces, c_pointcontents);
 		c_traces = 0;
 		c_brush_traces = 0;
 		c_patch_traces = 0;

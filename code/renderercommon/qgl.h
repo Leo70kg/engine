@@ -313,5 +313,4 @@ QGL_EXT_direct_state_access_PROCS;
 #undef GLE
 
 
-
 #endif

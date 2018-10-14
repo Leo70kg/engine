@@ -38,35 +38,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 
 
-/*
- * This makes pasting in client console and UI edit fields work on X11 and OS X.
- * Sys_GetClipboardData is only used by client, so returning NULL in dedicated is fine.
- */
-char *Sys_GetClipboardData(void)
-{
-#ifdef DEDICATED
-	return NULL;
-#else
-	char *data = NULL;
-	char *cliptext = SDL_GetClipboardText();
 
-	if( cliptext != NULL )
-    {
-		if ( cliptext[0] != '\0' )
-        {
-			size_t bufsize = strlen( cliptext ) + 1;
-
-			data = Z_Malloc( bufsize );
-			Q_strncpyz( data, cliptext, bufsize );
-
-			// find first listed char and set to '\0'
-			strtok( data, "\n\r\b" );
-		}
-		SDL_free( cliptext );
-	}
-	return data;
-#endif
-}
 
 #ifdef DEDICATED
 #	define PID_FILENAME PRODUCT_NAME "_server.pid"
@@ -147,10 +119,6 @@ Single exit point (regular exit or in case of error)
 __attribute__ ((noreturn)) void Sys_Exit( int exitCode )
 {
 	CON_Shutdown( );
-
-#ifndef DEDICATED
-	SDL_Quit( );
-#endif
 
 	if( exitCode < 2 && com_fullyInitialized)
 	{
@@ -240,31 +208,6 @@ int main( int argc, char **argv )
 	int   i;
 	char  commandLine[ MAX_STRING_CHARS ] = { 0 };
 
-#ifndef DEDICATED
-	// Compile time SDL version check, require a minimum version of SDL
-    #define MINSDL_MAJOR 2
-    #define MINSDL_MINOR 0
-    #define MINSDL_PATCH 0
-
-#	if !SDL_VERSION_ATLEAST(MINSDL_MAJOR, MINSDL_MINOR, MINSDL_PATCH)
-#		error A more recent version of SDL is required
-#	endif
-
-	// Run time
-	SDL_version ver;
-	SDL_GetVersion( &ver );
-
-    #define MINSDL_VERSION   XSTRING(MINSDL_MAJOR) "." XSTRING(MINSDL_MINOR) "." XSTRING(MINSDL_PATCH)
-
-	if( SDL_VERSIONNUM( ver.major, ver.minor, ver.patch ) <	SDL_VERSIONNUM( MINSDL_MAJOR, MINSDL_MINOR, MINSDL_PATCH ) )
-	{
-		Sys_Dialog( DT_ERROR, va( "SDL version " MINSDL_VERSION " or greater is required, "
-			"but only version %d.%d.%d was found. You may be able to obtain a more recent copy "
-			"from http://www.libsdl.org/.", ver.major, ver.minor, ver.patch ), "SDL Library Too Old" );
-
-		Sys_Exit(1);
-	}
-#endif
 
 	Sys_PlatformInit();
     Sys_InitSignal();

@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "client.h"
-
+#include "../sdl/input.h"
 #include "../botlib/botlib.h"
 
 extern	botlib_export_t	*botlib_export;
@@ -1071,7 +1071,7 @@ void CL_ShutdownUI( void )
 void CL_InitUI( void )
 {
 	int	v;
-	
+
 	// load the dll or bytecode
 	vmInterpret_t interpret = Cvar_VariableValue("vm_ui");
 	if(cl_connectedToPureServer)
@@ -1106,6 +1106,9 @@ void CL_InitUI( void )
 		// init for this gamestate
 		VM_Call( uivm, UI_INIT, (clc.state >= CA_AUTHORIZING && clc.state < CA_ACTIVE) );
 	}
+
+    Com_Printf( "--- CL_InitUI() finished ---\n" );	
+
 }
 
 #ifndef STANDALONE

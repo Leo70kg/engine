@@ -632,6 +632,23 @@ void Cvar_SetValueSafe( const char *var_name, float value )
 	Cvar_SetSafe( var_name, val );
 }
 
+
+qboolean Cvar_SetModified( const char *var_name, qboolean modified )
+{
+	cvar_t	*var;
+
+	var = Cvar_FindVar( var_name );
+	if ( var ) 
+	{
+		var->modified = modified;
+		return qtrue;
+	}
+	else 
+	{
+		return qfalse;
+	}
+}
+
 /*
 ============
 Cvar_Reset

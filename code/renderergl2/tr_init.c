@@ -238,7 +238,7 @@ qboolean GLimp_GetProcAddresses( void )
 #ifdef __SDL_NOGETPROCADDR__
 #define GLE( ret, name, ... ) qgl##name = gl#name;
 #else
-#define GLE( ret, name, ... ) qgl##name = (name##proc *) ri.GLimpGetProcAddress("gl" #name); \
+#define GLE( ret, name, ... ) qgl##name = (name##proc *) GLimp_GetProcAddress("gl" #name); \
 	if ( qgl##name == NULL ) { \
 		ri.Error(ERR_FATAL, "ERROR: Missing OpenGL function %s\n", "gl" #name ); \
 		success = qfalse; \
@@ -358,9 +358,9 @@ static void GLimp_InitExtensions(void)
 	qglClientActiveTextureARB = NULL;
 	if ( GLimp_HaveExtension( "GL_ARB_multitexture" ) )
 	{
-		qglMultiTexCoord2fARB = ri.GLimpGetProcAddress( "glMultiTexCoord2fARB" );
-		qglActiveTextureARB = ri.GLimpGetProcAddress( "glActiveTextureARB" );
-		qglClientActiveTextureARB = ri.GLimpGetProcAddress( "glClientActiveTextureARB" );
+		qglMultiTexCoord2fARB = GLimp_GetProcAddress( "glMultiTexCoord2fARB" );
+		qglActiveTextureARB = GLimp_GetProcAddress( "glActiveTextureARB" );
+		qglClientActiveTextureARB = GLimp_GetProcAddress( "glClientActiveTextureARB" );
 
 		if ( qglActiveTextureARB )
 		{
@@ -390,8 +390,8 @@ static void GLimp_InitExtensions(void)
 	if ( GLimp_HaveExtension( "GL_EXT_compiled_vertex_array" ) )
 	{
 		ri.Printf( PRINT_ALL,  "...using GL_EXT_compiled_vertex_array\n" );
-		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) ri.GLimpGetProcAddress( "glLockArraysEXT" );
-		qglUnlockArraysEXT = ( void ( APIENTRY * )( void ) ) ri.GLimpGetProcAddress( "glUnlockArraysEXT" );
+		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) GLimp_GetProcAddress( "glLockArraysEXT" );
+		qglUnlockArraysEXT = ( void ( APIENTRY * )( void ) ) GLimp_GetProcAddress( "glUnlockArraysEXT" );
 		if (!qglLockArraysEXT || !qglUnlockArraysEXT)
 		{
 			ri.Error(ERR_FATAL, "bad getprocaddress");
@@ -446,7 +446,7 @@ static void GLimp_InitExtensions(void)
 #undef GLE
 
 	// GL function loader, based on https://gist.github.com/rygorous/16796a0c876cf8a5f542caddb55bce8a
-#define GLE(ret, name, ...) qgl##name = (name##proc *) ri.GLimpGetProcAddress("gl" #name);
+#define GLE(ret, name, ...) qgl##name = (name##proc *) GLimp_GetProcAddress("gl" #name);
 
 	// OpenGL 1.3, was GL_ARB_texture_compression
 	QGL_1_3_PROCS;
@@ -728,7 +728,7 @@ static void InitOpenGL( void )
 	{
 		GLint		temp;
 		
-		ri.GLimpInit(&glConfig, qtrue);
+		GLimp_Init(&glConfig, qtrue);
 	
         const char *renderer;
 
@@ -740,8 +740,8 @@ static void InitOpenGL( void )
         {
             ri.Error(ERR_FATAL, "GLimp_GetProcAddresses() failed for OpenGL 3.2 core context\n");
             GLimp_ClearProcAddresses();
-            ri.GLimpDeleteCtx();
-            ri.GLimpDestroyWin();
+            GLimp_DeleteGLContext();
+            GLimp_DestroyWindow();
         }
 
         if (!renderer || (strstr(renderer, "Software Renderer") || strstr(renderer, "Software Rasterizer")))
@@ -750,7 +750,7 @@ static void InitOpenGL( void )
                 ri.Error(ERR_FATAL, "GL_RENDERER is %s, rejecting context\n", renderer);
 
             GLimp_ClearProcAddresses();
-            ri.GLimpDeleteCtx();
+            GLimp_DeleteGLContext();
             /*
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profileMask);
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, majorVersion);
@@ -760,7 +760,7 @@ static void InitOpenGL( void )
 
         qglClearColor( 0, 0, 1, 1 );
         qglClear( GL_COLOR_BUFFER_BIT );
-	    ri.GLimpEndFrame();
+	    GLimp_EndFrame();
 
 
         // get our config strings
@@ -1778,7 +1778,7 @@ void R_Register( void )
 	ri.Cmd_AddCommand( "screenshot", R_ScreenShot_f );
 	ri.Cmd_AddCommand( "screenshotJPEG", R_ScreenShotJPEG_f );
 	ri.Cmd_AddCommand( "gfxinfo", GfxInfo_f );
-	ri.Cmd_AddCommand( "minimize", ri.GLimpMinimize );
+	ri.Cmd_AddCommand( "minimize", GLimp_Minimize );
 	ri.Cmd_AddCommand( "gfxmeminfo", GfxMemInfo_f );
 	ri.Cmd_AddCommand( "exportCubemaps", R_ExportCubemaps_f );
 }
@@ -1941,10 +1941,7 @@ void RE_Shutdown( qboolean destroyWindow )
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow )
     {
-        ri.GLimpDeleteCtx();
-        ri.GLimpDestroyWin();
-
-        ri.GLimpShutdown();
+        GLimp_Shutdown();
 		memset( &glConfig, 0, sizeof( glConfig ) );
 		memset( &glRefConfig, 0, sizeof( glRefConfig ) );
 		memset( &glState, 0, sizeof( glState ) );

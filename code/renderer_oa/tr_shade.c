@@ -588,9 +588,9 @@ static void RB_CalcDiffuseColor(unsigned char (*colors)[4])
 		}
         else
         {
-            unsigned int r = abtLit[0] + incoming * drtLit[0];
-            unsigned int g = abtLit[1] + incoming * drtLit[1];
-            unsigned int b = abtLit[2] + incoming * drtLit[2];
+            int r = abtLit[0] + incoming * drtLit[0];
+            int g = abtLit[1] + incoming * drtLit[1];
+            int b = abtLit[2] + incoming * drtLit[2];
 
             colors[i][0] = (r <= 255 ? r : 255);
             colors[i][1] = (g <= 255 ? g : 255);

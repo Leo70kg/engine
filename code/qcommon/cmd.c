@@ -825,6 +825,12 @@ void Cmd_CompleteCfgName( char *args, int argNum )
 }
 
 
+void Cmd_Clear( void )
+{
+	cmd_argc = 0;
+}
+
+
 void Cmd_Init(void)
 {
 	Cmd_AddCommand("cmdlist", Cmd_List_f);

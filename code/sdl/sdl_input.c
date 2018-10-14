@@ -24,9 +24,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdio.h>
 #include <stdlib.h>
 #include "input.h"
-#include "glimp.h"
 #include "../client/client.h"
 
+
+#ifdef _WIN32
+	#include "../SDL2/include/SDL.h"
+#else
+	#include <SDL2/SDL.h>
+#endif
 
 static int vidRestartTime = 0;
 static int in_eventTime = 0;
@@ -37,7 +42,7 @@ static qboolean mouseActive = qfalse;
 static cvar_t *in_mouse = NULL;
 static cvar_t *in_keyboardDebug = NULL;
 
-extern SDL_Window *SDL_window;
+static SDL_Window *SDL_window;
 
 static cvar_t *in_nograb;
 
@@ -549,14 +554,17 @@ void IN_Frame(void)
 }
 
 
-void IN_Init(void)
+void IN_Init(void* win, unsigned int notuse)
 {
     Com_Printf("...IN_Init...\n");
+
+    SDL_window = (SDL_Window *) win;
+
 	int appState;
 
 	if( !SDL_WasInit( SDL_INIT_VIDEO ) )
 	{
-		Com_Error( ERR_FATAL, "IN_Init called before SDL_Init( SDL_INIT_VIDEO )" );
+		Com_Printf( "IN_Init called before SDL_Init( SDL_INIT_VIDEO )" );
 		return;
 	}
 
@@ -574,6 +582,11 @@ void IN_Init(void)
 	appState = SDL_GetWindowFlags( SDL_window );
 	Cvar_SetValue( "com_unfocused",	!( appState & SDL_WINDOW_INPUT_FOCUS ) );
 	Cvar_SetValue( "com_minimized", appState & SDL_WINDOW_MINIMIZED );
+}
+
+void IN_Restart( void )
+{
+   IN_Init(SDL_window, 0); 
 }
 
 
