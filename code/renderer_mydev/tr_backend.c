@@ -868,9 +868,6 @@ void RB_ShowImages( void ) {
 	float	x, y, w, h;
 	int		start, end;
 
-	if (!gl_active)
-		return;
-
 	if ( !backEnd.projection2D ) {
 		RB_SetGL2D();
 	}

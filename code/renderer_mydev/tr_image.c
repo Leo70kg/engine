@@ -561,7 +561,7 @@ static struct Image_Upload_Data generate_image_upload_data(const byte* data, int
 	// scale both axis down equally so we don't have to
 	// deal with a half mip resampling
 	//
-	int max_texture_size = gl_active ? glConfig.maxTextureSize : 2048;
+	int max_texture_size = glConfig.maxTextureSize;
 	while ( scaled_width > max_texture_size
 		|| scaled_height > max_texture_size ) {
 		scaled_width >>= 1;
@@ -723,9 +723,9 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	struct Image_Upload_Data upload_data = generate_image_upload_data(pic, width, height, 
 		mipmap, allowPicmip);
 
-	if (gl_active) {
-		image->internalFormat = upload_gl_image(&upload_data, glWrapClampMode);
-	}
+
+	image->internalFormat = upload_gl_image(&upload_data, glWrapClampMode);
+
 
 
 

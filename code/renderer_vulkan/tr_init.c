@@ -24,7 +24,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "VKimpl.h"
 
-qboolean	gl_active;
 glconfig_t	glConfig;
 glstate_t	glState;
 

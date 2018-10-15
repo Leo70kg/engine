@@ -258,12 +258,10 @@ void R_LightScaleTexture (unsigned *in, int inwidth, int inheight, qboolean only
 	}
 	else
 	{
-		int		i, c;
-		byte	*p;
+		int	i;
+		unsigned char* p = (unsigned char *)in;
 
-		p = (byte *)in;
-
-		c = inwidth*inheight;
+		int c = inwidth*inheight;
 
 		if ( glConfig.deviceSupportsGamma )
 		{
@@ -493,7 +491,7 @@ static struct Image_Upload_Data generate_image_upload_data(const byte* data, int
 	// scale both axis down equally so we don't have to
 	// deal with a half mip resampling
 	//
-	int max_texture_size = gl_active ? glConfig.maxTextureSize : 2048;
+	int max_texture_size = 2048;
 	while ( scaled_width > max_texture_size
 		|| scaled_height > max_texture_size ) {
 		scaled_width >>= 1;
