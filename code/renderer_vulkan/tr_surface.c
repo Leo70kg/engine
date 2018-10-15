@@ -285,10 +285,7 @@ void RB_SurfaceBeam( void )
 {
 #define NUM_BEAM_SEGS 6
 	refEntity_t *e;
-	int	i;
-	vec3_t perpvec;
 	vec3_t direction, normalized_direction;
-	vec3_t	start_points[NUM_BEAM_SEGS], end_points[NUM_BEAM_SEGS];
 	vec3_t oldorigin, origin;
 
 	e = &backEnd.currentEntity->e;
@@ -308,16 +305,7 @@ void RB_SurfaceBeam( void )
 	if ( VectorNormalize( normalized_direction ) == 0 )
 		return;
 
-	PerpendicularVector( perpvec, normalized_direction );
 
-	VectorScale( perpvec, 4, perpvec );
-
-	for ( i = 0; i < NUM_BEAM_SEGS ; i++ )
-	{
-		RotatePointAroundVector( start_points[i], normalized_direction, perpvec, (360.0/NUM_BEAM_SEGS)*i );
-//		VectorAdd( start_points[i], origin, start_points[i] );
-		VectorAdd( start_points[i], direction, end_points[i] );
-	}
 
 	GL_Bind( tr.whiteImage );
 

@@ -1371,7 +1371,6 @@ Q3OBJ += \
   $(B)/client/sdl_snd.o \
   $(B)/client/sdl_getClipboardData.o
 
-
 else
 Q3OBJ += \
   $(B)/client/input_linux.o \
@@ -1603,7 +1602,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/vk_shade_geometry.o \
   $(B)/renderer_vulkan/vk_upload_image_data.o \
   $(B)/renderer_vulkan/vk_update_descriptor_set.o \
-  $(B)/renderer_vulkan/vk_release_resources.o \
   $(B)/renderer_vulkan/vk_initialize.o \
   $(B)/renderer_vulkan/vk_bind_geometry.o \
   \
@@ -1616,16 +1614,12 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/single_texture_vert.o
 
 ifeq ($(BUILD_WITH_SDL), 1)
-  Q3VKOBJ += $(B)/renderer_vulkan/sdl_vkimp.o
- else
-  Q3VKOBJ += $(B)/renderer_vulkan/VKimpl.o
- endif
+  Q3VKOBJ += $(B)/renderer_vulkan/VKimp_SDL.o
+else
+  Q3VKOBJ += $(B)/renderer_vulkan/VKimp_XCB.o
+endif
 
 
-#  $(B)/renderer_vulkan/x11_randr.o \
-  $(B)/renderer_vulkan/x11_vidmode.o \
-  $(B)/renderer_vulkan/glimp_linux.o \
-  $(B)/renderer_vulkan/gamma_linux.o \
 
 ######################################################
 

@@ -1,6 +1,9 @@
 #include "qvk.h"
 #include "tr_local.h"
 
+extern	int	gl_filter_min, gl_filter_max;
+
+
 static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 {
 	// Look for sampler among existing samplers.

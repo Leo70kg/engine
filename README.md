@@ -3,7 +3,7 @@
     |    ______                                                                 |
     |   / ____ \                            /\                                  |
     |  / /    \ \                          //\\                                 |
-    | / /      \ \  _____  ____    _____  //  \\           ____    _____ ____   |
+    | / /      \ \  _____  ____    _____  //  \\    _   _  ____    _____ ____   |
     | \ \      / / //  // //  \\  //  // //====\\   || // //  \\  //  // ___\\  |
     |  \ \____/ / //__//  \\__// //  // //      \\  ||//  \\__// //  // //   \\ |
     |   \______/ //        \___ //  // //        \\ ||     \___ //  //  \\___// |
@@ -99,10 +99,12 @@ When you start OpenArena, you can pass the name of the dynamic library to load.
 Example:
 
 ```sh
-# new vulkan renderer backend, under developing:
+# new vulkan renderer backend, under developing, work in ubuntu 18.04
+# windows platform not test now, have small issues with \minimize
+
 $ ./openarena.x86_64 +set cl_renderer vulkan
 
-# OR type following comman in console
+# OR type following command in the poll down console
 
 \cl_renerer vulkan
 \vid_restart

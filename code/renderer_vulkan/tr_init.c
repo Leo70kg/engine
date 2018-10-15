@@ -896,10 +896,7 @@ Touch all images to make sure they are resident
 void RE_EndRegistration( void )
 {
 	R_SyncRenderThread();
-	if (!ri.Sys_LowPhysicalMemory())
-    {
-		RB_ShowImages();
-	}
+
 
 	// VULKAN
 	ri.Printf(PRINT_ALL, "Vulkan: pipelines create time %d msec\n", (int)(vk_world.pipeline_create_time * 1000));
@@ -908,9 +905,8 @@ void RE_EndRegistration( void )
 
 void R_Init( void )
 {	
-	int	err;
 	int i;
-	byte *ptr;
+	unsigned char* ptr;
 
 	ri.Printf( PRINT_ALL, "----- R_Init -----\n" );
 

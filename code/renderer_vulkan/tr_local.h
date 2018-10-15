@@ -883,7 +883,6 @@ the bits are allocated as follows:
 #define	QSORT_ENTITYNUM_SHIFT	7
 #define	QSORT_FOGNUM_SHIFT		2
 
-extern	int			gl_filter_min, gl_filter_max;
 
 /*
 ** performanceCounters_t
@@ -1041,20 +1040,13 @@ extern struct Vk_Instance	vk;				// shouldn't be cleared during ref re-init
 extern struct Vk_World		vk_world;		// this data is cleared during ref re-init
 
 
-enum RenderApi {
-	RENDER_API_GL,
-	RENDER_API_VK,
-	RENDER_API_DX
-};
-
-enum RenderApi get_render_api(void);
 
 //
 // cvars
 //
 //extern cvar_t	*r_renderAPI;			// 3D API to use: 0 - OpenGL, 1 - Vulkan, 2 - DX12
 
-extern cvar_t	*r_twinMode;			// Debug feature to compare rendering output between OpenGL/Vulkan/DX12 APIs
+// extern cvar_t	*r_twinMode;			// Debug feature to compare rendering output between OpenGL/Vulkan/DX12 APIs
 
 extern cvar_t	*r_railWidth;
 extern cvar_t	*r_railCoreWidth;
@@ -1586,9 +1578,7 @@ extern	int		max_polyverts;
 
 extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allocated
 
-extern	volatile renderCommandList_t	*renderCommandList;
 
-extern	volatile qboolean	renderThreadActive;
 
 
 void *R_GetCommandBuffer( int bytes );

@@ -26,14 +26,6 @@ backEndData_t	*backEndData[SMP_FRAMES];
 backEndState_t	backEnd;
 
 
-static float	s_flipMatrix[16] = {
-	// convert from our coordinate system (looking down X)
-	// to OpenGL's coordinate system (looking down -Z)
-	0, 0, -1, 0,
-	-1, 0, 0, 0,
-	0, 1, 0, 0,
-	0, 0, 0, 1
-};
 
 #ifdef _DEBUG
 static float fast_sky_color[4] = { 0.8f, 0.7f, 0.4f, 1.0f };
@@ -129,22 +121,7 @@ void RB_BeginDrawingView (void) {
 
 	glState.faceCulling = -1;		// force face culling to set next time
 
-	// clip to the plane of the portal
-	if ( backEnd.viewParms.isPortal ) {
-		float	plane[4];
-		double	plane2[4];
 
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
-
-		plane2[0] = DotProduct (backEnd.viewParms.or.axis[0], plane);
-		plane2[1] = DotProduct (backEnd.viewParms.or.axis[1], plane);
-		plane2[2] = DotProduct (backEnd.viewParms.or.axis[2], plane);
-		plane2[3] = DotProduct (plane, backEnd.viewParms.or.origin) - plane[3];
-
-	}
 }
 
 /*
@@ -340,6 +317,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 
 	if ( r_speeds->integer ) {
 		end = ri.Milliseconds();
+        ri.Printf( PRINT_ALL, "TexSubImage2D %i, %i: %i msec\n", cols, rows, end - start );
 	}
 
     tr.cinematicShader->stages[0]->bundle[0].image[0] = tr.scratchImage[client];
@@ -532,55 +510,6 @@ const void	*RB_DrawBuffer( const void *data )
 	return (const void *)(cmd + 1);
 }
 
-/*
-===============
-RB_ShowImages
-
-Draw all the images to the screen, on top of whatever
-was there.  This is used to test for texture thrashing.
-
-Also called by RE_EndRegistration
-===============
-*/
-void RB_ShowImages( void ) {
-	int		i;
-	image_t	*image;
-	float	x, y, w, h;
-	int		start, end;
-
-	if (!gl_active)
-		return;
-
-	if ( !backEnd.projection2D ) {
-		RB_SetGL2D();
-	}
-
-
-
-	start = ri.Milliseconds();
-
-	for ( i=0 ; i<tr.numImages ; i++ ) {
-		image = tr.images[i];
-
-		w = glConfig.vidWidth / 20;
-		h = glConfig.vidHeight / 15;
-		x = i % 20 * w;
-		y = i / 20 * h;
-
-		// show in proportional size in mode 2
-		if ( r_showImages->integer == 2 ) {
-			w *= image->uploadWidth / 512.0f;
-			h *= image->uploadHeight / 512.0f;
-		}
-
-		GL_Bind( image );
-
-	}
-
-
-	end = ri.Milliseconds();
-	ri.Printf( PRINT_ALL, "%i msec to draw all images\n", end - start );
-}
 
 // VULKAN
 void RB_Show_Vk_Dx_Images(void) {
@@ -671,7 +600,6 @@ const void	*RB_SwapBuffers( const void *data ) {
 
 	// texture swapping test
 	if ( r_showImages->integer ) {
-		RB_ShowImages();
 		RB_Show_Vk_Dx_Images();
 	}
 

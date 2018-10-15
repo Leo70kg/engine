@@ -237,7 +237,6 @@ static void ProjectDlightTexture( void ) {
 	float	*texCoords;
 	byte	*colors;
 	byte	clipBits[SHADER_MAX_VERTEXES];
-	unsigned	hitIndexes[SHADER_MAX_INDEXES];
 	int		numIndexes;
 	float	scale;
 	float	radius;
@@ -321,9 +320,6 @@ static void ProjectDlightTexture( void ) {
 			if ( clipBits[a] & clipBits[b] & clipBits[c] ) {
 				continue;	// not lighted
 			}
-			hitIndexes[numIndexes] = a;
-			hitIndexes[numIndexes+1] = b;
-			hitIndexes[numIndexes+2] = c;
 			numIndexes += 3;
 		}
 
@@ -340,10 +336,10 @@ static void ProjectDlightTexture( void ) {
 		backEnd.pc.c_dlightIndexes += numIndexes;
 
 		// VULKAN
-		if (vk.active) {
-			VkPipeline pipeline = vk.dlight_pipelines[dl->additive > 0 ? 1 : 0][tess.shader->cullType][tess.shader->polygonOffset];
-			vk_shade_geometry(pipeline, qfalse, normal, qtrue);
-		}
+
+		VkPipeline pipeline = vk.dlight_pipelines[dl->additive > 0 ? 1 : 0][tess.shader->cullType][tess.shader->polygonOffset];
+		vk_shade_geometry(pipeline, qfalse, normal, qtrue);
+
 	}
 }
 
@@ -765,14 +761,7 @@ void RB_StageIteratorGeneric( void )
 
 	RB_DeformTessGeometry();
 
-	//
-	// log this call
-	//
-	if ( r_logFile->integer ) 
-	{
-		// don't just call LogComment, or we will get
-		// a call to va() every frame!
-	}
+
 
 	// set face culling appropriately
 	// set polygon offset if necessary

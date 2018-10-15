@@ -360,14 +360,6 @@ static int	sky_texorder[6] = {0,2,1,3,4,5};
 static vec3_t	s_skyPoints[SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1];
 static float	s_skyTexCoords[SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1][2];
 
-static void DrawSkySide( struct image_s *image, const int mins[2], const int maxs[2] )
-{
-	int s, t;
-
-	GL_Bind( image );
-
-
-}
 
 static void DrawSkyBox( shader_t *shader )
 {
@@ -432,9 +424,9 @@ static void DrawSkyBox( shader_t *shader )
 			}
 		}
 
-		DrawSkySide( shader->sky.outerbox[sky_texorder[i]],
-			         sky_mins_subd,
-					 sky_maxs_subd );
+		// DrawSkySide( shader->sky.outerbox[sky_texorder[i]], sky_mins_subd, sky_maxs_subd );
+        GL_Bind( shader->sky.outerbox[sky_texorder[i]] );
+
 
 		// VULKAN: draw skybox side
 		// DX12
