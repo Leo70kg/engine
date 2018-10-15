@@ -1978,7 +1978,7 @@ $(B)/renderer_mydev_$(SHLIBNAME): $(Q3MYDEVOBJ) $(JPGOBJ)
 $(B)/renderer_vulkan_$(SHLIBNAME): $(Q3VKOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(Q3VKOBJ) $(JPGOBJ) \
-		$(THREAD_LIBS) $(RENDERER_LIBS) $(LIBS)
+		$(THREAD_LIBS) $(SDL_LIBS) $(LIBS)
 
 ##############################################################
 

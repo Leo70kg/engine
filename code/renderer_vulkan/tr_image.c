@@ -1009,7 +1009,6 @@ void R_SetColorMappings( void ) {
 	{
 		VKimp_SetGamma( s_gammatable, s_gammatable, s_gammatable );
 	}
-
 }
 
 
