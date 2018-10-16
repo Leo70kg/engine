@@ -333,17 +333,14 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int
 		tr.scratchImage[client]->width = tr.scratchImage[client]->uploadWidth = cols;
 		tr.scratchImage[client]->height = tr.scratchImage[client]->uploadHeight = rows;
 
-
 		// VULKAN
 
-        struct Vk_Image image = vk_world.images[tr.scratchImage[client]->index];
-        qvkDestroyImage(vk.device, image.handle, NULL);
-        qvkDestroyImageView(vk.device, image.view, NULL);
-        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &image.descriptor_set);
-        image = vk_create_image(cols, rows, VK_FORMAT_R8G8B8A8_UNORM, 1, qfalse);
-        vk_upload_image_data(image.handle, cols, rows, qfalse, data, 4);
-
-
+        struct Vk_Image* pImage = &vk_world.images[tr.scratchImage[client]->index];
+        qvkDestroyImage(vk.device, pImage->handle, NULL);
+        qvkDestroyImageView(vk.device, pImage->view, NULL);
+        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
+        *pImage = vk_create_image(cols, rows, VK_FORMAT_R8G8B8A8_UNORM, 1, qfalse);
+        vk_upload_image_data(pImage->handle, cols, rows, qfalse, data, 4);
 	}
     else if (dirty)
     {
@@ -351,9 +348,7 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int
         // it and don't try and do a texture compression
 
         // VULKAN
-
-        const struct Vk_Image image = vk_world.images[tr.scratchImage[client]->index];
-        vk_upload_image_data(image.handle, cols, rows, qfalse, data, 4);
+        vk_upload_image_data(vk_world.images[tr.scratchImage[client]->index].handle, cols, rows, qfalse, data, 4);
 	}
 }
 
