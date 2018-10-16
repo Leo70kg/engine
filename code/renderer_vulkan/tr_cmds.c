@@ -22,11 +22,21 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 
-/*
-=====================
-R_PerformanceCounters
-=====================
-*/
+int R_SumOfUsedImages( void ) {
+	int	total;
+	int i;
+
+	total = 0;
+	for ( i = 0; i < tr.numImages; i++ ) {
+		if ( tr.images[i]->frameUsed == tr.frameCount ) {
+			total += tr.images[i]->uploadWidth * tr.images[i]->uploadHeight;
+		}
+	}
+
+	return total;
+}
+
+
 void R_PerformanceCounters( void ) {
 	if ( !r_speeds->integer ) {
 		// clear the counters even if we aren't printing

@@ -1880,8 +1880,6 @@ static shader_t *GeneratePermanentShader( void )
 		return tr.defaultShader;
 	}
 
-	ri.Printf( PRINT_ALL, "tr.numShaders = %d\n", tr.numShaders);
-
 	newShader = (shader_t*) ri.Hunk_Alloc( sizeof( shader_t ), h_low );
 
 	*newShader = shader;
@@ -2020,10 +2018,10 @@ Returns a freshly allocated shader with all the needed info
 from the current global working shader
 =========================
 */
-static shader_t *FinishShader( void ) {
+static shader_t *FinishShader( void )
+{
 	int stage;
 	qboolean hasLightmapStage = qfalse;
-	ri.Printf( PRINT_ALL, "FinishShader() \n");
 	//
 	// set sky stuff appropriate
 	//
@@ -2222,9 +2220,6 @@ static char* FindShaderInShaderText( const char *shadername )
 	int i, hash;
 
 	hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
-
-    ri.Printf( PRINT_ALL, "shadername: %s\n", shadername);
-
 
 	for (i = 0; shaderTextHashTable[hash][i]; i++)
     {
@@ -2638,9 +2633,6 @@ way to ask for different implicit lighting modes (vertex, lightmap, etc)
 */
 qhandle_t RE_RegisterShader( const char *name )
 {
-
-    ri.Printf(PRINT_ALL, "Register Shader %s .\n", name);
-
 	shader_t	*sh;
 
 	if ( strlen( name ) >= MAX_QPATH ) {

@@ -303,7 +303,7 @@ R_LightScaleTexture
 Scale up the pixel values in a texture to increase the lighting range
 ================
 */
-void R_LightScaleTexture (unsigned char *in, int inwidth, int inheight, qboolean only_gamma )
+void R_LightScaleTexture (unsigned char*in, int inwidth, int inheight, qboolean only_gamma )
 {
 	if ( only_gamma )
 	{
@@ -311,7 +311,7 @@ void R_LightScaleTexture (unsigned char *in, int inwidth, int inheight, qboolean
 		{
 			int	i, N = inwidth*inheight;
 
-			for (i=0; i < N; i += 4)
+			for (i=0; i < N; )
 			{
 				in[i] = s_gammatable[in[i]];
                 i++;
@@ -324,29 +324,31 @@ void R_LightScaleTexture (unsigned char *in, int inwidth, int inheight, qboolean
 	}
 	else
 	{
-		int		i, c;
-		byte	*p;
-
-		p = (byte *)in;
-
-		c = inwidth*inheight;
+		int	i;
+		int N = inwidth*inheight;
 
 		if ( glConfig.deviceSupportsGamma )
 		{
-			for (i=0 ; i<c ; i++, p+=4)
+			for (i=0; i<N; )
 			{
-				p[0] = s_intensitytable[p[0]];
-				p[1] = s_intensitytable[p[1]];
-				p[2] = s_intensitytable[p[2]];
+				in[i] = s_intensitytable[in[i]];
+				i++;
+				in[i] = s_intensitytable[in[i]];
+				i++;
+				in[i] = s_intensitytable[in[i]];
+				i = i + 2;
 			}
 		}
 		else
 		{
-			for (i=0 ; i<c ; i++, p+=4)
+			for (i=0; i<N; )
 			{
-				p[0] = s_gammatable[s_intensitytable[p[0]]];
-				p[1] = s_gammatable[s_intensitytable[p[1]]];
-				p[2] = s_gammatable[s_intensitytable[p[2]]];
+				in[i] = s_gammatable[s_intensitytable[in[i]]];
+				i++;
+				in[i] = s_gammatable[s_intensitytable[in[i]]];
+				i++;
+				in[i] = s_gammatable[s_intensitytable[in[i]]];
+				i=i+2;
 			}
 		}
 	}

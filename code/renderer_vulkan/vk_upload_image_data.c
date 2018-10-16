@@ -177,6 +177,4 @@ void vk_upload_image_data(VkImage image, int width, int height,
 
     VK_CHECK(qvkQueueWaitIdle(vk.queue));
 	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
-
-    ri.Printf( PRINT_ALL, "vk_upload_image_data ok.\n");
 }

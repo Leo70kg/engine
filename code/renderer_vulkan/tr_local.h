@@ -1594,11 +1594,27 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 
 
 void R_LightScaleTexture (unsigned char* in, int inwidth, int inheight, qboolean only_gamma );
+void R_GammaCorrect( unsigned char *buffer, int bufSize );
+void R_SetColorMappings( void );
 
-
+void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight );
 void R_DisplayResolutionList_f(void);
 void R_GetModeInfo(unsigned int *width, unsigned int *height, float *windowAspect, int mode );
 void R_InitDisplayResolution( void );
+void R_CreateBuiltinImages(void);
+
+struct Image_Upload_Data {
+	byte* buffer;
+	int buffer_size;
+	int mip_levels;
+	int base_level_width;
+	int base_level_height;
+};
+
+struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture);
+struct Image_Upload_Data generate_image_upload_data(const unsigned char* data, int width, int height, qboolean mipmap, qboolean picmip);
+
+
 
 extern	refimport_t		ri;
 extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);

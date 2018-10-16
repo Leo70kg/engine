@@ -2,6 +2,8 @@
 
 #include "qvk.h"
 
+/*  
+
 #define FILE_HASH_SIZE		1024
 static image_t* hashTable[FILE_HASH_SIZE] = {0};
 
@@ -37,12 +39,6 @@ static const unsigned char mipBlendColors[16][4] =
 };
 
 
-
-/*
-================
-return a hash value for the filename
-================
-*/
 static int generateHashValue( const char *fname )
 {
 	int		i = 0;
@@ -59,63 +55,12 @@ static int generateHashValue( const char *fname )
 	return hash;
 }
 
-
-
-
-/*
-================
-ResampleTexture
-
-Used to resample images in a more general than quartering fashion.
-
-This will only be filtered properly if the resampled size
-is greater than half the original size.
-
-If a larger shrinking is needed, use the mipmap function before or after.
-================
 */
-static void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight )
-{
-	int		i, j;
-	unsigned	*inrow, *inrow2;
-	unsigned	frac, fracstep;
-	unsigned	p1[2048], p2[2048];
-	unsigned char *pix1, *pix2, *pix3, *pix4;
 
-	if (outwidth>2048)
-		ri.Error(ERR_DROP, "ResampleTexture: max width");
-	
-	ri.Printf( PRINT_ALL, "inwidth: %d, inheight: %d\n", inwidth, inheight );
 
-	fracstep = inwidth*0x10000/outwidth;
 
-	frac = fracstep>>2;
-	for ( i=0 ; i<outwidth ; i++ ) {
-		p1[i] = 4*(frac>>16);
-		frac += fracstep;
-	}
-	frac = 3*(fracstep>>2);
-	for ( i=0 ; i<outwidth ; i++ ) {
-		p2[i] = 4*(frac>>16);
-		frac += fracstep;
-	}
 
-	for (i=0 ; i<outheight ; i++, out += outwidth)
-	{
-		inrow = in + inwidth*(int)((i+0.25)*inheight/outheight);
-		inrow2 = in + inwidth*(int)((i+0.75)*inheight/outheight);
-		for (j=0 ; j<outwidth ; j++) {
-			pix1 = (unsigned char *)inrow + p1[j];
-			pix2 = (unsigned char *)inrow + p2[j];
-			pix3 = (unsigned char *)inrow2 + p1[j];
-			pix4 = (unsigned char *)inrow2 + p2[j];
-			((unsigned char *)(out+j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0])>>2;
-			((unsigned char *)(out+j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1])>>2;
-			((unsigned char *)(out+j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2])>>2;
-			((unsigned char *)(out+j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3])>>2;
-		}
-	}
-}
+
 
 
 /*
@@ -125,7 +70,6 @@ R_MipMap2
 Operates in place, quartering the size of the texture
 Proper linear filter
 ================
-*/
 static void R_MipMap2( unsigned *in, int inWidth, int inHeight ) {
 	int			i, j, k;
 	unsigned char* outpix;
@@ -174,6 +118,7 @@ static void R_MipMap2( unsigned *in, int inWidth, int inHeight ) {
 	ri.Hunk_FreeTempMemory( temp );
 }
 
+*/
 
 
 /*
@@ -182,7 +127,6 @@ R_MipMap
 
 Operates in place, quartering the size of the texture
 ================
-*/
 static void R_MipMap (unsigned char *in, int width, int height)
 {
 	int		i, j;
@@ -223,6 +167,7 @@ static void R_MipMap (unsigned char *in, int width, int height)
 		}
 	}
 }
+*/
 
 
 
@@ -233,7 +178,7 @@ R_BlendOverTexture
 
 Apply a color blend over a set of pixels
 ==================
-*/
+
 static void R_BlendOverTexture( unsigned char *data, int pixelCount, unsigned char blend[4] ) {
 	int		i;
 	int		inverseAlpha;
@@ -407,7 +352,7 @@ static struct Image_Upload_Data generate_image_upload_data(
 
     return upload_data;
 }
-
+*/
 
 static void allocate_and_bind_image_memory(VkImage image)
 {
@@ -526,10 +471,11 @@ struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_
 	return image;
 }
 
+
+
 // VULKAN
-static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture)
+struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture)
 {
-    ri.Printf( PRINT_ALL, "upload_vk_image: \n");
 	int w = upload_data->base_level_width;
 	int h = upload_data->base_level_height;
 
@@ -541,24 +487,22 @@ static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_da
 		}
 	}
 
-	unsigned char* buffer = upload_data->buffer;
+	byte* buffer = upload_data->buffer;
 	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 	int bytes_per_pixel = 4;
-
-    /*
+/*
 	if (r_texturebits->integer <= 16) {
-		buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( upload_data->buffer_size / 2 );
+		buffer = (byte*) ri.Hunk_AllocateTempMemory( upload_data->buffer_size / 2 );
 		format = has_alpha ? VK_FORMAT_B4G4R4A4_UNORM_PACK16 : VK_FORMAT_A1R5G5B5_UNORM_PACK16;
 		bytes_per_pixel = 2;
 	}
-    
-
+*/
 	if (format == VK_FORMAT_A1R5G5B5_UNORM_PACK16) {
 		uint16_t* p = (uint16_t*)buffer;
 		for (int i = 0; i < upload_data->buffer_size; i += 4, p++) {
-			unsigned char r = upload_data->buffer[i+0];
-			unsigned char g = upload_data->buffer[i+1];
-			unsigned char b = upload_data->buffer[i+2];
+			byte r = upload_data->buffer[i+0];
+			byte g = upload_data->buffer[i+1];
+			byte b = upload_data->buffer[i+2];
 
 			*p = (uint32_t)((b/255.0) * 31.0 + 0.5) |
 				((uint32_t)((g/255.0) * 31.0 + 0.5) << 5) |
@@ -568,10 +512,10 @@ static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_da
 	} else if (format == VK_FORMAT_B4G4R4A4_UNORM_PACK16) {
 		uint16_t* p = (uint16_t*)buffer;
 		for (int i = 0; i < upload_data->buffer_size; i += 4, p++) {
-			unsigned char r = upload_data->buffer[i+0];
-			unsigned char g = upload_data->buffer[i+1];
-			unsigned char b = upload_data->buffer[i+2];
-			unsigned char a = upload_data->buffer[i+3];
+			byte r = upload_data->buffer[i+0];
+			byte g = upload_data->buffer[i+1];
+			byte b = upload_data->buffer[i+2];
+			byte a = upload_data->buffer[i+3];
 
 			*p = (uint32_t)((a/255.0) * 15.0 + 0.5) |
 				((uint32_t)((r/255.0) * 15.0 + 0.5) << 4) |
@@ -579,16 +523,15 @@ static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_da
 				((uint32_t)((b/255.0) * 15.0 + 0.5) << 12);
 		}
 	}
-*/
+
 	struct Vk_Image image = vk_create_image(w, h, format, upload_data->mip_levels, repeat_texture);
 	vk_upload_image_data(image.handle, w, h, upload_data->mip_levels > 1, buffer, bytes_per_pixel);
 
-//	if (bytes_per_pixel == 2)
-//		ri.Hunk_FreeTempMemory(buffer);
+	if (bytes_per_pixel == 2)
+		ri.Hunk_FreeTempMemory(buffer);
 
 	return image;
 }
-
 
 
 
@@ -653,7 +596,7 @@ image_t *R_CreateImage( const char *name, const unsigned char *pic, int width, i
     ri.Hunk_FreeTempMemory(upload_data.buffer);
 	return image;
 }
-*/
+
 image_t *R_CreateImage( const char *name, const byte *pic, int width, int height,
 						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode ) {
 
@@ -704,56 +647,5 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	return image;
 }
 
-image_t* R_FindImageFile(const char *name, qboolean mipmap, qboolean allowPicmip, int glWrapClampMode)
-{
-	image_t* image;
-	int	width, height;
 
-
-
-	if (!name)
-    {
-        ri.Error( ERR_DROP, "R_FindImageFile: name=NULL\n");
-	}
-
-	int hash = generateHashValue(name);
-
-	// see if the image is already loaded
-
-	for (image=hashTable[hash]; image; image=image->next)
-	{
-		if ( !strcmp( name, image->imgName ) )
-		{
-			// the white image can be used with any set of parms,
-			// but other mismatches are errors
-			if ( strcmp( name, "*white" ) )
-			{
-				if ( image->mipmap != mipmap ) {
-					ri.Printf( PRINT_ALL, "reused image %s with mixed mipmap parm\n", name );
-				}
-				if ( image->allowPicmip != allowPicmip ) {
-					ri.Printf( PRINT_ALL, "reused image %s with mixed allowPicmip parm\n", name );
-				}
-				if ( image->wrapClampMode != glWrapClampMode ) {
-					ri.Printf( PRINT_ALL, "reused image %s with mixed glWrapClampMode parm\n", name );
-				}
-			}
-			return image;
-		}
-	}
-
-	//
-	// load the pic from disk
-    //
-    unsigned char* pic;
-    R_LoadImage( name, &pic, &width, &height );
-	if (pic == NULL)
-	{
-        return NULL;
-    }
-
-	image = R_CreateImage( name, pic, width, height,
-							mipmap, allowPicmip, glWrapClampMode );
-	ri.Free( pic );
-	return image;
-}
+*/

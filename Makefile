@@ -1597,6 +1597,10 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_displayResolution.o \
   $(B)/renderer_vulkan/qvk.o \
   $(B)/renderer_vulkan/loadImage.o \
+  $(B)/renderer_vulkan/ResampleTexture.o \
+  $(B)/renderer_vulkan/R_LightScaleTexture.o \
+  $(B)/renderer_vulkan/generate_image_upload_data.o \
+  $(B)/renderer_vulkan/R_FindImageFile.o \
   \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
   $(B)/renderer_vulkan/vk_image.o \
