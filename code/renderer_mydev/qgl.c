@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "qgl.h"
 #include "../qcommon/sys_loadlib.h"
-#include "../client/client.h"
+
 
 
 static cvar_t* r_ext_texture_filter_anisotropic;
@@ -91,11 +91,11 @@ void ( APIENTRY * qglVertexPointer )(GLint size, GLenum type, GLsizei stride, co
 void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
 
-void (APIENTRYP qglActiveTextureARB) (GLenum texture);
-void (APIENTRYP qglClientActiveTextureARB) (GLenum texture);
-void (APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
-void (APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
-void (APIENTRYP qglUnlockArraysEXT) (void);
+void (APIENTRY * qglActiveTextureARB) (GLenum texture);
+void (APIENTRY * qglClientActiveTextureARB) (GLenum texture);
+void (APIENTRY * qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
+void (APIENTRY * qglLockArraysEXT) (GLint first, GLsizei count);
+void (APIENTRY * qglUnlockArraysEXT) (void);
 
 
 
@@ -366,14 +366,14 @@ qboolean qglInit( void )
 	qglClientActiveTextureARB = NULL;
 	if ( GLimp_HaveExtension( "GL_ARB_multitexture" ) )
 	{
-		qglMultiTexCoord2fARB = (void ( APIENTRYP ) (GLenum, GLfloat, GLfloat)) GLimp_GetProcAddress( "glMultiTexCoord2fARB" );
-		qglActiveTextureARB = (void ( APIENTRYP ) (GLenum )) GLimp_GetProcAddress( "glActiveTextureARB" );
-		qglClientActiveTextureARB = (void ( APIENTRYP ) (GLenum )) GLimp_GetProcAddress( "glClientActiveTextureARB" );
+		qglMultiTexCoord2fARB = (void ( APIENTRY * ) (GLenum, GLfloat, GLfloat)) GLimp_GetProcAddress( "glMultiTexCoord2fARB" );
+		qglActiveTextureARB = (void ( APIENTRY * ) (GLenum )) GLimp_GetProcAddress( "glActiveTextureARB" );
+		qglClientActiveTextureARB = (void ( APIENTRY * ) (GLenum )) GLimp_GetProcAddress( "glClientActiveTextureARB" );
 
 		if ( qglActiveTextureARB )
 		{
 			GLint glint = 0;
-			qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &glint );
+			qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glint );
 			glConfig.numTextureUnits = (int) glint;
 			if ( glConfig.numTextureUnits > 1 )
 			{
@@ -397,8 +397,8 @@ qboolean qglInit( void )
 	if ( GLimp_HaveExtension( "GL_EXT_compiled_vertex_array" ) )
 	{
 		ri.Printf( PRINT_ALL,  "...using GL_EXT_compiled_vertex_array\n" );
-		qglLockArraysEXT = ( void ( APIENTRYP )( GLint, GLint ) ) GLimp_GetProcAddress( "glLockArraysEXT" );
-		qglUnlockArraysEXT = ( void ( APIENTRYP )( void ) ) GLimp_GetProcAddress( "glUnlockArraysEXT" );
+		qglLockArraysEXT = ( void ( APIENTRY * )( GLint, GLint ) ) GLimp_GetProcAddress( "glLockArraysEXT" );
+		qglUnlockArraysEXT = ( void ( APIENTRY * )( void ) ) GLimp_GetProcAddress( "glUnlockArraysEXT" );
 		if (!qglLockArraysEXT || !qglUnlockArraysEXT)
 		{
 			ri.Error(ERR_FATAL, "bad getprocaddress");
@@ -415,6 +415,10 @@ qboolean qglInit( void )
         {
             int maxAnisotropy = 0;
             char target_string[4] = {0};
+
+            #ifndef GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
+            #define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT 0x84FF
+            #endif
 			qglGetIntegerv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint *)&maxAnisotropy );
 			if ( maxAnisotropy <= 0 ) {
 				ri.Printf( PRINT_ALL, "...GL_EXT_texture_filter_anisotropic not properly supported!\n" );
