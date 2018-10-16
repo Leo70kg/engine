@@ -338,10 +338,6 @@ struct Vk_Instance {
 	VkPipeline surface_debug_pipeline_solid;
 	VkPipeline surface_debug_pipeline_outline;
 	VkPipeline images_debug_pipeline;
-
-#ifndef NDEBUG
-	VkDebugReportCallbackEXT debug_callback;
-#endif
 };
 
 struct Chunk {

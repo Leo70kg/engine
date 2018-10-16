@@ -1,6 +1,45 @@
 #include "qvk.h"
 #include "tr_local.h"
 
+
+#ifndef NDEBUG
+
+static VkDebugReportCallbackEXT debug_callback;
+
+
+VKAPI_ATTR VkBool32 VKAPI_CALL fpDebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT object_type, uint64_t object, size_t location,
+	int32_t message_code, const char* layer_prefix, const char* message, void* user_data)
+{
+	
+#ifdef _WIN32
+	OutputDebugString(message);
+	OutputDebugString("\n");
+	DebugBreak();
+#else
+    printf("%s\n", message);
+
+#endif
+	return VK_FALSE;
+}
+
+
+static void createDebugCallback( void )
+{
+    
+    VkDebugReportCallbackCreateInfoEXT desc;
+    desc.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    desc.pNext = NULL;
+    desc.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT |
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+        VK_DEBUG_REPORT_ERROR_BIT_EXT;
+    desc.pfnCallback = &fpDebugCallback;
+    desc.pUserData = NULL;
+
+    VK_CHECK(qvkCreateDebugReportCallbackEXT(vk.instance, &desc, NULL, &debug_callback));
+}
+#endif
+
+
 static VkRenderPass create_render_pass(VkDevice device, VkFormat color_format, VkFormat depth_format)
 {
 	VkAttachmentDescription attachments[2];
@@ -276,7 +315,7 @@ void vk_shutdown() {
 	qvkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
 
 #ifndef NDEBUG
-	qvkDestroyDebugReportCallbackEXT(vk.instance, vk.debug_callback, NULL);
+	qvkDestroyDebugReportCallbackEXT(vk.instance, debug_callback, NULL);
 #endif
 
 	qvkDestroyInstance(vk.instance, NULL);
@@ -314,7 +353,10 @@ void vk_initialize(void)
 {
 
 	qvkGetDeviceQueue(vk.device, vk.queue_family_index, 0, &vk.queue);
-
+#ifndef NDEBUG
+	// Create debug callback.
+    createDebugCallback();
+#endif
 	//
 	// Swapchain.
 	//

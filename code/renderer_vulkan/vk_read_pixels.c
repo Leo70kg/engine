@@ -1,4 +1,3 @@
-#include "qvk.h"
 #include "tr_local.h"
 
 void record_image_layout_transition( 
@@ -11,7 +10,7 @@ void record_image_layout_transition(
         VkImageLayout new_layout )
 {
 
-	VkImageMemoryBarrier barrier;
+	VkImageMemoryBarrier barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.pNext = NULL;
 	barrier.srcAccessMask = src_access_flags;
@@ -35,6 +34,9 @@ void record_image_layout_transition(
 
 void vk_read_pixels(unsigned char* buffer)
 {
+
+    ri.Printf(PRINT_ALL, " vk_read_pixels() \n\n");
+
 	qvkDeviceWaitIdle(vk.device);
 
 	// Create image in host visible memory to serve as a destination for framebuffer pixels.
@@ -71,100 +73,81 @@ void vk_read_pixels(unsigned char* buffer)
 	VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
 	VK_CHECK(qvkBindImageMemory(vk.device, image, memory, 0));
 
-/*
-	record_and_run_commands(vk.command_pool, vk.queue, [&image](VkCommandBuffer command_buffer) {
-		record_image_layout_transition(command_buffer, vk.swapchain_images[vk.swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_ACCESS_MEMORY_READ_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 
-			VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+  
+    {
 
-		record_image_layout_transition(command_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
-			0, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL);
-	});
-*/    
-{
+        VkCommandBufferAllocateInfo alloc_info;
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.pNext = NULL;
+        alloc_info.commandPool = vk.command_pool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandBufferCount = 1;
 
-	VkCommandBufferAllocateInfo alloc_info;
-	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	alloc_info.pNext = NULL;
-	alloc_info.commandPool = vk.command_pool;
-	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	alloc_info.commandBufferCount = 1;
+        VkCommandBuffer command_buffer;
+        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
 
-	VkCommandBuffer command_buffer;
-	VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
+        VkCommandBufferBeginInfo begin_info;
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.pNext = NULL;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        begin_info.pInheritanceInfo = NULL;
 
-	VkCommandBufferBeginInfo begin_info;
-	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	begin_info.pNext = NULL;
-	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	begin_info.pInheritanceInfo = NULL;
+        VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
 
-	VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
+        //recorder(command_buffer);
+        record_image_layout_transition(command_buffer, 
+                vk.swapchain_images[vk.swapchain_image_index], 
+                VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_MEMORY_READ_BIT, 
+                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_TRANSFER_READ_BIT, 
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-    //recorder(command_buffer);
-	record_image_layout_transition(command_buffer, vk.swapchain_images[vk.swapchain_image_index], VK_IMAGE_ASPECT_COLOR_BIT,
-		VK_ACCESS_MEMORY_READ_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,	VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-	record_image_layout_transition(command_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL);
+        record_image_layout_transition(command_buffer, 
+                image, VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL);
 
 
-	VK_CHECK(qvkEndCommandBuffer(command_buffer));
+        VK_CHECK(qvkEndCommandBuffer(command_buffer));
 
-	VkSubmitInfo submit_info;
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit_info.pNext = NULL;
-	submit_info.waitSemaphoreCount = 0;
-	submit_info.pWaitSemaphores = NULL;
-	submit_info.pWaitDstStageMask = NULL;
-	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &command_buffer;
-	submit_info.signalSemaphoreCount = 0;
-	submit_info.pSignalSemaphores = NULL;
+        VkSubmitInfo submit_info;
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = NULL;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = NULL;
+        submit_info.pWaitDstStageMask = NULL;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = NULL;
 
-    VkResult res = qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE);
-    if (res < 0)
-	    ri.Error(ERR_FATAL, "121: error code %d returned by qvkQueueSubmit\n", res);
-
-	VK_CHECK(qvkQueueWaitIdle(vk.queue));
-	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
-}
+        VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
+        VK_CHECK(qvkQueueWaitIdle(vk.queue));
+        qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
+    }
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Check if we can use vkCmdBlitImage for the given source and destination image formats.
-	qboolean blit_enabled = qtrue;
+    //////////////////////////////////////////////////////////////////////
+	
+    // Check if we can use vkCmdBlitImage for the given 
+    // source and destination image formats.
+	VkBool32 blit_enabled = 1;
 	{
 		VkFormatProperties formatProps;
-		qvkGetPhysicalDeviceFormatProperties(vk.physical_device, vk.surface_format.format, &formatProps);
-		if ((formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) == 0)
-			blit_enabled = qfalse;
+		qvkGetPhysicalDeviceFormatProperties(
+                vk.physical_device, vk.surface_format.format, &formatProps );
 
-		qvkGetPhysicalDeviceFormatProperties(vk.physical_device, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
+		if ((formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) == 0)
+			blit_enabled = 0;
+
+		qvkGetPhysicalDeviceFormatProperties(
+                vk.physical_device, VK_FORMAT_R8G8B8A8_UNORM, &formatProps );
+
 		if ((formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT) == 0)
-			blit_enabled = qfalse;
+			blit_enabled = 0;
 	}
 
 	if (blit_enabled)
     {
-
-/*
-		record_and_run_commands(vk.command_pool, vk.queue, [&image](VkCommandBuffer command_buffer) {
-			VkImageBlit region;
-			region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			region.srcSubresource.mipLevel = 0;
-			region.srcSubresource.baseArrayLayer = 0;
-			region.srcSubresource.layerCount = 1;
-			region.srcOffsets[0] = {0, 0, 0};
-			region.srcOffsets[1] = {glConfig.vidWidth, glConfig.vidHeight, 1};
-			region.dstSubresource = region.srcSubresource;
-			region.dstOffsets[0] = region.srcOffsets[0];
-			region.dstOffsets[1] = region.srcOffsets[1];
-
-			vkCmdBlitImage(command_buffer, vk.swapchain_images[vk.swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				image, VK_IMAGE_LAYOUT_GENERAL, 1, &region, VK_FILTER_NEAREST);
-		}
-*/
+        ri.Printf(PRINT_ALL, " blit_enabled \n\n");
 
         VkCommandBufferAllocateInfo alloc_info;
     	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -184,27 +167,30 @@ void vk_read_pixels(unsigned char* buffer)
 
     	VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
         //	recorder(command_buffer);
-    	VkImageBlit region;
-	    region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    	region.srcSubresource.mipLevel = 0;
-	    region.srcSubresource.baseArrayLayer = 0;
-		region.srcSubresource.layerCount = 1;
-			
-        region.srcOffsets[0].x = 0;
-		region.srcOffsets[0].y = 0;
-		region.srcOffsets[0].z = 0;
-            
-		region.srcOffsets[1].x = glConfig.vidWidth;
-		region.srcOffsets[1].y = glConfig.vidHeight;
-		region.srcOffsets[1].z = 1;
-            
-		region.dstSubresource = region.srcSubresource;
-		region.dstOffsets[0] = region.srcOffsets[0];
-		region.dstOffsets[1] = region.srcOffsets[1];
+        {
+            VkImageBlit region;
+            region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.srcSubresource.mipLevel = 0;
+            region.srcSubresource.baseArrayLayer = 0;
+            region.srcSubresource.layerCount = 1;
 
-		qvkCmdBlitImage(command_buffer, vk.swapchain_images[vk.swapchain_image_index], 
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_GENERAL, 1, &region, VK_FILTER_NEAREST);
+            region.srcOffsets[0].x = 0;
+            region.srcOffsets[0].y = 0;
+            region.srcOffsets[0].z = 0;
 
+            region.srcOffsets[1].x = glConfig.vidWidth;
+            region.srcOffsets[1].y = glConfig.vidHeight;
+            region.srcOffsets[1].z = 1;
+
+            region.dstSubresource = region.srcSubresource;
+            region.dstOffsets[0] = region.srcOffsets[0];
+            region.dstOffsets[1] = region.srcOffsets[1];
+
+            qvkCmdBlitImage(command_buffer,
+                    vk.swapchain_images[vk.swapchain_image_index], 
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
+                    VK_IMAGE_LAYOUT_GENERAL, 1, &region, VK_FILTER_NEAREST);
+        }
 
 	    VK_CHECK(qvkEndCommandBuffer(command_buffer));
 
@@ -219,37 +205,12 @@ void vk_read_pixels(unsigned char* buffer)
     	submit_info.signalSemaphoreCount = 0;
     	submit_info.pSignalSemaphores = NULL;
 
-    	VkResult res = qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE);
-        if (res < 0)
-		    ri.Error(ERR_FATAL, "219: error code %d returned by qvkQueueSubmit\n", res);
-
+    	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
     	VK_CHECK(qvkQueueWaitIdle(vk.queue));
     	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);   
 	}
     else
     {
-/*       
-		record_and_run_commands(vk.command_pool, vk.queue, [&image](VkCommandBuffer command_buffer)
-        {
-			VkImageCopy region;
-			region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			region.srcSubresource.mipLevel = 0;
-			region.srcSubresource.baseArrayLayer = 0;
-			region.srcSubresource.layerCount = 1;
-            region.srcOffsets[0].x = 0;
-			region.srcOffsets[0].y = 0;
-			region.srcOffsets[0].z = 0;
-			region.dstSubresource = region.srcSubresource;
-			region.dstOffset = region.srcOffset;
-			region.extent.width = glConfig.vidWidth;
-            region.extent.height = glConfig.vidHeight;
-			region.extent.depth = 1;
-
-			vkCmdCopyImage(command_buffer, vk.swapchain_images[vk.swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
-		});
-*/
-
 
         VkQueue queue = vk.queue;
 
@@ -270,26 +231,28 @@ void vk_read_pixels(unsigned char* buffer)
     	begin_info.pInheritanceInfo = NULL;
 
 	    VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
-	
-        ////   recorder(command_buffer);
-		VkImageCopy region;
-		region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		region.srcSubresource.mipLevel = 0;
-		region.srcSubresource.baseArrayLayer = 0;
-		region.srcSubresource.layerCount = 1;
-        region.srcOffset.x = 0;
-		region.srcOffset.y = 0;
-		region.srcOffset.z = 0;
-		region.dstSubresource = region.srcSubresource;
-		region.dstOffset = region.srcOffset;
-		region.extent.width = glConfig.vidWidth;
-        region.extent.height = glConfig.vidHeight;
-		region.extent.depth = 1;
+	    {
+            ////   recorder(command_buffer);
+            VkImageCopy region;
+            region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.srcSubresource.mipLevel = 0;
+            region.srcSubresource.baseArrayLayer = 0;
+            region.srcSubresource.layerCount = 1;
+            region.srcOffset.x = 0;
+            region.srcOffset.y = 0;
+            region.srcOffset.z = 0;
+            region.dstSubresource = region.srcSubresource;
+            region.dstOffset = region.srcOffset;
+            region.extent.width = glConfig.vidWidth;
+            region.extent.height = glConfig.vidHeight;
+            region.extent.depth = 1;
 
-		qvkCmdCopyImage(command_buffer, vk.swapchain_images[vk.swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
+            qvkCmdCopyImage(command_buffer, 
+                    vk.swapchain_images[vk.swapchain_image_index], 
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
 		
-    
+        }
         VK_CHECK(qvkEndCommandBuffer(command_buffer));
 
 	    VkSubmitInfo submit_info;
@@ -303,13 +266,12 @@ void vk_read_pixels(unsigned char* buffer)
     	submit_info.signalSemaphoreCount = 0;
     	submit_info.pSignalSemaphores = NULL;
 
-    	VkResult res = qvkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-        if (res < 0)
-		    ri.Error(ERR_FATAL, "305: error code %d returned by qvkQueueSubmit\n", res);
-        
+    	VK_CHECK(qvkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
         VK_CHECK(qvkQueueWaitIdle(queue));
     	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
 	}
+
+
 
 	// Copy data from destination image to memory buffer.
 	VkImageSubresource subresource;
@@ -319,29 +281,43 @@ void vk_read_pixels(unsigned char* buffer)
 	VkSubresourceLayout layout;
 	qvkGetImageSubresourceLayout(vk.device, image, &subresource, &layout);
 
-	byte* data;
+
+    // To retrieve a host virtual address pointer to
+    // a region of a mappable memory objec
+	unsigned char* data;
 	VK_CHECK(qvkMapMemory(vk.device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&data));
 	data += layout.offset;
 
-	byte* buffer_ptr = buffer + glConfig.vidWidth * (glConfig.vidHeight - 1) * 4;
-	for (int i = 0; i < glConfig.vidHeight; i++) {
+	unsigned char* buffer_ptr = buffer + 
+    glConfig.vidWidth * (glConfig.vidHeight - 1) * 4;
+	
+    int j = 0;
+    for (j = 0; j < glConfig.vidHeight; j++)
+    {
 		memcpy(buffer_ptr, data, glConfig.vidWidth * 4);
 		buffer_ptr -= glConfig.vidWidth * 4;
 		data += layout.rowPitch;
 	}
 
+
 	if (!blit_enabled)
     {
+        ri.Printf(PRINT_ALL, "blit_enabled = 0 \n\n");
+
 		//auto fmt = vk.surface_format.format;
-		qboolean swizzle_components = 
+		VkBool32 swizzle_components = 
             (vk.surface_format.format == VK_FORMAT_B8G8R8A8_SRGB ||
              vk.surface_format.format == VK_FORMAT_B8G8R8A8_UNORM ||
              vk.surface_format.format == VK_FORMAT_B8G8R8A8_SNORM);
         
-		if (swizzle_components) {
+		if (swizzle_components)
+        {
 			buffer_ptr = buffer;
-			for (int i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++) {
-				byte tmp = buffer_ptr[0];
+            unsigned int i = 0;
+            unsigned int pixels = glConfig.vidWidth * glConfig.vidHeight;
+			for (i = 0; i < pixels; i++)
+            {
+				unsigned char tmp = buffer_ptr[0];
 				buffer_ptr[0] = buffer_ptr[2];
 				buffer_ptr[2] = tmp;
 				buffer_ptr += 4;

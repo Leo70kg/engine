@@ -110,9 +110,6 @@ void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height 
 			break;
 		}
 	}
-
-    ri.Printf( PRINT_ALL, "LOADING: %s, %d x %d\n", name, *width, *height );
-
 }
 
 /*

@@ -407,7 +407,7 @@ static void allocate_and_bind_image_memory(VkImage image)
 struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, qboolean repeat_texture)
 {
 	struct Vk_Image image;
-
+    ri.Printf(PRINT_DEVELOPER, "create image view\n");
 	// create image
 	{
 		VkImageCreateInfo desc;
@@ -432,6 +432,7 @@ struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_
 		VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &image.handle));
 		allocate_and_bind_image_memory(image.handle);
 	}
+
 
 	// create image view
 	{
@@ -468,6 +469,8 @@ struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_
 		vk_world.current_descriptor_sets[glState.currenttmu] = image.descriptor_set;
 	}
 
+;
+
 	return image;
 }
 
@@ -479,19 +482,22 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 	int w = upload_data->base_level_width;
 	int h = upload_data->base_level_height;
 
-	qboolean has_alpha = qfalse;
-	for (int i = 0; i < w * h; i++) {
-		if (upload_data->buffer[i*4 + 3] != 255)  {
-			has_alpha = qtrue;
-			break;
-		}
-	}
 
 	byte* buffer = upload_data->buffer;
 	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 	int bytes_per_pixel = 4;
 /*
-	if (r_texturebits->integer <= 16) {
+	if (r_texturebits->integer <= 16)
+    {
+
+    	qboolean has_alpha = qfalse;
+	    for (int i = 0; i < w * h; i++) {
+		if (upload_data->buffer[i*4 + 3] != 255)  {
+			has_alpha = qtrue;
+			break;
+		}
+	    }
+
 		buffer = (byte*) ri.Hunk_AllocateTempMemory( upload_data->buffer_size / 2 );
 		format = has_alpha ? VK_FORMAT_B4G4R4A4_UNORM_PACK16 : VK_FORMAT_A1R5G5B5_UNORM_PACK16;
 		bytes_per_pixel = 2;
@@ -532,120 +538,3 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 
 	return image;
 }
-
-
-
-/*
-================
-R_CreateImage
-
-This is the only way any image_t are created
-================
-
-image_t *R_CreateImage( const char *name, const unsigned char *pic, int width, int height,
-						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode )
-{
-	if (strlen(name) >= MAX_QPATH ) {
-		ri.Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
-	}
-
-	if ( tr.numImages == MAX_DRAWIMAGES ) {
-		ri.Error( ERR_DROP, "R_CreateImage: MAX_DRAWIMAGES hit\n");
-	}
-
-	// Create image_t object.
-    VkBool32 isLightmap = (strncmp(name, "*lightmap", 9) == 0);
-
-    if (isLightmap) {
-		glState.currenttmu = 1;
-	}
-
-	image_t* image = tr.images[tr.numImages] = (image_t*) ri.Hunk_Alloc( sizeof( image_t ), h_low );
-    image->index = tr.numImages;
-	image->texnum = 1024 + tr.numImages;
-	image->mipmap = mipmap;
-	image->allowPicmip = allowPicmip;
-	strcpy (image->imgName, name);
-	image->width = width;
-	image->height = height;
-	image->wrapClampMode = glWrapClampMode;
-
-	int hash = generateHashValue(name);
-	image->next = hashTable[hash];
-	hashTable[hash] = image;
-
-
-	tr.numImages++;
-
-	GL_Bind(image);
-	
-	struct Image_Upload_Data upload_data = 
-        generate_image_upload_data(pic, width, height, mipmap, allowPicmip);
-   
-
-
-	// VULKAN
-
-	vk_world.images[image->index] = upload_vk_image(&upload_data, glWrapClampMode == GL_REPEAT);
-
-
-	if (isLightmap) {
-		glState.currenttmu = 0;
-	}
-    
-    ri.Hunk_FreeTempMemory(upload_data.buffer);
-	return image;
-}
-
-image_t *R_CreateImage( const char *name, const byte *pic, int width, int height,
-						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode ) {
-
-	if (strlen(name) >= MAX_QPATH ) {
-		ri.Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
-	}
-
-	if ( tr.numImages == MAX_DRAWIMAGES ) {
-		ri.Error( ERR_DROP, "R_CreateImage: MAX_DRAWIMAGES hit\n");
-	}
-
-	// Create image_t object.
-	image_t* image = tr.images[tr.numImages] = (image_t*) ri.Hunk_Alloc( sizeof( image_t ), h_low );
-    image->index = tr.numImages;
-	image->texnum = 1024 + tr.numImages;
-	image->mipmap = mipmap;
-	image->allowPicmip = allowPicmip;
-	strcpy (image->imgName, name);
-	image->width = width;
-	image->height = height;
-	image->wrapClampMode = glWrapClampMode;
-
-	long hash = generateHashValue(name);
-	image->next = hashTable[hash];
-	hashTable[hash] = image;
-
-	tr.numImages++;
-
-	// Create corresponding GPU resource.
-	qboolean isLightmap = (strncmp(name, "*lightmap", 9) == 0);
-	glState.currenttmu = (isLightmap ? 1 : 0);
-	GL_Bind(image);
-	
-	////struct Image_Upload_Data upload_data = generate_image_upload_data(pic, width, height, type, flags & IMGFLAG_PICMIP);
-	struct Image_Upload_Data upload_data = 
-        generate_image_upload_data(pic, width, height, mipmap, allowPicmip);
-
-
-	vk_world.images[image->index] = upload_vk_image(&upload_data, glWrapClampMode);
-
-
-
-
-	if (isLightmap) {
-		glState.currenttmu =  0 ;
-	}
-	ri.Hunk_FreeTempMemory(upload_data.buffer);
-	return image;
-}
-
-
-*/

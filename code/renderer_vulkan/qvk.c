@@ -118,26 +118,6 @@ PFN_vkQueuePresentKHR							qvkQueuePresentKHR;
 
 
 
-#ifndef NDEBUG
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT object_type, uint64_t object, size_t location,
-	int32_t message_code, const char* layer_prefix, const char* message, void* user_data)
-{
-	
-#ifdef _WIN32
-	OutputDebugString(message);
-	OutputDebugString("\n");
-	DebugBreak();
-#endif
-	return VK_FALSE;
-}
-
-#endif
-
-
-
-
-
 static void loadGlobalFunctions(void)
 {
     ri.Printf(PRINT_ALL, "...Load vulkan instance functions...\n");
@@ -452,32 +432,18 @@ static void loadDeviceFunctions(void)
 	INIT_DEVICE_FUNCTION(vkQueuePresentKHR)
 
     #undef INIT_DEVICE_FUNCTION
-
 }
 
 //// 
+
+
+
+
 
 void init_vulkan_library(void)
 {
 
     loadGlobalFunctions();
-
-	// Create debug callback.
-#ifndef NDEBUG
-	{
-		VkDebugReportCallbackCreateInfoEXT desc;
-		desc.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-		desc.pNext = NULL;
-		desc.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT |
-					 VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-					 VK_DEBUG_REPORT_ERROR_BIT_EXT;
-		desc.pfnCallback = &debug_callback;
-		desc.pUserData = NULL;
-
-		VK_CHECK(qvkCreateDebugReportCallbackEXT(vk.instance, &desc, NULL, &vk.debug_callback));
-	}
-#endif
-
 
 	// select physical device
 
@@ -658,10 +624,12 @@ const char * cvtResToStr(VkResult result)
         return "VK_ERROR_OUT_OF_POOL_MEMORY_KHR";
     case VK_ERROR_INVALID_SHADER_NV:
         return "VK_ERROR_INVALID_SHADER_NV";
+/*
     case VK_ERROR_INVALID_EXTERNAL_HANDLE:
         return "VK_ERROR_INVALID_EXTERNAL_HANDLE";
     case VK_ERROR_NOT_PERMITTED_EXT:
         return "VK_ERROR_NOT_PERMITTED_EXT";
+*/
     case VK_RESULT_MAX_ENUM:
         return "VK_RESULT_MAX_ENUM";
     case VK_RESULT_RANGE_SIZE:
