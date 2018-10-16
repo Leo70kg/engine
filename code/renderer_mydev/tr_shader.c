@@ -2369,7 +2369,9 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 	// attempt to define shader from an explicit parameter file
 	//
 	shaderText = FindShaderInShaderText( strippedName );
-	if ( shaderText ) {
+
+	if ( shaderText )
+    {
 		// enable this when building a pak file to get a global list
 		// of all explicit shaders
 		if ( r_printShaders->integer ) {
@@ -2383,7 +2385,8 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 		sh = FinishShader();
 		return sh;
 	}
-
+	
+    ri.Printf( PRINT_ALL, "HERE\n");
 
 	//
 	// if not defined in the in-memory shader descriptions,

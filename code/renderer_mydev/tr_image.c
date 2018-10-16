@@ -300,27 +300,25 @@ static void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *
 ================
 R_LightScaleTexture
 
-Scale up the pixel values in a texture to increase the
-lighting range
+Scale up the pixel values in a texture to increase the lighting range
 ================
 */
-void R_LightScaleTexture (unsigned *in, int inwidth, int inheight, qboolean only_gamma )
+void R_LightScaleTexture (unsigned char *in, int inwidth, int inheight, qboolean only_gamma )
 {
 	if ( only_gamma )
 	{
 		if ( !glConfig.deviceSupportsGamma )
 		{
-			int		i, c;
-			byte	*p;
+			int	i, N = inwidth*inheight;
 
-			p = (byte *)in;
-
-			c = inwidth*inheight;
-			for (i=0 ; i<c ; i++, p+=4)
+			for (i=0; i < N; i += 4)
 			{
-				p[0] = s_gammatable[p[0]];
-				p[1] = s_gammatable[p[1]];
-				p[2] = s_gammatable[p[2]];
+				in[i] = s_gammatable[in[i]];
+                i++;
+				in[i] = s_gammatable[in[i]];
+                i++;
+				in[i] = s_gammatable[in[i]];
+                i = i + 2;
 			}
 		}
 	}

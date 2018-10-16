@@ -42,7 +42,7 @@ static char **shaderTextHashTable[MAX_SHADERTEXT_HASH];
 return a hash value for the filename
 ================
 */
-static long generateHashValue( const char *fname, const int size ) {
+static int generateHashValue( const char *fname, const int size ) {
 	int		i;
 	long	hash;
 	char	letter;
@@ -1869,7 +1869,8 @@ static void SortNewShader( void ) {
 GeneratePermanentShader
 ====================
 */
-static shader_t *GeneratePermanentShader( void ) {
+static shader_t *GeneratePermanentShader( void )
+{
 	shader_t	*newShader;
 	int			i, b;
 	int			size, hash;
@@ -1878,6 +1879,8 @@ static shader_t *GeneratePermanentShader( void ) {
 		ri.Printf( PRINT_WARNING, "WARNING: GeneratePermanentShader - MAX_SHADERS hit\n");
 		return tr.defaultShader;
 	}
+
+	ri.Printf( PRINT_ALL, "tr.numShaders = %d\n", tr.numShaders);
 
 	newShader = (shader_t*) ri.Hunk_Alloc( sizeof( shader_t ), h_low );
 
@@ -2019,10 +2022,8 @@ from the current global working shader
 */
 static shader_t *FinishShader( void ) {
 	int stage;
-	qboolean		hasLightmapStage;
-
-	hasLightmapStage = qfalse;
-
+	qboolean hasLightmapStage = qfalse;
+	ri.Printf( PRINT_ALL, "FinishShader() \n");
 	//
 	// set sky stuff appropriate
 	//
@@ -2163,38 +2164,39 @@ static shader_t *FinishShader( void ) {
 
 	// VULKAN: create pipelines for each shader stage
 	// DX12
-	if (vk.active ) {
-		struct Vk_Pipeline_Def def;
-		memset(&def, 0, sizeof(def));
-		def.face_culling = shader.cullType;
-		def.polygon_offset = (shader.polygonOffset == qtrue);
+    struct Vk_Pipeline_Def def;
+    memset(&def, 0, sizeof(def));
 
-		for (int i = 0; i < stage; i++) {
-			shaderStage_t *pStage = &stages[i];
-			def.state_bits = pStage->stateBits;
 
-			if (pStage->bundle[1].image[0] == NULL)
-				def.shader_type = single_texture;
-			else if (shader.multitextureEnv == GL_MODULATE)
-				def.shader_type = multi_texture_mul;
-			else if (shader.multitextureEnv == GL_ADD)
-				def.shader_type = multi_texture_add;
-			else
-				ri.Error(ERR_FATAL, "Vulkan: could not create pipelines for q3 shader '%s'\n", shader.name);
+    def.face_culling = shader.cullType;
+    def.polygon_offset = (shader.polygonOffset == qtrue);
 
-			def.clipping_plane = qfalse;
-			def.mirror = qfalse;
-			pStage->vk_pipeline = vk_find_pipeline(&def);
+    for (int i = 0; i < stage; i++)
+    {
+        shaderStage_t *pStage = &stages[i];
+        def.state_bits = pStage->stateBits;
 
-			def.clipping_plane = qtrue;
-			def.mirror = qfalse;
-			pStage->vk_portal_pipeline = vk_find_pipeline(&def);
+        if (pStage->bundle[1].image[0] == NULL)
+            def.shader_type = single_texture;
+        else if (shader.multitextureEnv == GL_MODULATE)
+            def.shader_type = multi_texture_mul;
+        else if (shader.multitextureEnv == GL_ADD)
+            def.shader_type = multi_texture_add;
+        else
+            ri.Error(ERR_FATAL, "Vulkan: could not create pipelines for q3 shader '%s'\n", shader.name);
 
-			def.clipping_plane = qtrue;
-			def.mirror = qtrue;
-			pStage->vk_mirror_pipeline = vk_find_pipeline(&def);
-		}
-	}
+        def.clipping_plane = qfalse;
+        def.mirror = qfalse;
+        pStage->vk_pipeline = vk_find_pipeline(&def);
+
+        def.clipping_plane = qtrue;
+        def.mirror = qfalse;
+        pStage->vk_portal_pipeline = vk_find_pipeline(&def);
+
+        def.clipping_plane = qtrue;
+        def.mirror = qtrue;
+        pStage->vk_mirror_pipeline = vk_find_pipeline(&def);
+    }
 
 	return GeneratePermanentShader();
 }
@@ -2213,17 +2215,21 @@ return NULL if not found
 If found, it will return a valid shader
 =====================
 */
-static char *FindShaderInShaderText( const char *shadername ) {
-
+static char* FindShaderInShaderText( const char *shadername )
+{
 	char *token, *p;
 
 	int i, hash;
 
 	hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
 
-	for (i = 0; shaderTextHashTable[hash][i]; i++) {
+    ri.Printf( PRINT_ALL, "shadername: %s\n", shadername);
+
+
+	for (i = 0; shaderTextHashTable[hash][i]; i++)
+    {
 		p = shaderTextHashTable[hash][i];
-		token = COM_ParseExt(&p, qtrue);
+		token = R_ParseExt(&p, qtrue);
 		if ( !Q_stricmp( token, shadername ) ) {
 			return p;
 		}
@@ -2236,9 +2242,11 @@ static char *FindShaderInShaderText( const char *shadername ) {
 	}
 
 	// look for label
-	while ( 1 ) {
-		token = COM_ParseExt( &p, qtrue );
-		if ( token[0] == 0 ) {
+	while ( 1 )
+    {
+		token = R_ParseExt( &p, qtrue );
+		
+        if ( token[0] == 0 ) {
 			break;
 		}
 
@@ -2356,9 +2364,9 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 		return tr.defaultShader;
 	}
 
-	// use (fullbright) vertex lighting if the bsp file doesn't have
-	// lightmaps
-	if ( lightmapIndex >= 0 && lightmapIndex >= tr.numLightmaps ) {
+	// use (fullbright) vertex lighting if the bsp file doesn't have lightmaps
+	if ( lightmapIndex >= 0 && lightmapIndex >= tr.numLightmaps )
+    {
 		lightmapIndex = LIGHTMAP_BY_VERTEX;
 	} else if ( lightmapIndex < LIGHTMAP_2D ) {
 		// negative lightmap indexes cause stray pointers (think tr.lightmaps[lightmapIndex])
@@ -2373,7 +2381,8 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 	//
 	// see if the shader is already loaded
 	//
-	for (sh = hashTable[hash]; sh; sh = sh->next) {
+	for (sh = hashTable[hash]; sh; sh = sh->next)
+    {
 		// NOTE: if there was no shader or image available with the name strippedName
 		// then a default shader is created with lightmapIndex == LIGHTMAP_NONE, so we
 		// have to check all default shaders otherwise for every call to R_FindShader
@@ -2396,6 +2405,7 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 	//
 	// attempt to define shader from an explicit parameter file
 	//
+
 	shaderText = FindShaderInShaderText( strippedName );
 	if ( shaderText ) {
 		// enable this when building a pak file to get a global list
@@ -2420,7 +2430,8 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 	Q_strncpyz( fileName, name, sizeof( fileName ) );
 	COM_DefaultExtension( fileName, sizeof( fileName ), ".tga" );
 	image = R_FindImageFile( fileName, mipRawImage, mipRawImage, mipRawImage ? GL_REPEAT : GL_CLAMP );
-	if ( !image ) {
+	if ( !image )
+    {
 		ri.Printf( PRINT_DEVELOPER, "Couldn't find image for shader %s\n", name );
 		shader.defaultShader = qtrue;
 		return FinishShader();
@@ -2627,10 +2638,13 @@ way to ask for different implicit lighting modes (vertex, lightmap, etc)
 */
 qhandle_t RE_RegisterShader( const char *name )
 {
+
+    ri.Printf(PRINT_ALL, "Register Shader %s .\n", name);
+
 	shader_t	*sh;
 
-	if ( (int)strlen( name ) >= MAX_QPATH ) {
-		Com_Printf( "Shader name exceeds MAX_QPATH\n" );
+	if ( strlen( name ) >= MAX_QPATH ) {
+		ri.Printf(PRINT_ALL, "Shader name exceeds MAX_QPATH\n" );
 		return 0;
 	}
 
@@ -2771,6 +2785,8 @@ a single large text block that can be scanned for shader names
 #define	MAX_SHADER_FILES	4096
 static void ScanAndLoadShaderFiles( void )
 {
+    ri.Printf( PRINT_ALL, "ScanAndLoadShaderFiles\n" );
+
 	char *buffers[MAX_SHADER_FILES] = {0};
 	int numShaderFiles;
 	int i;
@@ -2924,7 +2940,10 @@ static void ScanAndLoadShaderFiles( void )
 CreateInternalShaders
 ====================
 */
-static void CreateInternalShaders( void ) {
+static void CreateInternalShaders( void )
+{
+    ri.Printf( PRINT_ALL, "CreateInternalShaders\n" );
+
 	tr.numShaders = 0;
 
 	// init the default shader
@@ -2961,17 +2980,18 @@ static void CreateInternalShaders( void ) {
     tr.cinematicShader = FinishShader();
 }
 
-static void CreateExternalShaders( void ) {
+static void CreateExternalShaders( void )
+{
+    ri.Printf( PRINT_ALL, "CreateExternalShaders\n" );
+
 	tr.projectionShadowShader = R_FindShader( "projectionShadow", LIGHTMAP_NONE, qtrue );
 }
 
-/*
-==================
-R_InitShaders
-==================
-*/
-void R_InitShaders( void ) {
-	//ri.Printf( PRINT_ALL, "Initializing Shaders\n" );
+
+void R_InitShaders( void )
+{
+	
+    ri.Printf( PRINT_ALL, "Initializing Shaders\n" );
 
 	memset(hashTable, 0, sizeof(hashTable));
 

@@ -624,7 +624,7 @@ typedef struct {
 } srfTriangles_t;
 
 
-extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
+
 
 /*
 ==============================================================================
@@ -715,7 +715,7 @@ typedef struct {
 
 	int			numClusters;
 	int			clusterBytes;
-	const byte	*vis;			// may be passed in by CM_LoadMap to save space
+	const unsigned char	*vis;			// may be passed in by CM_LoadMap to save space
 
 	byte		*novis;			// clusterBytes of 0xff
 
@@ -846,11 +846,8 @@ model_t		*R_GetModelByHandle( qhandle_t hModel );
 int			R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFrame, 
 					 float frac, const char *tagName );
 void		R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs );
-
-void		R_Modellist_f (void);
-
+void R_Modellist_f( void );
 //====================================================
-extern	refimport_t		ri;
 
 #define	MAX_DRAWIMAGES			2048
 #define	MAX_LIGHTMAPS			256
@@ -960,7 +957,7 @@ typedef struct {
 	qboolean				worldMapLoaded;
 	world_t					*world;
 
-	const byte				*externalVisData;	// from RE_SetWorldVisData, shared with CM_Load
+	const unsigned char		*externalVisData;	// from RE_SetWorldVisData, shared with CM_Load
 
 	image_t					*defaultImage;
 	image_t					*scratchImage[32];
@@ -1028,15 +1025,6 @@ typedef struct {
 	float					inverseSawToothTable[FUNCTABLE_SIZE];
 	float					fogTable[FOG_TABLE_SIZE];
 } trGlobals_t;
-
-extern backEndState_t	backEnd;
-extern trGlobals_t	tr;
-extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
-extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
-
-// VULKAN
-extern struct Vk_Instance	vk;				// shouldn't be cleared during ref re-init
-extern struct Vk_World		vk_world;		// this data is cleared during ref re-init
 
 
 
@@ -1230,7 +1218,6 @@ model_t		*R_AllocModel( void );
 
 void    	R_Init( void );
 
-qboolean R_GetModeInfo(unsigned int *width, unsigned int *height, float *windowAspect, int mode );
 
 
 void		R_SetColorMappings( void );
@@ -1311,7 +1298,6 @@ typedef struct shaderCommands_s
 	shaderStage_t	**xstages;
 } shaderCommands_t;
 
-extern	shaderCommands_t	tess;
 
 void RB_BeginSurface(shader_t *shader, int fogNum );
 void RB_EndSurface(void);
@@ -1572,10 +1558,6 @@ typedef struct {
 	renderCommandList_t	commands;
 } backEndData_t;
 
-extern	int		max_polys;
-extern	int		max_polyverts;
-
-extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allocated
 
 
 
@@ -1608,5 +1590,30 @@ image_t* R_FindImageFile(const char *name, qboolean mipmap,
 						qboolean allowPicmip, int glWrapClampMode);
 
 image_t *R_CreateImage( const char *name, const byte *pic, int width, int height,
-						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode ); 
+						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode );
+
+
+void R_LightScaleTexture (unsigned char* in, int inwidth, int inheight, qboolean only_gamma );
+
+
+void R_DisplayResolutionList_f(void);
+void R_GetModeInfo(unsigned int *width, unsigned int *height, float *windowAspect, int mode );
+void R_InitDisplayResolution( void );
+
+extern	refimport_t		ri;
+extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
+
+
+extern backEndState_t	backEnd;
+extern trGlobals_t	tr;
+extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
+extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
+extern	shaderCommands_t	tess;
+extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allocated
+
+// VULKAN
+extern struct Vk_Instance	vk;				// shouldn't be cleared during ref re-init
+extern struct Vk_World		vk_world;		// this data is cleared during ref re-init
+
+
 #endif //TR_LOCAL_H

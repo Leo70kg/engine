@@ -347,8 +347,11 @@ endif
 #  XCB_CFLAGS = $(shell PKG_CONFIG --silence-errors --cflags xcb)
   XCB_LIBS = $(shell pkg-config --libs xcb)
 
-
+ifeq ($(BUILD_WITH_SDL), 1)
+  RENDERER_LIBS = $(SDL_LIBS)
+else
   RENDERER_LIBS = -lGL $(XCB_LIBS)
+endif
 
   CLIENT_CFLAGS += $(CURL_CFLAGS)
   CLIENT_LIBS += $(CURL_LIBS)
@@ -1591,11 +1594,12 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_surface.o \
   $(B)/renderer_vulkan/tr_world.o \
   $(B)/renderer_vulkan/tr_common.o \
+  $(B)/renderer_vulkan/tr_displayResolution.o \
   $(B)/renderer_vulkan/qvk.o \
   $(B)/renderer_vulkan/loadImage.o \
   \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
-  $(B)/renderer_vulkan/vk_create_image.o \
+  $(B)/renderer_vulkan/vk_image.o \
   $(B)/renderer_vulkan/vk_create_pipeline.o \
   $(B)/renderer_vulkan/vk_frame.o \
   $(B)/renderer_vulkan/vk_read_pixels.o \
@@ -1978,7 +1982,7 @@ $(B)/renderer_mydev_$(SHLIBNAME): $(Q3MYDEVOBJ) $(JPGOBJ)
 $(B)/renderer_vulkan_$(SHLIBNAME): $(Q3VKOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(Q3VKOBJ) $(JPGOBJ) \
-		$(THREAD_LIBS) $(RENDERER_LIBS) $(LIBS)
+		$(THREAD_LIBS) $(SDL_LIBS) $(LIBS)
 
 ##############################################################
 

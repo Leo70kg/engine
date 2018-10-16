@@ -36,7 +36,7 @@ const static imageExtToLoaderMap_t imageLoaders[6] =
     { "bmp",  R_LoadBMP }
 };
 
-const static int numImageLoaders = ARRAY_LEN( imageLoaders );
+const static int numImageLoaders = 6;
 
 
 void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height )
@@ -53,7 +53,7 @@ void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height 
 
 	Q_strncpyz( localName, name, MAX_QPATH );
 
-	const char *ext = COM_GetExtension( localName );
+	const char *ext = getExtension( localName );
 
 
 	if( *ext )
@@ -104,12 +104,15 @@ void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height 
 		{
 			if( orgNameFailed )
 			{
-				ri.Printf( PRINT_WARNING, "WARNING: %s not present, using %s instead\n",name, altName );
+				ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n",name, altName );
 			}
 
 			break;
 		}
 	}
+
+    ri.Printf( PRINT_ALL, "LOADING: %s, %d x %d\n", name, *width, *height );
+
 }
 
 /*

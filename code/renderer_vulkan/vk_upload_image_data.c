@@ -49,6 +49,7 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size)
 void vk_upload_image_data(VkImage image, int width, int height, 
         qboolean mipmap, const uint8_t* pixels, int bytes_per_pixel)
 {
+
 	VkBufferImageCopy regions[16];
 	int num_regions = 0;
 
@@ -176,4 +177,6 @@ void vk_upload_image_data(VkImage image, int width, int height,
 
     VK_CHECK(qvkQueueWaitIdle(vk.queue));
 	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
+
+    ri.Printf( PRINT_ALL, "vk_upload_image_data ok.\n");
 }

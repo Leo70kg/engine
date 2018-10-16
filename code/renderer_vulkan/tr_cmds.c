@@ -131,6 +131,8 @@ void R_SyncRenderThread( void ) {
 	R_IssueRenderCommands( qfalse );
 }
 
+
+
 /*
 ============
 R_GetCommandBuffer

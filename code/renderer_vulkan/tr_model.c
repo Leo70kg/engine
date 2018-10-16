@@ -519,15 +519,12 @@ static qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
 }
 
 
+void R_ModelInit( void )
+{
+
+    ri.Printf( PRINT_ALL, "R_ModelInit\n");
 
 
-
-/*
-===============
-R_ModelInit
-===============
-*/
-void R_ModelInit( void ) {
 	model_t		*mod;
 
 	// leave a space for NULL model
