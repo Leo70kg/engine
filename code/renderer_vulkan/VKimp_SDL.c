@@ -48,17 +48,7 @@ static cvar_t* r_displayRefresh;
 static cvar_t *r_sdlDriver;
 static cvar_t* r_displayIndex;
 
-
-
-/*
-===============
-Minimize the game so that user is back at the desktop
-===============
-*/
-void VKimp_Minimize( void )
-{
-	SDL_MinimizeWindow( SDL_window );
-}
+cvar_t	*r_fullscreen;
 
 
 static void VKimp_DetectAvailableModes(void)
@@ -367,6 +357,9 @@ void VKimp_Init()
 
 	r_displayIndex = ri.Cvar_Get( "r_displayIndex", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "60", CVAR_LATCH );
+    r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
+
+
 	ri.Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );
 
 	if(ri.Cvar_VariableIntegerValue( "com_abnormalExit" ) )
@@ -418,7 +411,6 @@ success:
     {
         ri.Error(ERR_FATAL, "Failed to find entrypoint vkGetInstanceProcAddr\n"); 
     }
-
 
 
     // These values force the UI to disable driver selection
@@ -498,3 +490,56 @@ void VKimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 		ri.Printf(PRINT_ALL, "SDL_SetWindowGammaRamp() failed: %s\n", SDL_GetError() );
 	}
 }
+
+
+/*
+===============
+Minimize the game so that user is back at the desktop
+===============
+*/
+void VKimp_Minimize( void )
+{
+    if(r_fullscreen->integer == 1)
+    {
+        r_fullscreen->integer = 0;
+        ri.Cmd_ExecuteText (EXEC_NOW, "vid_restart\n");
+        r_fullscreen->integer = 1;
+    }
+
+	SDL_MinimizeWindow( SDL_window );
+}
+
+/*
+	if( r_fullscreen->modified )
+	{
+		int         fullscreen;
+		qboolean    needToToggle;
+		qboolean    sdlToggled = qfalse;
+
+		// Find out the current state
+		fullscreen = !!( SDL_GetWindowFlags( SDL_window ) & SDL_WINDOW_FULLSCREEN );
+
+		if( r_fullscreen->integer && ri.Cvar_VariableIntegerValue( "in_nograb" ) )
+		{
+			ri.Printf( PRINT_ALL, "Fullscreen not allowed with in_nograb 1\n");
+			ri.Cvar_Set( "r_fullscreen", "0" );
+			r_fullscreen->modified = qfalse;
+		}
+
+		// Is the state we want different from the current state?
+		needToToggle = !!r_fullscreen->integer != fullscreen;
+
+		if( needToToggle )
+		{
+			sdlToggled = SDL_SetWindowFullscreen( SDL_window, r_fullscreen->integer ) >= 0;
+
+			// SDL_WM_ToggleFullScreen didn't work, so do it the slow way
+			if( !sdlToggled )
+				ri.Cmd_ExecuteText(EXEC_APPEND, "vid_restart\n");
+
+			ri.IN_Restart( );
+		}
+
+		r_fullscreen->modified = qfalse;
+	}
+*/

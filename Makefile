@@ -2819,6 +2819,8 @@ clean2:
 	@rm -f $(OBJ_D_FILES)
 	@rm -f $(STRINGOBJ)
 	@rm -f $(TARGETS)
+	@rm -f $(VKOBJ)
+	@rm -f $(VKOBJ_D_FILES)
 
 toolsclean: toolsclean-debug toolsclean-release
 
@@ -2860,6 +2862,7 @@ dist:
 
 ifneq ($(B),)
   OBJ_D_FILES=$(filter %.d,$(OBJ:%.o=%.d))
+  VKOBJ_D_FILES=$(filter %.d,$(VKOBJ:%.o=%.d))
   TOOLSOBJ_D_FILES=$(filter %.d,$(TOOLSOBJ:%.o=%.d))
   -include $(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
 endif

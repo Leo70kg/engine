@@ -10,7 +10,7 @@ typedef struct vidmode_s
 
 
 cvar_t* r_mode;
-cvar_t	*r_fullscreen;
+
 
 
 static cvar_t* r_customwidth;
@@ -93,8 +93,7 @@ void R_InitDisplayResolution( void )
 {
     // leilei - -2 is so convenient for modern day PCs
 
-    r_mode = ri.Cvar_Get( "r_mode", "-2", CVAR_ARCHIVE | CVAR_LATCH ); 
-    r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
+    r_mode = ri.Cvar_Get( "r_mode", "-2", CVAR_ARCHIVE | CVAR_LATCH );
     r_customwidth = ri.Cvar_Get( "r_customwidth", "960", CVAR_ARCHIVE | CVAR_LATCH );
     r_customheight = ri.Cvar_Get( "r_customheight", "540", CVAR_ARCHIVE | CVAR_LATCH );
     r_customaspect = ri.Cvar_Get( "r_customaspect", "1.78", CVAR_ARCHIVE | CVAR_LATCH );

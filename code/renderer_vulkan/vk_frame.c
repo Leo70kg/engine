@@ -1,5 +1,6 @@
 #include "qvk.h"
 #include "tr_local.h"
+
 void vk_begin_frame(void)
 {
     
@@ -58,13 +59,9 @@ void vk_begin_frame(void)
 
 void vk_end_frame(void)
 {
-    VkResult res;
 	qvkCmdEndRenderPass(vk.command_buffer);
 	
-    res = qvkEndCommandBuffer(vk.command_buffer);
-    if (res < 0)
-		ri.Error(ERR_FATAL,
-            "vk_end_frame: error code %d returned by qvkEndCommandBuffer\n", res);
+    VK_CHECK(qvkEndCommandBuffer(vk.command_buffer));
 
 
 	VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -80,10 +77,7 @@ void vk_end_frame(void)
 	submit_info.pSignalSemaphores = &vk.rendering_finished;
 
 
-    res = qvkQueueSubmit(vk.queue, 1, &submit_info, vk.rendering_finished_fence);
-    if (res < 0)
-		ri.Error(ERR_FATAL,
-            "vk_end_frame: error code %d returned by qvkQueueSubmit\n", res);
+    VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, vk.rendering_finished_fence));
 
 	VkPresentInfoKHR present_info;
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -95,9 +89,30 @@ void vk_end_frame(void)
 	present_info.pImageIndices = &vk.swapchain_image_index;
 	present_info.pResults = NULL;
 	
-    res = qvkQueuePresentKHR(vk.queue, &present_info);
-    if (res < 0)
-		ri.Error(ERR_FATAL,
-            "vk_end_frame: error code %d returned by qvkQueuePresentKHR\n", res);
+    VkResult result = qvkQueuePresentKHR(vk.queue, &present_info);
+    if(result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        if( r_fullscreen->integer == 1)
+		{
+			r_fullscreen->integer = 0;
+            r_mode->integer = 3;
+		}
 
+        ri.Cmd_ExecuteText (EXEC_NOW, "vid_restart\n");
+        // hasty prevent crash.
+    }
+    else
+    {
+        VK_CHECK(result)
+    }
 }
+
+/*
+    VK_ERROR_OUT_OF_DATE_KHR
+
+A surface has changed in such a way that it is no longer compatible with
+the swapchain, and further presentation requests using the swapchain will
+fail. Applications must query the new surface properties and recreate 
+their swapchain if they wish to continue presenting to the surface.
+
+*/
