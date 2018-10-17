@@ -1602,7 +1602,7 @@ struct Image_Upload_Data {
 	int base_level_height;
 };
 
-struct Image_Upload_Data generate_image_upload_data(const unsigned char* data, int width, int height, qboolean mipmap, qboolean picmip);
+struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture);
 
 
 
