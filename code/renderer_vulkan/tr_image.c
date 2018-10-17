@@ -326,7 +326,6 @@ void R_CreateBuiltinImages( void )
 
 
 
-
 /*
 ===============
 R_DeleteTextures

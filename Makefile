@@ -829,8 +829,6 @@ echo_cmd=@echo
 Q=@
 endif
 
-CFLAGS+="-std=gnu11"
-
 
 define DO_CC
 $(echo_cmd) "CC $<"
