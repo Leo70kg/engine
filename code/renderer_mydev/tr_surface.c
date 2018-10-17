@@ -198,7 +198,12 @@ void RB_SurfacePolychain( srfPoly_t *p ) {
 		VectorCopy( p->verts[i].xyz, tess.xyz[numv] );
 		tess.texCoords[numv][0][0] = p->verts[i].st[0];
 		tess.texCoords[numv][0][1] = p->verts[i].st[1];
-		*(int *)&tess.vertexColors[numv] = *(int *)p->verts[ i ].modulate;
+	
+        //*(int *)&tess.vertexColors[numv] = *(int *)p->verts[ i ].modulate;
+        tess.vertexColors[numv][0] = p->verts[ i ].modulate[0];
+        tess.vertexColors[numv][1] = p->verts[ i ].modulate[1];
+        tess.vertexColors[numv][2] = p->verts[ i ].modulate[2];
+        tess.vertexColors[numv][3] = p->verts[ i ].modulate[3];
 
 		numv++;
 	}
@@ -224,7 +229,7 @@ void RB_SurfaceTriangles( srfTriangles_t *srf ) {
 	int			i;
 	drawVert_t	*dv;
 	float		*xyz, *normal, *texCoords;
-	byte		*color;
+	unsigned char (*color)[4];
 	int			dlightBits;
 	qboolean	needsNormal;
 
@@ -244,10 +249,10 @@ void RB_SurfaceTriangles( srfTriangles_t *srf ) {
 	xyz = tess.xyz[ tess.numVertexes ];
 	normal = tess.normal[ tess.numVertexes ];
 	texCoords = tess.texCoords[ tess.numVertexes ][0];
-	color = tess.vertexColors[ tess.numVertexes ];
+	color = &tess.vertexColors[ tess.numVertexes ];
 	needsNormal = tess.shader->needsNormal;
 
-	for ( i = 0 ; i < srf->numVerts ; i++, dv++, xyz += 4, normal += 4, texCoords += 4, color += 4 ) {
+	for ( i = 0 ; i < srf->numVerts ; i++, dv++, xyz += 4, normal += 4, texCoords += 4, color += 1 ) {
 		xyz[0] = dv->xyz[0];
 		xyz[1] = dv->xyz[1];
 		xyz[2] = dv->xyz[2];
@@ -264,7 +269,11 @@ void RB_SurfaceTriangles( srfTriangles_t *srf ) {
 		texCoords[2] = dv->lightmap[0];
 		texCoords[3] = dv->lightmap[1];
 
-		*(int *)color = *(int *)dv->color;
+		(*color)[0] = dv->color[0];
+        (*color)[1] = dv->color[1];
+		(*color)[2] = dv->color[2];
+		(*color)[3] = dv->color[3];
+
 	}
 
 	for ( i = 0 ; i < srf->numVerts ; i++ ) {
@@ -858,7 +867,10 @@ void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
 		tess.texCoords[ndx][0][1] = v[4];
 		tess.texCoords[ndx][1][0] = v[5];
 		tess.texCoords[ndx][1][1] = v[6];
+        
 		* ( unsigned int * ) &tess.vertexColors[ndx] = * ( unsigned int * ) &v[7];
+
+
 		tess.vertexDlightBits[ndx] = dlightBits;
 	}
 
@@ -909,7 +921,7 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 	float	*xyz;
 	float	*texCoords;
 	float	*normal;
-	unsigned char *color;
+	unsigned char (*color)[4];
 	drawVert_t	*dv;
 	int		rows, irows, vrows;
 	int		used;
@@ -986,7 +998,7 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 		xyz = tess.xyz[numVertexes];
 		normal = tess.normal[numVertexes];
 		texCoords = tess.texCoords[numVertexes][0];
-		color = ( unsigned char * ) &tess.vertexColors[numVertexes];
+		color = &tess.vertexColors[numVertexes];
 		vDlightBits = &tess.vertexDlightBits[numVertexes];
 		needsNormal = tess.shader->needsNormal;
 
@@ -1007,12 +1019,15 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 					normal[1] = dv->normal[1];
 					normal[2] = dv->normal[2];
 				}
-				* ( unsigned int * ) color = * ( unsigned int * ) dv->color;
-				*vDlightBits++ = dlightBits;
+				(*color)[0] = dv->color[0];
+				(*color)[1] = dv->color[1];
+                (*color)[2] = dv->color[2];
+				(*color)[3] = dv->color[3];
+                *vDlightBits++ = dlightBits;
 				xyz += 4;
 				normal += 4;
 				texCoords += 4;
-				color += 4;
+				color += 1;
 			}
 		}
 

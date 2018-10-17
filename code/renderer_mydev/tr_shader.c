@@ -2386,8 +2386,6 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 		return sh;
 	}
 	
-    ri.Printf( PRINT_ALL, "HERE\n");
-
 	//
 	// if not defined in the in-memory shader descriptions,
 	// look for a single supported image file
