@@ -593,7 +593,7 @@ static struct Image_Upload_Data generate_image_upload_data(const byte* data, int
 
 	// At this point width == scaled_width and height == scaled_height.
 
-	unsigned* scaled_buffer = (unsigned int*) ri.Hunk_AllocateTempMemory( sizeof( unsigned ) * scaled_width * scaled_height );
+	unsigned char* scaled_buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( sizeof( unsigned ) * scaled_width * scaled_height );
 	memcpy(scaled_buffer, data, scaled_width * scaled_height * 4);
 	R_LightScaleTexture(scaled_buffer, scaled_width, scaled_height, (qboolean) !mipmap);
 
@@ -605,7 +605,7 @@ static struct Image_Upload_Data generate_image_upload_data(const byte* data, int
 	
 	if (mipmap) {
 		while (scaled_width > 1 || scaled_height > 1) {
-			R_MipMap((byte *)scaled_buffer, scaled_width, scaled_height);
+			R_MipMap(scaled_buffer, scaled_width, scaled_height);
 
 			scaled_width >>= 1;
 			if (scaled_width < 1) scaled_width = 1;
@@ -617,7 +617,7 @@ static struct Image_Upload_Data generate_image_upload_data(const byte* data, int
 			mip_level_size = scaled_width * scaled_height * 4;
 
 			if ( r_colorMipLevels->integer ) {
-				R_BlendOverTexture( (byte *)scaled_buffer, scaled_width * scaled_height, mipBlendColors[miplevel] );
+				R_BlendOverTexture( scaled_buffer, scaled_width * scaled_height, mipBlendColors[miplevel] );
 			}
 
 			memcpy(&upload_data.buffer[upload_data.buffer_size], scaled_buffer, mip_level_size);

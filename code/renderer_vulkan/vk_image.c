@@ -1,50 +1,53 @@
+#include "qvk.h"
 #include "tr_local.h"
 
-#include "qvk.h"
 
-/*  
+typedef struct {
+	char *name;
+	int	minimize, maximize;
+} textureMode_t;
+
+const static textureMode_t modes[] = {
+	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
+	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},
+	{"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
+	{"GL_LINEAR_MIPMAP_NEAREST", GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR},
+	{"GL_NEAREST_MIPMAP_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST},
+	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
+};
+
+
+struct Vk_Sampler_Def
+{
+	VkBool32 repeat_texture; // clamp/repeat texture addressing mode
+	int gl_mag_filter; // GL_XXX mag filter
+	int gl_min_filter; // GL_XXX min filter
+};
+
+#define MAX_VK_SAMPLERS         32
+static int num_samplers = 0;
+static struct Vk_Sampler_Def sampler_defs[MAX_VK_SAMPLERS] = {0};
+static VkSampler samplers[MAX_VK_SAMPLERS] = {0};
+
+
+
+/*
+================
+return a hash value for the filename
+================
+*/
+
 
 #define FILE_HASH_SIZE		1024
-static image_t* hashTable[FILE_HASH_SIZE] = {0};
-
-struct Image_Upload_Data
-{
-	unsigned char* buffer;
-	int buffer_size;
-	int mip_levels;
-	int base_level_width;
-	int base_level_height;
-};
-
-
-
-static const unsigned char mipBlendColors[16][4] =
-{
-	{0,0,0,0},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-};
+static	image_t*		hashTable[FILE_HASH_SIZE];
 
 
 static int generateHashValue( const char *fname )
 {
 	int		i = 0;
-	long	hash = 0;
+	int	hash = 0;
 
-    while (fname[i] != '\0') {
+	while (fname[i] != '\0') {
 		char letter = tolower(fname[i]);
 		if (letter =='.') break;				// don't include extension
 		if (letter =='\\') letter = '/';		// damn path names
@@ -55,304 +58,199 @@ static int generateHashValue( const char *fname )
 	return hash;
 }
 
-*/
 
 
 
-
-
-
-
-/*
-================
-R_MipMap2
-
-Operates in place, quartering the size of the texture
-Proper linear filter
-================
-static void R_MipMap2( unsigned *in, int inWidth, int inHeight ) {
-	int			i, j, k;
-	unsigned char* outpix;
-	int			inWidthMask, inHeightMask;
-	int			total;
-	int			outWidth, outHeight;
-	unsigned	*temp;
-
-	outWidth = inWidth >> 1;
-	outHeight = inHeight >> 1;
-	temp = ri.Hunk_AllocateTempMemory( outWidth * outHeight * 4 );
-
-	inWidthMask = inWidth - 1;
-	inHeightMask = inHeight - 1;
-
-	for ( i = 0 ; i < outHeight ; i++ ) {
-		for ( j = 0 ; j < outWidth ; j++ ) {
-			outpix = (unsigned char *) ( temp + i * outWidth + j );
-			for ( k = 0 ; k < 4 ; k++ ) {
-				total = 
-					1 * ((unsigned char *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					1 * ((unsigned char *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
-
-					2 * ((unsigned char *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					4 * ((unsigned char *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					4 * ((unsigned char *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
-
-					2 * ((unsigned char *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					4 * ((unsigned char *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					4 * ((unsigned char *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
-
-					1 * ((unsigned char *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					1 * ((unsigned char *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k];
-				outpix[k] = total / 36;
-			}
-		}
-	}
-
-	memcpy( in, temp, outWidth * outHeight * 4 );
-	ri.Hunk_FreeTempMemory( temp );
-}
-
-*/
-
-
-/*
-================
-R_MipMap
-
-Operates in place, quartering the size of the texture
-================
-static void R_MipMap (unsigned char *in, int width, int height)
+static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 {
-	int		i, j;
-	unsigned char	*out;
-	int		row;
-
-	if ( !r_simpleMipMaps->integer ) {
-		R_MipMap2( (unsigned *)in, width, height );
-		return;
-	}
-
-	if ( width == 1 && height == 1 ) {
-		return;
-	}
-
-	row = width * 4;
-	out = in;
-	width >>= 1;
-	height >>= 1;
-
-	if ( width == 0 || height == 0 ) {
-		width += height;	// get largest
-		for (i=0 ; i<width ; i++, out+=4, in+=8 ) {
-			out[0] = ( in[0] + in[4] )>>1;
-			out[1] = ( in[1] + in[5] )>>1;
-			out[2] = ( in[2] + in[6] )>>1;
-			out[3] = ( in[3] + in[7] )>>1;
-		}
-		return;
-	}
-
-	for (i=0 ; i<height ; i++, in+=row) {
-		for (j=0 ; j<width ; j++, out+=4, in+=8) {
-			out[0] = (in[0] + in[4] + in[row+0] + in[row+4])>>2;
-			out[1] = (in[1] + in[5] + in[row+1] + in[row+5])>>2;
-			out[2] = (in[2] + in[6] + in[row+2] + in[row+6])>>2;
-			out[3] = (in[3] + in[7] + in[row+3] + in[row+7])>>2;
-		}
-	}
-}
-*/
-
-
-
-
-/*
-==================
-R_BlendOverTexture
-
-Apply a color blend over a set of pixels
-==================
-
-static void R_BlendOverTexture( unsigned char *data, int pixelCount, unsigned char blend[4] ) {
-	int		i;
-	int		inverseAlpha;
-	int		premult[3];
-
-	inverseAlpha = 255 - blend[3];
-	premult[0] = blend[0] * blend[3];
-	premult[1] = blend[1] * blend[3];
-	premult[2] = blend[2] * blend[3];
-
-	for ( i = 0 ; i < pixelCount ; i++, data+=4 ) {
-		data[0] = ( data[0] * inverseAlpha + premult[0] ) >> 9;
-		data[1] = ( data[1] * inverseAlpha + premult[1] ) >> 9;
-		data[2] = ( data[2] * inverseAlpha + premult[2] ) >> 9;
-	}
-}
-
-
-
-
-static struct Image_Upload_Data generate_image_upload_data(
-        const unsigned char* data,
-        int width, int height, qboolean mipmap, qboolean picmip )
-{
-	//
-	// convert to exact power of 2 sizes
-	//
-	int scaled_width = 1, scaled_height = 1;
-    while(scaled_width < width)
-        scaled_width<<=1;
-    
-    while(scaled_height < height)
-        scaled_height<<=1;
-
-    if ( r_roundImagesDown->integer && scaled_width > width )
-		scaled_width >>= 1;
-	if ( r_roundImagesDown->integer && scaled_height > height )
-		scaled_height >>= 1;
-
-
-
-	struct Image_Upload_Data upload_data;
-	upload_data.buffer = (unsigned char *) ri.Hunk_AllocateTempMemory(2 * 4 * scaled_width * scaled_height);
-
-
-	ri.Printf( PRINT_ALL, "generate_image_upload_data: Allocate %d byte Memory \n", 2 * 4 * scaled_width * scaled_height );
-
-
-
-	unsigned char* resampled_buffer = NULL;
-	if ( scaled_width != width || scaled_height != height )
+	// Look for sampler among existing samplers.
+	int i;
+    for (i = 0; i < num_samplers; i++)
     {
-		resampled_buffer = (unsigned char *) ri.Hunk_AllocateTempMemory( scaled_width * scaled_height * 4 );
-		ResampleTexture ((unsigned*)data, width, height, (unsigned*)resampled_buffer, scaled_width, scaled_height);
-		data = resampled_buffer;
-		width = scaled_width;
-		height = scaled_height;
+		if (( sampler_defs[i].repeat_texture == def->repeat_texture) &&
+			( sampler_defs[i].gl_mag_filter == def->gl_mag_filter) && 
+			( sampler_defs[i].gl_min_filter == def->gl_min_filter) )
+		{
+			return samplers[i];
+		}
 	}
 
-	//
-	// perform optional picmip operation
-	//
-	if ( picmip ) {
-		scaled_width >>= r_picmip->integer;
-		scaled_height >>= r_picmip->integer;
+	// Create new sampler.
+	if (num_samplers >= MAX_VK_SAMPLERS)
+    {
+		ri.Error(ERR_DROP, "vk_find_sampler: MAX_VK_SAMPLERS hit\n");
 	}
 
-	//
-	// clamp to minimum size
-	//
-	if (scaled_width < 1) {
-		scaled_width = 1;
+	VkSamplerAddressMode address_mode = def->repeat_texture ?
+        VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+
+	VkFilter mag_filter;
+	if (def->gl_mag_filter == GL_NEAREST)
+    {
+		mag_filter = VK_FILTER_NEAREST;
 	}
-	if (scaled_height < 1) {
-		scaled_height = 1;
+    else if(def->gl_mag_filter == GL_LINEAR)
+    {
+		mag_filter = VK_FILTER_LINEAR;
+	}
+    else
+    {
+		ri.Error(ERR_FATAL, "vk_find_sampler: invalid gl_mag_filter");
 	}
 
-	//
-	// clamp to the current upper OpenGL limit
-	// scale both axis down equally so we don't have to
-	// deal with a half mip resampling
-	//
-	int max_texture_size = 2048;
-	while ( scaled_width > max_texture_size	|| scaled_height > max_texture_size )
+	VkFilter min_filter;
+	VkSamplerMipmapMode mipmap_mode;
+	qboolean max_lod_0_25 = qfalse; // used to emulate OpenGL's GL_LINEAR/GL_NEAREST minification filter
+	if (def->gl_min_filter == GL_NEAREST) {
+		min_filter = VK_FILTER_NEAREST;
+		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		max_lod_0_25 = qtrue;
+	}
+    else if (def->gl_min_filter == GL_LINEAR)
+    {
+		min_filter = VK_FILTER_LINEAR;
+		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		max_lod_0_25 = qtrue;
+	}
+    else if (def->gl_min_filter == GL_NEAREST_MIPMAP_NEAREST)
+    {
+		min_filter = VK_FILTER_NEAREST;
+		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	}
+    else if (def->gl_min_filter == GL_LINEAR_MIPMAP_NEAREST)
+    {
+		min_filter = VK_FILTER_LINEAR;
+		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	}
+    else if (def->gl_min_filter == GL_NEAREST_MIPMAP_LINEAR)
+    {
+		min_filter = VK_FILTER_NEAREST;
+		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	}
+    else if (def->gl_min_filter == GL_LINEAR_MIPMAP_LINEAR)
+    {
+		min_filter = VK_FILTER_LINEAR;
+		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	}
+    else {
+		ri.Error(ERR_FATAL, "vk_find_sampler: invalid gl_min_filter");
+	}
+
+	VkSamplerCreateInfo desc;
+	desc.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	desc.pNext = NULL;
+	desc.flags = 0;
+	desc.magFilter = mag_filter;
+	desc.minFilter = min_filter;
+	desc.mipmapMode = mipmap_mode;
+	desc.addressModeU = address_mode;
+	desc.addressModeV = address_mode;
+	desc.addressModeW = address_mode;
+	desc.mipLodBias = 0.0f;
+	desc.anisotropyEnable = VK_FALSE;
+	desc.maxAnisotropy = 1;
+	desc.compareEnable = VK_FALSE;
+	desc.compareOp = VK_COMPARE_OP_ALWAYS;
+	desc.minLod = 0.0f;
+	desc.maxLod = max_lod_0_25 ? 0.25f : 12.0f;
+	desc.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	desc.unnormalizedCoordinates = VK_FALSE;
+
+	VkSampler sampler;
+	VK_CHECK(qvkCreateSampler(vk.device, &desc, NULL, &sampler));
+
+	sampler_defs[num_samplers] = *def;
+	samplers[num_samplers] = sampler;
+	num_samplers++;
+	return sampler;
+}
+
+
+static void vk_update_descriptor_set( 
+        VkDescriptorSet set, VkImageView image_view, 
+        qboolean mipmap, qboolean repeat_texture )
+{
+	struct Vk_Sampler_Def sampler_def;
+    memset(&sampler_def, 0, sizeof(sampler_def));
+
+	sampler_def.repeat_texture = repeat_texture;
+	if (mipmap) {
+		sampler_def.gl_mag_filter = GL_LINEAR;
+		sampler_def.gl_min_filter = GL_LINEAR_MIPMAP_NEAREST;
+	} else {
+		sampler_def.gl_mag_filter = GL_LINEAR;
+		sampler_def.gl_min_filter = GL_LINEAR;
+	}
+
+	VkDescriptorImageInfo image_info;
+	image_info.sampler = vk_find_sampler(&sampler_def);
+	image_info.imageView = image_view;
+	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet descriptor_write;
+	descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptor_write.dstSet = set;
+	descriptor_write.dstBinding = 0;
+	descriptor_write.dstArrayElement = 0;
+	descriptor_write.descriptorCount = 1;
+	descriptor_write.pNext = NULL;
+	descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptor_write.pImageInfo = &image_info;
+	descriptor_write.pBufferInfo = NULL;
+	descriptor_write.pTexelBufferView = NULL;
+
+	qvkUpdateDescriptorSets(vk.device, 1, &descriptor_write, 0, NULL);
+}
+
+/*
+void resetImageSampler()
+{
+    int i = 0;
+    for (i = 0; i < num_samplers; i++)
+		qvkDestroySampler(vk.device, samplers[i], NULL);
+}
+*/
+
+void GL_TextureMode( const char *string )
+{
+	int i;
+
+	for ( i=0 ; i< 6 ; i++ ) {
+		if ( !Q_stricmp( modes[i].name, string ) ) {
+			break;
+		}
+	}
+
+	if ( i == 6 ) {
+		ri.Printf (PRINT_ALL, "bad filter name\n");
+		return;
+	}
+
+	// change all the existing mipmap texture objects
+	for ( i = 0 ; i < tr.numImages ; i++ )
 	{
-		scaled_width >>= 1;
-		scaled_height >>= 1;
+		image_t* glt = tr.images[ i ];
+		if ( glt->mipmap )
+		{
+			GL_Bind (glt);
+		}
 	}
 
-	upload_data.base_level_width = scaled_width;
-	upload_data.base_level_height = scaled_height;
+    // VULKAN
 
-	if (scaled_width == width && scaled_height == height && !mipmap)
+    VK_CHECK(qvkDeviceWaitIdle(vk.device));
+    for ( i = 0; i < tr.numImages; i++ )
     {
-		upload_data.mip_levels = 1;
-		upload_data.buffer_size = scaled_width * scaled_height * 4;
-		
-        memcpy(upload_data.buffer, data, upload_data.buffer_size);
-
-	    ri.Printf( PRINT_ALL, "gupload_data.buffer_size:  %d \n", upload_data.buffer_size );
-		if (resampled_buffer != NULL)
-			ri.Hunk_FreeTempMemory(resampled_buffer);
-		return upload_data;
-	}
-
-	// Use the normal mip-mapping to go down from [width, height] to [scaled_width, scaled_height] dimensions.
-	while (width > scaled_width || height > scaled_height)
-    {
-		R_MipMap((unsigned char *)data, width, height);
-
-		width >>= 1;
-		if (width < 1)
-            width = 1;
-
-		height >>= 1;
-		if (height < 1)
-            height = 1; 
-	}
-
-	// At this point width == scaled_width and height == scaled_height.
-
-    {
-        unsigned char* scaled_buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( sizeof( unsigned int ) * scaled_width * scaled_height );
-        
-        ri.Printf( PRINT_ALL, "scaled_buffer: Allocate %d byte Memory \n", sizeof( unsigned int ) * scaled_width * scaled_height );
-
-
-        memcpy(scaled_buffer, data, scaled_width * scaled_height * 4);
-        
-        R_LightScaleTexture(scaled_buffer, scaled_width, scaled_height, !mipmap);
-
-        int miplevel = 0;
-        int mip_level_size = scaled_width * scaled_height * 4;
-
-        memcpy(upload_data.buffer, scaled_buffer, mip_level_size);
-        upload_data.buffer_size = mip_level_size;
-
-        if (mipmap)
+        if (tr.images[i]->mipmap)
         {
-            while (scaled_width > 1 || scaled_height > 1) {
-                R_MipMap(scaled_buffer, scaled_width, scaled_height);
-
-                scaled_width >>= 1;
-                if (scaled_width < 1) scaled_width = 1;
-
-                scaled_height >>= 1;
-                if (scaled_height < 1) scaled_height = 1;
-
-                miplevel++;
-                mip_level_size = scaled_width * scaled_height * 4;
-
-                if ( r_colorMipLevels->integer ) {
-                    R_BlendOverTexture( scaled_buffer, scaled_width * scaled_height, mipBlendColors[miplevel] );
-                }
-
-                memcpy(upload_data.buffer + upload_data.buffer_size, scaled_buffer, mip_level_size);
-                upload_data.buffer_size += mip_level_size;
-            }
+            struct Vk_Image* image = &vk_world.images[i];
+            vk_update_descriptor_set(image->descriptor_set, image->view, qtrue, tr.images[i]->wrapClampMode == GL_REPEAT);
         }
-        upload_data.mip_levels = miplevel + 1;
-
-        ri.Hunk_FreeTempMemory(scaled_buffer);
-
-        ri.Printf( PRINT_ALL, "Freed \n");
-
     }
-
-
-    if (resampled_buffer != NULL)
-		ri.Hunk_FreeTempMemory(resampled_buffer);
-
-    return upload_data;
 }
-*/
+
+
+
 
 static void allocate_and_bind_image_memory(VkImage image)
 {
@@ -404,7 +302,7 @@ static void allocate_and_bind_image_memory(VkImage image)
 
 
 
-struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, qboolean repeat_texture)
+static struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, qboolean repeat_texture)
 {
 	struct Vk_Image image;
     ri.Printf(PRINT_DEVELOPER, "create image view\n");
@@ -476,8 +374,163 @@ struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_
 
 
 
+static void ensure_staging_buffer_allocation(VkDeviceSize size)
+{
+	if (vk_world.staging_buffer_size >= size)
+		return;
+
+	if (vk_world.staging_buffer != VK_NULL_HANDLE)
+		qvkDestroyBuffer(vk.device, vk_world.staging_buffer, NULL);
+
+	if (vk_world.staging_buffer_memory != VK_NULL_HANDLE)
+		qvkFreeMemory(vk.device, vk_world.staging_buffer_memory, NULL);
+
+	vk_world.staging_buffer_size = size;
+
+	VkBufferCreateInfo buffer_desc;
+	buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_desc.pNext = NULL;
+	buffer_desc.flags = 0;
+	buffer_desc.size = size;
+	buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	buffer_desc.queueFamilyIndexCount = 0;
+	buffer_desc.pQueueFamilyIndices = NULL;
+	VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &vk_world.staging_buffer));
+
+	VkMemoryRequirements memory_requirements;
+	qvkGetBufferMemoryRequirements(vk.device, vk_world.staging_buffer, &memory_requirements);
+
+	uint32_t memory_type = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	VkMemoryAllocateInfo alloc_info;
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.pNext = NULL;
+	alloc_info.allocationSize = memory_requirements.size;
+	alloc_info.memoryTypeIndex = memory_type;
+	VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &vk_world.staging_buffer_memory));
+	VK_CHECK(qvkBindBufferMemory(vk.device, vk_world.staging_buffer, vk_world.staging_buffer_memory, 0));
+
+	void* data;
+	VK_CHECK(qvkMapMemory(vk.device, vk_world.staging_buffer_memory, 0, VK_WHOLE_SIZE, 0, &data));
+	vk_world.staging_buffer_ptr = (byte*)data;
+}
+
+
+static void vk_upload_image_data(VkImage image, int width, int height, 
+        qboolean mipmap, const uint8_t* pixels, int bytes_per_pixel)
+{
+
+	VkBufferImageCopy regions[16];
+	int num_regions = 0;
+
+	int buffer_size = 0;
+
+	while (qtrue) {
+		VkBufferImageCopy region;
+		region.bufferOffset = buffer_size;
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.mipLevel = num_regions;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+		region.imageOffset.x = 0;
+        region.imageOffset.y = 0;
+		region.imageOffset.z = 0;
+
+        region.imageExtent.width = width;
+		region.imageExtent.height = height;
+        region.imageExtent.depth = 1;
+        
+		regions[num_regions] = region;
+		num_regions++;
+
+		buffer_size += width * height * bytes_per_pixel;
+
+		if (!mipmap || (width == 1 && height == 1))
+			break;
+
+		width >>= 1;
+		if (width < 1)
+            width = 1;
+
+		height >>= 1;
+		if (height < 1)
+            height = 1;
+	}
+
+	ensure_staging_buffer_allocation(buffer_size);
+	memcpy(vk_world.staging_buffer_ptr, pixels, buffer_size);
+
+	VkCommandBufferAllocateInfo alloc_info;
+	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	alloc_info.pNext = NULL;
+	alloc_info.commandPool = vk.command_pool;
+	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	alloc_info.commandBufferCount = 1;
+
+	VkCommandBuffer command_buffer;
+	VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
+
+	VkCommandBufferBeginInfo begin_info;
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	begin_info.pNext = NULL;
+	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	begin_info.pInheritanceInfo = NULL;
+
+
+	VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
+	
+    //// recorder(command_buffer);
+    //// recorder = [&image, &num_regions, &regions](VkCommandBuffer command_buffer)
+    {
+        VkCommandBuffer cb = command_buffer;
+            record_buffer_memory_barrier(cb, vk_world.staging_buffer,
+			VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+	    record_image_layout_transition(cb, image, VK_IMAGE_ASPECT_COLOR_BIT,
+            0, VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+	    qvkCmdCopyBufferToImage(cb, vk_world.staging_buffer, image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, num_regions, regions);
+
+	    record_image_layout_transition(cb, image,
+            VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+    ////////
+    
+    VK_CHECK(qvkEndCommandBuffer(command_buffer));
+
+	VkSubmitInfo submit_info;
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.pNext = NULL;
+	submit_info.waitSemaphoreCount = 0;
+	submit_info.pWaitSemaphores = NULL;
+	submit_info.pWaitDstStageMask = NULL;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &command_buffer;
+	submit_info.signalSemaphoreCount = 0;
+	submit_info.pSignalSemaphores = NULL;
+
+	VkResult res = qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE);	
+	if (res < 0) 
+		ri.Error(ERR_FATAL,
+        "vk_upload_image_data: error code %d returned by qvkQueueSubmit", res);
+
+
+    VK_CHECK(qvkQueueWaitIdle(vk.queue));
+	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
+}
+
+
 // VULKAN
-struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture)
+static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture)
 {
 	int w = upload_data->base_level_width;
 	int h = upload_data->base_level_height;
@@ -537,4 +590,157 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 		ri.Hunk_FreeTempMemory(buffer);
 
 	return image;
+}
+
+
+
+image_t* R_FindImageFile(const char *name, qboolean mipmap, 
+						qboolean allowPicmip, int glWrapClampMode)
+{
+	image_t* image;
+	int	width, height;
+	unsigned char* pic;
+
+	if (!name) {
+		return NULL;
+	}
+
+	int hash = generateHashValue(name);
+
+	// see if the image is already loaded
+
+	for (image=hashTable[hash]; image; image=image->next)
+	{
+		if ( !strcmp( name, image->imgName ) )
+		{
+			// the white image can be used with any set of parms,
+			// but other mismatches are errors
+			if ( strcmp( name, "*white" ) )
+			{
+				if ( image->mipmap != mipmap ) {
+					ri.Printf( PRINT_ALL, "WARNING: reused image %s with mixed mipmap parm\n", name );
+				}
+				if ( image->allowPicmip != allowPicmip ) {
+					ri.Printf( PRINT_ALL, "WARNING: reused image %s with mixed allowPicmip parm\n", name );
+				}
+				if ( image->wrapClampMode != glWrapClampMode ) {
+					ri.Printf( PRINT_ALL, "WARNING: reused image %s with mixed glWrapClampMode parm\n", name );
+				}
+			}
+			return image;
+		}
+	}
+
+	//
+	// load the pic from disk
+    //
+    R_LoadImage( name, &pic, &width, &height );
+	if (pic == NULL)
+	{
+        return NULL;
+    }
+
+	image = R_CreateImage( ( char * ) name, pic, width, height,
+							mipmap, allowPicmip, glWrapClampMode );
+	ri.Free( pic );
+	return image;
+}
+
+
+/*
+================
+R_CreateImage
+
+This is the only way any image_t are created
+================
+*/
+image_t *R_CreateImage( const char *name, const byte *pic, int width, int height,
+						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode )
+{
+	if (strlen(name) >= MAX_QPATH ) {
+		ri.Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
+	}
+
+	if ( tr.numImages == MAX_DRAWIMAGES ) {
+		ri.Error( ERR_DROP, "R_CreateImage: MAX_DRAWIMAGES hit\n");
+	}
+
+	// Create image_t object.
+	image_t* image = tr.images[tr.numImages] = (image_t*) ri.Hunk_Alloc( sizeof( image_t ), h_low );
+    image->index = tr.numImages;
+	image->texnum = 1024 + tr.numImages;
+	image->mipmap = mipmap;
+	image->allowPicmip = allowPicmip;
+	strcpy (image->imgName, name);
+	image->width = width;
+	image->height = height;
+	image->wrapClampMode = glWrapClampMode;
+
+	long hash = generateHashValue(name);
+	image->next = hashTable[hash];
+	hashTable[hash] = image;
+
+	tr.numImages++;
+
+	// Create corresponding GPU resource.
+	//qboolean isLightmap = (strncmp(name, "*lightmap", 9) == 0);
+	//GL_SelectTexture(isLightmap ? 1 : 0);
+	GL_Bind(image);
+	
+	struct Image_Upload_Data upload_data = generate_image_upload_data(pic, width, height, 
+		mipmap, allowPicmip);
+
+
+	// VULKAN
+
+	vk_world.images[image->index] = upload_vk_image(&upload_data, glWrapClampMode == GL_REPEAT);
+
+
+	ri.Hunk_FreeTempMemory(upload_data.buffer);
+	return image;
+}
+
+
+void R_InitImages( void )
+{
+    memset(hashTable, 0, sizeof(hashTable));
+    // important
+
+	// build brightness translation tables
+	R_SetColorMappings();
+
+	// create default texture and white texture
+	R_CreateBuiltinImages();
+}
+
+
+void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
+{
+    //ri.Printf(PRINT_ALL, "w=%d, h=%d, cols=%d, rows=%d, client=%d, dirty=%d\n", 
+    //       w, h, cols, rows, client, dirty);
+	GL_Bind( tr.scratchImage[client] );
+
+	// if the scratchImage isn't in the format we want, specify it as a new texture
+    if ( cols != tr.scratchImage[client]->width || 
+            rows != tr.scratchImage[client]->height )
+    {
+        tr.scratchImage[client]->width = tr.scratchImage[client]->uploadWidth = cols;
+        tr.scratchImage[client]->height = tr.scratchImage[client]->uploadHeight = rows;
+
+        // VULKAN
+        struct Vk_Image* pImage = &vk_world.images[tr.scratchImage[client]->index];
+        qvkDestroyImage(vk.device, pImage->handle, NULL);
+        qvkDestroyImageView(vk.device, pImage->view, NULL);
+        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
+        vk_world.images[tr.scratchImage[client]->index] = vk_create_image(cols, rows, VK_FORMAT_R8G8B8A8_UNORM, 1, 0);
+        vk_upload_image_data(pImage->handle, cols, rows, 0, data, 4);
+    }
+    else if (dirty)
+    {
+        // otherwise, just subimage upload it so that
+        // drivers can tell we are going to be changing
+        // it and don't try and do a texture compression       
+        vk_upload_image_data(vk_world.images[tr.scratchImage[client]->index].handle, cols, rows, 0, data, 4);
+    }
+
 }

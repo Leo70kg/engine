@@ -74,10 +74,9 @@ cvar_t	*r_ext_texture_env_add;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_logFile;
-
+cvar_t	*r_textureMode;
 cvar_t	*r_stereo;
 
-cvar_t	*r_drawBuffer;
 cvar_t	*r_lightmap;
 cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
@@ -92,7 +91,6 @@ cvar_t	*r_showtris;
 cvar_t	*r_showsky;
 cvar_t	*r_shownormals;
 cvar_t	*r_clear;
-cvar_t	*r_textureMode;
 cvar_t	*r_offsetFactor;
 cvar_t	*r_offsetUnits;
 cvar_t	*r_gamma;
@@ -103,9 +101,6 @@ cvar_t	*r_portalOnly;
 
 cvar_t	*r_subdivisions;
 cvar_t	*r_lodCurveError;
-
-
-
 
 cvar_t	*r_overBrightBits;
 cvar_t	*r_mapOverBrightBits;
@@ -199,14 +194,6 @@ void vulkanInfo_f( void )
 	// Info that doesn't depend on r_renderAPI
 	//
 
-	if (glConfig.deviceSupportsGamma) {
-		ri.Printf( PRINT_ALL, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
-	} 
-	else {
-		ri.Printf( PRINT_ALL, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
-	}
-
-	ri.Printf( PRINT_ALL, "texturemode: %s\n", r_textureMode->string );
 	ri.Printf( PRINT_ALL, "picmip: %d\n", r_picmip->integer );
 
 	if ( r_vertexLight->integer ) {
@@ -244,7 +231,7 @@ static void InitRenderAPI( void )
 	// print info
 	vulkanInfo_f();
 
-	GL_TextureMode( r_textureMode->string );
+	GL_TextureMode( r_textureMode->string);
 
 
 	//
@@ -715,7 +702,6 @@ void R_Register( void )
 	r_fastsky = ri.Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE );
 	r_inGameVideo = ri.Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE );
 	r_dynamiclight = ri.Cvar_Get( "r_dynamiclight", "1", CVAR_ARCHIVE );
-	r_textureMode = ri.Cvar_Get( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
 	r_gamma = ri.Cvar_Get( "r_gamma", "1", CVAR_ARCHIVE );
 	r_facePlaneCull = ri.Cvar_Get ("r_facePlaneCull", "1", CVAR_ARCHIVE );
 
@@ -725,7 +711,7 @@ void R_Register( void )
 
 	r_ambientScale = ri.Cvar_Get( "r_ambientScale", "0.6", CVAR_CHEAT );
 	r_directedScale = ri.Cvar_Get( "r_directedScale", "1", CVAR_CHEAT );
-
+    r_textureMode = ri.Cvar_Get( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
 	//
 	// temporary variables that can change at any time
 	//
@@ -761,7 +747,6 @@ void R_Register( void )
 	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_CHEAT);
 	r_offsetFactor = ri.Cvar_Get( "r_offsetfactor", "-1", CVAR_CHEAT );
 	r_offsetUnits = ri.Cvar_Get( "r_offsetunits", "-2", CVAR_CHEAT );
-	r_drawBuffer = ri.Cvar_Get( "r_drawBuffer", "GL_BACK", CVAR_CHEAT );
 	r_lockpvs = ri.Cvar_Get ("r_lockpvs", "0", CVAR_CHEAT);
 	r_noportals = ri.Cvar_Get ("r_noportals", "0", CVAR_CHEAT);
 	r_shadows = ri.Cvar_Get( "cg_shadows", "1", 0 );
@@ -810,15 +795,6 @@ void R_Init( void )
 	ri.Printf( PRINT_ALL, "----- R_Init -----\n" );
 
 
-    R_InitDisplayResolution();
-
-	//r_stereoSeparation = Cvar_Get( "r_stereoSeparation", "64", CVAR_ARCHIVE );
-    r_drawBuffer = ri.Cvar_Get( "r_drawBuffer", "GL_BACK", CVAR_CHEAT );
-    
-	//r_glDriver = Cvar_Get( "r_glDriver", OPENGL_DRIVER_NAME, CVAR_ARCHIVE | CVAR_LATCH );
-
-
-
 	// clear all our internal state
 	memset( &tr, 0, sizeof( tr ) );
 	memset( &backEnd, 0, sizeof( backEnd ) );
@@ -826,11 +802,9 @@ void R_Init( void )
 	memset( &vk_world, 0, sizeof( vk_world ) );
 
 	if ( (intptr_t)tess.xyz & 15 ) {
-		Com_Printf( "WARNING: tess.xyz not 16 byte aligned\n" );
+		ri.Printf( PRINT_ALL, "WARNING: tess.xyz not 16 byte aligned\n" );
 	}
 	memset( tess.constantColor255, 255, sizeof( tess.constantColor255 ) );
-
-
 
 	//
 	// init function tables
@@ -858,6 +832,8 @@ void R_Init( void )
 			tr.triangleTable[i] = -tr.triangleTable[i-FUNCTABLE_SIZE/2];
 		}
 	}
+
+    R_InitDisplayResolution();
 
 	R_InitFogTable();
 
@@ -899,7 +875,6 @@ void R_Init( void )
 
 	R_InitFreeType();
 
-
 	ri.Printf( PRINT_ALL, "----- R_Init finished -----\n" );
 }
 
@@ -917,8 +892,8 @@ void vk_release_resources(void)
 	if (vk_world.staging_buffer_memory != VK_NULL_HANDLE)
 		qvkFreeMemory(vk.device, vk_world.staging_buffer_memory, NULL);
 
-	for (int i = 0; i < vk_world.num_samplers; i++)
-		qvkDestroySampler(vk.device, vk_world.samplers[i], NULL);
+//    resetImageSampler();
+
 
 	for (int i = 0; i < vk_world.num_pipelines; i++)
 		qvkDestroyPipeline(vk.device, vk_world.pipelines[i], NULL);
@@ -961,6 +936,8 @@ void RE_Shutdown( qboolean destroyWindow )
 	ri.Cmd_RemoveCommand("shaderstate");
 	ri.Cmd_RemoveCommand("vkinfo");
     ri.Cmd_RemoveCommand("minimize");
+	ri.Cmd_RemoveCommand("displayResolutionList");
+
 
 	if ( tr.registered ) {
 		R_SyncRenderThread();

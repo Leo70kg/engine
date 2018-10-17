@@ -5,7 +5,7 @@
 
 
 #define MAX_SWAPCHAIN_IMAGES    8
-#define MAX_VK_SAMPLERS         32
+
 #define MAX_VK_PIPELINES        1024
 #define MAX_VK_IMAGES           2048 // should be the same as MAX_DRAWIMAGES
 
@@ -59,11 +59,6 @@ enum Vk_Depth_Range {
 	weapon // [0..0.3]
 };
 
-struct Vk_Sampler_Def {
-	VkBool32 repeat_texture; // clamp/repeat texture addressing mode
-	int gl_mag_filter; // GL_XXX mag filter
-	int gl_min_filter; // GL_XXX min filter
-};
 
 struct Vk_Pipeline_Def {
 	enum Vk_Shader_Type shader_type;
@@ -235,9 +230,6 @@ uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t memory_type
 //
 // Resources allocation.
 //
-struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, VkBool32 repeat_texture);
-void vk_upload_image_data(VkImage image, int width, int height, VkBool32 mipmap, const uint8_t* pixels, int bytes_per_pixel);
-void vk_update_descriptor_set(VkDescriptorSet set, VkImageView image_view, VkBool32 mipmap, VkBool32 repeat_texture);
 VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def);
 void init_vulkan_library(void);
 void deinit_vulkan_library(void);
@@ -351,10 +343,11 @@ struct Vk_World {
 	//
 	// Resources.
 	//
+/*
 	int num_samplers;
 	struct Vk_Sampler_Def sampler_defs[MAX_VK_SAMPLERS];
 	VkSampler samplers[MAX_VK_SAMPLERS];
-
+*/
 	int num_pipelines;
 	struct Vk_Pipeline_Def pipeline_defs[MAX_VK_PIPELINES];
 	VkPipeline pipelines[MAX_VK_PIPELINES];

@@ -1080,10 +1080,6 @@ extern	cvar_t	*r_singleShader;				// make most world faces use default shader
 extern	cvar_t	*r_roundImagesDown;
 extern	cvar_t	*r_colorMipLevels;				// development aid to see texture mip usage
 extern	cvar_t	*r_picmip;						// controls picmip values
-extern	cvar_t	*r_drawBuffer;
-extern  cvar_t  *r_glDriver;
-extern	cvar_t	*r_swapInterval;
-extern	cvar_t	*r_textureMode;
 extern	cvar_t	*r_offsetFactor;
 extern	cvar_t	*r_offsetUnits;
 
@@ -1158,7 +1154,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 ** GL wrapper/helper functions
 */
 void	GL_Bind( image_t *image );
-void	GL_TextureMode( const char *string );
+void	GL_TextureMode(const char *string);
 
 #define GLS_SRCBLEND_ZERO						0x00000001
 #define GLS_SRCBLEND_ONE						0x00000002
@@ -1591,6 +1587,7 @@ void R_LightScaleTexture (unsigned char* in, int inwidth, int inheight, qboolean
 void R_GammaCorrect( unsigned char *buffer, int bufSize );
 void R_SetColorMappings( void );
 
+
 void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight );
 void R_DisplayResolutionList_f(void);
 void R_GetModeInfo(unsigned int *width, unsigned int *height, float *windowAspect, int mode );
@@ -1605,7 +1602,6 @@ struct Image_Upload_Data {
 	int base_level_height;
 };
 
-struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture);
 struct Image_Upload_Data generate_image_upload_data(const unsigned char* data, int width, int height, qboolean mipmap, qboolean picmip);
 
 

@@ -1598,7 +1598,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/ResampleTexture.o \
   $(B)/renderer_vulkan/R_LightScaleTexture.o \
   $(B)/renderer_vulkan/generate_image_upload_data.o \
-  $(B)/renderer_vulkan/R_FindImageFile.o \
   \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
   $(B)/renderer_vulkan/vk_image.o \
@@ -1606,8 +1605,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/vk_frame.o \
   $(B)/renderer_vulkan/vk_read_pixels.o \
   $(B)/renderer_vulkan/vk_shade_geometry.o \
-  $(B)/renderer_vulkan/vk_upload_image_data.o \
-  $(B)/renderer_vulkan/vk_update_descriptor_set.o \
   $(B)/renderer_vulkan/vk_initialize.o \
   $(B)/renderer_vulkan/vk_bind_geometry.o \
   \
@@ -2745,7 +2742,7 @@ $(B)/$(MISSIONPACK)/qcommon/%.asm: $(CMDIR)/%.c $(Q3LCC)
 # MISC
 #############################################################################
 
-OBJ = $(Q3OBJ)  $(Q3ROBJ) $(Q3R2OBJ) $(Q3ROAOBJ) $(Q3DOBJ) $(JPGOBJ) \
+OBJ = $(Q3OBJ)  $(Q3ROBJ) $(Q3R2OBJ) $(Q3ROAOBJ) $(Q3MYDEVOBJ) $(Q3VKOBJ) $(Q3DOBJ) $(JPGOBJ) \
   $(MPGOBJ) $(Q3GOBJ) $(Q3CGOBJ) $(MPCGOBJ) $(Q3UIOBJ) $(MPUIOBJ) \
   $(MPGVMOBJ) $(Q3GVMOBJ) $(Q3CGVMOBJ) $(MPCGVMOBJ) $(Q3UIVMOBJ) $(MPUIVMOBJ)
 TOOLSOBJ = $(LBURGOBJ) $(Q3CPPOBJ) $(Q3RCCOBJ) $(Q3LCCOBJ) $(Q3ASMOBJ)
@@ -2862,7 +2859,6 @@ dist:
 
 ifneq ($(B),)
   OBJ_D_FILES=$(filter %.d,$(OBJ:%.o=%.d))
-  VKOBJ_D_FILES=$(filter %.d,$(VKOBJ:%.o=%.d))
   TOOLSOBJ_D_FILES=$(filter %.d,$(TOOLSOBJ:%.o=%.d))
   -include $(OBJ_D_FILES) $(TOOLSOBJ_D_FILES)
 endif

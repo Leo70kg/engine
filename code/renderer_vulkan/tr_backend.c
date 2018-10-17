@@ -324,36 +324,6 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
     RE_StretchPic(x, y, w, h,  0.5f / cols, 0.5f / rows,  1.0f - 0.5f / cols, 1.0f - 0.5 / rows, tr.cinematicShader->index);
 }
 
-void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
-{
-    //ri.Printf(PRINT_ALL, "w=%d, h=%d, cols=%d, rows=%d, client=%d, dirty=%d\n", 
-    //       w, h, cols, rows, client, dirty);
-	GL_Bind( tr.scratchImage[client] );
-
-	// if the scratchImage isn't in the format we want, specify it as a new texture
-    if ( cols != tr.scratchImage[client]->width || 
-            rows != tr.scratchImage[client]->height )
-    {
-        tr.scratchImage[client]->width = tr.scratchImage[client]->uploadWidth = cols;
-        tr.scratchImage[client]->height = tr.scratchImage[client]->uploadHeight = rows;
-
-        // VULKAN
-        struct Vk_Image* pImage = &vk_world.images[tr.scratchImage[client]->index];
-        qvkDestroyImage(vk.device, pImage->handle, NULL);
-        qvkDestroyImageView(vk.device, pImage->view, NULL);
-        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
-        vk_world.images[tr.scratchImage[client]->index] = vk_create_image(cols, rows, VK_FORMAT_R8G8B8A8_UNORM, 1, 0);
-        vk_upload_image_data(pImage->handle, cols, rows, 0, data, 4);
-    }
-    else if (dirty)
-    {
-        // otherwise, just subimage upload it so that
-        // drivers can tell we are going to be changing
-        // it and don't try and do a texture compression       
-        vk_upload_image_data(vk_world.images[tr.scratchImage[client]->index].handle, cols, rows, 0, data, 4);
-    }
-
-}
 
 
 /*
