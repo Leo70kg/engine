@@ -7,6 +7,19 @@ typedef struct {
 	int	minimize, maximize;
 } textureMode_t;
 
+
+struct Vk_Sampler_Def
+{
+	VkBool32 repeat_texture; // clamp/repeat texture addressing mode
+	int gl_mag_filter; // GL_XXX mag filter
+	int gl_min_filter; // GL_XXX min filter
+};
+
+
+
+
+
+
 const static textureMode_t modes[] = {
 	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
 	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},
@@ -17,14 +30,8 @@ const static textureMode_t modes[] = {
 };
 
 
-struct Vk_Sampler_Def
-{
-	VkBool32 repeat_texture; // clamp/repeat texture addressing mode
-	int gl_mag_filter; // GL_XXX mag filter
-	int gl_min_filter; // GL_XXX min filter
-};
 
-#define MAX_VK_SAMPLERS         32
+#define MAX_VK_SAMPLERS     32
 static int num_samplers = 0;
 static struct Vk_Sampler_Def sampler_defs[MAX_VK_SAMPLERS] = {0};
 static VkSampler samplers[MAX_VK_SAMPLERS] = {0};
@@ -55,7 +62,7 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 	// Create new sampler.
 	if (num_samplers >= MAX_VK_SAMPLERS)
     {
-		ri.Error(ERR_DROP, "vk_find_sampler: MAX_VK_SAMPLERS hit\n");
+		ri.Error(ERR_DROP, "MAX_VK_SAMPLERS hit\n");
 	}
 
 	VkSamplerAddressMode address_mode = def->repeat_texture ?
@@ -72,7 +79,7 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 	}
     else
     {
-		ri.Error(ERR_FATAL, "vk_find_sampler: invalid gl_mag_filter");
+		ri.Error(ERR_FATAL, "invalid gl_mag_filter");
 	}
 
 	VkFilter min_filter;
@@ -110,7 +117,7 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	}
     else {
-		ri.Error(ERR_FATAL, "vk_find_sampler: invalid gl_min_filter");
+		ri.Error(ERR_FATAL, "invalid gl_min_filter");
 	}
 
 	VkSamplerCreateInfo desc;
@@ -511,7 +518,7 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 	int h = upload_data->base_level_height;
 
 
-	byte* buffer = upload_data->buffer;
+	unsigned char* buffer = upload_data->buffer;
 	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 	int bytes_per_pixel = 4;
 /*
@@ -530,7 +537,6 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 		format = has_alpha ? VK_FORMAT_B4G4R4A4_UNORM_PACK16 : VK_FORMAT_A1R5G5B5_UNORM_PACK16;
 		bytes_per_pixel = 2;
 	}
-*/
 	if (format == VK_FORMAT_A1R5G5B5_UNORM_PACK16) {
 		uint16_t* p = (uint16_t*)buffer;
 		for (int i = 0; i < upload_data->buffer_size; i += 4, p++) {
@@ -557,6 +563,7 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 				((uint32_t)((b/255.0) * 15.0 + 0.5) << 12);
 		}
 	}
+*/
 
 	struct Vk_Image image = vk_create_image(w, h, format, upload_data->mip_levels, repeat_texture);
 	vk_upload_image_data(image.handle, w, h, upload_data->mip_levels > 1, buffer, bytes_per_pixel);
@@ -568,6 +575,20 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 }
 
 
+void destroyImage(void)
+{
+    int i = 0; 
+	for (i = 0; i < MAX_VK_IMAGES; i++)
+    {
+		struct Vk_Image* image = &vk_world.images[i];
+
+		if (image->handle != VK_NULL_HANDLE)
+        {
+			qvkDestroyImage(vk.device, image->handle, NULL);
+			qvkDestroyImageView(vk.device, image->view, NULL);
+		}
+	}
+}
 
 void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
 {

@@ -255,7 +255,7 @@ static glyphInfo_t *RE_ConstructGlyphInfo(unsigned char *imageOut, int *xOut, in
 						*_dst = 0xff;
 					}
 					mask >>= 1;
-        
+
 					if ( mask == 0 ) {
 						mask = 0x80;
 					}
@@ -264,11 +264,10 @@ static glyphInfo_t *RE_ConstructGlyphInfo(unsigned char *imageOut, int *xOut, in
 
 				src += glyph.pitch;
 				dst += 256;
-
 			}
 		} else {
 	    for (i = 0; i < glyph.height; i++) {
-		    Com_Memcpy(dst, src, glyph.pitch);
+		    memcpy(dst, src, glyph.pitch);
 			  src += glyph.pitch;
 				dst += 256;
 	    }
@@ -520,7 +519,8 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font) {
 
 
 
-void R_InitFreeType() {
+void R_InitFreeType()
+{
 #ifdef BUILD_FREETYPE
   if (FT_Init_FreeType( &ftLibrary )) {
     ri.Printf(PRINT_ALL, "R_InitFreeType: Unable to initialize FreeType.\n");

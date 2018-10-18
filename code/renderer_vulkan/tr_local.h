@@ -1075,7 +1075,7 @@ extern cvar_t	*r_ext_texenv_op;
 extern cvar_t	*r_ext_compiled_vertex_array;
 extern cvar_t	*r_ext_texture_env_add;
 
-extern	cvar_t	*r_nobind;						// turns off binding to appropriate textures
+
 extern	cvar_t	*r_singleShader;				// make most world faces use default shader
 extern	cvar_t	*r_roundImagesDown;
 extern	cvar_t	*r_colorMipLevels;				// development aid to see texture mip usage
@@ -1575,7 +1575,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
 int SetWindowMode(glconfig_t *config, int mode, qboolean fullscreen );
 
-void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );
+//void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );
 image_t* R_FindImageFile(const char *name, qboolean mipmap, 
 						qboolean allowPicmip, int glWrapClampMode);
 
@@ -1583,10 +1583,11 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode );
 
 
-void R_LightScaleTexture (unsigned char* in, int inwidth, int inheight, qboolean only_gamma );
+void R_LightScaleTexture (unsigned char* in, int inwidth, int inheight, int only_gamma );
 void R_GammaCorrect( unsigned char *buffer, int bufSize );
 void R_SetColorMappings( void );
 
+void R_MipMap (unsigned char *in, int width, int height);
 
 void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight );
 void R_DisplayResolutionList_f(void);
@@ -1594,8 +1595,9 @@ void R_GetModeInfo(unsigned int *width, unsigned int *height, float *windowAspec
 void R_InitDisplayResolution( void );
 void R_CreateBuiltinImages(void);
 
-struct Image_Upload_Data {
-	byte* buffer;
+struct Image_Upload_Data
+{
+	unsigned char* buffer;
 	int buffer_size;
 	int mip_levels;
 	int base_level_width;
@@ -1603,6 +1605,10 @@ struct Image_Upload_Data {
 };
 
 struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture);
+void generate_image_upload_data(struct Image_Upload_Data* upload_data, const unsigned char* data,
+        int width, int height, qboolean mipmap, qboolean picmip);
+
+void destroyImage(void);
 
 
 

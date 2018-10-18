@@ -151,7 +151,7 @@
   r_norefresh;                      - bypasses the ref rendering
   r_drawBuffer
   
-
+  r_nobind                          - turns off binding to appropriate textures
   r_zProj                           - distance of observer camera to projection
                                       plane in quake3 standard units
   r_greyscale                       - desaturate textures, useful for anaglyph,

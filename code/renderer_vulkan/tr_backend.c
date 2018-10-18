@@ -34,27 +34,18 @@ static float fast_sky_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 #endif
 
 
-/*
-** GL_Bind
-*/
-void GL_Bind( image_t *image ) {
-    image_t* final_image = image;
 
-
-	if ( r_nobind->integer && tr.dlightImage ) {		// performance evaluation option
-		final_image = tr.dlightImage;
-	}
-
-    int texnum = final_image->texnum;
-
-	if ( glState.currenttextures[glState.currenttmu] != texnum )
+void GL_Bind( image_t *image )
+{
+	if ( glState.currenttextures[glState.currenttmu] != image->texnum )
     {
-		image->frameUsed = tr.frameCount;
-		glState.currenttextures[glState.currenttmu] = texnum;
+		glState.currenttextures[glState.currenttmu] = image->texnum;
+
+        image->frameUsed = tr.frameCount;
 
 		// VULKAN
-		VkDescriptorSet set = vk_world.images[final_image->index].descriptor_set;
-		vk_world.current_descriptor_sets[glState.currenttmu] = set;
+		vk_world.current_descriptor_sets[glState.currenttmu] = 
+            vk_world.images[image->index].descriptor_set ;
 	}
 }
 

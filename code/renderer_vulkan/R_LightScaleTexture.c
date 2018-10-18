@@ -67,6 +67,7 @@ void R_SetColorMappings( void )
 
 	shift = tr.overbrightBits;
 
+
 	for ( i = 0; i < 256; i++ ) {
 		if ( g == 1 ) {
 			inf = i;
@@ -77,11 +78,13 @@ void R_SetColorMappings( void )
 		if (inf < 0) {
 			inf = 0;
 		}
-		if (inf > 255) {
+        else if (inf > 255) {
 			inf = 255;
 		}
 		s_gammatable[i] = inf;
 	}
+
+
 
 	for (i=0 ; i<256 ; i++) {
 		j = i * r_intensity->value;
@@ -98,20 +101,22 @@ void R_SetColorMappings( void )
 }
 
 
+
 /*
 ================
 Scale up the pixel values in a texture to increase the
 lighting range
 ================
 */
-void R_LightScaleTexture (unsigned char*in, int inwidth, int inheight, qboolean only_gamma )
+void R_LightScaleTexture (unsigned char*in, int inwidth, int inheight, int only_gamma )
 {
-	if ( only_gamma )
+    int	i;
+	int N = inwidth*inheight;
+	
+    if ( only_gamma )
 	{
 		if ( !glConfig.deviceSupportsGamma )
 		{
-			int	i, N = inwidth*inheight;
-
 			for (i=0; i < N; )
 			{
 				in[i] = s_gammatable[in[i]];
@@ -125,9 +130,6 @@ void R_LightScaleTexture (unsigned char*in, int inwidth, int inheight, qboolean 
 	}
 	else
 	{
-		int	i;
-		int N = inwidth*inheight;
-
 		if ( glConfig.deviceSupportsGamma )
 		{
 			for (i=0; i<N; )

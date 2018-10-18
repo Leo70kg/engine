@@ -82,7 +82,6 @@ cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
 cvar_t	*r_shadows;
 
-cvar_t	*r_nobind;
 cvar_t	*r_singleShader;
 cvar_t	*r_roundImagesDown;
 cvar_t	*r_colorMipLevels;
@@ -740,7 +739,6 @@ void R_Register( void )
 	r_verbose = ri.Cvar_Get( "r_verbose", "0", CVAR_CHEAT );
 	r_logFile = ri.Cvar_Get( "r_logFile", "0", CVAR_CHEAT );
 	r_debugSurface = ri.Cvar_Get ("r_debugSurface", "0", CVAR_CHEAT);
-	r_nobind = ri.Cvar_Get ("r_nobind", "0", CVAR_CHEAT);
 	r_showtris = ri.Cvar_Get ("r_showtris", "0", CVAR_CHEAT);
 	r_showsky = ri.Cvar_Get ("r_showsky", "0", CVAR_CHEAT);
 	r_shownormals = ri.Cvar_Get ("r_shownormals", "0", CVAR_CHEAT);
@@ -900,16 +898,8 @@ void vk_release_resources(void)
 
 	vk_world.pipeline_create_time = 0.0f;
 
-	for (int i = 0; i < MAX_VK_IMAGES; i++)
-    {
-		struct Vk_Image* image = &vk_world.images[i];
-
-		if (image->handle != VK_NULL_HANDLE)
-        {
-			qvkDestroyImage(vk.device, image->handle, NULL);
-			qvkDestroyImageView(vk.device, image->view, NULL);
-		}
-	}
+    
+    destroyImage();
 
 	memset(&vk_world, 0, sizeof(vk_world));
 

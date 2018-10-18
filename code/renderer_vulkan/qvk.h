@@ -71,15 +71,6 @@ struct Vk_Pipeline_Def {
 	enum Vk_Shadow_Phase shadow_phase;
 };
 
-struct Vk_Image {
-	VkImage handle;
-	VkImageView view;
-
-	// Descriptor set that contains single descriptor used to access the given image.
-	// It is updated only once during image initialization.
-	VkDescriptorSet descriptor_set;
-};
-
 
 
 // Most of the renderer's code uses Vulkan API via function provides in this file but 
@@ -335,6 +326,15 @@ struct Vk_Instance {
 struct Chunk {
 	VkDeviceMemory memory;
 	VkDeviceSize used;
+};
+
+struct Vk_Image {
+	VkImage handle;
+	VkImageView view;
+
+	// Descriptor set that contains single descriptor used to access the given image.
+	// It is updated only once during image initialization.
+	VkDescriptorSet descriptor_set;
 };
 
 // Vk_World contains vulkan resources/state requested by the game code.
