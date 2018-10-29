@@ -258,7 +258,8 @@ uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t memory_type
 
 
 
-void vk_shutdown() {
+void vk_shutdown()
+{
 	qvkDestroyImage(vk.device, vk.depth_image, NULL);
 	qvkFreeMemory(vk.device, vk.depth_image_memory, NULL);
 	qvkDestroyImageView(vk.device, vk.depth_image_view, NULL);
@@ -886,3 +887,39 @@ void vk_initialize(void)
 	}
 	vk.active = qtrue;
 }
+
+
+void vk_release_resources(void)
+{
+	qvkDeviceWaitIdle(vk.device);
+
+	for (int i = 0; i < vk_world.num_image_chunks; i++)
+		qvkFreeMemory(vk.device, vk_world.image_chunks[i].memory, NULL);
+
+	if (vk_world.staging_buffer != VK_NULL_HANDLE)
+		qvkDestroyBuffer(vk.device, vk_world.staging_buffer, NULL);
+
+	if (vk_world.staging_buffer_memory != VK_NULL_HANDLE)
+		qvkFreeMemory(vk.device, vk_world.staging_buffer_memory, NULL);
+
+	for (int i = 0; i < vk_world.num_pipelines; i++)
+		qvkDestroyPipeline(vk.device, vk_world.pipelines[i], NULL);
+
+    myResetImageSampler();
+	
+    
+    vk_world.pipeline_create_time = 0.0f;
+
+    
+    myDestroyImage();
+
+	memset(&vk_world, 0, sizeof(vk_world));
+
+	VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
+
+	// Reset geometry buffer's current offsets.
+	vk.xyz_elements = 0;
+	vk.color_st_elements = 0;
+	vk.index_buffer_offset = 0;
+}
+

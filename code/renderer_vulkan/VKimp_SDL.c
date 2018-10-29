@@ -31,7 +31,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #else
 	#include <SDL2/SDL.h>
     #include <SDL2/SDL_syswm.h>
-    #include "vulkan/vulkan.h"
     #include <SDL2/SDL_vulkan.h>
 #endif
 
@@ -271,6 +270,39 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 
 
 
+void checkInstanceExt(void)
+{
+	// check extensions availability
+	unsigned int nInsExt = 0;
+    
+	VK_CHECK( qvkEnumerateInstanceExtensionProperties( NULL, &nInsExt, NULL) );
+
+    if (nInsExt > 0)
+    {
+		ri.Printf(PRINT_ALL, "total %d instance extensions.\n", nInsExt);
+
+        VkExtensionProperties *pInsExt = (VkExtensionProperties *)
+            malloc(sizeof(VkExtensionProperties) * nInsExt);
+
+        VK_CHECK(qvkEnumerateInstanceExtensionProperties( NULL, &nInsExt, pInsExt));
+            
+        unsigned int i = 0;
+        for (i = 0; i < nInsExt; i++)
+        {
+            //ri.Printf(PRINT_ALL, "%s\n", pInsExt[i].extensionName );
+            
+            strcat(glConfig.extensions_string, pInsExt[i].extensionName);
+            strcat(glConfig.extensions_string, "\n");
+        }
+            
+        free(pInsExt);
+    }
+
+}
+
+
+
+
 void VKimp_CreateInstance(void)
 {
     ri.Printf(PRINT_ALL, "...VKimp_CreateInstance...\n");
@@ -279,10 +311,10 @@ void VKimp_CreateInstance(void)
 	memset(&appInfo, 0, sizeof(appInfo));
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = "OpenArena";
-	appInfo.applicationVersion = 1;
+	appInfo.applicationVersion = VK_MAKE_VERSION(1, 1, 0);
 	appInfo.pEngineName = "OpenArena";
-	appInfo.engineVersion = 1;
-	appInfo.apiVersion = VK_API_VERSION_1_0;
+	appInfo.engineVersion = VK_MAKE_VERSION(1, 1, 0);
+	appInfo.apiVersion = VK_MAKE_VERSION(1, 1, 0);
 
 	VkInstanceCreateInfo instanceCreateInfo;
 	memset(&instanceCreateInfo, 0, sizeof(instanceCreateInfo));
@@ -320,6 +352,10 @@ void VKimp_CreateInstance(void)
 	instanceCreateInfo.enabledLayerCount = 1;
 	instanceCreateInfo.ppEnabledLayerNames = &validation_layer_name;
 #endif
+
+
+    checkInstanceExt();
+
 
     VkResult e = qvkCreateInstance(&instanceCreateInfo, NULL, &vk.instance);
     if(!e)
@@ -435,9 +471,6 @@ void VKimp_Shutdown( void )
 {
     ri.Printf(PRINT_ALL, "Shutting down Vulkan subsystem...\n");
 
-    
-
-    
     //Sys_UnloadLibrary(vk_library_handle);
 	
     memset(&glConfig, 0, sizeof(glConfig));

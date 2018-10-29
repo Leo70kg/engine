@@ -196,5 +196,6 @@ gprof openarena.x86_64 gmon.out > report.txt
 * have small issues with \minimize when use vulkan renderer.
 * E_AddRefEntityToScene passed a refEntity which has an origin with a NaN component
 * Unpure client detected. Invalid .PK3 files referenced!
+* VK_ERROR_OUT_OF_DEVICE_MEMORY returned by qvkAllocateDescriptorSets(vk.device, &desc, &image.descriptor_set)
 
 

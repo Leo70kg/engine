@@ -188,16 +188,21 @@ void vulkanInfo_f( void )
     ri.Printf(PRINT_ALL, "Vk device type: %s\n", device_type);
     ri.Printf(PRINT_ALL, "Vk device name: %s\n", props.deviceName);
 
+	if ( r_vertexLight->integer ) {
+		ri.Printf( PRINT_ALL, "HACK: using vertex lightmap approximation\n" );
+	}
+
+
+    ri.Printf(PRINT_ALL, "Vk instance extensions: \n%s\n",
+            glConfig.extensions_string);
+
 
 	//
 	// Info that doesn't depend on r_renderAPI
 	//
 
-	ri.Printf( PRINT_ALL, "picmip: %d\n", r_picmip->integer );
+	ri.Printf( PRINT_ALL, "picmip: %d\n\n", r_picmip->integer );
 
-	if ( r_vertexLight->integer ) {
-		ri.Printf( PRINT_ALL, "HACK: using vertex lightmap approximation\n" );
-	}
 }
 
 /*
@@ -873,43 +878,10 @@ void R_Init( void )
 
 	R_InitFreeType();
 
-	ri.Printf( PRINT_ALL, "----- R_Init finished -----\n" );
+    ri.Printf( PRINT_ALL, "----- R_Init finished -----\n" );
 }
 
 
-void vk_release_resources(void)
-{
-	qvkDeviceWaitIdle(vk.device);
-
-	for (int i = 0; i < vk_world.num_image_chunks; i++)
-		qvkFreeMemory(vk.device, vk_world.image_chunks[i].memory, NULL);
-
-	if (vk_world.staging_buffer != VK_NULL_HANDLE)
-		qvkDestroyBuffer(vk.device, vk_world.staging_buffer, NULL);
-
-	if (vk_world.staging_buffer_memory != VK_NULL_HANDLE)
-		qvkFreeMemory(vk.device, vk_world.staging_buffer_memory, NULL);
-
-//    resetImageSampler();
-
-
-	for (int i = 0; i < vk_world.num_pipelines; i++)
-		qvkDestroyPipeline(vk.device, vk_world.pipelines[i], NULL);
-
-	vk_world.pipeline_create_time = 0.0f;
-
-    
-    destroyImage();
-
-	memset(&vk_world, 0, sizeof(vk_world));
-
-	VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
-
-	// Reset geometry buffer's current offsets.
-	vk.xyz_elements = 0;
-	vk.color_st_elements = 0;
-	vk.index_buffer_offset = 0;
-}
 
 
 void RE_Shutdown( qboolean destroyWindow )
@@ -936,13 +908,15 @@ void RE_Shutdown( qboolean destroyWindow )
 
 	R_DoneFreeType();
 
+    vk_release_resources();
+
 	// VULKAN
     // Releases vulkan resources allocated during program execution.
     // This effectively puts vulkan subsystem into initial state 
     // (the state we have after vk_initialize call).
-    vk_release_resources();
     if (destroyWindow)
     {
+
         vk_shutdown();
         VKimp_Shutdown();
     }

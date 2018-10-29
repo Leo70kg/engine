@@ -64,81 +64,101 @@ const static int numImageLoaders = 6;
 static void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height )
 {
 
-	qboolean orgNameFailed = qfalse;
 	int orgLoader = -1;
 	int i;
-	char localName[ MAX_QPATH ] = {0};
+	char localName[ 128 ] = {0};
+    //int len = strlen(name);
+	
+    const char* pSrc = name;
+    char* pDst = localName;
+    //char* dot = NULL;
+    char* pExt = NULL;
+    //char* slash = NULL;
 
-	*pic = NULL;
+    *pic = NULL;
 	*width = 0;
 	*height = 0;
 
-	Q_strncpyz( localName, name, MAX_QPATH );
 
-	const char *ext = getExtension( localName );
+    char c;
 
-
-	if( *ext )
+    // copy name to localName
+    while((c =  *pDst++ = *pSrc++) )
+    {
+        if(c == '.')
+            pExt = pDst;
+//        else if(c == '/')
+//            slash = pDst-1;
+    }
+    
+	if( pExt != NULL )
 	{
 		// Look for the correct loader and use it
 		for( i = 0; i < numImageLoaders; i++ )
 		{
-			if( !Q_stricmp( ext, imageLoaders[ i ].ext ) )
+			if( !Q_stricmp( pExt, imageLoaders[ i ].ext ) )
 			{
+                orgLoader = i;
+
 				// Load
 				imageLoaders[ i ].ImageLoader( localName, pic, width, height );
-				if( *pic == NULL )
+				if( *pic != NULL )
                 {
                     // Something loaded
 				    return;
                 }
 			}
 		}
+  
+		// Loader failed, most likely because the file isn't there;
+        // Try and find a suitable match using all the image formats supported
 
-		// A loader was found
-		if( i < numImageLoaders )
-		{
-			if( *pic == NULL )
-			{
-				// Loader failed, most likely because the file isn't there;
-				// try again without the extension
-				orgNameFailed = qtrue;
-				orgLoader = i;
-				stripExtension( name, localName, MAX_QPATH );
-			}
-			else
-			{
-			}
-		}
-	}
-    else
-    {
         for( i = 0; i < numImageLoaders; i++ )
 	    {
-		    if (i == orgLoader)
-			    continue;
+            if (i == orgLoader)
+                continue;
 
-            char *altName = va( "%s.%s", localName, imageLoaders[ i ].ext );
+            strcpy(pExt, imageLoaders[ i ].ext);
 
             // Load
-            imageLoaders[ i ].ImageLoader( altName, pic, width, height );
+            imageLoaders[ i ].ImageLoader( localName, pic, width, height );
 
-            if( *pic )
+            if( *pic != NULL )
             {
-                if( orgNameFailed )
-                {
-                    ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n",name, altName );
-                }
-
-                break;
+                // Something loaded
+                //ri.Printf( PRINT_WARNING, "%s not present, using %s instead\n", name, localName );
+                return;
             }
         }
-    
+
+        ri.Printf( PRINT_WARNING, "%s not present\n", localName );
+
     }
+    else
+    {
+          
+        // Try and find a suitable match using all the image formats supported
+        *(pDst-1) = '.';
+
+        for( i = 0; i < numImageLoaders; i++ )
+	    {
+            strcpy(pDst, imageLoaders[ i ].ext);
+            // Load
+            imageLoaders[ i ].ImageLoader( localName, pic, width, height );
+
+            if( *pic != NULL )
+            {
+                ri.Printf( PRINT_WARNING, "%s without a extension, using %s instead. \n",
+                        name, localName);
+                return;
+            }
+        }
+    }
+
+    ri.Printf( PRINT_WARNING, "%s not present.\n", name);
+
+    // try again without the extension
     
-    ri.Printf( PRINT_WARNING, "WARNING: %s not present\n", name);
-	// Try and find a suitable match using all
-	// the image formats supported
 }
 
 /*
@@ -159,6 +179,7 @@ static void R_LoadImage(const char *name, unsigned char **pic, int *width, int *
 image_t* R_FindImageFile(const char *name, qboolean mipmap, 
 						qboolean allowPicmip, int glWrapClampMode)
 {
+
 	image_t* image;
 	int	width, height;
 	unsigned char* pic;

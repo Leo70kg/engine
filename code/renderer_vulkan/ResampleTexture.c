@@ -25,7 +25,6 @@ void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *out, in
 	if (outwidth>2048)
 		ri.Error(ERR_DROP, "ResampleTexture: max width");
 	
-	ri.Printf( PRINT_ALL, "inwidth: %d, inheight: %d\n", inwidth, inheight );
 
 	fracstep = inwidth*0x10000/outwidth;
 
@@ -55,4 +54,8 @@ void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *out, in
 			((unsigned char *)(out+j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3])>>2;
 		}
 	}
+
+    ri.Printf( PRINT_ALL, "ResampleTexture, inwidth: %d, inheight: %d, outwidth: %d, outheight: %d\n",
+                inwidth, inheight, outwidth, outheight );
+
 }

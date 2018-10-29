@@ -199,7 +199,7 @@ void vk_initialize(void);
 void vk_shutdown(void);
 
 
-//void vk_release_resources(void);
+
 
 //void vk_create_instance(void);
 //void vk_create_device(void);

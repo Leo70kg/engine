@@ -633,7 +633,7 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 			}
 			else
 			{
-				stage->bundle[0].image[0] = R_FindImageFile(token, (qboolean) !shader.noMipMaps, (qboolean)!shader.noPicMip, GL_REPEAT);
+				stage->bundle[0].image[0] = R_FindImageFile(token, !shader.noMipMaps, !shader.noPicMip, GL_REPEAT);
 				if ( !stage->bundle[0].image[0] )
 				{
 					ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -2266,14 +2266,20 @@ Will always return a valid shader, but it might be the
 default shader if the real one can't be found.
 ==================
 */
-shader_t *R_FindShaderByName( const char *name ) {
-	char		strippedName[MAX_QPATH];
+shader_t *R_FindShaderByName( const char *name )
+{
+
+    
+    char		strippedName[MAX_QPATH];
 	int			hash;
 	shader_t	*sh;
 
 	if ( (name==NULL) || (name[0] == 0) ) {  // bk001205
 		return tr.defaultShader;
 	}
+
+    ri.Printf( PRINT_ALL, "Trying to find %s\n", name );
+
 
 	stripExtension( name, strippedName, sizeof(strippedName) );
 

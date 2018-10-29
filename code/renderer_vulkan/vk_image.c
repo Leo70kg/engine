@@ -34,7 +34,7 @@ const static textureMode_t modes[] = {
 #define MAX_VK_SAMPLERS     32
 static int num_samplers = 0;
 static struct Vk_Sampler_Def sampler_defs[MAX_VK_SAMPLERS] = {0};
-static VkSampler samplers[MAX_VK_SAMPLERS] = {0};
+static VkSampler imgSamplers[MAX_VK_SAMPLERS] = {0};
 
 
 
@@ -55,7 +55,7 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 			( sampler_defs[i].gl_mag_filter == def->gl_mag_filter) && 
 			( sampler_defs[i].gl_min_filter == def->gl_min_filter) )
 		{
-			return samplers[i];
+			return imgSamplers[i];
 		}
 	}
 
@@ -144,7 +144,7 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 	VK_CHECK(qvkCreateSampler(vk.device, &desc, NULL, &sampler));
 
 	sampler_defs[num_samplers] = *def;
-	samplers[num_samplers] = sampler;
+	imgSamplers[num_samplers] = sampler;
 	num_samplers++;
 	return sampler;
 }
@@ -186,14 +186,20 @@ static void vk_update_descriptor_set(
 	qvkUpdateDescriptorSets(vk.device, 1, &descriptor_write, 0, NULL);
 }
 
-/*
-void resetImageSampler()
+
+void myResetImageSampler()
 {
     int i = 0;
     for (i = 0; i < num_samplers; i++)
-		qvkDestroySampler(vk.device, samplers[i], NULL);
+        if(imgSamplers[i] != VK_NULL_HANDLE)
+        {
+		    qvkDestroySampler(vk.device, imgSamplers[i], NULL);
+            imgSamplers[i] = VK_NULL_HANDLE;
+        }
+
+    num_samplers = 0;
 }
-*/
+
 
 void GL_TextureMode( const char *string )
 {
@@ -227,14 +233,75 @@ void GL_TextureMode( const char *string )
     {
         if (tr.images[i]->mipmap)
         {
-            struct Vk_Image* image = &vk_world.images[i];
-            vk_update_descriptor_set(image->descriptor_set, image->view, qtrue, tr.images[i]->wrapClampMode == GL_REPEAT);
+            vk_update_descriptor_set(vk_world.images[i].descriptor_set, vk_world.images[i].view, qtrue, tr.images[i]->wrapClampMode == GL_REPEAT);
         }
     }
 }
 
 
+/*
 
+static void allocate_and_bind_image_memory(VkImage image)
+{
+    int i = 0;
+	VkMemoryRequirements memory_requirements;
+	qvkGetImageMemoryRequirements(vk.device, image, &memory_requirements);
+
+	if (memory_requirements.size > IMAGE_CHUNK_SIZE) {
+		ri.Error(ERR_FATAL, "Vulkan: could not allocate memory, image is too large.");
+	}
+
+	struct Chunk* chunk = NULL;
+
+	// Try to find an existing chunk of sufficient capacity.
+	long mask = ~(memory_requirements.alignment - 1);
+	
+    for (i = 0; i < vk_world.num_image_chunks; i++)
+    {
+		// ensure that memory region has proper alignment
+		VkDeviceSize offset = (vk_world.image_chunks[i].used + memory_requirements.alignment - 1) & mask;
+
+		if (offset + memory_requirements.size <= IMAGE_CHUNK_SIZE)
+        {
+			chunk = &vk_world.image_chunks[i];
+			chunk->used = offset + memory_requirements.size;
+			break;
+		}
+	}
+
+
+	// Allocate a new chunk in case we couldn't find suitable existing chunk.
+	if (chunk == NULL) {
+		if (vk_world.num_image_chunks >= MAX_IMAGE_CHUNKS) {
+			ri.Error(ERR_FATAL, "Vulkan: image chunk limit has been reached");
+		}
+
+		VkMemoryAllocateInfo alloc_info;
+		alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		alloc_info.pNext = NULL;
+		alloc_info.allocationSize = IMAGE_CHUNK_SIZE;
+		alloc_info.memoryTypeIndex = find_memory_type(
+            vk.physical_device, memory_requirements.memoryTypeBits, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+
+		VkDeviceMemory memory;
+		VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
+
+		vk_world.image_chunks[vk_world.num_image_chunks].memory = memory;
+		vk_world.image_chunks[vk_world.num_image_chunks].used =
+            memory_requirements.size;
+
+        chunk = &vk_world.image_chunks[vk_world.num_image_chunks];
+
+    	VK_CHECK(qvkBindImageMemory(vk.device, image, chunk->memory, chunk->used - memory_requirements.size));
+
+        vk_world.num_image_chunks++;
+        return;
+	}
+    VK_CHECK(qvkBindImageMemory(vk.device, image, chunk->memory, chunk->used - memory_requirements.size));
+}
+
+*/
 
 static void allocate_and_bind_image_memory(VkImage image)
 {
@@ -283,7 +350,6 @@ static void allocate_and_bind_image_memory(VkImage image)
 
 	VK_CHECK(qvkBindImageMemory(vk.device, image, chunk->memory, chunk->used - memory_requirements.size));
 }
-
 
 
 static struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, qboolean repeat_texture)
@@ -575,7 +641,7 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 }
 
 
-void destroyImage(void)
+void myDestroyImage(void)
 {
     int i = 0; 
 	for (i = 0; i < MAX_VK_IMAGES; i++)
@@ -587,8 +653,29 @@ void destroyImage(void)
 			qvkDestroyImage(vk.device, image->handle, NULL);
 			qvkDestroyImageView(vk.device, image->view, NULL);
 		}
+		
+//	    if (vk_world.staging_buffer_memory != VK_NULL_HANDLE)
+//		    qvkFreeMemory(vk.device, vk_world.staging_buffer_memory, NULL);       
+       
 	}
+
+    ////////// suijingfeng: not sure if it's ok writing this way
+/*
+    if(image->descriptor_set != VK_NULL_HANDLE)
+    {    
+        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &image->descriptor_set);
+	    image->descriptor_set = VK_NULL_HANDLE;
+    }
+
+    for(i = 0; i < vk_world.num_image_chunks; i++)
+        if(vk_world.image_chunks[i].memory != VK_NULL_HANDLE)
+        {
+            qvkFreeMemory(vk.device, vk_world.image_chunks[i].memory, NULL); 
+        }
+*/
 }
+
+
 
 void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
 {

@@ -1608,9 +1608,9 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 void generate_image_upload_data(struct Image_Upload_Data* upload_data, const unsigned char* data,
         int width, int height, qboolean mipmap, qboolean picmip);
 
-void destroyImage(void);
-
-
+void myDestroyImage(void);
+void myResetImageSampler(void);
+void vk_release_resources(void);
 
 extern	refimport_t		ri;
 extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);

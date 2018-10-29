@@ -624,12 +624,12 @@ const char * cvtResToStr(VkResult result)
         return "VK_ERROR_OUT_OF_POOL_MEMORY_KHR";
     case VK_ERROR_INVALID_SHADER_NV:
         return "VK_ERROR_INVALID_SHADER_NV";
-/*
+//
     case VK_ERROR_INVALID_EXTERNAL_HANDLE:
         return "VK_ERROR_INVALID_EXTERNAL_HANDLE";
     case VK_ERROR_NOT_PERMITTED_EXT:
         return "VK_ERROR_NOT_PERMITTED_EXT";
-*/
+//
     case VK_RESULT_MAX_ENUM:
         return "VK_RESULT_MAX_ENUM";
     case VK_RESULT_RANGE_SIZE:
