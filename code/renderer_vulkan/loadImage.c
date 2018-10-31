@@ -298,6 +298,7 @@ image_t *R_CreateImage( const char *name, const unsigned char* pic, int width, i
 	struct Image_Upload_Data upload_data;
     memset(&upload_data, 0, sizeof(upload_data));
 
+	ri.Printf (PRINT_ALL, "generate_image_upload_data: %s\n", name);
     generate_image_upload_data(&upload_data, pic, width, height, mipmap, allowPicmip);
 
 

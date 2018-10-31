@@ -1587,9 +1587,11 @@ void R_LightScaleTexture (unsigned char* in, int inwidth, int inheight, int only
 void R_GammaCorrect( unsigned char *buffer, int bufSize );
 void R_SetColorMappings( void );
 
-void R_MipMap (unsigned char *in, int width, int height);
+/* 
+static void R_MipMap(unsigned char *in, int width, int height);
+static void R_MipMap2(unsigned *in, int inWidth, int inHeight);
+*/
 
-void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight );
 void R_DisplayResolutionList_f(void);
 void R_GetModeInfo(unsigned int *width, unsigned int *height, float *windowAspect, int mode );
 void R_InitDisplayResolution( void );
@@ -1611,6 +1613,9 @@ void generate_image_upload_data(struct Image_Upload_Data* upload_data, const uns
 void myDestroyImage(void);
 void myResetImageSampler(void);
 void vk_release_resources(void);
+
+
+void R_ScreenShotJPEG_f(void);
 
 extern	refimport_t		ri;
 extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);

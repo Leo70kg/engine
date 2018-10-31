@@ -29,20 +29,18 @@ const static textureMode_t modes[] = {
 	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
 };
 
-
+/*
+  The maximum number of sampler objects which can be simultaneously created on a device is
+  implementation-dependent and specified by the maxSamplerAllocationCount member of the
+  VkPhysicalDeviceLimits structure. If maxSamplerAllocationCount is exceeded, 
+  vkCreateSampler will return VK_ERROR_TOO_MANY_OBJECTS.
+*/
 
 #define MAX_VK_SAMPLERS     32
 static int num_samplers = 0;
 static struct Vk_Sampler_Def sampler_defs[MAX_VK_SAMPLERS] = {0};
 static VkSampler imgSamplers[MAX_VK_SAMPLERS] = {0};
 
-
-
-/*
-================
-return a hash value for the filename
-================
-*/
 
 
 static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
@@ -58,18 +56,14 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 			return imgSamplers[i];
 		}
 	}
+	sampler_defs[i] = *def;
 
-	// Create new sampler.
-	if (num_samplers >= MAX_VK_SAMPLERS)
-    {
-		ri.Error(ERR_DROP, "MAX_VK_SAMPLERS hit\n");
-	}
 
 	VkSamplerAddressMode address_mode = def->repeat_texture ?
         VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
 	VkFilter mag_filter;
-	if (def->gl_mag_filter == GL_NEAREST)
+	if(def->gl_mag_filter == GL_NEAREST)
     {
 		mag_filter = VK_FILTER_NEAREST;
 	}
@@ -84,17 +78,20 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 
 	VkFilter min_filter;
 	VkSamplerMipmapMode mipmap_mode;
-	qboolean max_lod_0_25 = qfalse; // used to emulate OpenGL's GL_LINEAR/GL_NEAREST minification filter
-	if (def->gl_min_filter == GL_NEAREST) {
+	
+    //used to emulate OpenGL's GL_LINEAR/GL_NEAREST minification filter    
+    VkBool32 max_lod_0_25 = 0;
+
+    if (def->gl_min_filter == GL_NEAREST) {
 		min_filter = VK_FILTER_NEAREST;
 		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-		max_lod_0_25 = qtrue;
+		max_lod_0_25 = 1;
 	}
     else if (def->gl_min_filter == GL_LINEAR)
     {
 		min_filter = VK_FILTER_LINEAR;
 		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-		max_lod_0_25 = qtrue;
+		max_lod_0_25 = 1;
 	}
     else if (def->gl_min_filter == GL_NEAREST_MIPMAP_NEAREST)
     {
@@ -140,19 +137,28 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 	desc.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	desc.unnormalizedCoordinates = VK_FALSE;
 
+	// Create new sampler.
+
+
 	VkSampler sampler;
 	VK_CHECK(qvkCreateSampler(vk.device, &desc, NULL, &sampler));
 
-	sampler_defs[num_samplers] = *def;
+
 	imgSamplers[num_samplers] = sampler;
 	num_samplers++;
+	if (num_samplers >= MAX_VK_SAMPLERS)
+    {
+		ri.Error(ERR_DROP, "MAX_VK_SAMPLERS hit\n");
+	}
+
+
 	return sampler;
 }
 
 
 static void vk_update_descriptor_set( 
         VkDescriptorSet set, VkImageView image_view, 
-        qboolean mipmap, qboolean repeat_texture )
+        VkBool32 mipmap, qboolean repeat_texture )
 {
 	struct Vk_Sampler_Def sampler_def;
     memset(&sampler_def, 0, sizeof(sampler_def));
@@ -205,7 +211,7 @@ void GL_TextureMode( const char *string )
 {
 	int i;
 
-	for ( i=0 ; i< 6 ; i++ ) {
+	for ( i=0; i< 6; i++ ) {
 		if ( !Q_stricmp( modes[i].name, string ) ) {
 			break;
 		}
@@ -233,7 +239,7 @@ void GL_TextureMode( const char *string )
     {
         if (tr.images[i]->mipmap)
         {
-            vk_update_descriptor_set(vk_world.images[i].descriptor_set, vk_world.images[i].view, qtrue, tr.images[i]->wrapClampMode == GL_REPEAT);
+            vk_update_descriptor_set(vk_world.images[i].descriptor_set, vk_world.images[i].view, 1, tr.images[i]->wrapClampMode == GL_REPEAT);
         }
     }
 }
@@ -303,8 +309,11 @@ static void allocate_and_bind_image_memory(VkImage image)
 
 */
 
+
+
 static void allocate_and_bind_image_memory(VkImage image)
 {
+    int i = 0;
 	VkMemoryRequirements memory_requirements;
 	qvkGetImageMemoryRequirements(vk.device, image, &memory_requirements);
 
@@ -316,11 +325,14 @@ static void allocate_and_bind_image_memory(VkImage image)
 
 	// Try to find an existing chunk of sufficient capacity.
 	long mask = ~(memory_requirements.alignment - 1);
-	for (int i = 0; i < vk_world.num_image_chunks; i++) {
+
+	for (i = 0; i < vk_world.num_image_chunks; i++)
+    {
 		// ensure that memory region has proper alignment
 		VkDeviceSize offset = (vk_world.image_chunks[i].used + memory_requirements.alignment - 1) & mask;
 
-		if (offset + memory_requirements.size <= IMAGE_CHUNK_SIZE) {
+		if (offset + memory_requirements.size <= IMAGE_CHUNK_SIZE)
+        {
 			chunk = &vk_world.image_chunks[i];
 			chunk->used = offset + memory_requirements.size;
 			break;
@@ -328,7 +340,8 @@ static void allocate_and_bind_image_memory(VkImage image)
 	}
 
 	// Allocate a new chunk in case we couldn't find suitable existing chunk.
-	if (chunk == NULL) {
+	if (chunk == NULL)
+    {
 		if (vk_world.num_image_chunks >= MAX_IMAGE_CHUNKS) {
 			ri.Error(ERR_FATAL, "Vulkan: image chunk limit has been reached");
 		}
@@ -578,7 +591,7 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 
 
 // VULKAN
-struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture)
+struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean isRepTex)
 {
 	int w = upload_data->base_level_width;
 	int h = upload_data->base_level_height;
@@ -631,7 +644,7 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 	}
 */
 
-	struct Vk_Image image = vk_create_image(w, h, format, upload_data->mip_levels, repeat_texture);
+	struct Vk_Image image = vk_create_image(w, h, format, upload_data->mip_levels, isRepTex);
 	vk_upload_image_data(image.handle, w, h, upload_data->mip_levels > 1, buffer, bytes_per_pixel);
 
 	if (bytes_per_pixel == 2)

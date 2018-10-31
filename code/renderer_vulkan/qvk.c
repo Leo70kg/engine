@@ -440,7 +440,7 @@ static void loadDeviceFunctions(void)
 
 
 
-void init_vulkan_library(void)
+void VK_GetProcAddress(void)
 {
 
     loadGlobalFunctions();
@@ -465,7 +465,7 @@ void init_vulkan_library(void)
 }
 
 
-void deinit_vulkan_library(void)
+void VK_ClearProcAddress(void)
 {
 	qvkCreateInstance                           = NULL;
 	qvkEnumerateInstanceExtensionProperties		= NULL;

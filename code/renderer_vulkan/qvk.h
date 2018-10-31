@@ -222,8 +222,8 @@ uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t memory_type
 // Resources allocation.
 //
 VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def);
-void init_vulkan_library(void);
-void deinit_vulkan_library(void);
+void VK_GetProcAddress(void);
+void VK_ClearProcAddress(void);
 
 //
 // Rendering setup.

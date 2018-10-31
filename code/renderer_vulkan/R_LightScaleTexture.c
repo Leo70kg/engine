@@ -6,11 +6,12 @@ static unsigned char s_gammatable[256];
 
 
 
-void R_GammaCorrect( byte *buffer, int bufSize )
+void R_GammaCorrect(unsigned char* buffer, int bufSize)
 {
 	int i;
 
-	for ( i = 0; i < bufSize; i++ ) {
+	for( i = 0; i < bufSize; i++ )
+    {
 		buffer[i] = s_gammatable[buffer[i]];
 	}
 }

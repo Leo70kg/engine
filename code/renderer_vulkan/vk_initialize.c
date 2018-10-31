@@ -131,15 +131,15 @@ static VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevic
     qvkGetPhysicalDeviceSurfacePresentModesKHR(
             physical_device, surface, &nPM, pPresentModes);
 
-	qboolean mailbox_supported = qfalse;
-	qboolean immediate_supported = qfalse;
+	int mailbox_supported = 0;
+	int immediate_supported = 0;
 
     for ( i = 0; i < nPM; i++)
     {
 		if (pPresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
-			mailbox_supported = qtrue;
+			mailbox_supported = 1;
 		else if (pPresentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
-			immediate_supported = qtrue;
+			immediate_supported = 1;
 	}
 
     free(pPresentModes);
@@ -220,7 +220,7 @@ static VkFormat get_depth_format(VkPhysicalDevice physical_device)
 }
 
 
-static VkShaderModule create_shader_module(uint8_t* bytes, int count)
+static VkShaderModule create_shader_module(const unsigned char* pBytes, int count)
 {
 	if (count % 4 != 0) {
 		ri.Error(ERR_FATAL, "Vulkan: SPIR-V binary buffer size is not multiple of 4");
@@ -230,7 +230,7 @@ static VkShaderModule create_shader_module(uint8_t* bytes, int count)
 	desc.pNext = NULL;
 	desc.flags = 0;
 	desc.codeSize = count;
-	desc.pCode = (const uint32_t*)(bytes);
+	desc.pCode = (const uint32_t*)pBytes;
 			   
 	VkShaderModule module;
 	VK_CHECK(qvkCreateShaderModule(vk.device, &desc, NULL, &module));
@@ -260,18 +260,20 @@ uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t memory_type
 
 void vk_shutdown()
 {
+    unsigned int i = 0, j = 0, k = 0;
+
 	qvkDestroyImage(vk.device, vk.depth_image, NULL);
 	qvkFreeMemory(vk.device, vk.depth_image_memory, NULL);
 	qvkDestroyImageView(vk.device, vk.depth_image_view, NULL);
 
-	for (uint32_t i = 0; i < vk.swapchain_image_count; i++)
+	for (i = 0; i < vk.swapchain_image_count; i++)
 		qvkDestroyFramebuffer(vk.device, vk.framebuffers[i], NULL);
 
 	qvkDestroyRenderPass(vk.device, vk.render_pass, NULL);
 
 	qvkDestroyCommandPool(vk.device, vk.command_pool, NULL);
 
-	for (uint32_t i = 0; i < vk.swapchain_image_count; i++)
+	for (i = 0; i < vk.swapchain_image_count; i++)
 		qvkDestroyImageView(vk.device, vk.swapchain_image_views[i], NULL);
 
 	qvkDestroyDescriptorPool(vk.device, vk.descriptor_pool, NULL);
@@ -293,17 +295,23 @@ void vk_shutdown()
 	qvkDestroyShaderModule(vk.device, vk.multi_texture_add_fs, NULL);
 
 	qvkDestroyPipeline(vk.device, vk.skybox_pipeline, NULL);
-	for (int i = 0; i < 2; i++)
-		for (int j = 0; j < 2; j++) {
+	for (i = 0; i < 2; i++)
+		for (j = 0; j < 2; j++)
+        {
 			qvkDestroyPipeline(vk.device, vk.shadow_volume_pipelines[i][j], NULL);
 		}
-	qvkDestroyPipeline(vk.device, vk.shadow_finish_pipeline, NULL);
-	for (int i = 0; i < 2; i++)
-		for (int j = 0; j < 3; j++)
-			for (int k = 0; k < 2; k++) {
+	
+    qvkDestroyPipeline(vk.device, vk.shadow_finish_pipeline, NULL);
+	
+    
+    for (i = 0; i < 2; i++)
+		for (j = 0; j < 3; j++)
+			for (k = 0; k < 2; k++)
+            {
 				qvkDestroyPipeline(vk.device, vk.fog_pipelines[i][j][k], NULL);
 				qvkDestroyPipeline(vk.device, vk.dlight_pipelines[i][j][k], NULL);
 			}
+
 	qvkDestroyPipeline(vk.device, vk.tris_debug_pipeline, NULL);
 	qvkDestroyPipeline(vk.device, vk.tris_mirror_debug_pipeline, NULL);
 	qvkDestroyPipeline(vk.device, vk.normals_debug_pipeline, NULL);
@@ -322,7 +330,7 @@ void vk_shutdown()
 	qvkDestroyInstance(vk.instance, NULL);
 
 	memset(&vk, 0, sizeof(vk));
-	deinit_vulkan_library();
+	VK_ClearProcAddress();
 }
 
 
@@ -352,6 +360,7 @@ void record_buffer_memory_barrier(VkCommandBuffer cb, VkBuffer buffer,
 
 void vk_initialize(void)
 {
+    uint32_t i = 0;
 
 	qvkGetDeviceQueue(vk.device, vk.queue_family_index, 0, &vk.queue);
 #ifndef NDEBUG
@@ -368,7 +377,6 @@ void vk_initialize(void)
 		vk.swapchain_image_count = MIN(vk.swapchain_image_count, (uint32_t)MAX_SWAPCHAIN_IMAGES);
 		VK_CHECK(qvkGetSwapchainImagesKHR(vk.device, vk.swapchain, &vk.swapchain_image_count, vk.swapchain_images));
 
-        uint32_t i = 0;
 		for (i = 0; i < vk.swapchain_image_count; i++)
         {
 			VkImageViewCreateInfo desc;
@@ -506,13 +514,6 @@ void vk_initialize(void)
         //r_stencilbits->integer
         if (1)
 			image_aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
-/*
-		record_and_run_commands(vk.command_pool, vk.queue, [&image_aspect_flags](VkCommandBuffer command_buffer)
-        {
-			record_image_layout_transition(command_buffer, vk.depth_image, image_aspect_flags, 0, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-		});
-*/
 
 
 	    VkCommandBufferAllocateInfo alloc_info;
@@ -589,7 +590,8 @@ void vk_initialize(void)
 		desc.height = glConfig.vidHeight;
 		desc.layers = 1;
 
-		for (uint32_t i = 0; i < vk.swapchain_image_count; i++) {
+		for (i = 0; i < vk.swapchain_image_count; i++)
+        {
 			attachments[0] = vk.swapchain_image_views[i]; // set color attachment
 			VK_CHECK(qvkCreateFramebuffer(vk.device, &desc, NULL, &vk.framebuffers[i]));
 		}
@@ -702,8 +704,8 @@ void vk_initialize(void)
 
 		void* data;
 		VK_CHECK(qvkMapMemory(vk.device, vk.geometry_buffer_memory, 0, VK_WHOLE_SIZE, 0, &data));
-		vk.vertex_buffer_ptr = (byte*)data;
-		vk.index_buffer_ptr = (byte*)data + index_buffer_offset;
+		vk.vertex_buffer_ptr = (unsigned char*)data;
+		vk.index_buffer_ptr = (unsigned char*)data + index_buffer_offset;
 	}
 
 	//
