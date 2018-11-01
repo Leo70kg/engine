@@ -1943,7 +1943,6 @@ long R_ReadFile(const char *filename, char **buffer)
     long len = -1;
 	fileHandle_t h = 0;
 
-
 	searchpath_t *search;
 
 	for(search = fs_searchpaths; search; search = search->next)

@@ -642,7 +642,8 @@ static void R_MarkLeaves (void) {
 R_AddWorldSurfaces
 =============
 */
-void R_AddWorldSurfaces (void) {
+void R_AddWorldSurfaces (void)
+{
 	if ( !r_drawworld->integer ) {
 		return;
 	}

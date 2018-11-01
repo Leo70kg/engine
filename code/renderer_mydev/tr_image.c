@@ -1284,7 +1284,7 @@ qhandle_t RE_RegisterSkin( const char *name ) {
 	}
 
 	// load and parse the skin file
-    ri.FS_ReadFile( name, (void **)&text );
+    ri.R_ReadFile( name, &text );
 	if ( !text ) {
 		return 0;
 	}

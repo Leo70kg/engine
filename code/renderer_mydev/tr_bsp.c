@@ -1841,7 +1841,7 @@ void RE_LoadWorldMap( const char *name ) {
 	tr.worldMapLoaded = qtrue;
 
 	// load it
-    ri.FS_ReadFile( name, (void **)&buffer );
+    ri.R_ReadFile( name, &buffer );
 	if ( !buffer ) {
 		ri.Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
 	}

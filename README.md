@@ -43,7 +43,6 @@ website for updated status.
 
 ## Building on Ubuntu or Debian Linux ##
 
-
 Install the build dependencies.
 
 ```sh
@@ -54,6 +53,16 @@ $ git clone https://github.com/suijingfeng/engine.git
 $ cd engine
 $ make
 ```
+
+Please note that vulkan renderer requires at least SDL 2.0.6. 
+The precompiled versions in some of the distribute repositories 
+do not ship with Vulkan support, you therefore may come cross the
+following problem when you launch OA:
+
+```
+Vulkan support is either not configured in SDL or not available in video driver.
+```
+This problem can be solved easily by compiling the SDL from source, very easy!.
 
 ## Building on Windows 7 or 10 ##
 

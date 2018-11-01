@@ -46,7 +46,8 @@ void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
 
     byte* buffer_ptr = buffer + 18;
     byte* buffer2_ptr = buffer2;
-    for (int i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++) {
+    for (i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++)
+    {
         buffer_ptr[0] = buffer2_ptr[0];
         buffer_ptr[1] = buffer2_ptr[1];
         buffer_ptr[2] = buffer2_ptr[2];
@@ -227,7 +228,7 @@ void R_LevelShot( void ) {
 	int			r, g, b;
 	float		xScale, yScale;
 	int			xx, yy;
-
+    int i = 0;
 	sprintf( checkname, "levelshots/%s.tga", tr.world->baseName );
 
 	source = (byte*) ri.Hunk_AllocateTempMemory( glConfig.vidWidth * glConfig.vidHeight * 3 );
@@ -245,7 +246,7 @@ void R_LevelShot( void ) {
 
     byte* buffer_ptr = source;
     byte* buffer2_ptr = buffer2;
-    for (int i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++)
+    for (i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++)
     {
         buffer_ptr[0] = buffer2_ptr[0];
         buffer_ptr[1] = buffer2_ptr[1];

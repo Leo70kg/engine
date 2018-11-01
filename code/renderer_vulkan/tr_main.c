@@ -430,7 +430,8 @@ static void SetFarClip( void )
 R_SetupProjection
 ===============
 */
-void R_SetupProjection( void ) {
+void R_SetupProjection( void )
+{
 	float	xmin, xmax, ymin, ymax;
 	float	width, height, depth;
 	float	zNear, zFar;
@@ -482,14 +483,12 @@ R_SetupFrustum
 Setup that culling frustum planes for the current view
 =================
 */
-void R_SetupFrustum (void) {
+void R_SetupFrustum (void)
+{
 	int		i;
-	float	xs, xc;
-	float	ang;
-
-	ang = tr.viewParms.fovX / 180 * M_PI * 0.5f;
-	xs = sin( ang );
-	xc = cos( ang );
+	float	ang = tr.viewParms.fovX * (M_PI / 360.0f);
+	float xs = sin( ang );
+	float xc = cos( ang );
 
     float temp1[3];
     float temp2[3];
@@ -505,7 +504,7 @@ void R_SetupFrustum (void) {
 	//VectorScale( tr.viewParms.or.axis[0], xs, tr.viewParms.frustum[1].normal );
 	//VectorMA( tr.viewParms.frustum[1].normal, -xc, tr.viewParms.or.axis[1], tr.viewParms.frustum[1].normal );
 
-	ang = tr.viewParms.fovY / 180 * M_PI * 0.5f;
+	ang = tr.viewParms.fovY * (M_PI / 360.0f);
 	xs = sin( ang );
 	xc = cos( ang );
 
@@ -523,7 +522,8 @@ void R_SetupFrustum (void) {
 	//VectorScale( tr.viewParms.or.axis[0], xs, tr.viewParms.frustum[3].normal );
 	//VectorMA( tr.viewParms.frustum[3].normal, -xc, tr.viewParms.or.axis[2], tr.viewParms.frustum[3].normal );
 
-	for (i=0 ; i<4 ; i++) {
+	for (i=0 ; i<4 ; i++)
+    {
 		tr.viewParms.frustum[i].type = PLANE_NON_AXIAL;
 		tr.viewParms.frustum[i].dist = DotProduct (tr.viewParms.or.origin, tr.viewParms.frustum[i].normal);
 		SetPlaneSignbits( &tr.viewParms.frustum[i] );
@@ -1233,7 +1233,8 @@ void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader,
 R_SortDrawSurfs
 =================
 */
-void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs )
+{
 	shader_t		*shader;
 	int				fogNum;
 	int				entityNum;
@@ -1289,7 +1290,8 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 R_AddEntitySurfaces
 =============
 */
-void R_AddEntitySurfaces (void) {
+void R_AddEntitySurfaces (void)
+{
 	trRefEntity_t	*ent;
 	shader_t		*shader;
 
@@ -1483,7 +1485,8 @@ R_DebugGraphics
 Visualization aid for movement clipping debugging
 ====================
 */
-void R_DebugGraphics( void ) {
+void R_DebugGraphics( void )
+{
 	if ( !r_debugSurface->integer ) {
 		return;
 	}
@@ -1504,7 +1507,8 @@ A view may be either the actual camera view,
 or a mirror / remote location
 ================
 */
-void R_RenderView (viewParms_t *parms) {
+void R_RenderView (viewParms_t *parms)
+{
 	int		firstDrawSurf;
 
 	if ( parms->viewportWidth <= 0 || parms->viewportHeight <= 0 ) {

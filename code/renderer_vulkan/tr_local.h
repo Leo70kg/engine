@@ -1575,7 +1575,9 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
 int SetWindowMode(glconfig_t *config, int mode, qboolean fullscreen );
 
-//void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );
+void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );
+void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height );
+
 image_t* R_FindImageFile(const char *name, qboolean mipmap, 
 						qboolean allowPicmip, int glWrapClampMode);
 

@@ -41,13 +41,13 @@ typedef struct _TargaHeader {
 void R_LoadTGA ( const char *name, unsigned char** pic, int *width, int *height)
 {
 	unsigned	columns, rows, numPixels;
-	byte	*pixbuf;
+	unsigned char	*pixbuf;
 	int		row, column;
-	byte	*buf_p;
-	byte	*end;
+	unsigned char	*buf_p;
+	unsigned char	*end;
 	char * buffer;
 	TargaHeader	targa_header;
-	byte		*targa_rgba;
+	unsigned char		*targa_rgba;
 	int length;
 
 	*pic = NULL;

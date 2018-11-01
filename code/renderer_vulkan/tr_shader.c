@@ -2813,7 +2813,7 @@ static void ScanAndLoadShaderFiles( void )
 		char filename[MAX_QPATH];
 
 		snprintf( filename, sizeof( filename ), "scripts/%s", shaderFiles[i] );
-		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
+		ri.Printf( PRINT_ALL, "...loading '%s'\n", filename );
 		summand = ri.R_ReadFile( filename, &buffers[i] );
 		
 		if ( !buffers[i] )

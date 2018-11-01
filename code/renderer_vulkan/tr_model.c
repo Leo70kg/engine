@@ -78,9 +78,10 @@ optimization to prevent disk rescanning if they are
 asked for again.
 ====================
 */
-qhandle_t RE_RegisterModel( const char *name ) {
+qhandle_t RE_RegisterModel( const char *name )
+{
 	model_t		*mod;
-	unsigned	*buf;
+
 	int			lod;
 	int			ident;
 	qboolean	loaded;
@@ -112,7 +113,8 @@ qhandle_t RE_RegisterModel( const char *name ) {
 
 	// allocate a new model_t
 
-	if ( ( mod = R_AllocModel() ) == NULL ) {
+	if ( ( mod = R_AllocModel() ) == NULL )
+    {
 		ri.Printf( PRINT_WARNING, "RE_RegisterModel: R_AllocModel() failed for '%s'\n", name);
 		return 0;
 	}
@@ -131,12 +133,14 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	//
 	numLoaded = 0;
 
-	for ( lod = MD3_MAX_LODS - 1 ; lod >= 0 ; lod-- ) {
+	for ( lod = MD3_MAX_LODS - 1 ; lod >= 0 ; lod-- )
+    {
 		char filename[1024];
 
 		strcpy( filename, name );
 
-		if ( lod != 0 ) {
+		if ( lod != 0 )
+        {
 			char namebuf[80];
 
 			if ( strrchr( filename, '.' ) ) {
@@ -145,8 +149,9 @@ qhandle_t RE_RegisterModel( const char *name ) {
 			sprintf( namebuf, "_%d.md3", lod );
 			strcat( filename, namebuf );
 		}
-
-		ri.FS_ReadFile( filename, (void **)&buf );
+        
+        char* buf = NULL;
+		ri.R_ReadFile( filename, &buf );
 		if ( !buf ) {
 			continue;
 		}
