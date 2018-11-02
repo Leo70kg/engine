@@ -1508,15 +1508,7 @@ typedef struct {
 	int		numDrawSurfs;
 } drawSurfsCommand_t;
 
-typedef struct {
-	int commandId;
-	int x;
-	int y;
-	int width;
-	int height;
-	char *fileName;
-	qboolean jpeg;
-} screenshotCommand_t;
+
 
 typedef enum {
 	RC_END_OF_LIST,
@@ -1581,7 +1573,7 @@ void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height
 image_t* R_FindImageFile(const char *name, qboolean mipmap, 
 						qboolean allowPicmip, int glWrapClampMode);
 
-image_t *R_CreateImage( const char *name, const byte *pic, int width, int height,
+image_t *R_CreateImage( const char *name, unsigned char *pic, int width, int height,
 						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode );
 
 
@@ -1609,7 +1601,7 @@ struct Image_Upload_Data
 };
 
 struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture);
-void generate_image_upload_data(struct Image_Upload_Data* upload_data, const unsigned char* data,
+void generate_image_upload_data(struct Image_Upload_Data* upload_data, unsigned char* data,
         int width, int height, qboolean mipmap, qboolean picmip);
 
 void myDestroyImage(void);

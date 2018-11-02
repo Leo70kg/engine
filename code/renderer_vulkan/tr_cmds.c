@@ -151,13 +151,13 @@ make sure there is enough command space, waiting on the
 render thread if needed.
 ============
 */
-void *R_GetCommandBuffer( int bytes ) {
-	renderCommandList_t	*cmdList;
-
-	cmdList = &backEndData[tr.smpFrame]->commands;
+void* R_GetCommandBuffer( int bytes )
+{
+	renderCommandList_t	*cmdList = &backEndData[tr.smpFrame]->commands;
 
 	// always leave room for the end of list command
-	if ( cmdList->used + bytes + 4 > MAX_RENDER_COMMANDS ) {
+	if ( cmdList->used + bytes + 4 > MAX_RENDER_COMMANDS )
+    {
 		if ( bytes > MAX_RENDER_COMMANDS - 4 ) {
 			ri.Error( ERR_FATAL, "R_GetCommandBuffer: bad size %i", bytes );
 		}

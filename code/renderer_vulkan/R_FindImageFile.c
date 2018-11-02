@@ -30,7 +30,7 @@ R_CreateImage
 This is the only way any image_t are created
 ================
 */
-image_t *R_CreateImage( const char *name, const unsigned char* pic, int width, int height,
+image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int height,
 						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode )
 {
 	if (strlen(name) >= MAX_QPATH ) {
@@ -141,7 +141,7 @@ image_t* R_FindImageFile(const char *name, qboolean mipmap,
         return NULL;
     }
 
-	image = R_CreateImage(  name, pic, width, height,
+	image = R_CreateImage( name, pic, width, height,
 							mipmap, allowPicmip, glWrapClampMode );
 	ri.Free( pic );
 	return image;

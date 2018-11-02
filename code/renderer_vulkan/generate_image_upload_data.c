@@ -171,7 +171,7 @@ If a larger shrinking is needed, use the mipmap function before or after.
 ================
 */
 
-static void ResampleTexture(unsigned char *pIn, int inwidth, int inheight, unsigned char *pOut, int outwidth, int outheight)
+static void ResampleTexture(const unsigned char *pIn, int inwidth, int inheight, unsigned char *pOut, int outwidth, int outheight)
 {
 	int		i, j;
 	unsigned	p1[2048], p2[2048];
@@ -197,8 +197,8 @@ static void ResampleTexture(unsigned char *pIn, int inwidth, int inheight, unsig
 
 	for (i=0; i<outheight; i++, pOut += outwidth*4)
 	{
-		unsigned char* inrow = pIn + 4*inwidth*(int)((i+0.25)*inheight/outheight);
-		unsigned char* inrow2 = pIn + 4*inwidth*(int)((i+0.75)*inheight/outheight);
+		unsigned char* inrow = (unsigned char*)pIn + 4*inwidth*(int)((i+0.25)*inheight/outheight);
+		unsigned char* inrow2 = (unsigned char*)pIn + 4*inwidth*(int)((i+0.75)*inheight/outheight);
 		for (j=0; j<outwidth; j++)
         {
 			unsigned char * pix1 = (unsigned char *)inrow + p1[j];
@@ -224,7 +224,7 @@ static void ResampleTexture(unsigned char *pIn, int inwidth, int inheight, unsig
 
 void generate_image_upload_data( 
         struct Image_Upload_Data* upload_data, 
-        const unsigned char* data,
+        unsigned char* data,
         int width, int height,
         qboolean mipmap, qboolean picmip)
 {
@@ -302,7 +302,7 @@ void generate_image_upload_data(
 	// Use the normal mip-mapping to go down from [width, height] to [scaled_width, scaled_height] dimensions.
 	while (width > scaled_width || height > scaled_height)
     {
-
+        
         if ( !r_simpleMipMaps->integer )
         {
             R_MipMap2(data, width, height );
@@ -339,7 +339,6 @@ void generate_image_upload_data(
     {
 		while (scaled_width > 1 || scaled_height > 1)
         {
-
             if ( !r_simpleMipMaps->integer )
             {
                 R_MipMap2(scaled_buffer, scaled_width, scaled_height);
