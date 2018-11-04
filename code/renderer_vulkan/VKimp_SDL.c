@@ -311,10 +311,10 @@ void VKimp_CreateInstance(void)
 	memset(&appInfo, 0, sizeof(appInfo));
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = "OpenArena";
-	appInfo.applicationVersion = VK_MAKE_VERSION(1, 1, 0);
+	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "OpenArena";
-	appInfo.engineVersion = VK_MAKE_VERSION(1, 1, 0);
-	appInfo.apiVersion = VK_MAKE_VERSION(1, 1, 0);
+	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
 	VkInstanceCreateInfo instanceCreateInfo;
 	memset(&instanceCreateInfo, 0, sizeof(instanceCreateInfo));
@@ -362,9 +362,12 @@ void VKimp_CreateInstance(void)
     {
         ri.Printf(PRINT_ALL, "---Vulkan create instance success---\n\n");
     }
-    else if (e == VK_ERROR_INCOMPATIBLE_DRIVER) {
+    else if (e == VK_ERROR_INCOMPATIBLE_DRIVER)
+	{
+		// The requested version of Vulkan is not supported by the driver 
+		// or is otherwise incompatible for implementation-specific reasons.
         ri.Error(ERR_FATAL, 
-            "Cannot find a compatible Vulkan installable client driver (ICD).\n" );
+            "The requested version of Vulkan is not supported by the driver.\n" );
     }
     else if (e == VK_ERROR_EXTENSION_NOT_PRESENT)
     {

@@ -392,7 +392,7 @@ qboolean SkipBracedSection(char **program, int depth)
 {
 	do
     {
-		char* token = COM_ParseExt(program, qtrue);
+		char* token = R_ParseExt(program, qtrue);
 		if( token[1] == 0 )
         {
 			if( token[0] == '{' )
