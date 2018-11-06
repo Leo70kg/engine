@@ -1561,7 +1561,8 @@ void ClientBegin( int clientNum ) {
 		( ( !client->ps.pm_type ) == PM_SPECTATOR ) */ ) || //Sago: Yes, it made no sense 
 		( ( g_gametype.integer != GT_ELIMINATION || level.intermissiontime) &&
 		( g_gametype.integer != GT_CTF_ELIMINATION || level.intermissiontime) &&
-		( g_gametype.integer != GT_LMS || level.intermissiontime ) ) ) ) {
+		( g_gametype.integer != GT_LMS || level.intermissiontime ) ) ) )
+	{
 		// send event
 		tent = G_TempEntity( ent->client->ps.origin, EV_PLAYER_TELEPORT_IN );
 		tent->s.clientNum = ent->s.clientNum;
