@@ -70,42 +70,84 @@ static long int generateHashValue( const char *fname, const int size )
 }
 
 
+/* 
+====================
+RE_RegisterShader
+
+This is the exported shader entry point for the rest of the system
+It will always return an index that will be valid.
+
+This should really only be used for explicit shaders, because there is no
+way to ask for different implicit lighting modes (vertex, lightmap, etc)
+====================
+*/
+
+
+
 void R_RemapShader(const char *shaderName, const char *newShaderName, const char *timeOffset)
 {
-	char strippedName[MAX_QPATH];
+
 	
 	shader_t* sh = R_FindShaderByName( shaderName );
-	
     if((sh == NULL) || (sh == tr.defaultShader))
     {
-		qhandle_t h = RE_RegisterShaderLightMap(shaderName, 0);
-		
+	    qhandle_t h;
+        //h = RE_RegisterShaderLightMap(shaderName, 0);
+
+        shader_t* pSh = R_FindShader( shaderName, 0, qtrue );
+        
+        if ( pSh->defaultShader )
+        {
+            h = 0;
+        }
+        else
+        {
+            h = pSh->index;
+        }
+
 		sh = R_GetShaderByHandle(h);
+
+        if((sh == NULL) || (sh == tr.defaultShader))
+        {
+            ri.Printf( PRINT_WARNING, "WARNING: R_RemapShader: shader %s not found\n", shaderName );
+            return;
+        }
 	}
 
-	if((sh == NULL) || (sh == tr.defaultShader))
-    {
-		ri.Printf( PRINT_WARNING, "WARNING: R_RemapShader: shader %s not found\n", shaderName );
-		return;
-	}
+
 
 	shader_t* sh2 = R_FindShaderByName( newShaderName );
 	if (sh2 == NULL || sh2 == tr.defaultShader)
     {
-		qhandle_t h = RE_RegisterShaderLightMap(newShaderName, 0);
+		qhandle_t h;
+        //h = RE_RegisterShaderLightMap(newShaderName, 0);
+        shader_t* pSh = R_FindShader( newShaderName, 0, qtrue );
+        
+        if ( pSh->defaultShader )
+        {
+            h = 0;
+        }
+        else
+        {
+            h = pSh->index;
+        }
+
 		sh2 = R_GetShaderByHandle(h);
+
+        if((sh2 == NULL) || (sh2 == tr.defaultShader))
+        {
+            ri.Printf( PRINT_WARNING, "WARNING: R_RemapShader: shader %s not found\n", newShaderName );
+            return;
+        }
+
 	}
 
-	if (sh2 == NULL || sh2 == tr.defaultShader)
-    {
-		ri.Printf( PRINT_WARNING, "WARNING: R_RemapShader: new shader %s not found\n", newShaderName );
-		return;
-	}
 
 	// remap all the shaders with the given name
 	// even tho they might have different lightmaps
+    char strippedName[MAX_QPATH];
 	stripExtension(shaderName, strippedName, sizeof(strippedName));
-	long int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
+	int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 	for (sh = hashTable[hash]; sh; sh = sh->next)
     {
 		if (Q_stricmp(sh->name, strippedName) == 0)
@@ -3308,31 +3350,6 @@ static shader_t *FinishShader( void )
 		}
 
 
-		//
-		// ditch this stage if it's detail and detail textures are disabled
-		//
-		if ( pStage->isDetail && !r_detailTextures->integer )
-		{
-			int index;
-			
-			for(index = stage + 1; index < MAX_SHADER_STAGES; index++)
-			{
-				if(!stages[index].active)
-					break;
-			}
-			
-			if(index < MAX_SHADER_STAGES)
-				memmove(pStage, pStage + 1, sizeof(*pStage) * (index - stage));
-			else
-			{
-				if(stage + 1 < MAX_SHADER_STAGES)
-					memmove(pStage, pStage + 1, sizeof(*pStage) * (index - stage - 1));
-				
-				memset(&stages[index - 1], 0, sizeof(*stages));
-			}
-			
-			continue;
-		}
 
 		//
 		// default texture coordinate generation
@@ -3569,16 +3586,11 @@ as apropriate for most world construction surfaces.
 Leilei TODO - and if it has a lightmapindex and no detail texture please
 try to generate a generic detail stage for the sake of consistency with
 the other textures with details so there's one big grainy world
- (only if r_detailTextures 3)
 
-TODO:	if r_detailTextures 2, try to move the detail texture before the lightmap stage and use filterblend ,
-        so we can use the multitexturing pass performance advantage
+
 
 ===============
 */
-
-//extern  cvar_t	*r_detailTextureScale;		// leilei - scale tweak the detail textures, 0 doesn't tweak at all.
-//extern  cvar_t	*r_detailTextureLayers;		// leilei - add in more smaller detail texture layers, expensive!
 
 
 shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRawImage )
@@ -3588,18 +3600,6 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 	char *shaderText;
 	image_t	*image;
 	shader_t *sh;
-
-	//
-	// LEILEI's DETAIL TEXTURE STUFFS
-	//
-	int wi, hi; // leilei - for determining detail texture size by uploaded texture
-	int detailLayer = 1; // leilei - detail layer hack, one usual layer
-
-    // leilei - for adjusting detail textures
-    
-    if (detailLayer > 6){
-        detailLayer = 6; // limit 6 for now
-	}
 
 	if ( name[0] == 0 ) {
 		return tr.defaultShader;
@@ -3619,7 +3619,7 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 
 	stripExtension(name, strippedName, sizeof(strippedName));
 
-	long int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
+	int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
 	//
 	// see if the shader is already loaded
@@ -3670,50 +3670,8 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 			shader.defaultShader = qtrue;
 		}
 
-			// leilei -  SUPER detail hack to existing shaders,very aggressive and won't look good on 100% of shaders
-		
-		if( (shader.lightmapIndex != LIGHTMAP_WHITEIMAGE) && (shader.lightmapIndex != LIGHTMAP_BY_VERTEX)
-                && (shader.lightmapIndex != LIGHTMAP_2D) && (shader.lightmapIndex != LIGHTMAP_NONE) )
-            {
-			    if (r_detailTextures->integer)
-				{
-					// for snagging it into more layers if we find a defined one
-					int e = 0;
-					int f = 0;
-					wi = hi = 32; // reset to none....
-
-					for (f=0;f<detailLayer;f++)
-					{
-					for (e=0;e<(MAX_SHADER_STAGES-1);e++)
-					{
-						if (shader.defaultShader)
-							break; // DON'T! This fixes a crash, trying to stage up placeholder/default textures
-
-						// Pick the first free stage to do, hopefully the last
-						if (stages[e].active == qfalse)
-							break;
-			
-						// find detail texture scale by determining which of the stages have the largest image
-						if (stages[e].bundle[0].image[0]->uploadHeight > wi)
-							wi = stages[e].bundle[0].image[0]->uploadWidth;
-
-						if (stages[e].bundle[0].image[0]->uploadHeight > hi)
-							hi = stages[e].bundle[0].image[0]->uploadHeight;
-
-						// for adjusting the detail textures and skipping some redundancy
-						if (stages[e].isDetail)
-                        {
-
-						}						
-					}
-					}
-				
-				}
-		}
-
-
-		sh = FinishShader();
-		return sh;
+        sh = FinishShader();
+        return sh;
 	}
 
 
@@ -3915,41 +3873,6 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_
 	sh = FinishShader();
     return sh->index; 
 }
-
-
-/* 
-====================
-RE_RegisterShader
-
-This is the exported shader entry point for the rest of the system
-It will always return an index that will be valid.
-
-This should really only be used for explicit shaders, because there is no
-way to ask for different implicit lighting modes (vertex, lightmap, etc)
-====================
-*/
-qhandle_t RE_RegisterShaderLightMap( const char *name, int lightmapIndex )
-{
-	if ( strlen( name ) >= MAX_QPATH )
-    {
-		ri.Printf( PRINT_ALL, "Shader name exceeds MAX_QPATH\n" );
-		return 0;
-	}
-
-	shader_t* sh = R_FindShader( name, lightmapIndex, qtrue );
-
-	// we want to return 0 if the shader failed to load for some reason, 
-    // but R_FindShader should still keep a name allocated for it, 
-    // so if something calls RE_RegisterShader again with the same name, 
-    // we don't try looking for it again
-	if ( sh->defaultShader )
-    {
-		return 0;
-	}
-
-	return sh->index;
-}
-
 
 
 

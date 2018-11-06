@@ -3089,7 +3089,7 @@ void CL_ShutdownRef( void )
 #ifdef USE_RENDERER_DLOPEN
 	if ( rendererLib )
     {
-        Com_Printf("...Unloading renderer dll: %p ...\n", rendererLib);
+        Com_Printf("Unloading renderer dll.\n");
 		Sys_UnloadLibrary( rendererLib );
 		rendererLib = NULL;
 	}

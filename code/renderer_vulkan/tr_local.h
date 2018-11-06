@@ -335,10 +335,6 @@ typedef struct {
 
 struct shaderCommands_s;
 
-#define LIGHTMAP_2D			-4		// shader is for 2D rendering
-#define LIGHTMAP_BY_VERTEX	-3		// pre-lit triangle models
-#define LIGHTMAP_WHITEIMAGE	-2
-#define	LIGHTMAP_NONE		-1
 
 typedef enum {
 	CT_FRONT_SIDED,
@@ -1039,7 +1035,6 @@ extern cvar_t	*r_znear;				// near Z clip plane
 
 extern cvar_t	*r_stencilbits;			// number of desired stencil bits
 extern cvar_t	*r_depthbits;			// number of desired depth bits
-extern cvar_t	*r_stereo;				// desired pixelformat stereo flag
 extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 0 = use framebuffer depth
 										// 16 = use 16-bit textures
@@ -1057,7 +1052,7 @@ extern	cvar_t	*r_norefresh;			// bypasses the ref rendering
 extern	cvar_t	*r_drawentities;		// disable/enable entity rendering
 extern	cvar_t	*r_drawworld;			// disable/enable world rendering
 extern	cvar_t	*r_speeds;				// various levels of information display
-extern  cvar_t	*r_detailTextures;		// enables/disables detail texturing stages
+
 extern	cvar_t	*r_novis;				// disable/enable usage of PVS
 extern	cvar_t	*r_nocull;
 extern	cvar_t	*r_facePlaneCull;		// enables culling of planar surfaces with back side test
@@ -1104,8 +1099,6 @@ extern	cvar_t	*r_portalOnly;
 
 extern	cvar_t	*r_subdivisions;
 extern	cvar_t	*r_lodCurveError;
-extern	cvar_t	*r_smp;
-extern	cvar_t	*r_showSmp;
 extern	cvar_t	*r_skipBackEnd;
 
 extern	cvar_t	*r_ignoreGLErrors;
@@ -1137,6 +1130,10 @@ void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader,
 					 int *fogNum, int *dlightMap );
 
 void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap );
+void ScanAndLoadShaderFiles( void );
+shader_t * GeneratePermanentShader( void );
+qboolean ParseShader( char **text );
+
 
 
 #define	CULL_IN		0		// completely unclipped
@@ -1231,18 +1228,25 @@ skin_t	*R_GetSkinByHandle( qhandle_t hSkin );
 //
 // tr_shader.c
 //
-qhandle_t		 RE_RegisterShaderLightMap( const char *name, int lightmapIndex );
-qhandle_t		 RE_RegisterShader( const char *name );
-qhandle_t		 RE_RegisterShaderNoMip( const char *name );
+// qhandle_t RE_RegisterShaderLightMap( const char *name, int lightmapIndex );
+qhandle_t RE_RegisterShader( const char *name );
+qhandle_t RE_RegisterShaderNoMip( const char *name );
 qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_t *image, qboolean mipRawImage);
 
-shader_t	*R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImage );
-shader_t	*R_GetShaderByHandle( qhandle_t hShader );
-shader_t *R_FindShaderByName( const char *name );
-void		R_InitShaders( void );
-void		R_ShaderList_f( void );
-void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
+shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImage );
+shader_t* R_GetShaderByHandle( qhandle_t hShader );
+//shader_t* R_FindShaderByName( const char *name );
 
+void R_InitShaders( void );
+void R_ShaderList_f( void );
+void R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
+void R_ClearShaderHashTable(void);
+void R_SetTheShader( const char *name, int lightmapIndex );
+void R_UpdateShaderHashTable(shader_t* newShader);
+
+void R_SetDefaultShader( void );
+shader_t *FinishShader( void );
+void R_CreateDefaultShadingCmds(const char* name, image_t* image);
 
 
 
@@ -1570,8 +1574,7 @@ int SetWindowMode(glconfig_t *config, int mode, qboolean fullscreen );
 void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );
 void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height );
 
-image_t* R_FindImageFile(const char *name, qboolean mipmap, 
-						qboolean allowPicmip, int glWrapClampMode);
+image_t* R_FindImageFile(const char *name, qboolean mipmap,	qboolean allowPicmip, int glWrapClampMode);
 
 image_t *R_CreateImage( const char *name, unsigned char *pic, int width, int height,
 						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode );

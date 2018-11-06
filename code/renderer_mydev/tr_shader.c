@@ -2025,9 +2025,7 @@ from the current global working shader
 */
 static shader_t *FinishShader( void ) {
 	int stage;
-	qboolean		hasLightmapStage;
-
-	hasLightmapStage = qfalse;
+	qboolean hasLightmapStage = qfalse;
 
 	//
 	// set sky stuff appropriate
@@ -2060,16 +2058,6 @@ static shader_t *FinishShader( void ) {
 			continue;
 		}
 
-		//
-		// ditch this stage if it's detail and detail textures are disabled
-		//
-		if ( pStage->isDetail && !r_detailTextures->integer ) {
-			if ( stage < ( MAX_SHADER_STAGES - 1 ) ) {
-				memmove( pStage, pStage + 1, sizeof( *pStage ) * ( MAX_SHADER_STAGES - stage - 1 ) );
-				memset(  pStage + 1, 0, sizeof( *pStage ) );
-			}
-			continue;
-		}
 
 		//
 		// default texture coordinate generation
@@ -2151,7 +2139,8 @@ static shader_t *FinishShader( void ) {
 		stage--;
 	}
 
-	if ( shader.lightmapIndex >= 0 && !hasLightmapStage ) {
+	if ( (qfalse == hasLightmapStage) && (shader.lightmapIndex >= 0) )
+    {
 		ri.Printf( PRINT_DEVELOPER, "WARNING: shader '%s' has lightmap but no lightmap stage!\n", shader.name );
   		shader.lightmapIndex = LIGHTMAP_NONE;
 	}

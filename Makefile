@@ -219,11 +219,13 @@ endif
 
 
 ifndef DEBUG_CFLAGS
-DEBUG_CFLAGS=-ggdb -pg -O0
+DEBUG_CFLAGS=-ggdb -O0
 endif
 
+# -pg 
+
 ifndef DEBUG_LDFLAGS
-DEBUG_LDFLAGS=-pg
+#DEBUG_LDFLAGS=-pg
 endif
 
 #############################################################################
@@ -1598,6 +1600,8 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/R_LoadImage.o \
   $(B)/renderer_vulkan/R_LoadImage2.o \
   $(B)/renderer_vulkan/R_FindImageFile.o \
+  $(B)/renderer_vulkan/R_FindShader.o \
+  $(B)/renderer_vulkan/R_ListShader.o \
   $(B)/renderer_vulkan/R_LightScaleTexture.o \
   $(B)/renderer_vulkan/generate_image_upload_data.o \
   $(B)/renderer_vulkan/vk_clear_attachments.o \

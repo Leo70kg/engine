@@ -303,13 +303,13 @@ void generate_image_upload_data(
 	while (width > scaled_width || height > scaled_height)
     {
         
-        if ( !r_simpleMipMaps->integer )
+        if ( r_simpleMipMaps->integer )
         {
-            R_MipMap2(data, width, height );
+            R_MipMap(data, width, height );
         }
         else
         {
-            R_MipMap(data, width, height);
+            R_MipMap2(data, width, height);
         }
 
 		width >>= 1;
@@ -339,13 +339,13 @@ void generate_image_upload_data(
     {
 		while (scaled_width > 1 || scaled_height > 1)
         {
-            if ( !r_simpleMipMaps->integer )
+            if ( r_simpleMipMaps->integer )
             {
-                R_MipMap2(scaled_buffer, scaled_width, scaled_height);
+                R_MipMap(scaled_buffer, scaled_width, scaled_height);
             }
             else
             {
-                R_MipMap(scaled_buffer, scaled_width, scaled_height);
+                R_MipMap2(scaled_buffer, scaled_width, scaled_height);
             }
 
 			scaled_width >>= 1;

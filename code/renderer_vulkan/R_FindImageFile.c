@@ -52,7 +52,7 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
 
-	long hash = generateHashValue(name);
+	int hash = generateHashValue(name);
 	image->next = hashTable[hash];
 	hashTable[hash] = image;
 
@@ -98,11 +98,13 @@ image_t* R_FindImageFile(const char *name, qboolean mipmap,
 						qboolean allowPicmip, int glWrapClampMode)
 {
 
-	image_t* image;
+   	image_t* image;
 	int	width, height;
 	unsigned char* pic;
 
-	if (!name) {
+	if (name == NULL)
+    {
+        ri.Printf( PRINT_WARNING, "R_FindImageFile: NULL\n");
 		return NULL;
 	}
 

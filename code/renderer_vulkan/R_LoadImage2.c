@@ -43,7 +43,7 @@ static void LoadPCX32 ( const char *filename, unsigned char **pic, int *width, i
 */
 void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height)
 {
-	
+
 	*pic = NULL;
 	*width = 0;
 	*height = 0;

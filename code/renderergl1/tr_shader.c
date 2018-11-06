@@ -66,6 +66,40 @@ static long generateHashValue( const char *fname, const int size )
 	return hash;
 }
 
+
+/* 
+====================
+RE_RegisterShader
+
+This is the exported shader entry point for the rest of the system
+It will always return an index that will be valid.
+
+This should really only be used for explicit shaders, because there is no
+way to ask for different implicit lighting modes (vertex, lightmap, etc)
+====================
+*/
+static qhandle_t RE_RegisterShaderLightMap( const char *name, int lightmapIndex ) {
+	shader_t	*sh;
+
+	if ( strlen( name ) >= MAX_QPATH ) {
+		ri.Printf( PRINT_ALL, "Shader name exceeds MAX_QPATH\n" );
+		return 0;
+	}
+
+	sh = R_FindShader( name, lightmapIndex, qtrue );
+
+	// we want to return 0 if the shader failed to
+	// load for some reason, but R_FindShader should
+	// still keep a name allocated for it, so if
+	// something calls RE_RegisterShader again with
+	// the same name, we don't try looking for it again
+	if ( sh->defaultShader ) {
+		return 0;
+	}
+
+	return sh->index;
+}
+
 void R_RemapShader(const char *shaderName, const char *newShaderName, const char *timeOffset) {
 	char		strippedName[MAX_QPATH];
 	int			hash;
@@ -2158,32 +2192,6 @@ static shader_t *FinishShader( void ) {
 		}
 
 		//
-		// ditch this stage if it's detail and detail textures are disabled
-		//
-		if ( pStage->isDetail && !r_detailTextures->integer )
-		{
-			int index;
-			
-			for(index = stage + 1; index < MAX_SHADER_STAGES; index++)
-			{
-				if(!stages[index].active)
-					break;
-			}
-			
-			if(index < MAX_SHADER_STAGES)
-				memmove(pStage, pStage + 1, sizeof(*pStage) * (index - stage));
-			else
-			{
-				if(stage + 1 < MAX_SHADER_STAGES)
-					memmove(pStage, pStage + 1, sizeof(*pStage) * (index - stage - 1));
-				
-				memset(&stages[index - 1], 0, sizeof(*stages));
-			}
-			
-			continue;
-		}
-
-		//
 		// default texture coordinate generation
 		//
 		if ( pStage->bundle[0].isLightmap ) {
@@ -2671,38 +2679,7 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_
 }
 
 
-/* 
-====================
-RE_RegisterShader
 
-This is the exported shader entry point for the rest of the system
-It will always return an index that will be valid.
-
-This should really only be used for explicit shaders, because there is no
-way to ask for different implicit lighting modes (vertex, lightmap, etc)
-====================
-*/
-qhandle_t RE_RegisterShaderLightMap( const char *name, int lightmapIndex ) {
-	shader_t	*sh;
-
-	if ( strlen( name ) >= MAX_QPATH ) {
-		ri.Printf( PRINT_ALL, "Shader name exceeds MAX_QPATH\n" );
-		return 0;
-	}
-
-	sh = R_FindShader( name, lightmapIndex, qtrue );
-
-	// we want to return 0 if the shader failed to
-	// load for some reason, but R_FindShader should
-	// still keep a name allocated for it, so if
-	// something calls RE_RegisterShader again with
-	// the same name, we don't try looking for it again
-	if ( sh->defaultShader ) {
-		return 0;
-	}
-
-	return sh->index;
-}
 
 
 /* 

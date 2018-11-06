@@ -338,19 +338,10 @@ typedef struct {
 
 	qboolean		isDetail;
 
-	// VULKAN
-//	VkPipeline		vk_pipeline;
-//	VkPipeline		vk_portal_pipeline;
-//	VkPipeline		vk_mirror_pipeline;
-
 } shaderStage_t;
 
 struct shaderCommands_s;
 
-#define LIGHTMAP_2D			-4		// shader is for 2D rendering
-#define LIGHTMAP_BY_VERTEX	-3		// pre-lit triangle models
-#define LIGHTMAP_WHITEIMAGE	-2
-#define	LIGHTMAP_NONE		-1
 
 typedef enum {
 	CT_FRONT_SIDED,
@@ -1071,7 +1062,6 @@ extern cvar_t	*r_znear;				// near Z clip plane
 
 extern cvar_t	*r_stencilbits;			// number of desired stencil bits
 extern cvar_t	*r_depthbits;			// number of desired depth bits
-extern cvar_t	*r_stereo;				// desired pixelformat stereo flag
 extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 0 = use framebuffer depth
 										// 16 = use 16-bit textures
@@ -1089,7 +1079,6 @@ extern	cvar_t	*r_norefresh;			// bypasses the ref rendering
 extern	cvar_t	*r_drawentities;		// disable/enable entity rendering
 extern	cvar_t	*r_drawworld;			// disable/enable world rendering
 extern	cvar_t	*r_speeds;				// various levels of information display
-extern  cvar_t	*r_detailTextures;		// enables/disables detail texturing stages
 extern	cvar_t	*r_novis;				// disable/enable usage of PVS
 extern	cvar_t	*r_nocull;
 extern	cvar_t	*r_facePlaneCull;		// enables culling of planar surfaces with back side test

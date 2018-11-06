@@ -1574,13 +1574,11 @@ void ClientBegin( int clientNum ) {
 	motd ( ent );
 
 	G_LogPrintf( "ClientBegin: %i\n", clientNum );
-
 	//Send domination point names:
 	if(g_gametype.integer == GT_DOMINATION) {
 		DominationPointNamesMessage(ent);
 		DominationPointStatusMessage(ent);
 	}
-
 	TeamCvarSet();
 
 	// count current clients and rank for scoreboard
@@ -1590,6 +1588,7 @@ void ClientBegin( int clientNum ) {
 	if(strlen(custom_vote_info)) {
 		SendCustomVoteCommands(clientNum);
 	}
+
 }
 
 /*

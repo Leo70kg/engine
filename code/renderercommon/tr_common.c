@@ -392,7 +392,7 @@ qboolean SkipBracedSection(char **program, int depth)
 {
 	do
     {
-		char* token = COM_ParseExt(program, qtrue);
+		char* token = R_ParseExt(program, qtrue);
 		if( token[1] == 0 )
         {
 			if( token[0] == '{' )
@@ -671,10 +671,10 @@ I want the render part standalone, dont fuck up with game part.
 ============================================================================
 */
 
-static char r_token[512];
-static char	r_parsename[512];
-static int	r_lines;
-static int	r_tokenline;
+static char r_token[512] = {0};
+static char	r_parsename[512] = {0};
+static int	r_lines = 0;
+static int	r_tokenline = 0;
 
 void R_BeginParseSession(const char* name)
 {
@@ -777,8 +777,7 @@ Parse a token out of a string
 Will never return NULL, just empty strings
 
 If "allowLineBreaks" is qtrue then an empty
-string will be returned if the next token is
-a newline.
+string will be returned if the next token is a newline.
 ==============
 */
 char* R_ParseExt(char** data_p, qboolean allowLineBreaks)

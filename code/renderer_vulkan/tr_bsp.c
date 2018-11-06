@@ -33,11 +33,9 @@ void RE_LoadWorldMap( const char *name );
 
 */
 
-static	world_t		s_worldData;
-static	byte		*fileBase;
+static	world_t		s_worldData ;
+static	unsigned char* fileBase = NULL;
 
-int			c_subdivisions;
-int			c_gridVerts;
 
 //===============================================================================
 
@@ -229,11 +227,13 @@ void		RE_SetWorldVisData( const byte *vis ) {
 R_LoadVisibility
 =================
 */
-static	void R_LoadVisibility( lump_t *l ) {
-	int		len;
-	byte	*buf;
+static	void R_LoadVisibility( lump_t *l )
+{
+    ri.Printf (PRINT_ALL, "\n---R_LoadVisibility---\n");
 
-	len = ( s_worldData.numClusters + 63 ) & ~63;
+	unsigned char* buf;
+
+	int len = ( s_worldData.numClusters + 63 ) & ~63;
 	s_worldData.novis = (byte*) ri.Hunk_Alloc( len, h_low );
 	memset( s_worldData.novis, 0xff, len );
 
@@ -1318,7 +1318,12 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 R_LoadSubmodels
 =================
 */
-static	void R_LoadSubmodels( lump_t *l ) {
+static	void R_LoadSubmodels( lump_t *l )
+{
+
+    ri.Printf (PRINT_ALL, "\n---R_LoadSubmodels---\n");
+
+
 	dmodel_t	*in;
 	bmodel_t	*out;
 	int			i, j, count;
@@ -1374,7 +1379,10 @@ static	void R_SetParent (mnode_t *node, mnode_t *parent)
 R_LoadNodesAndLeafs
 =================
 */
-static	void R_LoadNodesAndLeafs (lump_t *nodeLump, lump_t *leafLump) {
+static	void R_LoadNodesAndLeafs (lump_t *nodeLump, lump_t *leafLump)
+{
+    ri.Printf (PRINT_ALL, "\n---R_LoadNodesAndLeafs---\n");
+
 	int			i, j, p;
 	dnode_t		*in;
 	dleaf_t		*inLeaf;
@@ -1480,12 +1488,12 @@ R_LoadMarksurfaces
 =================
 */
 static	void R_LoadMarksurfaces (lump_t *l)
-{	
+{
+    ri.Printf (PRINT_ALL, "\n---R_LoadMarksurfaces---\n");
 	int		i, j, count;
-	int		*in;
 	msurface_t **out;
 	
-	in = (int*) (void *)(fileBase + l->fileofs);
+	int* in = (int*) (void *)(fileBase + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		ri.Error (ERR_DROP, "LoadMap: funny lump size in %s",s_worldData.name);
 	count = l->filelen / sizeof(*in);
@@ -1674,7 +1682,11 @@ R_LoadLightGrid
 
 ================
 */
-void R_LoadLightGrid( lump_t *l ) {
+void R_LoadLightGrid( lump_t *l )
+{
+    ri.Printf (PRINT_ALL, "\n---R_LoadLightGrid---\n");
+    
+
 	int		i;
 	vec3_t	maxs;
 	int		numGridPoints;
@@ -1719,7 +1731,12 @@ void R_LoadLightGrid( lump_t *l ) {
 R_LoadEntities
 ================
 */
-void R_LoadEntities( lump_t *l ) {
+void R_LoadEntities( lump_t *l )
+{
+
+    ri.Printf (PRINT_ALL, "\n---R_LoadEntities---\n");
+
+
 	char *p, *token, *s;
 	char keyname[MAX_TOKEN_CHARS];
 	char value[MAX_TOKEN_CHARS];
@@ -1858,7 +1875,6 @@ void RE_LoadWorldMap( const char *name )
 	COM_StripExtension( s_worldData.baseName, s_worldData.baseName, sizeof(s_worldData.baseName) );
 
 	startMarker = (byte*) ri.Hunk_Alloc(0, h_low);
-	c_gridVerts = 0;
 
 	header = (dheader_t *)buffer;
 	fileBase = (byte *)header;

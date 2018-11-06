@@ -385,16 +385,14 @@ VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def)
 {
 	for (int i = 0; i < vk_world.num_pipelines; i++)
     {
-		const struct Vk_Pipeline_Def* cur_def = &vk_world.pipeline_defs[i];
-
-		if (cur_def->shader_type == def->shader_type &&
-			cur_def->state_bits == def->state_bits &&
-			cur_def->face_culling == def->face_culling &&
-			cur_def->polygon_offset == def->polygon_offset &&
-			cur_def->clipping_plane == def->clipping_plane &&
-			cur_def->mirror == def->mirror &&
-			cur_def->line_primitives == def->line_primitives &&
-			cur_def->shadow_phase == def->shadow_phase)
+		if (vk_world.pipeline_defs[i].shader_type == def->shader_type &&
+			vk_world.pipeline_defs[i].state_bits == def->state_bits &&
+			vk_world.pipeline_defs[i].face_culling == def->face_culling &&
+			vk_world.pipeline_defs[i].polygon_offset == def->polygon_offset &&
+			vk_world.pipeline_defs[i].clipping_plane == def->clipping_plane &&
+			vk_world.pipeline_defs[i].mirror == def->mirror &&
+			vk_world.pipeline_defs[i].line_primitives == def->line_primitives &&
+			vk_world.pipeline_defs[i].shadow_phase == def->shadow_phase)
 		{
 			return vk_world.pipelines[i];
 		}
