@@ -697,23 +697,26 @@ int R_GetCurrentParseLine( void )
 
 int R_Compress( char *data_p )
 {
-	int c;
-	qboolean newline = qfalse, whitespace = qfalse;
+	qboolean newline = qfalse;
+    qboolean whitespace = qfalse;
 
 	char* in = data_p;
     char* out = data_p;
 
 	if (in)
     {
-		while ((c = *in) != 0) {
-
+        int c;
+		while ((c = *in) != 0)
+        {
 			// skip double slash comments
-			if ( c == '/' && in[1] == '/' ) {
+			if ( c == '/' && in[1] == '/' )
+            {
 				while (*in && *in != '\n') {
 					in++;
 				}
 			// skip /* */ comments
-			} else if ( c == '/' && in[1] == '*' ) {
+			}
+            else if ( c == '/' && in[1] == '*' ) {
 				while ( *in && ( *in != '*' || in[1] != '/' ) ) 
 					in++;
 				if ( *in ) 
@@ -771,8 +774,6 @@ int R_Compress( char *data_p )
 
 /*
 ==============
-COM_Parse
-
 Parse a token out of a string
 Will never return NULL, just empty strings
 

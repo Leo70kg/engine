@@ -1037,14 +1037,6 @@ extern struct Vk_Instance	vk;				// shouldn't be cleared during ref re-init
 extern struct Vk_World		vk_world;		// this data is cleared during ref re-init
 
 
-enum RenderApi {
-	RENDER_API_GL,
-	RENDER_API_VK,
-	RENDER_API_DX
-};
-
-enum RenderApi get_render_api(void);
-
 //
 // cvars
 //
@@ -1060,7 +1052,6 @@ extern cvar_t	*r_verbose;				// used for verbose debug spew
 
 extern cvar_t	*r_znear;				// near Z clip plane
 
-extern cvar_t	*r_stencilbits;			// number of desired stencil bits
 extern cvar_t	*r_depthbits;			// number of desired depth bits
 extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 0 = use framebuffer depth

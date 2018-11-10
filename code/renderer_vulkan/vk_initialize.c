@@ -16,7 +16,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL fpDebugCallback(VkDebugReportFlagsEXT flags, VkDe
 	OutputDebugString("\n");
 	DebugBreak();
 #else
-    printf("%s\n", message);
+    ri.Printf(PRINT_WARNING, "%s\n", message);
 
 #endif
 	return VK_FALSE;

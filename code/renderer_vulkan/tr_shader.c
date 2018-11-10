@@ -1286,14 +1286,16 @@ ParseSurfaceParm
 surfaceparm <name>
 ===============
 */
-static void ParseSurfaceParm( char **text ) {
-	char	*token;
-	int		numInfoParms = sizeof(infoParms) / sizeof(infoParms[0]);
-	int		i;
+static void ParseSurfaceParm( char **text )
+{
+	int	numInfoParms = sizeof(infoParms) / sizeof(infoParms[0]);
+	int	i;
 
-	token = R_ParseExt( text, qfalse );
-	for ( i = 0 ; i < numInfoParms ; i++ ) {
-		if ( !Q_stricmp( token, infoParms[i].name ) ) {
+	char* token = R_ParseExt( text, qfalse );
+	for ( i = 0 ; i < numInfoParms ; i++ )
+    {
+		if ( !Q_stricmp( token, infoParms[i].name ) )
+        {
 			shader.surfaceFlags |= (int)infoParms[i].surfaceFlags;
 			shader.contentFlags |= (int)infoParms[i].contents;
 #if 0

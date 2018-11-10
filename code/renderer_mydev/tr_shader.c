@@ -2557,7 +2557,7 @@ qhandle_t RE_RegisterShaderLightMap( const char *name, int lightmapIndex ) {
 	shader_t	*sh;
 
 	if ( (int)strlen( name ) >= MAX_QPATH ) {
-		Com_Printf( "Shader name exceeds MAX_QPATH\n" );
+		ri.Printf( PRINT_ALL, "Shader name exceeds MAX_QPATH\n" );
 		return 0;
 	}
 
@@ -2836,9 +2836,11 @@ static void ScanAndLoadShaderFiles( void )
 
 	char* p = s_shaderText;
 	// look for shader names
-	while ( 1 ) {
+	while ( 1 )
+    {
 		token = R_ParseExt( &p, qtrue );
-		if ( token[0] == 0 ) {
+		if ( token[0] == 0 )
+        {
 			break;
 		}
 

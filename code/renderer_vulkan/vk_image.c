@@ -17,9 +17,6 @@ struct Vk_Sampler_Def
 
 
 
-
-
-
 const static textureMode_t modes[] = {
 	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
 	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},

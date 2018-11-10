@@ -228,6 +228,9 @@ void generate_image_upload_data(
         int width, int height,
         qboolean mipmap, qboolean picmip)
 {
+
+    // ri.Printf (PRINT_ALL, "generate_image_upload_data: %s\n", name);
+
 	//
 	// convert to exact power of 2 sizes
 	//
