@@ -1619,7 +1619,10 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/multi_texture_vert.o \
   $(B)/renderer_vulkan/single_texture_clipping_plane_vert.o \
   $(B)/renderer_vulkan/single_texture_frag.o \
-  $(B)/renderer_vulkan/single_texture_vert.o
+  $(B)/renderer_vulkan/single_texture_vert.o \
+  \
+  $(B)/renderer_vulkan/fun_log.o
+
 
 ifeq ($(BUILD_WITH_SDL), 1)
   Q3VKOBJ += $(B)/renderer_vulkan/VKimp_SDL.o

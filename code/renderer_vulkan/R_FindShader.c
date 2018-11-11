@@ -1,5 +1,7 @@
 #include "tr_local.h"
 
+#include "fun_log.h"
+
 
 #define MAX_SHADERTEXT_HASH		2048
 static char** shaderTextHashTable[MAX_SHADERTEXT_HASH] ={ 0 };
@@ -463,7 +465,6 @@ static void SetShaderTextHashTableSizes( void )
         hashMem += (shaderTextHashTableSizes[i] + 1) * sizeof(char *);
     }
 
-
 	memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));
 
 	p = s_shaderText;
@@ -533,15 +534,19 @@ void ScanAndLoadShaderFiles( void )
 
 	// build single large buffer
     BuildSingleLargeBuffer(buffers, numShaderFiles, sum);
+   
+    FunLogging("BuildSingleLargeBuffer.txt", s_shaderText);
+	
+    R_Compress( s_shaderText );
 
-	R_Compress( s_shaderText );
+    FunLogging("after_R_Compress.txt", s_shaderText);
+
 
 	// free up memory
 	ri.FS_FreeFileList( shaderFiles );
 
 
     SetShaderTextHashTableSizes();
-
 
 	return;
 

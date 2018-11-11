@@ -504,10 +504,6 @@ static void APIENTRY logViewport(GLint x, GLint y, GLsizei width, GLsizei height
 }
 
 
-
-
-
-
 void qglEnableLogging( qboolean enable )
 {
 	static qboolean isEnabled;

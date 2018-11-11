@@ -671,7 +671,7 @@ I want the render part standalone, dont fuck up with game part.
 ============================================================================
 */
 
-static char r_token[512] = {0};
+
 static char	r_parsename[512] = {0};
 static int	r_lines = 0;
 static int	r_tokenline = 0;
@@ -680,7 +680,7 @@ void R_BeginParseSession(const char* name)
 {
 	r_lines = 1;
 	r_tokenline = 0;
-	Com_sprintf(r_parsename, sizeof(r_parsename), "%s", name);
+	snprintf(r_parsename, sizeof(r_parsename), "%s", name);
 }
 
 int R_GetCurrentParseLine( void )
@@ -722,21 +722,29 @@ int R_Compress( char *data_p )
 				if ( *in ) 
 					in += 2;
 				// record when we hit a newline
-			} else if ( c == '\n' || c == '\r' ) {
+			}
+            else if ( c == '\n' || c == '\r' ) {
 				newline = qtrue;
 				in++;
 				// record when we hit whitespace
-			} else if ( c == ' ' || c == '\t') {
+			}
+            else if ( (c == ' ') || (c == '\t') )
+            {
 				whitespace = qtrue;
 				in++;
 				// an actual token
-			} else {
+			}
+            else
+            {
 				// if we have a pending newline, emit it (and it counts as whitespace)
-				if (newline) {
+				if (newline)
+                {
 					*out++ = '\n';
 					newline = qfalse;
 					whitespace = qfalse;
-				} if (whitespace) {
+				}
+                if (whitespace)
+                {
 					*out++ = ' ';
 					whitespace = qfalse;
 				}
@@ -788,7 +796,7 @@ char* R_ParseExt(char** data_p, qboolean allowLineBreaks)
 	char *data = *data_p;
 
     unsigned char c;
-  
+    static char r_token[512] = {0}; 
     r_token[0] = 0;
 	r_tokenline = 0;
 
