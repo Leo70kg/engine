@@ -4,8 +4,6 @@
 
 void vk_clear_attachments(qboolean clear_depth_stencil, qboolean clear_color, float* color)
 {
-	if (!vk.active)
-		return;
 
 	if (!clear_depth_stencil && !clear_color)
 		return;
@@ -13,7 +11,8 @@ void vk_clear_attachments(qboolean clear_depth_stencil, qboolean clear_color, fl
 	VkClearAttachment attachments[2];
 	uint32_t attachment_count = 0;
 
-	if (clear_depth_stencil) {
+	if (clear_depth_stencil)
+    {
 		attachments[0].aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 		attachments[0].clearValue.depthStencil.depth = 1.0f;
 

@@ -130,10 +130,10 @@ static void DrawNormals (shaderCommands_t *input) {
         tess.numVertexes = 2 * count;
         tess.numIndexes = 0;
 
-        if (vk.active) {
-            vk_bind_geometry();
-            vk_shade_geometry(vk.normals_debug_pipeline, qfalse, force_zero, qfalse);
-        }
+
+        vk_bind_geometry();
+        vk_shade_geometry(vk.normals_debug_pipeline, qfalse, force_zero, qfalse);
+
 
         i += count;
     }
@@ -676,8 +676,8 @@ static void ComputeTexCoords( shaderStage_t *pStage ) {
 static void RB_IterateStagesGeneric( shaderCommands_t *input )
 {
 	// VULKAN
-	if (vk.active)
-		vk_bind_geometry();
+
+	vk_bind_geometry();
 
 
 	for ( int stage = 0; stage < MAX_SHADER_STAGES; stage++ )
@@ -714,32 +714,32 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		}
 
 		// VULKAN
-		// DX12
-		if (vk.active ) {
-			VkPipeline vk_pipeline = pStage->vk_pipeline;
 
-			if (backEnd.viewParms.isMirror) {
-				vk_pipeline = pStage->vk_mirror_pipeline;
-			}
-			else if (backEnd.viewParms.isPortal) {
-				vk_pipeline = pStage->vk_portal_pipeline;
-			}
 
-			enum Vk_Depth_Range depth_range = normal;
-			if (input->shader->isSky) {
-				depth_range = force_one;
-				if (r_showsky->integer)
-					depth_range = force_zero;
-			} else if (backEnd.currentEntity->e.renderfx & RF_DEPTHHACK) {
-				depth_range = weapon;
-			}
+        VkPipeline vk_pipeline = pStage->vk_pipeline;
 
-			if (r_lightmap->integer && multitexture)
-				GL_Bind(tr.whiteImage); // replace diffuse texture with a white one thus effectively render only lightmap
-
-			if (vk.active)
-				vk_shade_geometry(vk_pipeline, multitexture, depth_range, qtrue);
+        if (backEnd.viewParms.isMirror) {
+            vk_pipeline = pStage->vk_mirror_pipeline;
         }
+        else if (backEnd.viewParms.isPortal) {
+            vk_pipeline = pStage->vk_portal_pipeline;
+        }
+
+        enum Vk_Depth_Range depth_range = normal;
+        if (input->shader->isSky) {
+            depth_range = force_one;
+            if (r_showsky->integer)
+                depth_range = force_zero;
+        } else if (backEnd.currentEntity->e.renderfx & RF_DEPTHHACK) {
+            depth_range = weapon;
+        }
+
+        if (r_lightmap->integer && multitexture)
+            GL_Bind(tr.whiteImage); // replace diffuse texture with a white one thus effectively render only lightmap
+
+
+        vk_shade_geometry(vk_pipeline, multitexture, depth_range, qtrue);
+        
 
 		// allow skipping out to show just lightmaps during development
 		if ( r_lightmap->integer && ( pStage->bundle[0].isLightmap || pStage->bundle[1].isLightmap ) )

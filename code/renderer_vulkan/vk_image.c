@@ -11,20 +11,67 @@ typedef struct {
 struct Vk_Sampler_Def
 {
 	VkBool32 repeat_texture; // clamp/repeat texture addressing mode
-	int gl_mag_filter; // GL_XXX mag filter
-	int gl_min_filter; // GL_XXX min filter
+    VkBool32 mipmap;
 };
 
 
+//////////////////////////////////////////////
 
-const static textureMode_t modes[] = {
-	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
-	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},
-	{"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
-	{"GL_LINEAR_MIPMAP_NEAREST", GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR},
-	{"GL_NEAREST_MIPMAP_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST},
-	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
+#ifndef GL_NEAREST
+#define GL_NEAREST				0x2600
+#endif
+
+#ifndef GL_LINEAR
+#define GL_LINEAR				0x2601
+#endif
+
+#ifndef GL_NEAREST_MIPMAP_NEAREST
+#define GL_NEAREST_MIPMAP_NEAREST		0x2700
+#endif
+
+#ifndef GL_NEAREST_MIPMAP_LINEAR
+#define GL_NEAREST_MIPMAP_LINEAR		0x2702
+#endif
+
+#ifndef GL_LINEAR_MIPMAP_NEAREST
+#define GL_LINEAR_MIPMAP_NEAREST		0x2701
+#endif
+
+#ifndef GL_LINEAR_MIPMAP_LINEAR
+#define GL_LINEAR_MIPMAP_LINEAR			0x2703
+#endif
+
+
+//////////////////////////////////////
+
+
+//
+// Memory allocations.
+//
+#define MAX_IMAGE_CHUNKS        16
+
+struct Chunk {
+	VkDeviceMemory memory;
+	VkDeviceSize used;
 };
+
+static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS] = {0};
+static int s_NumImageChunks = 0;
+
+
+
+
+///////////////////////////////////////
+
+	// Host visible memory used to copy image data to device local memory.
+static VkBuffer s_StagingBuffer;
+static VkDeviceMemory s_StagingBufferMemory;
+// pointer to mapped staging buffer
+static unsigned char* s_pStagingBuffer = NULL;
+static VkDeviceSize s_StagingBufferSize = 0;
+
+////////////////////////////////////////
+
 
 /*
   The maximum number of sampler objects which can be simultaneously created on a device is
@@ -34,85 +81,83 @@ const static textureMode_t modes[] = {
 */
 
 #define MAX_VK_SAMPLERS     32
-static int num_samplers = 0;
-static struct Vk_Sampler_Def sampler_defs[MAX_VK_SAMPLERS] = {0};
-static VkSampler imgSamplers[MAX_VK_SAMPLERS] = {0};
+static struct Vk_Sampler_Def s_SamplerDefs[MAX_VK_SAMPLERS] = {0};
+
+static int s_NumSamplers = 0;
+
+static VkSampler s_ImgSamplers[MAX_VK_SAMPLERS] = {0};
+
+// Descriptor sets corresponding to bound texture images.
+static VkDescriptorSet s_CurrentDescriptorSets[2] = {0};
 
 
-
-static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
+static void vk_free_sampler(void)
 {
+    int i = 0;
+    for (i = 0; i < s_NumSamplers; i++)
+    {
+        if(s_ImgSamplers[i] != VK_NULL_HANDLE)
+        {
+		    qvkDestroySampler(vk.device, s_ImgSamplers[i], NULL);
+            s_ImgSamplers[i] = VK_NULL_HANDLE;
+        }
+
+        memset(&s_SamplerDefs[i], 0, sizeof(struct Vk_Sampler_Def));
+    }
+
+    s_NumSamplers = 0;
+}
+
+
+
+static VkSampler vk_find_sampler( VkBool32 isMipmap, VkBool32 isRepeatTexture )
+{
+
 	// Look for sampler among existing samplers.
 	int i;
-    for (i = 0; i < num_samplers; i++)
+    for (i = 0; i < s_NumSamplers; i++)
     {
-		if (( sampler_defs[i].repeat_texture == def->repeat_texture) &&
-			( sampler_defs[i].gl_mag_filter == def->gl_mag_filter) && 
-			( sampler_defs[i].gl_min_filter == def->gl_min_filter) )
-		{
-			return imgSamplers[i];
+		if (( s_SamplerDefs[i].repeat_texture == isRepeatTexture ) && ( s_SamplerDefs[i].mipmap == isMipmap ))
+        {
+			return s_ImgSamplers[i];
 		}
 	}
-	sampler_defs[i] = *def;
 
 
-	VkSamplerAddressMode address_mode = def->repeat_texture ?
+	struct Vk_Sampler_Def curSamplerDef;
+
+	curSamplerDef.repeat_texture = isRepeatTexture;
+	curSamplerDef.mipmap = isMipmap;
+	
+	s_SamplerDefs[i] = curSamplerDef;
+
+
+	VkSamplerAddressMode address_mode = isRepeatTexture ?
         VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
-	VkFilter mag_filter;
-	if(def->gl_mag_filter == GL_NEAREST)
-    {
-		mag_filter = VK_FILTER_NEAREST;
-	}
-    else if(def->gl_mag_filter == GL_LINEAR)
-    {
-		mag_filter = VK_FILTER_LINEAR;
-	}
-    else
-    {
-		ri.Error(ERR_FATAL, "invalid gl_mag_filter");
-	}
+	VkFilter mag_filter = VK_FILTER_LINEAR;
+//	VkFilter mag_filter = VK_FILTER_NEAREST;
 
-	VkFilter min_filter;
-	VkSamplerMipmapMode mipmap_mode;
-	
+    VkFilter min_filter = VK_FILTER_LINEAR;
+    // VkFilter min_filter = VK_FILTER_NEAREST;
+
+    
     //used to emulate OpenGL's GL_LINEAR/GL_NEAREST minification filter    
     VkBool32 max_lod_0_25 = 0;
 
-    if (def->gl_min_filter == GL_NEAREST) {
-		min_filter = VK_FILTER_NEAREST;
+    VkSamplerMipmapMode mipmap_mode;
+    if (isMipmap)
+    {
 		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-		max_lod_0_25 = 1;
-	}
-    else if (def->gl_min_filter == GL_LINEAR)
+        max_lod_0_25 = 0;
+    }
+    else
     {
-		min_filter = VK_FILTER_LINEAR;
-		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-		max_lod_0_25 = 1;
-	}
-    else if (def->gl_min_filter == GL_NEAREST_MIPMAP_NEAREST)
-    {
-		min_filter = VK_FILTER_NEAREST;
-		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-	}
-    else if (def->gl_min_filter == GL_LINEAR_MIPMAP_NEAREST)
-    {
-		min_filter = VK_FILTER_LINEAR;
-		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-	}
-    else if (def->gl_min_filter == GL_NEAREST_MIPMAP_LINEAR)
-    {
-		min_filter = VK_FILTER_NEAREST;
-		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	}
-    else if (def->gl_min_filter == GL_LINEAR_MIPMAP_LINEAR)
-    {
-		min_filter = VK_FILTER_LINEAR;
-		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	}
-    else {
-		ri.Error(ERR_FATAL, "invalid gl_min_filter");
-	}
+        mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        max_lod_0_25 = 1;
+    }
+    //VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
 
 	VkSamplerCreateInfo desc;
 	desc.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -134,43 +179,29 @@ static VkSampler vk_find_sampler(const struct Vk_Sampler_Def* def)
 	desc.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	desc.unnormalizedCoordinates = VK_FALSE;
 
-	// Create new sampler.
-
-
 	VkSampler sampler;
 	VK_CHECK(qvkCreateSampler(vk.device, &desc, NULL, &sampler));
 
 
-	imgSamplers[num_samplers] = sampler;
-	num_samplers++;
-	if (num_samplers >= MAX_VK_SAMPLERS)
+	s_ImgSamplers[s_NumSamplers++] = sampler;
+	if (s_NumSamplers >= MAX_VK_SAMPLERS)
     {
 		ri.Error(ERR_DROP, "MAX_VK_SAMPLERS hit\n");
 	}
+    return sampler;
 
-
-	return sampler;
+	// Create new sampler.
+    //return CreateNewSampler(&s_SamplerDefs[i]);
 }
 
 
 static void vk_update_descriptor_set( 
         VkDescriptorSet set, VkImageView image_view, 
-        VkBool32 mipmap, qboolean repeat_texture )
+        VkBool32 mipmap, VkBool32 repeat_texture )
 {
-	struct Vk_Sampler_Def sampler_def;
-    memset(&sampler_def, 0, sizeof(sampler_def));
-
-	sampler_def.repeat_texture = repeat_texture;
-	if (mipmap) {
-		sampler_def.gl_mag_filter = GL_LINEAR;
-		sampler_def.gl_min_filter = GL_LINEAR_MIPMAP_NEAREST;
-	} else {
-		sampler_def.gl_mag_filter = GL_LINEAR;
-		sampler_def.gl_min_filter = GL_LINEAR;
-	}
 
 	VkDescriptorImageInfo image_info;
-	image_info.sampler = vk_find_sampler(&sampler_def);
+	image_info.sampler = vk_find_sampler(mipmap, repeat_texture);
 	image_info.imageView = image_view;
 	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -189,27 +220,46 @@ static void vk_update_descriptor_set(
 	qvkUpdateDescriptorSets(vk.device, 1, &descriptor_write, 0, NULL);
 }
 
-
-void myResetImageSampler()
+void vk_bind_descriptor_sets(unsigned int numSet)
 {
-    int i = 0;
-    for (i = 0; i < num_samplers; i++)
-        if(imgSamplers[i] != VK_NULL_HANDLE)
-        {
-		    qvkDestroySampler(vk.device, imgSamplers[i], NULL);
-            imgSamplers[i] = VK_NULL_HANDLE;
-        }
-
-    num_samplers = 0;
+	qvkCmdBindDescriptorSets(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline_layout, 0, numSet, s_CurrentDescriptorSets, 0, NULL);
 }
 
 
-void GL_TextureMode( const char *string )
+void GL_Bind( image_t *image )
 {
+	if ( glState.currenttextures[glState.currenttmu] != image->texnum )
+    {
+		glState.currenttextures[glState.currenttmu] = image->texnum;
+
+        image->frameUsed = tr.frameCount;
+
+		// VULKAN
+		s_CurrentDescriptorSets[glState.currenttmu] = 
+            vk_world.images[image->index].descriptor_set;
+	}
+}
+
+
+void VK_TextureMode( void )
+{
+
+    cvar_t* r_textureMode = ri.Cvar_Get( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
+    
+    const static textureMode_t modes[] = {
+        {"GL_NEAREST", GL_NEAREST, GL_NEAREST},
+        {"GL_LINEAR", GL_LINEAR, GL_LINEAR},
+        {"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
+        {"GL_LINEAR_MIPMAP_NEAREST", GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR},
+        {"GL_NEAREST_MIPMAP_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST},
+        {"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
+    };
+
 	int i;
 
-	for ( i=0; i< 6; i++ ) {
-		if ( !Q_stricmp( modes[i].name, string ) ) {
+	for ( i=0; i< 6; i++ )
+    {
+		if ( !Q_stricmp( modes[i].name, r_textureMode->string ) ) {
 			break;
 		}
 	}
@@ -242,71 +292,6 @@ void GL_TextureMode( const char *string )
 }
 
 
-/*
-
-static void allocate_and_bind_image_memory(VkImage image)
-{
-    int i = 0;
-	VkMemoryRequirements memory_requirements;
-	qvkGetImageMemoryRequirements(vk.device, image, &memory_requirements);
-
-	if (memory_requirements.size > IMAGE_CHUNK_SIZE) {
-		ri.Error(ERR_FATAL, "Vulkan: could not allocate memory, image is too large.");
-	}
-
-	struct Chunk* chunk = NULL;
-
-	// Try to find an existing chunk of sufficient capacity.
-	long mask = ~(memory_requirements.alignment - 1);
-	
-    for (i = 0; i < vk_world.num_image_chunks; i++)
-    {
-		// ensure that memory region has proper alignment
-		VkDeviceSize offset = (vk_world.image_chunks[i].used + memory_requirements.alignment - 1) & mask;
-
-		if (offset + memory_requirements.size <= IMAGE_CHUNK_SIZE)
-        {
-			chunk = &vk_world.image_chunks[i];
-			chunk->used = offset + memory_requirements.size;
-			break;
-		}
-	}
-
-
-	// Allocate a new chunk in case we couldn't find suitable existing chunk.
-	if (chunk == NULL) {
-		if (vk_world.num_image_chunks >= MAX_IMAGE_CHUNKS) {
-			ri.Error(ERR_FATAL, "Vulkan: image chunk limit has been reached");
-		}
-
-		VkMemoryAllocateInfo alloc_info;
-		alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		alloc_info.pNext = NULL;
-		alloc_info.allocationSize = IMAGE_CHUNK_SIZE;
-		alloc_info.memoryTypeIndex = find_memory_type(
-            vk.physical_device, memory_requirements.memoryTypeBits, 
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
-
-		VkDeviceMemory memory;
-		VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
-
-		vk_world.image_chunks[vk_world.num_image_chunks].memory = memory;
-		vk_world.image_chunks[vk_world.num_image_chunks].used =
-            memory_requirements.size;
-
-        chunk = &vk_world.image_chunks[vk_world.num_image_chunks];
-
-    	VK_CHECK(qvkBindImageMemory(vk.device, image, chunk->memory, chunk->used - memory_requirements.size));
-
-        vk_world.num_image_chunks++;
-        return;
-	}
-    VK_CHECK(qvkBindImageMemory(vk.device, image, chunk->memory, chunk->used - memory_requirements.size));
-}
-
-*/
-
-
 
 static void allocate_and_bind_image_memory(VkImage image)
 {
@@ -323,14 +308,14 @@ static void allocate_and_bind_image_memory(VkImage image)
 	// Try to find an existing chunk of sufficient capacity.
 	long mask = ~(memory_requirements.alignment - 1);
 
-	for (i = 0; i < vk_world.num_image_chunks; i++)
-    {
+	for (i = 0; i < s_NumImageChunks; i++)
+ 	{
 		// ensure that memory region has proper alignment
-		VkDeviceSize offset = (vk_world.image_chunks[i].used + memory_requirements.alignment - 1) & mask;
+		VkDeviceSize offset = (s_ImageChunks[i].used + memory_requirements.alignment - 1) & mask;
 
 		if (offset + memory_requirements.size <= IMAGE_CHUNK_SIZE)
-        {
-			chunk = &vk_world.image_chunks[i];
+		{
+			chunk = &s_ImageChunks[i];
 			chunk->used = offset + memory_requirements.size;
 			break;
 		}
@@ -339,7 +324,7 @@ static void allocate_and_bind_image_memory(VkImage image)
 	// Allocate a new chunk in case we couldn't find suitable existing chunk.
 	if (chunk == NULL)
     {
-		if (vk_world.num_image_chunks >= MAX_IMAGE_CHUNKS) {
+		if (s_NumImageChunks >= MAX_IMAGE_CHUNKS) {
 			ri.Error(ERR_FATAL, "Vulkan: image chunk limit has been reached");
 		}
 
@@ -352,8 +337,8 @@ static void allocate_and_bind_image_memory(VkImage image)
 		VkDeviceMemory memory;
 		VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
 
-		chunk = &vk_world.image_chunks[vk_world.num_image_chunks];
-		vk_world.num_image_chunks++;
+		chunk = &s_ImageChunks[s_NumImageChunks];
+		s_NumImageChunks++;
 		chunk->memory = memory;
 		chunk->used = memory_requirements.size;
 	}
@@ -424,7 +409,7 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 		VK_CHECK(qvkAllocateDescriptorSets(vk.device, &desc, &image.descriptor_set));
 
 		vk_update_descriptor_set(image.descriptor_set, image.view, mip_levels > 1, repeat_texture);
-		vk_world.current_descriptor_sets[glState.currenttmu] = image.descriptor_set;
+		s_CurrentDescriptorSets[glState.currenttmu] = image.descriptor_set;
 	}
 
 	return image;
@@ -434,16 +419,20 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 
 static void ensure_staging_buffer_allocation(VkDeviceSize size)
 {
-	if (vk_world.staging_buffer_size >= size)
-		return;
 
-	if (vk_world.staging_buffer != VK_NULL_HANDLE)
-		qvkDestroyBuffer(vk.device, vk_world.staging_buffer, NULL);
+	if (s_StagingBuffer != VK_NULL_HANDLE)
+    {
+		qvkDestroyBuffer(vk.device, s_StagingBuffer, NULL);
+        memset(&s_StagingBuffer, 0, sizeof(VkBuffer));
+    }
 
-	if (vk_world.staging_buffer_memory != VK_NULL_HANDLE)
-		qvkFreeMemory(vk.device, vk_world.staging_buffer_memory, NULL);
+	if (s_StagingBufferMemory != VK_NULL_HANDLE)
+    {
+		qvkFreeMemory(vk.device, s_StagingBufferMemory, NULL);
+        memset(&s_StagingBufferMemory, 0, sizeof(VkDeviceMemory));
+    }
 
-	vk_world.staging_buffer_size = size;
+	s_StagingBufferSize = size;
 
 	VkBufferCreateInfo buffer_desc;
 	buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -454,10 +443,12 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size)
 	buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	buffer_desc.queueFamilyIndexCount = 0;
 	buffer_desc.pQueueFamilyIndices = NULL;
-	VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &vk_world.staging_buffer));
+	VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &s_StagingBuffer));
+
+    // To determine the memory requirements for a buffer resource
 
 	VkMemoryRequirements memory_requirements;
-	qvkGetBufferMemoryRequirements(vk.device, vk_world.staging_buffer, &memory_requirements);
+	qvkGetBufferMemoryRequirements(vk.device, s_StagingBuffer, &memory_requirements);
 
 	uint32_t memory_type = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -467,17 +458,18 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size)
 	alloc_info.pNext = NULL;
 	alloc_info.allocationSize = memory_requirements.size;
 	alloc_info.memoryTypeIndex = memory_type;
-	VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &vk_world.staging_buffer_memory));
-	VK_CHECK(qvkBindBufferMemory(vk.device, vk_world.staging_buffer, vk_world.staging_buffer_memory, 0));
+	VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &s_StagingBufferMemory));
+	VK_CHECK(qvkBindBufferMemory(vk.device, s_StagingBuffer, s_StagingBufferMemory, 0));
 
 	void* data;
-	VK_CHECK(qvkMapMemory(vk.device, vk_world.staging_buffer_memory, 0, VK_WHOLE_SIZE, 0, &data));
-	vk_world.staging_buffer_ptr = (byte*)data;
+	VK_CHECK(qvkMapMemory(vk.device, s_StagingBufferMemory, 0, VK_WHOLE_SIZE, 0, &data));
+	
+    s_pStagingBuffer = (unsigned char *)data;
 }
 
 
 static void vk_upload_image_data(VkImage image, int width, int height, 
-        qboolean mipmap, const uint8_t* pixels, int bytes_per_pixel)
+        qboolean mipmap, const unsigned char* pixels, int bytes_per_pixel)
 {
 
 	VkBufferImageCopy regions[16];
@@ -485,7 +477,8 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 
 	int buffer_size = 0;
 
-	while (qtrue) {
+	while (1)
+    {
 		VkBufferImageCopy region;
 		region.bufferOffset = buffer_size;
 		region.bufferRowLength = 0;
@@ -520,7 +513,7 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 	}
 
 	ensure_staging_buffer_allocation(buffer_size);
-	memcpy(vk_world.staging_buffer_ptr, pixels, buffer_size);
+	memcpy(s_pStagingBuffer, pixels, buffer_size);
 
 	VkCommandBufferAllocateInfo alloc_info;
 	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -545,7 +538,7 @@ static void vk_upload_image_data(VkImage image, int width, int height,
     //// recorder = [&image, &num_regions, &regions](VkCommandBuffer command_buffer)
     {
         VkCommandBuffer cb = command_buffer;
-            record_buffer_memory_barrier(cb, vk_world.staging_buffer,
+            record_buffer_memory_barrier(cb, s_StagingBuffer,
 			VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
@@ -553,7 +546,7 @@ static void vk_upload_image_data(VkImage image, int width, int height,
             0, VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-	    qvkCmdCopyBufferToImage(cb, vk_world.staging_buffer, image,
+	    qvkCmdCopyBufferToImage(cb, s_StagingBuffer, image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, num_regions, regions);
 
 	    record_image_layout_transition(cb, image,
@@ -653,7 +646,38 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 
 void myDestroyImage(void)
 {
-    int i = 0; 
+    vk_free_sampler();
+
+    if (s_StagingBufferMemory != VK_NULL_HANDLE)
+    {
+		qvkFreeMemory(vk.device, s_StagingBufferMemory, NULL);
+        memset(&s_StagingBufferMemory, 0, sizeof(VkDeviceMemory));
+    }
+
+
+	if (s_StagingBuffer != VK_NULL_HANDLE)
+    {
+        qvkDestroyBuffer(vk.device, s_StagingBuffer, NULL);
+        memset(&s_StagingBuffer, 0, sizeof(VkBuffer));
+    }
+    s_StagingBufferSize = 0;
+
+	s_pStagingBuffer = NULL;
+   
+    int i = 0;
+
+    for(i = 0; i < s_NumImageChunks; i++)
+    {    
+        if(s_ImageChunks[i].memory != VK_NULL_HANDLE)
+        {
+            qvkFreeMemory(vk.device, s_ImageChunks[i].memory, NULL);
+			memset(&s_ImageChunks[i], 0, sizeof(struct Chunk) );
+        }
+    }
+    s_NumImageChunks = 0;
+
+
+
 	for (i = 0; i < MAX_VK_IMAGES; i++)
     {
 		struct Vk_Image* image = &vk_world.images[i];
@@ -662,27 +686,16 @@ void myDestroyImage(void)
         {
 			qvkDestroyImage(vk.device, image->handle, NULL);
 			qvkDestroyImageView(vk.device, image->view, NULL);
+            image->handle = VK_NULL_HANDLE;
 		}
-		
-//	    if (vk_world.staging_buffer_memory != VK_NULL_HANDLE)
-//		    qvkFreeMemory(vk.device, vk_world.staging_buffer_memory, NULL);       
-       
+
+        if(image->descriptor_set != VK_NULL_HANDLE)
+        {    
+            qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &image->descriptor_set);
+            image->descriptor_set = VK_NULL_HANDLE;
+        }
 	}
 
-    ////////// suijingfeng: not sure if it's ok writing this way
-/*
-    if(image->descriptor_set != VK_NULL_HANDLE)
-    {    
-        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &image->descriptor_set);
-	    image->descriptor_set = VK_NULL_HANDLE;
-    }
-
-    for(i = 0; i < vk_world.num_image_chunks; i++)
-        if(vk_world.image_chunks[i].memory != VK_NULL_HANDLE)
-        {
-            qvkFreeMemory(vk.device, vk_world.image_chunks[i].memory, NULL); 
-        }
-*/
 }
 
 

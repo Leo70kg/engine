@@ -59,22 +59,10 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 	tr.numImages++;
 
 	// Create corresponding GPU resource.
-	qboolean isLightmap = (strncmp(name, "*lightmap", 9) == 0);
-	glState.currenttmu = (isLightmap ? 1 : 0);
+	int isLightmap = (strncmp(name, "*lightmap", 9) == 0);
+	glState.currenttmu = isLightmap;
 	
-
-    if ( glState.currenttextures[glState.currenttmu] != image->texnum )
-    {
-        glState.currenttextures[glState.currenttmu] = image->texnum;
-
-        image->frameUsed = tr.frameCount;
-
-        // VULKAN
-        vk_world.current_descriptor_sets[glState.currenttmu] = 
-            vk_world.images[image->index].descriptor_set ;
-    }
-
-
+    GL_Bind(image);
 
 	struct Image_Upload_Data upload_data;
     memset(&upload_data, 0, sizeof(upload_data));
@@ -121,13 +109,13 @@ image_t* R_FindImageFile(const char *name, qboolean mipmap,
 			if ( strcmp( name, "*white" ) )
 			{
 				if ( image->mipmap != mipmap ) {
-					ri.Printf( PRINT_ALL, "WARNING: reused image %s with mixed mipmap parm\n", name );
+					ri.Printf( PRINT_WARNING, "WARNING: reused image %s with mixed mipmap parm\n", name );
 				}
 				if ( image->allowPicmip != allowPicmip ) {
-					ri.Printf( PRINT_ALL, "WARNING: reused image %s with mixed allowPicmip parm\n", name );
+					ri.Printf( PRINT_WARNING, "WARNING: reused image %s with mixed allowPicmip parm\n", name );
 				}
 				if ( image->wrapClampMode != glWrapClampMode ) {
-					ri.Printf( PRINT_ALL, "WARNING: reused image %s with mixed glWrapClampMode parm\n", name );
+					ri.Printf( PRINT_WARNING, "WARNING: reused image %s with mixed glWrapClampMode parm\n", name );
 				}
 			}
 			return image;

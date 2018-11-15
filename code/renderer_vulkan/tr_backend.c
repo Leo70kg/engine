@@ -35,22 +35,6 @@ static float fast_sky_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 
 
-void GL_Bind( image_t *image )
-{
-	if ( glState.currenttextures[glState.currenttmu] != image->texnum )
-    {
-		glState.currenttextures[glState.currenttmu] = image->texnum;
-
-        image->frameUsed = tr.frameCount;
-
-		// VULKAN
-		vk_world.current_descriptor_sets[glState.currenttmu] = 
-            vk_world.images[image->index].descriptor_set ;
-	}
-}
-
-
-
 
 
 
@@ -83,7 +67,8 @@ Any mirrored or portaled views have already been drawn, so prepare
 to actually render the visible surfaces for this view
 =================
 */
-void RB_BeginDrawingView (void) {
+void RB_BeginDrawingView (void)
+{
 	// we will need to change the projection matrix before drawing
 	// 2D images again
 	backEnd.projection2D = qfalse;
@@ -254,22 +239,6 @@ RENDER BACK END THREAD FUNCTIONS
 ============================================================================
 */
 
-/*
-================
-RB_SetGL2D
-
-================
-*/
-void	RB_SetGL2D (void) {
-	backEnd.projection2D = qtrue;
-
-	// set 2D virtual screen size
-
-
-	// set time for 2D shaders
-	backEnd.refdef.time = ri.Milliseconds();
-	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
-}
 
 
 /*
@@ -348,8 +317,15 @@ const void *RB_StretchPic ( const void *data ) {
 
 	cmd = (const stretchPicCommand_t *)data;
 
-	if ( !backEnd.projection2D ) {
-		RB_SetGL2D();
+	if ( !backEnd.projection2D )
+    {
+		backEnd.projection2D = qtrue;
+
+        // set 2D virtual screen size
+
+        // set time for 2D shaders
+	    backEnd.refdef.time = ri.Milliseconds();
+	    backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
 	}
 
 	shader = cmd->shader;
@@ -443,11 +419,9 @@ RB_DrawBuffer
 
 =============
 */
-const void	*RB_DrawBuffer( const void *data )
+const void* RB_DrawBuffer( const void *data )
 {
-	const drawBufferCommand_t	*cmd;
-
-	cmd = (const drawBufferCommand_t *)data;
+	const drawBufferCommand_t* cmd = (const drawBufferCommand_t *)data;
 
 
 	// VULKAN
@@ -461,8 +435,17 @@ const void	*RB_DrawBuffer( const void *data )
 
 		// VULKAN
 
-		RB_SetGL2D(); // to ensure we have viewport that occupies entire window
-		vk_clear_attachments(qfalse, qtrue, color);
+		// to ensure we have viewport that occupies entire window
+        backEnd.projection2D = qtrue;
+
+        // set 2D virtual screen size
+
+
+        // set time for 2D shaders
+        backEnd.refdef.time = ri.Milliseconds();
+        backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;	
+        
+        vk_clear_attachments(qfalse, qtrue, color);
 
 	}
 
@@ -471,13 +454,19 @@ const void	*RB_DrawBuffer( const void *data )
 
 
 // VULKAN
-void RB_Show_Vk_Dx_Images(void) {
-	if (!vk.active ) {
-		return;
-	}
+void RB_Show_Vk_Dx_Images(void)
+{
 
-	if ( !backEnd.projection2D ) {
-		RB_SetGL2D();
+	if ( !backEnd.projection2D )
+    {
+        backEnd.projection2D = qtrue;
+
+        // set 2D virtual screen size
+
+
+        // set time for 2D shaders
+        backEnd.refdef.time = ri.Milliseconds();
+        backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
 	}
 
 	float black[4] = {0, 0, 0, 1};
@@ -532,10 +521,10 @@ void RB_Show_Vk_Dx_Images(void) {
 		tess.svars.texcoords[0][3][0] = 0;
 		tess.svars.texcoords[0][3][1] = 1;
 
-		if (vk.active) {
-			vk_bind_geometry();
-			vk_shade_geometry(vk.images_debug_pipeline, qfalse, normal, qtrue);
-		}
+
+        vk_bind_geometry();
+        vk_shade_geometry(vk.images_debug_pipeline, qfalse, normal, qtrue);
+
 
 	}
 	tess.numIndexes = 0;

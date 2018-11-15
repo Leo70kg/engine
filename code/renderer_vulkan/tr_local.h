@@ -33,7 +33,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "qvk.h"
 
-// work around, will be removed
+
+/*
 #if defined( _WIN32 )
 
 
@@ -44,6 +45,26 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <GL/gl.h>
 
+#endif
+*/
+
+
+// work around, will be removed
+
+#ifndef GL_REPEAT
+#define GL_REPEAT				0x2901
+#endif
+
+#ifndef GL_CLAMP
+#define GL_CLAMP				0x2900
+#endif
+
+#ifndef GL_MODULATE
+#define GL_MODULATE				0x2100
+#endif
+
+#ifndef GL_ADD
+#define GL_ADD					0x0104
 #endif
 
 
@@ -1150,8 +1171,8 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 /*
 ** GL wrapper/helper functions
 */
-void	GL_Bind( image_t *image );
-void	GL_TextureMode(const char *string);
+void GL_Bind( image_t *image );
+void VK_TextureMode(void);
 
 #define GLS_SRCBLEND_ZERO						0x00000001
 #define GLS_SRCBLEND_ONE						0x00000002
@@ -1608,9 +1629,8 @@ void generate_image_upload_data(struct Image_Upload_Data* upload_data, unsigned 
         int width, int height, qboolean mipmap, qboolean picmip);
 
 void myDestroyImage(void);
-void myResetImageSampler(void);
 void vk_release_resources(void);
-
+void vk_bind_descriptor_sets(unsigned int numSet);
 
 void R_ScreenShotJPEG_f(void);
 

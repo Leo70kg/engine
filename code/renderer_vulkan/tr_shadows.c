@@ -48,9 +48,7 @@ static vec4_t		extrudedEdges[SHADER_MAX_VERTEXES * 4];
 static int			numExtrudedEdges;
 
 static void R_AddEdgeDef( int i1, int i2, int facing ) {
-	int		c;
-
-	c = numEdgeDefs[ i1 ];
+	int		c = numEdgeDefs[ i1 ];
 	if ( c == MAX_EDGE_DEFS ) {
 		return;		// overflow
 	}
@@ -105,10 +103,8 @@ static void R_ExtrudeShadowEdges( void ) {
 
 
 // VULKAN
-// DX12
-static void R_Vk_Dx_RenderShadowEdges(VkPipeline vk_pipeline) {
-	if (!vk.active )
-		return;
+static void R_Vk_Dx_RenderShadowEdges(VkPipeline vk_pipeline)
+{
 
 	int i = 0;
 	while (i < numExtrudedEdges) {
@@ -118,8 +114,10 @@ static void R_Vk_Dx_RenderShadowEdges(VkPipeline vk_pipeline) {
 
 		memcpy(tess.xyz, extrudedEdges[i*4], 4 * count * sizeof(vec4_t));
 		tess.numVertexes = count * 4;
-
-		for (int k = 0; k < count; k++) {
+        int k = 0;
+		
+        for (k = 0; k < count; k++)
+        {
 			tess.indexes[k * 6 + 0] = k * 4 + 0;
 			tess.indexes[k * 6 + 1] = k * 4 + 2;
 			tess.indexes[k * 6 + 2] = k * 4 + 1;
@@ -130,15 +128,14 @@ static void R_Vk_Dx_RenderShadowEdges(VkPipeline vk_pipeline) {
 		}
 		tess.numIndexes = count * 6;
 
-		for (int k = 0; k < tess.numVertexes; k++) {
+		for (k = 0; k < tess.numVertexes; k++)
+        {
 			VectorSet(tess.svars.colors[k], 50, 50, 50);
 			tess.svars.colors[k][3] = 255;
 		}
 
-		if (vk.active) {
-			vk_bind_geometry();
-			vk_shade_geometry(vk_pipeline, qfalse, normal, qtrue);
-		}
+        vk_bind_geometry();
+        vk_shade_geometry(vk_pipeline, qfalse, normal, qtrue);
 
 
 		i += count;
@@ -182,7 +179,8 @@ void RB_ShadowTessEnd( void ) {
 	memset( numEdgeDefs, 0, 4 * tess.numVertexes );
 
 	numTris = tess.numIndexes / 3;
-	for ( i = 0 ; i < numTris ; i++ ) {
+	for ( i = 0 ; i < numTris ; i++ )
+    {
 		int		i1, i2, i3;
 		vec3_t	d1, d2, normal;
 		float	*v1, *v2, *v3;
@@ -220,17 +218,10 @@ void RB_ShadowTessEnd( void ) {
 	R_ExtrudeShadowEdges();
 
 	// mirrors have the culling order reversed
-	if ( backEnd.viewParms.isMirror ) {
-		// VULKAN
-		// DX12
-		R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[0][1]);
-		R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[1][1]);
-	} else {
-		// VULKAN
-		// DX12
-		R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[0][0]);
-		R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[1][0]);
-	}
+    int isMir = backEnd.viewParms.isMirror;
+	// VULKAN
+	R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[0][isMir]);
+	R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[1][isMir]);
 
 }
 
@@ -245,7 +236,8 @@ because otherwise shadows from different body parts would
 overlap and double darken.
 =================
 */
-void RB_ShadowFinish( void ) {
+void RB_ShadowFinish( void )
+{
 	if ( r_shadows->integer != 2 ) {
 		return;
 	}
@@ -256,10 +248,7 @@ void RB_ShadowFinish( void ) {
 
 	GL_Bind( tr.whiteImage );
 
-
-
 	// VULKAN
-	// DX12
 
     tess.indexes[0] = 0;
     tess.indexes[1] = 1;
@@ -273,27 +262,30 @@ void RB_ShadowFinish( void ) {
     VectorSet(tess.xyz[1],  100,  100, -10);
     VectorSet(tess.xyz[2],  100, -100, -10);
     VectorSet(tess.xyz[3], -100, -100, -10);
-    for (int i = 0; i < 4; i++) {
+    int i = 0;
+
+    for (i = 0; i < 4; i++)
+    {
         VectorSet(tess.svars.colors[i], 153, 153, 153);
         tess.svars.colors[i][3] = 255;
     }
     tess.numVertexes = 4;
 
-    if (vk.active) {
-        // set backEnd.or.modelMatrix to identity matrix
-        float tmp[16];
-        memcpy(tmp, vk_world.modelview_transform, 64);
-        memset(vk_world.modelview_transform, 0, 64);
-        vk_world.modelview_transform[0] = 1.0f;
-        vk_world.modelview_transform[5] = 1.0f;
-        vk_world.modelview_transform[10] = 1.0f;
-        vk_world.modelview_transform[15] = 1.0f;
 
-        vk_bind_geometry();
-        vk_shade_geometry(vk.shadow_finish_pipeline, qfalse, normal, qtrue);
+    // set backEnd.or.modelMatrix to identity matrix
+    float tmp[16];
+    memcpy(tmp, vk_world.modelview_transform, 64);
+    memset(vk_world.modelview_transform, 0, 64);
+    vk_world.modelview_transform[0] = 1.0f;
+    vk_world.modelview_transform[5] = 1.0f;
+    vk_world.modelview_transform[10] = 1.0f;
+    vk_world.modelview_transform[15] = 1.0f;
 
-        memcpy(vk_world.modelview_transform, tmp, 64);
-    }
+    vk_bind_geometry();
+    vk_shade_geometry(vk.shadow_finish_pipeline, qfalse, normal, qtrue);
+
+    memcpy(vk_world.modelview_transform, tmp, 64);
+
 
     tess.numIndexes = 0;
     tess.numVertexes = 0;
@@ -307,28 +299,26 @@ RB_ProjectionShadowDeform
 
 =================
 */
-void RB_ProjectionShadowDeform( void ) {
-	float	*xyz;
-	int		i;
-	float	h;
+void RB_ProjectionShadowDeform( void )
+{
 	vec3_t	ground;
 	vec3_t	light;
-	float	groundDist;
-	float	d;
 	vec3_t	lightDir;
 
-	xyz = ( float * ) tess.xyz;
+	float* xyz = ( float * ) tess.xyz;
 
 	ground[0] = backEnd.or.axis[0][2];
 	ground[1] = backEnd.or.axis[1][2];
 	ground[2] = backEnd.or.axis[2][2];
 
-	groundDist = backEnd.or.origin[2] - backEnd.currentEntity->e.shadowPlane;
+	float groundDist = backEnd.or.origin[2] - backEnd.currentEntity->e.shadowPlane;
 
 	VectorCopy( backEnd.currentEntity->lightDir, lightDir );
-	d = DotProduct( lightDir, ground );
+	
+    float d = DotProduct( lightDir, ground );
 	// don't let the shadows get too long or go negative
-	if ( d < 0.5 ) {
+	if ( d < 0.5 )
+    {
 		VectorMA( lightDir, (0.5 - d), ground, lightDir );
 		d = DotProduct( lightDir, ground );
 	}
@@ -338,8 +328,10 @@ void RB_ProjectionShadowDeform( void ) {
 	light[1] = lightDir[1] * d;
 	light[2] = lightDir[2] * d;
 
-	for ( i = 0; i < tess.numVertexes; i++, xyz += 4 ) {
-		h = DotProduct( xyz, ground ) + groundDist;
+	int	i;
+	for ( i = 0; i < tess.numVertexes; i++, xyz += 4 )
+    {
+		float h = DotProduct( xyz, ground ) + groundDist;
 
 		xyz[0] -= light[0] * h;
 		xyz[1] -= light[1] * h;

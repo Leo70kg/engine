@@ -767,18 +767,23 @@ void vk_initialize(void)
                 memset(&def, 0, sizeof(def));
 
 
-				def.polygon_offset = qfalse;
+				def.polygon_offset = 0;
 				def.state_bits = 0;
 				def.shader_type = single_texture;
-				def.clipping_plane = qfalse;
+				def.clipping_plane = 0;
 				def.shadow_phase = shadow_edges_rendering;
 
 				cullType_t cull_types[2] = {CT_FRONT_SIDED, CT_BACK_SIDED};
-				qboolean mirror_flags[2] = {qfalse, qtrue};
+				qboolean mirror_flags[2] = {0, 1};
+                
+                int i = 0; 
+                int j = 0;
 
-				for (int i = 0; i < 2; i++) {
+				for (i = 0; i < 2; i++)
+                {
 					def.face_culling = cull_types[i];
-					for (int j = 0; j < 2; j++) {
+					for (j = 0; j < 2; j++)
+                    {
 						def.mirror = mirror_flags[j];
 						vk.shadow_volume_pipelines[i][j] = vk_create_pipeline(&def);
 					}
@@ -820,14 +825,19 @@ void vk_initialize(void)
 			};
 			qboolean polygon_offset[2] = {qfalse, qtrue};
 
-			for (int i = 0; i < 2; i++) {
+            int i = 0, j = 0, k = 0;
+
+			for (i = 0; i < 2; i++)
+            {
 				unsigned fog_state = fog_state_bits[i];
 				unsigned dlight_state = dlight_state_bits[i];
-
-				for (int j = 0; j < 3; j++) {
+             
+				for (j = 0; j < 3; j++)
+                {
 					def.face_culling = j; // cullType_t value
 
-					for (int k = 0; k < 2; k++) {
+					for ( k = 0; k < 2; k++)
+                    {
 						def.polygon_offset = polygon_offset[k];
 
 						def.state_bits = fog_state;
@@ -887,28 +897,18 @@ void vk_initialize(void)
 			vk.images_debug_pipeline = vk_create_pipeline(&def);
 		}
 	}
-	vk.active = qtrue;
 }
 
 
 void vk_release_resources(void)
 {
+    int i = 0;
 	qvkDeviceWaitIdle(vk.device);
 
-	for (int i = 0; i < vk_world.num_image_chunks; i++)
-		qvkFreeMemory(vk.device, vk_world.image_chunks[i].memory, NULL);
 
-	if (vk_world.staging_buffer != VK_NULL_HANDLE)
-		qvkDestroyBuffer(vk.device, vk_world.staging_buffer, NULL);
-
-	if (vk_world.staging_buffer_memory != VK_NULL_HANDLE)
-		qvkFreeMemory(vk.device, vk_world.staging_buffer_memory, NULL);
-
-	for (int i = 0; i < vk_world.num_pipelines; i++)
+	for (i = 0; i < vk_world.num_pipelines; i++)
 		qvkDestroyPipeline(vk.device, vk_world.pipelines[i], NULL);
 
-    myResetImageSampler();
-	
     
     vk_world.pipeline_create_time = 0.0f;
 

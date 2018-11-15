@@ -5,12 +5,15 @@
 static VkRect2D get_viewport_rect(void)
 {
 	VkRect2D r;
-	if (backEnd.projection2D) {
+	if (backEnd.projection2D)
+    {
 		r.offset.x = 0.0f;
 		r.offset.y = 0.0f;
 		r.extent.width = glConfig.vidWidth;
 		r.extent.height = glConfig.vidHeight;
-	} else {
+	}
+    else
+    {
 		r.offset.x = backEnd.viewParms.viewportX;
 		r.offset.y = glConfig.vidHeight - (backEnd.viewParms.viewportY + backEnd.viewParms.viewportHeight);
 		r.extent.width = backEnd.viewParms.viewportWidth;
@@ -18,6 +21,7 @@ static VkRect2D get_viewport_rect(void)
 	}
 	return r;
 }
+
 
 static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 {
@@ -101,8 +105,8 @@ void vk_shade_geometry(VkPipeline pipeline, qboolean multitexture, enum Vk_Depth
 	vk.color_st_elements += tess.numVertexes;
 
 	// bind descriptor sets
-	uint32_t set_count = multitexture ? 2 : 1;
-	qvkCmdBindDescriptorSets(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline_layout, 0, set_count, vk_world.current_descriptor_sets, 0, NULL);
+	// unsigned int set_count = multitexture ? 2 : 1;
+    vk_bind_descriptor_sets( multitexture ? 2 : 1 );
 
 	// bind pipeline
 	qvkCmdBindPipeline(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);

@@ -428,56 +428,54 @@ static void DrawSkyBox( shader_t *shader )
         GL_Bind( shader->sky.outerbox[sky_texorder[i]] );
 
 
-		// VULKAN: draw skybox side
-		// DX12
-		if (vk.active ) {
-			GL_Bind(shader->sky.outerbox[sky_texorder[i]]);
+        // VULKAN: draw skybox side
+        // DX12
 
-			tess.numVertexes = 0;
-			tess.numIndexes = 0;
+        GL_Bind(shader->sky.outerbox[sky_texorder[i]]);
 
-			for ( t = sky_mins_subd[1]+HALF_SKY_SUBDIVISIONS; t < sky_maxs_subd[1]+HALF_SKY_SUBDIVISIONS; t++ )
-			{
-				for ( s = sky_mins_subd[0]+HALF_SKY_SUBDIVISIONS; s < sky_maxs_subd[0]+HALF_SKY_SUBDIVISIONS; s++ )
-				{
-					int ndx = tess.numVertexes;
+        tess.numVertexes = 0;
+        tess.numIndexes = 0;
 
-					tess.indexes[ tess.numIndexes ] = ndx;
-					tess.indexes[ tess.numIndexes + 1 ] = ndx + 1;
-					tess.indexes[ tess.numIndexes + 2 ] = ndx + 2;
+        for ( t = sky_mins_subd[1]+HALF_SKY_SUBDIVISIONS; t < sky_maxs_subd[1]+HALF_SKY_SUBDIVISIONS; t++ )
+        {
+            for ( s = sky_mins_subd[0]+HALF_SKY_SUBDIVISIONS; s < sky_maxs_subd[0]+HALF_SKY_SUBDIVISIONS; s++ )
+            {
+                int ndx = tess.numVertexes;
 
-					tess.indexes[ tess.numIndexes + 3 ] = ndx + 2;
-					tess.indexes[ tess.numIndexes + 4 ] = ndx + 1;
-					tess.indexes[ tess.numIndexes + 5 ] = ndx + 3;
-					tess.numIndexes += 6;
+                tess.indexes[ tess.numIndexes ] = ndx;
+                tess.indexes[ tess.numIndexes + 1 ] = ndx + 1;
+                tess.indexes[ tess.numIndexes + 2 ] = ndx + 2;
 
-					VectorCopy(s_skyPoints[t][s], tess.xyz[ndx]);
-					tess.svars.texcoords[0][ndx][0] = s_skyTexCoords[t][s][0];
-					tess.svars.texcoords[0][ndx][1] = s_skyTexCoords[t][s][1];
+                tess.indexes[ tess.numIndexes + 3 ] = ndx + 2;
+                tess.indexes[ tess.numIndexes + 4 ] = ndx + 1;
+                tess.indexes[ tess.numIndexes + 5 ] = ndx + 3;
+                tess.numIndexes += 6;
 
-					VectorCopy(s_skyPoints[t + 1][s], tess.xyz[ndx + 1]);
-					tess.svars.texcoords[0][ndx + 1][0] = s_skyTexCoords[t + 1][s][0];
-					tess.svars.texcoords[0][ndx + 1][1] = s_skyTexCoords[t + 1][s][1];
+                VectorCopy(s_skyPoints[t][s], tess.xyz[ndx]);
+                tess.svars.texcoords[0][ndx][0] = s_skyTexCoords[t][s][0];
+                tess.svars.texcoords[0][ndx][1] = s_skyTexCoords[t][s][1];
 
-					VectorCopy(s_skyPoints[t][s + 1], tess.xyz[ndx + 2]);
-					tess.svars.texcoords[0][ndx + 2][0] = s_skyTexCoords[t][s + 1][0];
-					tess.svars.texcoords[0][ndx + 2][1] = s_skyTexCoords[t][s + 1][1];
+                VectorCopy(s_skyPoints[t + 1][s], tess.xyz[ndx + 1]);
+                tess.svars.texcoords[0][ndx + 1][0] = s_skyTexCoords[t + 1][s][0];
+                tess.svars.texcoords[0][ndx + 1][1] = s_skyTexCoords[t + 1][s][1];
 
-					VectorCopy(s_skyPoints[t + 1][s + 1], tess.xyz[ndx + 3]);
-					tess.svars.texcoords[0][ndx + 3][0] = s_skyTexCoords[t + 1][s + 1][0];
-					tess.svars.texcoords[0][ndx + 3][1] = s_skyTexCoords[t + 1][s + 1][1];
+                VectorCopy(s_skyPoints[t][s + 1], tess.xyz[ndx + 2]);
+                tess.svars.texcoords[0][ndx + 2][0] = s_skyTexCoords[t][s + 1][0];
+                tess.svars.texcoords[0][ndx + 2][1] = s_skyTexCoords[t][s + 1][1];
 
-					tess.numVertexes += 4;
-				}
-			}
+                VectorCopy(s_skyPoints[t + 1][s + 1], tess.xyz[ndx + 3]);
+                tess.svars.texcoords[0][ndx + 3][0] = s_skyTexCoords[t + 1][s + 1][0];
+                tess.svars.texcoords[0][ndx + 3][1] = s_skyTexCoords[t + 1][s + 1][1];
 
-			memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
+                tess.numVertexes += 4;
+            }
+        }
 
-			if (vk.active) {
-				vk_bind_geometry();
-				vk_shade_geometry(vk.skybox_pipeline, qfalse, r_showsky->integer ? force_zero : force_one, qtrue);
-			}
-		}
+        memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
+
+        vk_bind_geometry();
+        vk_shade_geometry(vk.skybox_pipeline, qfalse, r_showsky->integer ? force_zero : force_one, qtrue);
+
 	}
 
 }

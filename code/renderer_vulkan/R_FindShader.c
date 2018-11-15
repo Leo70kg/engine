@@ -7,7 +7,7 @@
 static char** shaderTextHashTable[MAX_SHADERTEXT_HASH] ={ 0 };
 
 #define FILE_HASH_SIZE		1024
-static	shader_t* hashTable[FILE_HASH_SIZE] = {0};
+static shader_t* hashTable[FILE_HASH_SIZE] = {0};
 
 
 static char *s_shaderText = NULL;
@@ -55,6 +55,9 @@ shader name. If found, it will return a valid shader, return NULL if not found.
 */
 static char* FindShaderInShaderText( const char *shadername )
 {
+
+    ri.Printf( PRINT_ALL, "FindShaderInShaderText: %s\n", shadername);
+
 	int hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
 
     int i;
@@ -445,7 +448,6 @@ static void SetShaderTextHashTableSizes( void )
         {
 			break;
 		}
-
 
         int hash = generateHashValue(token, MAX_SHADERTEXT_HASH);
         shaderTextHashTableSizes[hash]++;

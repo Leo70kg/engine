@@ -10,7 +10,7 @@
 #define MAX_VK_IMAGES           2048 // should be the same as MAX_DRAWIMAGES
 
 #define IMAGE_CHUNK_SIZE        (32 * 1024 * 1024)
-#define MAX_IMAGE_CHUNKS        16
+
 
 
 #define VERTEX_CHUNK_SIZE   (512 * 1024)
@@ -237,7 +237,6 @@ void vk_read_pixels(unsigned char* buffer); // screenshots
 // Vk_Instance contains engine-specific vulkan resources that persist entire renderer lifetime.
 // This structure is initialized/deinitialized by vk_initialize/vk_shutdown functions correspondingly.
 struct Vk_Instance {
-	VkBool32 active ;
 	VkInstance instance ;
 	VkPhysicalDevice physical_device;
 	VkSurfaceKHR surface;
@@ -323,10 +322,7 @@ struct Vk_Instance {
 	VkPipeline images_debug_pipeline;
 };
 
-struct Chunk {
-	VkDeviceMemory memory;
-	VkDeviceSize used;
-};
+
 
 struct Vk_Image {
 	VkImage handle;
@@ -343,11 +339,6 @@ struct Vk_World {
 	//
 	// Resources.
 	//
-/*
-	int num_samplers;
-	struct Vk_Sampler_Def sampler_defs[MAX_VK_SAMPLERS];
-	VkSampler samplers[MAX_VK_SAMPLERS];
-*/
 	int num_pipelines;
 	struct Vk_Pipeline_Def pipeline_defs[MAX_VK_PIPELINES];
 	VkPipeline pipelines[MAX_VK_PIPELINES];
@@ -356,24 +347,8 @@ struct Vk_World {
 	struct Vk_Image images[MAX_VK_IMAGES];
 
 	//
-	// Memory allocations.
-	//
-	struct Chunk image_chunks[MAX_IMAGE_CHUNKS];
-
-	int num_image_chunks;
-
-	// Host visible memory used to copy image data to device local memory.
-	VkBuffer staging_buffer;
-	VkDeviceMemory staging_buffer_memory;
-	VkDeviceSize staging_buffer_size;
-	unsigned char* staging_buffer_ptr; // pointer to mapped staging buffer
-
-	//
 	// State.
 	//
-
-	// Descriptor sets corresponding to bound texture images.
-	VkDescriptorSet current_descriptor_sets[2];
 
 	// This flag is used to decide whether framebuffer's depth attachment should be cleared
 	// with vmCmdClearAttachment (dirty_depth_attachment == true), or it have just been

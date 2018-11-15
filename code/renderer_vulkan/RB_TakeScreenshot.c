@@ -28,17 +28,13 @@ FIXME: the statics don't get a reinit between fs_game changes
 ============================================================================== 
 */ 
 
-/* 
-================== 
-RB_TakeScreenshot
-================== 
-*/  
-void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
-	unsigned char		*buffer;
-	int			i, c, temp;
-		
-	buffer = (unsigned char*) ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*3+18);
 
+void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName )
+{
+
+	int	i, c, temp;
+		
+	unsigned char* buffer = (unsigned char*) ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*3+18);
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
 	buffer[12] = width & 255;
@@ -83,51 +79,7 @@ void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
 	ri.Hunk_FreeTempMemory( buffer );
 }
 
-/* 
-================== 
-RB_TakeScreenshotJPEG
-================== 
-static unsigned char *RB_ReadPixels(int x, int y, int width, int height, size_t *offset, int *padlen)
-{
-	unsigned char *buffer, *bufstart;
-	int padwidth, linelen;
-	GLint packAlign;
 
-	qglGetIntegerv(GL_PACK_ALIGNMENT, &packAlign);
-
-	linelen = width * 3;
-	padwidth = PAD(linelen, packAlign);
-
-	// Allocate a few more bytes so that we can choose an alignment we like
-	buffer = ri.Hunk_AllocateTempMemory(padwidth * height + *offset + packAlign - 1);
-
-	bufstart = PADP((intptr_t) buffer + *offset, packAlign);
-	qglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, bufstart);
-
-	*offset = bufstart - buffer;
-	*padlen = padwidth - linelen;
-
-	return buffer;
-}
-
-
-static void RB_TakeScreenshotJPEG(int x, int y, int width, int height, char *fileName)
-{
-	unsigned char *buffer;
-	size_t offset = 0, memcount;
-	int padlen;
-
-	buffer = RB_ReadPixels(x, y, width, height, &offset, &padlen);
-	memcount = (width * 3 + padlen) * height;
-
-	// gamma correct
-	if(glConfig.deviceSupportsGamma)
-		R_GammaCorrect(buffer + offset, memcount);
-
-	RE_SaveJPG(fileName, 95, width, height, buffer + offset, padlen);
-	ri.Hunk_FreeTempMemory(buffer);
-}
-*/
 
 /*
 ==================
@@ -168,56 +120,7 @@ static void R_TakeScreenshot( int x, int y, int width, int height, char *name, q
 	cmd->jpeg = jpeg;
 }
 
-/* 
-================== 
-R_ScreenshotFilename
-================== 
-*/  
-static void R_ScreenshotFilename( int lastNumber, char *fileName )
-{
-	int	a,b,c,d;
 
-	if ( lastNumber < 0 || lastNumber > 9999 ) {
-		Com_sprintf( fileName, MAX_OSPATH, "screenshots/shot9999.tga" );
-		return;
-	}
-
-	a = lastNumber / 1000;
-	lastNumber -= a*1000;
-	b = lastNumber / 100;
-	lastNumber -= b*100;
-	c = lastNumber / 10;
-	lastNumber -= c*10;
-	d = lastNumber;
-
-	Com_sprintf( fileName, MAX_OSPATH, "screenshots/shot%i%i%i%i.tga"
-		, a, b, c, d );
-}
-
-/* 
-================== 
-R_ScreenshotFilename
-================== 
-*/  
-void R_ScreenshotFilenameJPEG( int lastNumber, char *fileName ) {
-	int		a,b,c,d;
-
-	if ( lastNumber < 0 || lastNumber > 9999 ) {
-		Com_sprintf( fileName, MAX_OSPATH, "screenshots/shot9999.jpg" );
-		return;
-	}
-
-	a = lastNumber / 1000;
-	lastNumber -= a*1000;
-	b = lastNumber / 100;
-	lastNumber -= b*100;
-	c = lastNumber / 10;
-	lastNumber -= c*10;
-	d = lastNumber;
-
-	Com_sprintf( fileName, MAX_OSPATH, "screenshots/shot%i%i%i%i.jpg"
-		, a, b, c, d );
-}
 
 /*
 ====================
@@ -338,7 +241,7 @@ void R_ScreenShot_f (void)
 	if ( ri.Cmd_Argc() == 2 && !silent )
     {
 		// explicit filename
-		Com_sprintf( checkname, MAX_OSPATH, "screenshots/%s.tga", ri.Cmd_Argv( 1 ) );
+		snprintf( checkname, sizeof(checkname), "screenshots/%s.tga", ri.Cmd_Argv( 1 ) );
 	}
     else
     {
@@ -352,8 +255,20 @@ void R_ScreenShot_f (void)
 		// scan for a free number
 		for ( ; lastNumber <= 9999 ; lastNumber++ )
         {
-			R_ScreenshotFilename( lastNumber, checkname );
+			//R_ScreenshotFilename( lastNumber, checkname );
             
+            int	a,b,c,d;
+
+            a = lastNumber / 1000;
+            lastNumber -= a*1000;
+            b = lastNumber / 100;
+            lastNumber -= b*100;
+            c = lastNumber / 10;
+            lastNumber -= c*10;
+            d = lastNumber;
+
+            snprintf( checkname, sizeof(checkname), "screenshots/shot%i%i%i%i.tga", a, b, c, d );
+
             if (!ri.FS_FileExists( checkname ))
             {
                 break; // file doesn't exist
@@ -396,7 +311,7 @@ void R_ScreenShotJPEG_f(void)
 
 	if ( ri.Cmd_Argc() == 2 && !silent ) {
 		// explicit filename
-		Com_sprintf( checkname, MAX_OSPATH, "screenshots/%s.jpg", ri.Cmd_Argv( 1 ) );
+		snprintf( checkname, sizeof(checkname), "screenshots/%s.jpg", ri.Cmd_Argv( 1 ) );
 	} else {
 		// scan for a free filename
 
@@ -407,13 +322,25 @@ void R_ScreenShotJPEG_f(void)
 			lastNumber = 0;
 		}
 		// scan for a free number
-		for ( ; lastNumber <= 9999 ; lastNumber++ ) {
-			R_ScreenshotFilenameJPEG( lastNumber, checkname );
+		for ( ; lastNumber <= 9999 ; lastNumber++ )
+        {
+            int	a,b,c,d;
 
-      if (!ri.FS_FileExists( checkname ))
-      {
-        break; // file doesn't exist
-      }
+            a = lastNumber / 1000;
+            lastNumber -= a*1000;
+            b = lastNumber / 100;
+            lastNumber -= b*100;
+            c = lastNumber / 10;
+            lastNumber -= c*10;
+            d = lastNumber;
+
+            snprintf( checkname, sizeof(checkname), "screenshots/shot%i%i%i%i.jpg"
+                    , a, b, c, d );
+
+            if (!ri.FS_FileExists( checkname ))
+            {
+                break; // file doesn't exist
+            }
 		}
 
 		if ( lastNumber == 10000 ) {
@@ -430,6 +357,4 @@ void R_ScreenShotJPEG_f(void)
 		ri.Printf (PRINT_ALL, "Wrote %s\n", checkname);
 	}
 } 
-
-//============================================================================
 

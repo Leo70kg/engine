@@ -1470,12 +1470,11 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
 	tess.numVertexes = numPoints * 2;
 	tess.numIndexes = 0;
 
-	if (vk.active) {
-		vk_bind_geometry();
-		vk_shade_geometry(vk.surface_debug_pipeline_outline, qfalse, force_zero, qfalse);
-	}
 
-	tess.numVertexes = 0;
+    vk_bind_geometry();
+    vk_shade_geometry(vk.surface_debug_pipeline_outline, qfalse, force_zero, qfalse);
+	
+    tess.numVertexes = 0;
 }
 
 /*

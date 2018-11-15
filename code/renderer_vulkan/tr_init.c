@@ -70,7 +70,7 @@ cvar_t	*r_ext_texture_env_add;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_logFile;
-cvar_t	*r_textureMode;
+
 
 cvar_t	*r_lightmap;
 cvar_t	*r_vertexLight;
@@ -231,7 +231,7 @@ static void InitRenderAPI( void )
 	// print info
 	vulkanInfo_f();
 
-	GL_TextureMode( r_textureMode->string);
+	VK_TextureMode();
 
 
 	//
@@ -300,7 +300,7 @@ void R_Register( void )
 
 	r_ambientScale = ri.Cvar_Get( "r_ambientScale", "0.6", CVAR_CHEAT );
 	r_directedScale = ri.Cvar_Get( "r_directedScale", "1", CVAR_CHEAT );
-    r_textureMode = ri.Cvar_Get( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
+
 	//
 	// temporary variables that can change at any time
 	//

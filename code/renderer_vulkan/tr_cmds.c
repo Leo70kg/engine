@@ -262,7 +262,6 @@ If running in stereo, RE_BeginFrame will be called twice
 for each RE_EndFrame
 ====================
 */
-extern cvar_t* r_textureMode;
 
 void RE_BeginFrame( void )
 {
@@ -274,14 +273,7 @@ void RE_BeginFrame( void )
 
 	tr.frameCount++;
 
-	//
-	// texturemode stuff
-	//
-	if ( r_textureMode->modified ) {
-		R_SyncRenderThread();
-		GL_TextureMode( r_textureMode->string );
-		r_textureMode->modified = qfalse;
-	}
+
 	//
 	// gamma stuff
 	//
