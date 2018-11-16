@@ -591,7 +591,7 @@ void vk_initialize(void)
 		desc.layers = 1;
 
 		for (i = 0; i < vk.swapchain_image_count; i++)
-        {
+		{
 			attachments[0] = vk.swapchain_image_views[i]; // set color attachment
 			VK_CHECK(qvkCreateFramebuffer(vk.device, &desc, NULL, &vk.framebuffers[i]));
 		}

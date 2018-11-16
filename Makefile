@@ -1606,6 +1606,7 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/generate_image_upload_data.o \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
   $(B)/renderer_vulkan/vk_image.o \
+  $(B)/renderer_vulkan/image_sampler.o \
   $(B)/renderer_vulkan/vk_create_pipeline.o \
   $(B)/renderer_vulkan/vk_frame.o \
   $(B)/renderer_vulkan/vk_read_pixels.o \

@@ -1,48 +1,6 @@
 #include "qvk.h"
 #include "tr_local.h"
-
-
-typedef struct {
-	char *name;
-	int	minimize, maximize;
-} textureMode_t;
-
-
-struct Vk_Sampler_Def
-{
-	VkBool32 repeat_texture; // clamp/repeat texture addressing mode
-    VkBool32 mipmap;
-};
-
-
-//////////////////////////////////////////////
-
-#ifndef GL_NEAREST
-#define GL_NEAREST				0x2600
-#endif
-
-#ifndef GL_LINEAR
-#define GL_LINEAR				0x2601
-#endif
-
-#ifndef GL_NEAREST_MIPMAP_NEAREST
-#define GL_NEAREST_MIPMAP_NEAREST		0x2700
-#endif
-
-#ifndef GL_NEAREST_MIPMAP_LINEAR
-#define GL_NEAREST_MIPMAP_LINEAR		0x2702
-#endif
-
-#ifndef GL_LINEAR_MIPMAP_NEAREST
-#define GL_LINEAR_MIPMAP_NEAREST		0x2701
-#endif
-
-#ifndef GL_LINEAR_MIPMAP_LINEAR
-#define GL_LINEAR_MIPMAP_LINEAR			0x2703
-#endif
-
-
-//////////////////////////////////////
+#include "image_sampler.h"
 
 
 //
@@ -58,141 +16,52 @@ struct Chunk {
 static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS] = {0};
 static int s_NumImageChunks = 0;
 
-
-
-
 ///////////////////////////////////////
 
-	// Host visible memory used to copy image data to device local memory.
+// Host visible memory used to copy image data to device local memory.
 static VkBuffer s_StagingBuffer;
-static VkDeviceMemory s_StagingBufferMemory;
+static VkDeviceMemory s_MemStgBuf;
 // pointer to mapped staging buffer
-static unsigned char* s_pStagingBuffer = NULL;
+static unsigned char* s_pStgBuf = NULL;
 static VkDeviceSize s_StagingBufferSize = 0;
 
 ////////////////////////////////////////
 
 
-/*
-  The maximum number of sampler objects which can be simultaneously created on a device is
-  implementation-dependent and specified by the maxSamplerAllocationCount member of the
-  VkPhysicalDeviceLimits structure. If maxSamplerAllocationCount is exceeded, 
-  vkCreateSampler will return VK_ERROR_TOO_MANY_OBJECTS.
-*/
 
-#define MAX_VK_SAMPLERS     32
-static struct Vk_Sampler_Def s_SamplerDefs[MAX_VK_SAMPLERS] = {0};
 
-static int s_NumSamplers = 0;
-
-static VkSampler s_ImgSamplers[MAX_VK_SAMPLERS] = {0};
 
 // Descriptor sets corresponding to bound texture images.
 static VkDescriptorSet s_CurrentDescriptorSets[2] = {0};
 
-
-static void vk_free_sampler(void)
+static void vk_free_chunk(void)
 {
-    int i = 0;
-    for (i = 0; i < s_NumSamplers; i++)
-    {
-        if(s_ImgSamplers[i] != VK_NULL_HANDLE)
-        {
-		    qvkDestroySampler(vk.device, s_ImgSamplers[i], NULL);
-            s_ImgSamplers[i] = VK_NULL_HANDLE;
-        }
-
-        memset(&s_SamplerDefs[i], 0, sizeof(struct Vk_Sampler_Def));
-    }
-
-    s_NumSamplers = 0;
+	int i = 0;
+	for(i = 0; i < s_NumImageChunks; i++)
+	{
+		qvkFreeMemory(vk.device, s_ImageChunks[i].memory, NULL);
+		memset(&s_ImageChunks[i], 0, sizeof(struct Chunk) );
+	}
+    s_NumImageChunks = 0;
 }
 
-
-
-static VkSampler vk_find_sampler( VkBool32 isMipmap, VkBool32 isRepeatTexture )
+static void vk_free_staging_buffer(void)
 {
-
-	// Look for sampler among existing samplers.
-	int i;
-    for (i = 0; i < s_NumSamplers; i++)
+	if (s_MemStgBuf != VK_NULL_HANDLE)
     {
-		if (( s_SamplerDefs[i].repeat_texture == isRepeatTexture ) && ( s_SamplerDefs[i].mipmap == isMipmap ))
-        {
-			return s_ImgSamplers[i];
-		}
-	}
-
-
-	struct Vk_Sampler_Def curSamplerDef;
-
-	curSamplerDef.repeat_texture = isRepeatTexture;
-	curSamplerDef.mipmap = isMipmap;
-	
-	s_SamplerDefs[i] = curSamplerDef;
-
-
-	VkSamplerAddressMode address_mode = isRepeatTexture ?
-        VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-
-	VkFilter mag_filter = VK_FILTER_LINEAR;
-//	VkFilter mag_filter = VK_FILTER_NEAREST;
-
-    VkFilter min_filter = VK_FILTER_LINEAR;
-    // VkFilter min_filter = VK_FILTER_NEAREST;
-
-    
-    //used to emulate OpenGL's GL_LINEAR/GL_NEAREST minification filter    
-    VkBool32 max_lod_0_25 = 0;
-
-    VkSamplerMipmapMode mipmap_mode;
-    if (isMipmap)
-    {
-		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        max_lod_0_25 = 0;
+		qvkFreeMemory(vk.device, s_MemStgBuf, NULL);
+        memset(&s_MemStgBuf, 0, sizeof(VkDeviceMemory));
     }
-    else
+
+	if (s_StagingBuffer != VK_NULL_HANDLE)
     {
-        mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        max_lod_0_25 = 1;
+        qvkDestroyBuffer(vk.device, s_StagingBuffer, NULL);
+        memset(&s_StagingBuffer, 0, sizeof(VkBuffer));
     }
-    //VK_SAMPLER_MIPMAP_MODE_LINEAR;
-
-
-	VkSamplerCreateInfo desc;
-	desc.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	desc.pNext = NULL;
-	desc.flags = 0;
-	desc.magFilter = mag_filter;
-	desc.minFilter = min_filter;
-	desc.mipmapMode = mipmap_mode;
-	desc.addressModeU = address_mode;
-	desc.addressModeV = address_mode;
-	desc.addressModeW = address_mode;
-	desc.mipLodBias = 0.0f;
-	desc.anisotropyEnable = VK_FALSE;
-	desc.maxAnisotropy = 1;
-	desc.compareEnable = VK_FALSE;
-	desc.compareOp = VK_COMPARE_OP_ALWAYS;
-	desc.minLod = 0.0f;
-	desc.maxLod = max_lod_0_25 ? 0.25f : 12.0f;
-	desc.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	desc.unnormalizedCoordinates = VK_FALSE;
-
-	VkSampler sampler;
-	VK_CHECK(qvkCreateSampler(vk.device, &desc, NULL, &sampler));
-
-
-	s_ImgSamplers[s_NumSamplers++] = sampler;
-	if (s_NumSamplers >= MAX_VK_SAMPLERS)
-    {
-		ri.Error(ERR_DROP, "MAX_VK_SAMPLERS hit\n");
-	}
-    return sampler;
-
-	// Create new sampler.
-    //return CreateNewSampler(&s_SamplerDefs[i]);
+    s_StagingBufferSize = 0;
+	s_pStgBuf = NULL;
 }
+
 
 
 static void vk_update_descriptor_set( 
@@ -244,31 +113,8 @@ void GL_Bind( image_t *image )
 void VK_TextureMode( void )
 {
 
-    cvar_t* r_textureMode = ri.Cvar_Get( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
-    
-    const static textureMode_t modes[] = {
-        {"GL_NEAREST", GL_NEAREST, GL_NEAREST},
-        {"GL_LINEAR", GL_LINEAR, GL_LINEAR},
-        {"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
-        {"GL_LINEAR_MIPMAP_NEAREST", GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR},
-        {"GL_NEAREST_MIPMAP_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST},
-        {"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
-    };
-
-	int i;
-
-	for ( i=0; i< 6; i++ )
-    {
-		if ( !Q_stricmp( modes[i].name, r_textureMode->string ) ) {
-			break;
-		}
-	}
-
-	if ( i == 6 ) {
-		ri.Printf (PRINT_ALL, "bad filter name\n");
-		return;
-	}
-
+	vk_set_sampler(3);
+	int i = 0;
 	// change all the existing mipmap texture objects
 	for ( i = 0 ; i < tr.numImages ; i++ )
 	{
@@ -417,54 +263,59 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 
 
 
-static void ensure_staging_buffer_allocation(VkDeviceSize size)
+static void ensure_staging_buffer_allocation(VkDeviceSize size, const unsigned char* pPix)
 {
-
-	if (s_StagingBuffer != VK_NULL_HANDLE)
+    if(s_StagingBufferSize < size)
     {
-		qvkDestroyBuffer(vk.device, s_StagingBuffer, NULL);
-        memset(&s_StagingBuffer, 0, sizeof(VkBuffer));
+        s_StagingBufferSize = size;
+
+        if (s_StagingBuffer != VK_NULL_HANDLE)
+        {
+            qvkDestroyBuffer(vk.device, s_StagingBuffer, NULL);
+            memset(&s_StagingBuffer, 0, sizeof(VkBuffer));
+        }
+
+        if (s_MemStgBuf != VK_NULL_HANDLE)
+        {
+            qvkFreeMemory(vk.device, s_MemStgBuf, NULL);
+            memset(&s_MemStgBuf, 0, sizeof(VkDeviceMemory));
+        }
+
+
+        VkBufferCreateInfo buffer_desc;
+        buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_desc.pNext = NULL;
+        buffer_desc.flags = 0;
+        buffer_desc.size = size;
+        buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        buffer_desc.queueFamilyIndexCount = 0;
+        buffer_desc.pQueueFamilyIndices = NULL;
+        VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &s_StagingBuffer));
+
+        // To determine the memory requirements for a buffer resource
+
+        VkMemoryRequirements memory_requirements;
+        qvkGetBufferMemoryRequirements(vk.device, s_StagingBuffer, &memory_requirements);
+
+        uint32_t memory_type = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        VkMemoryAllocateInfo alloc_info;
+        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.pNext = NULL;
+        alloc_info.allocationSize = memory_requirements.size;
+        alloc_info.memoryTypeIndex = memory_type;
+        VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &s_MemStgBuf));
+        VK_CHECK(qvkBindBufferMemory(vk.device, s_StagingBuffer, s_MemStgBuf, 0));
+
+        void* data;
+        VK_CHECK(qvkMapMemory(vk.device, s_MemStgBuf, 0, VK_WHOLE_SIZE, 0, &data));
+
+        s_pStgBuf = (unsigned char *)data;
     }
 
-	if (s_StagingBufferMemory != VK_NULL_HANDLE)
-    {
-		qvkFreeMemory(vk.device, s_StagingBufferMemory, NULL);
-        memset(&s_StagingBufferMemory, 0, sizeof(VkDeviceMemory));
-    }
-
-	s_StagingBufferSize = size;
-
-	VkBufferCreateInfo buffer_desc;
-	buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_desc.pNext = NULL;
-	buffer_desc.flags = 0;
-	buffer_desc.size = size;
-	buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-	buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	buffer_desc.queueFamilyIndexCount = 0;
-	buffer_desc.pQueueFamilyIndices = NULL;
-	VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &s_StagingBuffer));
-
-    // To determine the memory requirements for a buffer resource
-
-	VkMemoryRequirements memory_requirements;
-	qvkGetBufferMemoryRequirements(vk.device, s_StagingBuffer, &memory_requirements);
-
-	uint32_t memory_type = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	VkMemoryAllocateInfo alloc_info;
-	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	alloc_info.pNext = NULL;
-	alloc_info.allocationSize = memory_requirements.size;
-	alloc_info.memoryTypeIndex = memory_type;
-	VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &s_StagingBufferMemory));
-	VK_CHECK(qvkBindBufferMemory(vk.device, s_StagingBuffer, s_StagingBufferMemory, 0));
-
-	void* data;
-	VK_CHECK(qvkMapMemory(vk.device, s_StagingBufferMemory, 0, VK_WHOLE_SIZE, 0, &data));
-	
-    s_pStagingBuffer = (unsigned char *)data;
+    memcpy(s_pStgBuf, pPix, size);
 }
 
 
@@ -512,8 +363,8 @@ static void vk_upload_image_data(VkImage image, int width, int height,
             height = 1;
 	}
 
-	ensure_staging_buffer_allocation(buffer_size);
-	memcpy(s_pStagingBuffer, pixels, buffer_size);
+	ensure_staging_buffer_allocation(buffer_size, pixels);
+
 
 	VkCommandBufferAllocateInfo alloc_info;
 	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -648,36 +499,12 @@ void myDestroyImage(void)
 {
     vk_free_sampler();
 
-    if (s_StagingBufferMemory != VK_NULL_HANDLE)
-    {
-		qvkFreeMemory(vk.device, s_StagingBufferMemory, NULL);
-        memset(&s_StagingBufferMemory, 0, sizeof(VkDeviceMemory));
-    }
+	vk_free_staging_buffer();   
+
+	vk_free_chunk();
 
 
-	if (s_StagingBuffer != VK_NULL_HANDLE)
-    {
-        qvkDestroyBuffer(vk.device, s_StagingBuffer, NULL);
-        memset(&s_StagingBuffer, 0, sizeof(VkBuffer));
-    }
-    s_StagingBufferSize = 0;
-
-	s_pStagingBuffer = NULL;
-   
-    int i = 0;
-
-    for(i = 0; i < s_NumImageChunks; i++)
-    {    
-        if(s_ImageChunks[i].memory != VK_NULL_HANDLE)
-        {
-            qvkFreeMemory(vk.device, s_ImageChunks[i].memory, NULL);
-			memset(&s_ImageChunks[i], 0, sizeof(struct Chunk) );
-        }
-    }
-    s_NumImageChunks = 0;
-
-
-
+	int i = 0;
 	for (i = 0; i < MAX_VK_IMAGES; i++)
     {
 		struct Vk_Image* image = &vk_world.images[i];
@@ -696,6 +523,7 @@ void myDestroyImage(void)
         }
 	}
 
+	memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
 }
 
 

@@ -1768,9 +1768,6 @@ static void VertexLightingCollapse( void )
 	}
 }
 
-
-
-
 /*
 =========================
 FinishShader

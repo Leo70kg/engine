@@ -34,19 +34,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "qvk.h"
 
 
-/*
-#if defined( _WIN32 )
-
-
-#define NOMINMAX
-#include <gl/gl.h>
-
-#else
-
-#include <GL/gl.h>
-
-#endif
-*/
 
 
 // work around, will be removed
