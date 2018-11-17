@@ -1,5 +1,7 @@
 #include "qvk.h"
 #include "tr_local.h"
+#include "vk_clear_attachments.h"
+#include "mvp_matrix.h"
 
 
 #ifndef NDEBUG
@@ -745,177 +747,27 @@ void vk_initialize(void)
 	//
 	// Standard pipelines.
 	//
-	{
-		// skybox
-		{
-			struct Vk_Pipeline_Def def;
-            memset(&def, 0, sizeof(def));
-            
-			def.shader_type = single_texture;
-			def.state_bits = 0;
-			def.face_culling = CT_FRONT_SIDED;
-			def.polygon_offset = qfalse;
-			def.clipping_plane = qfalse;
-			def.mirror = qfalse;
-			vk.skybox_pipeline = vk_create_pipeline(&def);
-		}
+    create_standard_pipelines();
 
-		// Q3 stencil shadows
-		{
-			{
-				struct Vk_Pipeline_Def def;
-                memset(&def, 0, sizeof(def));
-
-
-				def.polygon_offset = 0;
-				def.state_bits = 0;
-				def.shader_type = single_texture;
-				def.clipping_plane = 0;
-				def.shadow_phase = shadow_edges_rendering;
-
-				cullType_t cull_types[2] = {CT_FRONT_SIDED, CT_BACK_SIDED};
-				qboolean mirror_flags[2] = {0, 1};
-                
-                int i = 0; 
-                int j = 0;
-
-				for (i = 0; i < 2; i++)
-                {
-					def.face_culling = cull_types[i];
-					for (j = 0; j < 2; j++)
-                    {
-						def.mirror = mirror_flags[j];
-						vk.shadow_volume_pipelines[i][j] = vk_create_pipeline(&def);
-					}
-				}
-			}
-
-			{
-				struct Vk_Pipeline_Def def;
-                memset(&def, 0, sizeof(def));
-
-				def.face_culling = CT_FRONT_SIDED;
-				def.polygon_offset = qfalse;
-				def.state_bits = GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-				def.shader_type = single_texture;
-				def.clipping_plane = qfalse;
-				def.mirror = qfalse;
-				def.shadow_phase = fullscreen_quad_rendering;
-				vk.shadow_finish_pipeline = vk_create_pipeline(&def);
-			}
-		}
-
-		// fog and dlights
-		{
-			struct Vk_Pipeline_Def def;
-            memset(&def, 0, sizeof(def));
-
-
-			def.shader_type = single_texture;
-			def.clipping_plane = qfalse;
-			def.mirror = qfalse;
-
-			unsigned int fog_state_bits[2] = {
-				GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHFUNC_EQUAL,
-				GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
-			};
-			unsigned int dlight_state_bits[2] = {
-				GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL,
-				GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL
-			};
-			qboolean polygon_offset[2] = {qfalse, qtrue};
-
-            int i = 0, j = 0, k = 0;
-
-			for (i = 0; i < 2; i++)
-            {
-				unsigned fog_state = fog_state_bits[i];
-				unsigned dlight_state = dlight_state_bits[i];
-             
-				for (j = 0; j < 3; j++)
-                {
-					def.face_culling = j; // cullType_t value
-
-					for ( k = 0; k < 2; k++)
-                    {
-						def.polygon_offset = polygon_offset[k];
-
-						def.state_bits = fog_state;
-						vk.fog_pipelines[i][j][k] = vk_create_pipeline(&def);
-
-						def.state_bits = dlight_state;
-						vk.dlight_pipelines[i][j][k] = vk_create_pipeline(&def);
-					}
-				}
-			}
-		}
-
-		// debug pipelines
-		{
-			struct Vk_Pipeline_Def def;
-            memset(&def, 0, sizeof(def));
-
-			def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE;
-			vk.tris_debug_pipeline = vk_create_pipeline(&def);
-		}
-		{
-			struct Vk_Pipeline_Def def;
-            memset(&def, 0, sizeof(def));
-
-			def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE;
-			def.face_culling = CT_BACK_SIDED;
-			vk.tris_mirror_debug_pipeline = vk_create_pipeline(&def);
-		}
-		{
-			struct Vk_Pipeline_Def def;
-            memset(&def, 0, sizeof(def));
-
-			def.state_bits = GLS_DEPTHMASK_TRUE;
-			def.line_primitives = qtrue;
-			vk.normals_debug_pipeline = vk_create_pipeline(&def);
-		}
-		{
-			struct Vk_Pipeline_Def def;
-            memset(&def, 0, sizeof(def));
-
-			def.state_bits = GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE;
-			vk.surface_debug_pipeline_solid = vk_create_pipeline(&def);
-		}
-		{
-			struct Vk_Pipeline_Def def;
-            memset(&def, 0, sizeof(def));
-
-			def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE;
-			def.line_primitives = qtrue;
-			vk.surface_debug_pipeline_outline = vk_create_pipeline(&def);
-		}
-		{
-			struct Vk_Pipeline_Def def;
-            memset(&def, 0, sizeof(def));
-
-			def.state_bits = GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-			vk.images_debug_pipeline = vk_create_pipeline(&def);
-		}
-	}
 }
 
 
+// contains vulkan resources/state, reinitialized on a map change.
+
 void vk_release_resources(void)
 {
-    int i = 0;
 	qvkDeviceWaitIdle(vk.device);
 
 
-	for (i = 0; i < vk_world.num_pipelines; i++)
-		qvkDestroyPipeline(vk.device, vk_world.pipelines[i], NULL);
-
+    qDestroyALLPipeline();
+ 
     
-    vk_world.pipeline_create_time = 0.0f;
-
     
-    myDestroyImage();
+    qDestroyImage();
 
-	memset(&vk_world, 0, sizeof(vk_world));
+    set_depth_attachment(VK_FALSE);
+    reset_modelview_matrix();
+    
 
 	VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
 

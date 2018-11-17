@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #include "tr_local.h"
+#include "mvp_matrix.h"
+#include "vk_shade_geometry.h"
 
 
 /*
@@ -273,19 +275,17 @@ void RB_ShadowFinish( void )
 
 
     // set backEnd.or.modelMatrix to identity matrix
-    float tmp[16];
-    memcpy(tmp, vk_world.modelview_transform, 64);
-    memset(vk_world.modelview_transform, 0, 64);
-    vk_world.modelview_transform[0] = 1.0f;
-    vk_world.modelview_transform[5] = 1.0f;
-    vk_world.modelview_transform[10] = 1.0f;
-    vk_world.modelview_transform[15] = 1.0f;
+    float bak[16];
+     
+   
+    get_modelview_matrix(bak);
+
+    reset_modelview_matrix();
 
     vk_bind_geometry();
     vk_shade_geometry(vk.shadow_finish_pipeline, qfalse, normal, qtrue);
 
-    memcpy(vk_world.modelview_transform, tmp, 64);
-
+    set_modelview_matrix(bak);
 
     tess.numIndexes = 0;
     tess.numVertexes = 0;

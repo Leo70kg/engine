@@ -69,6 +69,11 @@ void vk_free_sampler(void)
 }
 
 
+/*
+    VkSampler objects represent the state of an image sampler which is used by the implementation to
+    read image data and apply filtering and other transformations for the shader.
+*/
+
 VkSampler vk_find_sampler( VkBool32 isMipmap, VkBool32 isRepeatTexture )
 {
 
@@ -95,10 +100,10 @@ VkSampler vk_find_sampler( VkBool32 isMipmap, VkBool32 isRepeatTexture )
         VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
 	VkFilter mag_filter = VK_FILTER_LINEAR;
-//	VkFilter mag_filter = VK_FILTER_NEAREST;
+//  VkFilter mag_filter = VK_FILTER_NEAREST;
 
     VkFilter min_filter = VK_FILTER_LINEAR;
-    // VkFilter min_filter = VK_FILTER_NEAREST;
+//  VkFilter min_filter = VK_FILTER_NEAREST;
 
     
     //used to emulate OpenGL's GL_LINEAR/GL_NEAREST minification filter    
@@ -107,7 +112,7 @@ VkSampler vk_find_sampler( VkBool32 isMipmap, VkBool32 isRepeatTexture )
     VkSamplerMipmapMode mipmap_mode;
     if (isMipmap)
     {
-		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		mipmap_mode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         max_lod_0_25 = 0;
     }
     else
@@ -130,7 +135,7 @@ VkSampler vk_find_sampler( VkBool32 isMipmap, VkBool32 isRepeatTexture )
 	desc.addressModeW = address_mode;
 	desc.mipLodBias = 0.0f;
 	desc.anisotropyEnable = VK_FALSE;
-	desc.maxAnisotropy = 1;
+	desc.maxAnisotropy = 16;
 	desc.compareEnable = VK_FALSE;
 	desc.compareOp = VK_COMPARE_OP_ALWAYS;
 	desc.minLod = 0.0f;
@@ -149,7 +154,6 @@ VkSampler vk_find_sampler( VkBool32 isMipmap, VkBool32 isRepeatTexture )
 	}
 	return sampler;
 }
-
 
 
 typedef struct {

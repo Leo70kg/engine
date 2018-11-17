@@ -21,9 +21,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // tr_sky.c
 #include "tr_local.h"
+#include "mvp_matrix.h"
+#include "vk_shade_geometry.h"
+
+
+
 
 #define SKY_SUBDIVISIONS		8
 #define HALF_SKY_SUBDIVISIONS	(SKY_SUBDIVISIONS/2)
+
+
+
 
 static float s_cloudTexCoords[6][SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1][2];
 
@@ -690,22 +698,29 @@ void RB_StageIteratorSky( void ) {
 	// front of everything to allow developers to see how
 	// much sky is getting sucked in
 	// draw the outer skybox
-	if ( tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage ) {
+	if ( tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage )
+    {
         float modelMatrix_original[16];
-        memcpy(modelMatrix_original, vk_world.modelview_transform, sizeof(float[16]));
-
+        //memcpy(modelMatrix_original, vk_world.modelview_transform, sizeof(float[16]));
+        get_modelview_matrix(modelMatrix_original);
+        
         float skybox_translate[16] = {
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
             backEnd.viewParms.or.origin[0], backEnd.viewParms.or.origin[1], backEnd.viewParms.or.origin[2], 1
         };
-        myGlMultMatrix(skybox_translate, modelMatrix_original, vk_world.modelview_transform);
 
-		DrawSkyBox( tess.shader );
+        {
+            float tmp[16];
+            myGlMultMatrix(skybox_translate, modelMatrix_original, tmp);
+            set_modelview_matrix(tmp);
+        }
+		
+        DrawSkyBox( tess.shader );
 
+        set_modelview_matrix(modelMatrix_original);
 
-        memcpy(vk_world.modelview_transform, modelMatrix_original, sizeof(float[16]));
 	}
 
 	// generate the vertexes for all the clouds, which will be drawn

@@ -22,6 +22,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 #include "qvk.h"
+
+#include "vk_clear_attachments.h"
+
+#include "mvp_matrix.h"
+
 backEndData_t	*backEndData[SMP_FRAMES];
 backEndState_t	backEnd;
 
@@ -83,7 +88,7 @@ void RB_BeginDrawingView (void)
 
 
 	// VULKAN
-	vk_clear_attachments(vk_world.dirty_depth_attachment, fast_sky, fast_sky_color);
+	vk_clear_attachments(get_depth_attachment(), fast_sky, fast_sky_color);
 
 	if ( ( backEnd.refdef.rdflags & RDF_HYPERSPACE ) )
 	{
@@ -195,8 +200,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 
 			// VULKAN
-			memcpy(vk_world.modelview_transform, backEnd.or.modelMatrix, 64);
-
+            set_modelview_matrix(backEnd.or.modelMatrix);
 			//
 			// change depthrange if needed
 			//
@@ -222,8 +226,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	//glLoadMatrixf( backEnd.viewParms.world.modelMatrix );
 
 	// VULKAN
-	memcpy(vk_world.modelview_transform, backEnd.viewParms.world.modelMatrix, 64);
-
+    set_modelview_matrix(backEnd.viewParms.world.modelMatrix);
 
 
 	// darken down any stencil shadows
@@ -452,84 +455,6 @@ const void* RB_DrawBuffer( const void *data )
 	return (const void *)(cmd + 1);
 }
 
-
-// VULKAN
-void RB_Show_Vk_Dx_Images(void)
-{
-
-	if ( !backEnd.projection2D )
-    {
-        backEnd.projection2D = qtrue;
-
-        // set 2D virtual screen size
-
-
-        // set time for 2D shaders
-        backEnd.refdef.time = ri.Milliseconds();
-        backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
-	}
-
-	float black[4] = {0, 0, 0, 1};
-
-	vk_clear_attachments(qfalse, qtrue, black);
-
-	for (int i = 0 ; i < tr.numImages ; i++) {
-		image_t* image = tr.images[i];
-
-		float w = glConfig.vidWidth / 20;
-		float h = glConfig.vidHeight / 15;
-		float x = i % 20 * w;
-		float y = i / 20 * h;
-
-		// show in proportional size in mode 2
-		if ( r_showImages->integer == 2 ) {
-			w *= image->uploadWidth / 512.0f;
-			h *= image->uploadHeight / 512.0f;
-		}
-
-		GL_Bind( image );
-
-		memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
-
-		tess.numIndexes = 6;
-		tess.numVertexes = 4;
-
-		tess.indexes[0] = 0;
-		tess.indexes[1] = 1;
-		tess.indexes[2] = 2;
-		tess.indexes[3] = 0;
-		tess.indexes[4] = 2;
-		tess.indexes[5] = 3;
-
-		tess.xyz[0][0] = x;
-		tess.xyz[0][1] = y;
-		tess.svars.texcoords[0][0][0] = 0;
-		tess.svars.texcoords[0][0][1] = 0;
-
-		tess.xyz[1][0] = x + w;
-		tess.xyz[1][1] = y;
-		tess.svars.texcoords[0][1][0] = 1;
-		tess.svars.texcoords[0][1][1] = 0;
-
-		tess.xyz[2][0] = x + w;
-		tess.xyz[2][1] = y + h;
-		tess.svars.texcoords[0][2][0] = 1;
-		tess.svars.texcoords[0][2][1] = 1;
-
-		tess.xyz[3][0] = x;
-		tess.xyz[3][1] = y + h;
-		tess.svars.texcoords[0][3][0] = 0;
-		tess.svars.texcoords[0][3][1] = 1;
-
-
-        vk_bind_geometry();
-        vk_shade_geometry(vk.images_debug_pipeline, qfalse, normal, qtrue);
-
-
-	}
-	tess.numIndexes = 0;
-	tess.numVertexes = 0;
-}
 
 
 /*

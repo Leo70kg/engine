@@ -1,5 +1,6 @@
 #include "qvk.h"
 #include "tr_local.h"
+
 /*
 static VkPipelineShaderStageCreateInfo get_shader_stage_desc(
         VkShaderStageFlagBits stage, VkShaderModule shader_module, const char* entry)
@@ -16,8 +17,43 @@ static VkPipelineShaderStageCreateInfo get_shader_stage_desc(
 };
 */
 
+enum Vk_Shader_Type {
+	single_texture,
+	multi_texture_mul,
+	multi_texture_add
+};
 
-VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
+
+// used with cg_shadows == 2
+enum Vk_Shadow_Phase {
+    shadows_disabled,
+	shadow_edges_rendering,
+	fullscreen_quad_rendering
+};
+
+
+struct Vk_Pipeline_Def {
+	enum Vk_Shader_Type shader_type;
+	unsigned int state_bits; // GLS_XXX flags
+	int face_culling;// cullType_t
+	VkBool32 polygon_offset;
+	VkBool32 clipping_plane;
+	VkBool32 mirror;
+	VkBool32 line_primitives;
+	enum Vk_Shadow_Phase shadow_phase;
+};
+
+
+
+static int s_numPipelines = 0;
+static int s_pipelineCreateTime = 0; // ms
+
+#define MAX_VK_PIPELINES        1024
+static struct Vk_Pipeline_Def s_pipeline_defs[MAX_VK_PIPELINES] = {0};
+static VkPipeline s_pipelines[MAX_VK_PIPELINES] = {0};
+
+
+static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 {
 
 	struct Specialization_Data {
@@ -216,7 +252,7 @@ VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 	depth_stencil_state.depthWriteEnable = (def->state_bits & GLS_DEPTHMASK_TRUE) ? VK_TRUE : VK_FALSE;
 	depth_stencil_state.depthCompareOp = (def->state_bits & GLS_DEPTHFUNC_EQUAL) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL;
 	depth_stencil_state.depthBoundsTestEnable = VK_FALSE;
-	depth_stencil_state.stencilTestEnable = (def->shadow_phase != disabled) ? VK_TRUE : VK_FALSE;
+	depth_stencil_state.stencilTestEnable = (def->shadow_phase != shadows_disabled) ? VK_TRUE : VK_FALSE;
 
 	if (def->shadow_phase == shadow_edges_rendering)
     {
@@ -381,39 +417,256 @@ VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 }
 
 
-VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def)
+static VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def)
 {
-	for (int i = 0; i < vk_world.num_pipelines; i++)
+    int i = 0;
+	for (i = 0; i < s_numPipelines; i++)
     {
-		if (vk_world.pipeline_defs[i].shader_type == def->shader_type &&
-			vk_world.pipeline_defs[i].state_bits == def->state_bits &&
-			vk_world.pipeline_defs[i].face_culling == def->face_culling &&
-			vk_world.pipeline_defs[i].polygon_offset == def->polygon_offset &&
-			vk_world.pipeline_defs[i].clipping_plane == def->clipping_plane &&
-			vk_world.pipeline_defs[i].mirror == def->mirror &&
-			vk_world.pipeline_defs[i].line_primitives == def->line_primitives &&
-			vk_world.pipeline_defs[i].shadow_phase == def->shadow_phase)
+		if (s_pipeline_defs[i].shader_type == def->shader_type &&
+			s_pipeline_defs[i].state_bits == def->state_bits &&
+			s_pipeline_defs[i].face_culling == def->face_culling &&
+			s_pipeline_defs[i].polygon_offset == def->polygon_offset &&
+			s_pipeline_defs[i].clipping_plane == def->clipping_plane &&
+			s_pipeline_defs[i].mirror == def->mirror &&
+			s_pipeline_defs[i].line_primitives == def->line_primitives &&
+			s_pipeline_defs[i].shadow_phase == def->shadow_phase)
 		{
-			return vk_world.pipelines[i];
+			return s_pipelines[i];
 		}
 	}
 
-	if (vk_world.num_pipelines >= MAX_VK_PIPELINES)
-    {
-		ri.Error(ERR_DROP, "vk_find_pipeline: MAX_VK_PIPELINES hit\n");
-	}
-
-	
     unsigned int start = ri.Milliseconds();
 
 	VkPipeline pipeline = vk_create_pipeline(def);
 
     unsigned int end = ri.Milliseconds();
 
-	vk_world.pipeline_create_time += (end - start)/1000.0f;
+	s_pipelineCreateTime += (end - start);
 
-	vk_world.pipeline_defs[vk_world.num_pipelines] = *def;
-	vk_world.pipelines[vk_world.num_pipelines] = pipeline;
-	vk_world.num_pipelines++;
+	s_pipeline_defs[s_numPipelines] = *def;
+	s_pipelines[s_numPipelines] = pipeline;
+	s_numPipelines++;
+    if (s_numPipelines >= MAX_VK_PIPELINES)
+    {
+		ri.Error(ERR_DROP, "vk_find_pipeline: MAX_VK_PIPELINES hit\n");
+	}
 	return pipeline;
 }
+
+
+void qDestroyALLPipeline(void)
+{
+    int i;
+    for (i = 0; i < s_numPipelines; i++)
+    {
+		qvkDestroyPipeline(vk.device, s_pipelines[i], NULL);
+
+        memset(&s_pipelines[i], 0, sizeof(VkPipeline) );
+
+        memset(&s_pipeline_defs[i], 0, sizeof(struct Vk_Pipeline_Def));
+    }
+    s_numPipelines = 0;
+
+    s_pipelineCreateTime = 0;
+}
+
+
+
+void qTotalPipelinesCreateTime(void)
+{
+	// VULKAN
+	ri.Printf(PRINT_ALL, "Vulkan: pipelines create time %d msec\n", s_pipelineCreateTime);
+
+}
+
+
+
+void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
+{
+    struct Vk_Pipeline_Def def;
+
+    def.line_primitives = 0;
+    def.shadow_phase = 0;
+    def.face_culling = pShader->cullType;
+    def.polygon_offset = (pShader->polygonOffset == qtrue);
+    def.state_bits = pStage->stateBits;
+
+    if (pStage->bundle[1].image[0] == NULL)
+        def.shader_type = single_texture;
+    else if (pShader->multitextureEnv == GL_MODULATE)
+        def.shader_type = multi_texture_mul;
+    else if (pShader->multitextureEnv == GL_ADD)
+        def.shader_type = multi_texture_add;
+    else
+        ri.Error(ERR_FATAL, "Vulkan: could not create pipelines for q3 shader '%s'\n", pShader->name);
+
+    def.clipping_plane = 0;
+    def.mirror = 0;
+    pStage->vk_pipeline = vk_find_pipeline(&def);
+
+    def.clipping_plane = 1;
+    def.mirror = 0;
+    pStage->vk_portal_pipeline = vk_find_pipeline(&def);
+
+    def.clipping_plane = 1;
+    def.mirror = 1;
+    pStage->vk_mirror_pipeline = vk_find_pipeline(&def);
+}
+
+
+
+void create_standard_pipelines(void)
+{
+
+    // skybox
+    {
+        struct Vk_Pipeline_Def def;
+        memset(&def, 0, sizeof(def));
+
+        def.shader_type = single_texture;
+        def.state_bits = 0;
+        def.face_culling = CT_FRONT_SIDED;
+        def.polygon_offset = qfalse;
+        def.clipping_plane = qfalse;
+        def.mirror = qfalse;
+        vk.skybox_pipeline = vk_create_pipeline(&def);
+    }
+
+    // Q3 stencil shadows
+    {
+        {
+            struct Vk_Pipeline_Def def;
+            memset(&def, 0, sizeof(def));
+
+
+            def.polygon_offset = 0;
+            def.state_bits = 0;
+            def.shader_type = single_texture;
+            def.clipping_plane = 0;
+            def.shadow_phase = shadow_edges_rendering;
+
+            cullType_t cull_types[2] = {CT_FRONT_SIDED, CT_BACK_SIDED};
+            qboolean mirror_flags[2] = {0, 1};
+
+            int i = 0; 
+            int j = 0;
+
+            for (i = 0; i < 2; i++)
+            {
+                def.face_culling = cull_types[i];
+                for (j = 0; j < 2; j++)
+                {
+                    def.mirror = mirror_flags[j];
+                    vk.shadow_volume_pipelines[i][j] = vk_create_pipeline(&def);
+                }
+            }
+        }
+
+        {
+            struct Vk_Pipeline_Def def;
+            memset(&def, 0, sizeof(def));
+
+            def.face_culling = CT_FRONT_SIDED;
+            def.polygon_offset = qfalse;
+            def.state_bits = GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+            def.shader_type = single_texture;
+            def.clipping_plane = qfalse;
+            def.mirror = qfalse;
+            def.shadow_phase = fullscreen_quad_rendering;
+            vk.shadow_finish_pipeline = vk_create_pipeline(&def);
+        }
+    }
+
+    // fog and dlights
+    {
+        struct Vk_Pipeline_Def def;
+        memset(&def, 0, sizeof(def));
+
+
+        def.shader_type = single_texture;
+        def.clipping_plane = qfalse;
+        def.mirror = qfalse;
+
+        unsigned int fog_state_bits[2] = {
+            GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHFUNC_EQUAL,
+            GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
+        };
+        unsigned int dlight_state_bits[2] = {
+            GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL,
+            GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL
+        };
+        qboolean polygon_offset[2] = {qfalse, qtrue};
+
+        int i = 0, j = 0, k = 0;
+
+        for (i = 0; i < 2; i++)
+        {
+            unsigned fog_state = fog_state_bits[i];
+            unsigned dlight_state = dlight_state_bits[i];
+
+            for (j = 0; j < 3; j++)
+            {
+                def.face_culling = j; // cullType_t value
+
+                for ( k = 0; k < 2; k++)
+                {
+                    def.polygon_offset = polygon_offset[k];
+
+                    def.state_bits = fog_state;
+                    vk.fog_pipelines[i][j][k] = vk_create_pipeline(&def);
+
+                    def.state_bits = dlight_state;
+                    vk.dlight_pipelines[i][j][k] = vk_create_pipeline(&def);
+                }
+            }
+        }
+    }
+
+    // debug pipelines
+    {
+        struct Vk_Pipeline_Def def;
+        memset(&def, 0, sizeof(def));
+
+        def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE;
+        vk.tris_debug_pipeline = vk_create_pipeline(&def);
+    }
+    {
+        struct Vk_Pipeline_Def def;
+        memset(&def, 0, sizeof(def));
+
+        def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE;
+        def.face_culling = CT_BACK_SIDED;
+        vk.tris_mirror_debug_pipeline = vk_create_pipeline(&def);
+    }
+    {
+        struct Vk_Pipeline_Def def;
+        memset(&def, 0, sizeof(def));
+
+        def.state_bits = GLS_DEPTHMASK_TRUE;
+        def.line_primitives = qtrue;
+        vk.normals_debug_pipeline = vk_create_pipeline(&def);
+    }
+    {
+        struct Vk_Pipeline_Def def;
+        memset(&def, 0, sizeof(def));
+
+        def.state_bits = GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE;
+        vk.surface_debug_pipeline_solid = vk_create_pipeline(&def);
+    }
+    {
+        struct Vk_Pipeline_Def def;
+        memset(&def, 0, sizeof(def));
+
+        def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE;
+        def.line_primitives = qtrue;
+        vk.surface_debug_pipeline_outline = vk_create_pipeline(&def);
+    }
+    {
+        struct Vk_Pipeline_Def def;
+        memset(&def, 0, sizeof(def));
+
+        def.state_bits = GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+        vk.images_debug_pipeline = vk_create_pipeline(&def);
+    }
+}
+

@@ -1,5 +1,7 @@
 #include "qvk.h"
 #include "tr_local.h"
+#include "vk_clear_attachments.h"
+
 
 void vk_begin_frame(void)
 {
@@ -50,8 +52,9 @@ void vk_begin_frame(void)
 
 	qvkCmdBeginRenderPass(vk.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-	vk_world.dirty_depth_attachment = qfalse;
-	vk.xyz_elements = 0;
+    set_depth_attachment(VK_FALSE);
+	
+    vk.xyz_elements = 0;
 	vk.color_st_elements = 0;
 	vk.index_buffer_offset = 0;
 }

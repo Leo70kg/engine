@@ -22,6 +22,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_main.c -- main control flow for each frame
 
 #include "tr_local.h"
+#include "mvp_matrix.h"
+
+#include "vk_shade_geometry.h"
+
 
 trGlobals_t		tr;
 
@@ -33,6 +37,9 @@ static float	s_flipMatrix[16] = {
 	0, 1, 0, 0,
 	0, 0, 0, 1
 };
+
+
+
 
 
 refimport_t	ri;
@@ -1381,11 +1388,12 @@ void R_AddEntitySurfaces (void)
 R_DebugPolygon
 ================
 */
-void R_DebugPolygon( int color, int numPoints, float *points ) {
+void R_DebugPolygon( int color, int numPoints, float *points )
+{
 
 	if (numPoints < 3 || numPoints >= SHADER_MAX_VERTEXES/2)
 		return;
-
+    int i;
 	// In Vulkan we don't have GL_POLYGON + GLS_POLYMODE_LINE equivalent, so we use lines to draw polygon outlines.
 	// This approach has additional implication that we need to do manual backface culling to reject outlines that
 	// belong to back facing polygons.
@@ -1395,19 +1403,20 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
     vec3_t pa;
 	vec3_t pb;
 //	transform_to_eye_space(&points[0], pa);
-    {
-		float* m = vk_world.modelview_transform;
-        pa[0] = m[0]*points[0] + m[4]*points[1] + m[8 ]*points[2] + points[12];
-		pa[1] = m[1]*points[0] + m[5]*points[1] + m[9 ]*points[2] + points[13];
-		pa[2] = m[2]*points[0] + m[6]*points[1] + m[10]*points[2] + points[14];
-	};
+    
+    float m[15];
+    get_modelview_matrix(m);
+    
+
+    pa[0] = m[0]*points[0] + m[4]*points[1] + m[8 ]*points[2] + points[12];
+    pa[1] = m[1]*points[0] + m[5]*points[1] + m[9 ]*points[2] + points[13];
+    pa[2] = m[2]*points[0] + m[6]*points[1] + m[10]*points[2] + points[14];
 	
     
 //   transform_to_eye_space(&points[3], pb);
     {
         float *v = &points[3];
         float *v_eye = pb;
-        float* m = vk_world.modelview_transform;
         v_eye[0] = m[0]*v[0] + m[4]*v[1] + m[8 ]*v[2] + m[12];
 		v_eye[1] = m[1]*v[0] + m[5]*v[1] + m[9 ]*v[2] + m[13];
 		v_eye[2] = m[2]*v[0] + m[6]*v[1] + m[10]*v[2] + m[14];
@@ -1415,13 +1424,13 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
 	vec3_t p;
 	VectorSubtract(pb, pa, p);
 	vec3_t n;
-	for (int i = 2; i < numPoints; i++)
+	for (i = 2; i < numPoints; i++)
     {
 		//transform_to_eye_space(&points[3*i], pb);
         {
             float *v = &points[3*i];
             float *v_eye = pb;
-            float* m = vk_world.modelview_transform;
+
             v_eye[0] = m[0]*v[0] + m[4]*v[1] + m[8 ]*v[2] + m[12];
 		    v_eye[1] = m[1]*v[0] + m[5]*v[1] + m[9 ]*v[2] + m[13];
 		    v_eye[2] = m[2]*v[0] + m[6]*v[1] + m[10]*v[2] + m[14];
@@ -1437,7 +1446,7 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
 		return; // discard backfacing polygon
 
 	// Solid shade.
-	for (int i = 0; i < numPoints; i++) {
+	for (i = 0; i < numPoints; i++) {
 		VectorCopy(&points[3*i], tess.xyz[i]);
 
 		tess.svars.colors[i][0] = (color&1) ? 255 : 0;
@@ -1448,7 +1457,8 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
 	tess.numVertexes = numPoints;
 
 	tess.numIndexes = 0;
-	for (int i = 1; i < numPoints - 1; i++) {
+	for (i = 1; i < numPoints - 1; i++)
+    {
 		tess.indexes[tess.numIndexes + 0] = 0;
 		tess.indexes[tess.numIndexes + 1] = i;
 		tess.indexes[tess.numIndexes + 2] = i + 1;
@@ -1463,7 +1473,8 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
 	// Outline.
 	memset(tess.svars.colors, tr.identityLightByte, numPoints * 2 * sizeof(color4ub_t));
 
-	for (int i = 0; i < numPoints; i++) {
+	for (i = 0; i < numPoints; i++)
+    {
 		VectorCopy(&points[3*i], tess.xyz[2*i]);
 		VectorCopy(&points[3*((i + 1) % numPoints)], tess.xyz[2*i + 1]);
 	}

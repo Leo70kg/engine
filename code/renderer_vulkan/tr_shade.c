@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_shade.c
 
 #include "tr_local.h"
+#include "vk_shade_geometry.h"
 
 /*
 
@@ -670,17 +671,83 @@ static void ComputeTexCoords( shaderStage_t *pStage ) {
 	}
 }
 
+
+
+
 /*
-** RB_IterateStagesGeneric
+** RB_StageIteratorGeneric
 */
-static void RB_IterateStagesGeneric( shaderCommands_t *input )
+void RB_StageIteratorGeneric( void )
+{
+	shaderCommands_t *input;
+
+	input = &tess;
+
+	RB_DeformTessGeometry();
+
+
+
+	// set face culling appropriately
+	// set polygon offset if necessary
+
+
+	//
+	// if there is only a single pass then we can enable color
+	// and texture arrays before we compile, otherwise we need
+	// to avoid compiling those arrays since they will change
+	// during multipass rendering
+	//
+	if ( tess.numPasses > 1 || input->shader->multitextureEnv )
+	{
+		setArraysOnce = qfalse;
+	}
+	else
+	{
+		setArraysOnce = qtrue;
+	}
+
+	//
+	// lock XYZ
+	//
+
+	//
+	// enable color and texcoord arrays after the lock if necessary
+	//
+
+	//
+	// call shader function
+	//
+	RB_IterateStagesGeneric( input );
+
+	// 
+	// now do any dynamic lighting needed
+	//
+	if ( tess.dlightBits && tess.shader->sort <= SS_OPAQUE
+		&& !(tess.shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY) ) ) {
+		ProjectDlightTexture();
+	}
+
+	//
+	// now do fog
+	//
+	if ( tess.fogNum && tess.shader->fogPass ) {
+		RB_FogPass();
+	}
+
+
+
+}
+
+
+void RB_IterateStagesGeneric( shaderCommands_t *input )
 {
 	// VULKAN
 
 	vk_bind_geometry();
+    
+    int stage = 0;
 
-
-	for ( int stage = 0; stage < MAX_SHADER_STAGES; stage++ )
+	for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ )
 	{
 		shaderStage_t *pStage = tess.xstages[stage];
 
@@ -750,69 +817,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 }
 
 
-/*
-** RB_StageIteratorGeneric
-*/
-void RB_StageIteratorGeneric( void )
-{
-	shaderCommands_t *input;
-
-	input = &tess;
-
-	RB_DeformTessGeometry();
-
-
-
-	// set face culling appropriately
-	// set polygon offset if necessary
-
-
-	//
-	// if there is only a single pass then we can enable color
-	// and texture arrays before we compile, otherwise we need
-	// to avoid compiling those arrays since they will change
-	// during multipass rendering
-	//
-	if ( tess.numPasses > 1 || input->shader->multitextureEnv )
-	{
-		setArraysOnce = qfalse;
-	}
-	else
-	{
-		setArraysOnce = qtrue;
-	}
-
-	//
-	// lock XYZ
-	//
-
-	//
-	// enable color and texcoord arrays after the lock if necessary
-	//
-
-	//
-	// call shader function
-	//
-	RB_IterateStagesGeneric( input );
-
-	// 
-	// now do any dynamic lighting needed
-	//
-	if ( tess.dlightBits && tess.shader->sort <= SS_OPAQUE
-		&& !(tess.shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY) ) ) {
-		ProjectDlightTexture();
-	}
-
-	//
-	// now do fog
-	//
-	if ( tess.fogNum && tess.shader->fogPass ) {
-		RB_FogPass();
-	}
-
-
-
-}
 
 /*
 ** RB_EndSurface

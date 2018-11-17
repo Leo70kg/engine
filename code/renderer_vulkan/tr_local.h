@@ -1553,8 +1553,8 @@ typedef struct {
 } backEndData_t;
 
 
-
-
+void RB_IterateStagesGeneric( shaderCommands_t *input );
+void RB_Show_Vk_Dx_Images(void);
 
 void *R_GetCommandBuffer( int bytes );
 void RB_ExecuteRenderCommands( const void *data );
@@ -1615,9 +1615,17 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 void generate_image_upload_data(struct Image_Upload_Data* upload_data, unsigned char* data,
         int width, int height, qboolean mipmap, qboolean picmip);
 
-void myDestroyImage(void);
+void create_pipelines_for_each_stage(shaderStage_t* pStage, shader_t* pShader); 
+void create_standard_pipelines(void);
+
+
+void qDestroyImage(void);
+void qDestroyALLPipeline(void);
+
 void vk_release_resources(void);
 void vk_bind_descriptor_sets(unsigned int numSet);
+
+
 
 void R_ScreenShotJPEG_f(void);
 

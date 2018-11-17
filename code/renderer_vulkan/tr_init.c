@@ -29,7 +29,6 @@ glstate_t	glState;
 
 // VULKAN
 struct Vk_Instance vk;
-struct Vk_World	vk_world;
 
 
 
@@ -368,10 +367,6 @@ void RE_EndRegistration( void )
 {
 	R_SyncRenderThread();
 
-
-	// VULKAN
-	ri.Printf(PRINT_ALL, "Vulkan: pipelines create time %d msec\n", (int)(vk_world.pipeline_create_time * 1000));
-
 }
 
 void R_Init( void )
@@ -386,7 +381,7 @@ void R_Init( void )
 	memset( &tr, 0, sizeof( tr ) );
 	memset( &backEnd, 0, sizeof( backEnd ) );
 	memset( &tess, 0, sizeof( tess ) );
-	memset( &vk_world, 0, sizeof( vk_world ) );
+
 
 	if ( (intptr_t)tess.xyz & 15 ) {
 		ri.Printf( PRINT_ALL, "WARNING: tess.xyz not 16 byte aligned\n" );

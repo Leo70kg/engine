@@ -573,7 +573,7 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 				return qfalse;
 			}
             
-            ri.Printf( PRINT_ALL, "CLAMPMAP: \n");
+            //ri.Printf( PRINT_ALL, "CLAMPMAP: \n");
 			
             stage->bundle[0].image[0] = R_FindImageFile(token, !shader.noMipMaps, !shader.noPicMip, GL_CLAMP);
 			if ( !stage->bundle[0].image[0] )
@@ -1915,41 +1915,15 @@ shader_t *FinishShader( void )
 		shader.sort = SS_FOG;
 	}
 
-	// VULKAN: create pipelines for each shader stage
-	// DX12
-    struct Vk_Pipeline_Def def;
-    memset(&def, 0, sizeof(def));
-
-
-    def.face_culling = shader.cullType;
-    def.polygon_offset = (shader.polygonOffset == qtrue);
-
+	
+    // create_pipelines_for_each_stage(); 
+    // VULKAN: create pipelines for each shader stage
     int i = 0;
     for (i=0; i < stage; i++)
     {
-        shaderStage_t *pStage = &stages[i];
-        def.state_bits = pStage->stateBits;
+        //shaderStage_t *pStage = &stages[i];
+        create_pipelines_for_each_stage(&stages[i], &shader); 
 
-        if (pStage->bundle[1].image[0] == NULL)
-            def.shader_type = single_texture;
-        else if (shader.multitextureEnv == GL_MODULATE)
-            def.shader_type = multi_texture_mul;
-        else if (shader.multitextureEnv == GL_ADD)
-            def.shader_type = multi_texture_add;
-        else
-            ri.Error(ERR_FATAL, "Vulkan: could not create pipelines for q3 shader '%s'\n", shader.name);
-
-        def.clipping_plane = 0;
-        def.mirror = 0;
-        pStage->vk_pipeline = vk_find_pipeline(&def);
-
-        def.clipping_plane = 1;
-        def.mirror = 0;
-        pStage->vk_portal_pipeline = vk_find_pipeline(&def);
-
-        def.clipping_plane = 1;
-        def.mirror = 1;
-        pStage->vk_mirror_pipeline = vk_find_pipeline(&def);
     }
 
 	return GeneratePermanentShader();

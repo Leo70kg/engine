@@ -6,8 +6,8 @@
 
 #define MAX_SWAPCHAIN_IMAGES    8
 
-#define MAX_VK_PIPELINES        1024
-#define MAX_VK_IMAGES           2048 // should be the same as MAX_DRAWIMAGES
+
+
 
 #define IMAGE_CHUNK_SIZE        (32 * 1024 * 1024)
 
@@ -39,37 +39,7 @@ const char * cvtResToStr(VkResult result);
 }
 
 
-enum Vk_Shader_Type {
-	single_texture,
-	multi_texture_mul,
-	multi_texture_add
-};
 
-// used with cg_shadows == 2
-enum Vk_Shadow_Phase {
-	disabled,
-	shadow_edges_rendering,
-	fullscreen_quad_rendering
-};
-
-enum Vk_Depth_Range {
-	normal, // [0..1]
-	force_zero, // [0..0]
-	force_one, // [1..1]
-	weapon // [0..0.3]
-};
-
-
-struct Vk_Pipeline_Def {
-	enum Vk_Shader_Type shader_type;
-	unsigned int state_bits; // GLS_XXX flags
-	int face_culling;// cullType_t
-	VkBool32 polygon_offset;
-	VkBool32 clipping_plane;
-	VkBool32 mirror;
-	VkBool32 line_primitives;
-	enum Vk_Shadow_Phase shadow_phase;
-};
 
 
 
@@ -199,13 +169,12 @@ void vk_initialize(void);
 void vk_shutdown(void);
 
 
-
-
 //void vk_create_instance(void);
 //void vk_create_device(void);
-VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def);
+
+
 void vk_bind_geometry(void);
-void vk_clear_attachments(VkBool32 clear_depth_stencil, VkBool32 clear_color, float* color);
+
 
 VkRect2D get_scissor_rect(void);
 
@@ -221,14 +190,14 @@ uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t memory_type
 //
 // Resources allocation.
 //
-VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def);
+
 void VK_GetProcAddress(void);
 void VK_ClearProcAddress(void);
 
 //
 // Rendering setup.
 //
-void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed);
+
 void vk_begin_frame(void);
 void vk_end_frame(void);
 
@@ -322,41 +291,6 @@ struct Vk_Instance {
 	VkPipeline images_debug_pipeline;
 };
 
-
-
-struct Vk_Image {
-	VkImage handle;
-	VkImageView view;
-
-	// Descriptor set that contains single descriptor used to access the given image.
-	// It is updated only once during image initialization.
-	VkDescriptorSet descriptor_set;
-};
-
-// Vk_World contains vulkan resources/state requested by the game code.
-// It is reinitialized on a map change.
-struct Vk_World {
-	//
-	// Resources.
-	//
-	int num_pipelines;
-	struct Vk_Pipeline_Def pipeline_defs[MAX_VK_PIPELINES];
-	VkPipeline pipelines[MAX_VK_PIPELINES];
-	float pipeline_create_time;
-
-	struct Vk_Image images[MAX_VK_IMAGES];
-
-	//
-	// State.
-	//
-
-	// This flag is used to decide whether framebuffer's depth attachment should be cleared
-	// with vmCmdClearAttachment (dirty_depth_attachment == true), or it have just been
-	// cleared by render pass instance clear op (dirty_depth_attachment == false).
-	VkBool32 dirty_depth_attachment;
-
-	float modelview_transform[16];
-};
 
 
 extern struct Vk_Instance vk;

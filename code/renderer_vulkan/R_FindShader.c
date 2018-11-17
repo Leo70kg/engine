@@ -56,7 +56,7 @@ shader name. If found, it will return a valid shader, return NULL if not found.
 static char* FindShaderInShaderText( const char *shadername )
 {
 
-    ri.Printf( PRINT_ALL, "FindShaderInShaderText: %s\n", shadername);
+//    ri.Printf( PRINT_ALL, "FindShaderInShaderText: %s\n", shadername);
 
 	int hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
 
@@ -199,7 +199,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
                 // had errors, so use default shader
                 R_SetDefaultShader( );
 
-                ri.Printf( PRINT_WARNING, "ParseShader: %s had errors\n", shaderText );
+                ri.Printf( PRINT_WARNING, "ParseShader: %s had errors\n", strippedName );
 
             }
             sh = FinishShader();

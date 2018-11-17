@@ -13,6 +13,20 @@ struct Chunk {
 	VkDeviceSize used;
 };
 
+
+struct Vk_Image {
+	VkImage handle;
+	VkImageView view;
+
+	// Descriptor set that contains single descriptor used to access the given image.
+	// It is updated only once during image initialization.
+	VkDescriptorSet descriptor_set;
+};
+
+#define MAX_VK_IMAGES           2048 // should be the same as MAX_DRAWIMAGES
+static struct Vk_Image s_vkImages[MAX_VK_IMAGES] = {0};
+
+
 static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS] = {0};
 static int s_NumImageChunks = 0;
 
@@ -26,9 +40,6 @@ static unsigned char* s_pStgBuf = NULL;
 static VkDeviceSize s_StagingBufferSize = 0;
 
 ////////////////////////////////////////
-
-
-
 
 
 // Descriptor sets corresponding to bound texture images.
@@ -104,8 +115,7 @@ void GL_Bind( image_t *image )
         image->frameUsed = tr.frameCount;
 
 		// VULKAN
-		s_CurrentDescriptorSets[glState.currenttmu] = 
-            vk_world.images[image->index].descriptor_set;
+		s_CurrentDescriptorSets[glState.currenttmu] = s_vkImages[image->index].descriptor_set;
 	}
 }
 
@@ -132,7 +142,7 @@ void VK_TextureMode( void )
     {
         if (tr.images[i]->mipmap)
         {
-            vk_update_descriptor_set(vk_world.images[i].descriptor_set, vk_world.images[i].view, 1, tr.images[i]->wrapClampMode == GL_REPEAT);
+            vk_update_descriptor_set(s_vkImages[i].descriptor_set, s_vkImages[i].view, 1, tr.images[i]->wrapClampMode == GL_REPEAT);
         }
     }
 }
@@ -495,7 +505,7 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 }
 
 
-void myDestroyImage(void)
+void qDestroyImage(void)
 {
     vk_free_sampler();
 
@@ -507,7 +517,7 @@ void myDestroyImage(void)
 	int i = 0;
 	for (i = 0; i < MAX_VK_IMAGES; i++)
     {
-		struct Vk_Image* image = &vk_world.images[i];
+		struct Vk_Image* image = &s_vkImages[i];
 
 		if (image->handle != VK_NULL_HANDLE)
         {
@@ -522,10 +532,149 @@ void myDestroyImage(void)
             image->descriptor_set = VK_NULL_HANDLE;
         }
 	}
-
-	memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
+    
+    memset(s_vkImages, 0, MAX_VK_IMAGES*sizeof(struct Vk_Image));
+	
+    memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
 }
 
+
+
+#define FILE_HASH_SIZE	1024
+static	image_t*		hashTable[FILE_HASH_SIZE];
+
+
+static int generateHashValue( const char *fname )
+{
+	int		i = 0;
+	int	hash = 0;
+
+	while (fname[i] != '\0') {
+		char letter = tolower(fname[i]);
+		if (letter =='.') break;				// don't include extension
+		if (letter =='\\') letter = '/';		// damn path names
+		hash+=(long)(letter)*(i+119);
+		i++;
+	}
+	hash &= (FILE_HASH_SIZE-1);
+	return hash;
+}
+
+
+
+/*
+================
+R_CreateImage
+
+This is the only way any image_t are created
+================
+*/
+image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int height,
+						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode )
+{
+	if (strlen(name) >= MAX_QPATH ) {
+		ri.Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
+	}
+
+	if ( tr.numImages == MAX_DRAWIMAGES ) {
+		ri.Error( ERR_DROP, "R_CreateImage: MAX_DRAWIMAGES hit\n");
+	}
+
+	// Create image_t object.
+	image_t* image = tr.images[tr.numImages] = (image_t*) ri.Hunk_Alloc( sizeof( image_t ), h_low );
+    image->index = tr.numImages;
+	image->texnum = 1024 + tr.numImages;
+	image->mipmap = mipmap;
+	image->allowPicmip = allowPicmip;
+	strcpy (image->imgName, name);
+	image->width = width;
+	image->height = height;
+	image->wrapClampMode = glWrapClampMode;
+
+	int hash = generateHashValue(name);
+	image->next = hashTable[hash];
+	hashTable[hash] = image;
+
+	tr.numImages++;
+
+	// Create corresponding GPU resource.
+	int isLightmap = (strncmp(name, "*lightmap", 9) == 0);
+	glState.currenttmu = isLightmap;
+	
+    GL_Bind(image);
+
+	struct Image_Upload_Data upload_data;
+    memset(&upload_data, 0, sizeof(upload_data));
+
+
+    generate_image_upload_data(&upload_data, pic, width, height, mipmap, allowPicmip);
+
+
+	s_vkImages[image->index] = upload_vk_image(&upload_data, glWrapClampMode == GL_REPEAT);
+
+	if (isLightmap) {
+		glState.currenttmu = 0;
+	}
+	ri.Hunk_FreeTempMemory(upload_data.buffer);
+	return image;
+}
+
+
+
+image_t* R_FindImageFile(const char *name, qboolean mipmap, 
+						qboolean allowPicmip, int glWrapClampMode)
+{
+
+   	image_t* image;
+	int	width, height;
+	unsigned char* pic;
+
+	if (name == NULL)
+    {
+        ri.Printf( PRINT_WARNING, "R_FindImageFile: NULL\n");
+		return NULL;
+	}
+
+	int hash = generateHashValue(name);
+
+	// see if the image is already loaded
+
+	for (image=hashTable[hash]; image; image=image->next)
+	{
+		if ( !strcmp( name, image->imgName ) )
+		{
+			// the white image can be used with any set of parms,
+			// but other mismatches are errors
+			if ( strcmp( name, "*white" ) )
+			{
+				if ( image->mipmap != mipmap ) {
+					ri.Printf( PRINT_WARNING, "WARNING: reused image %s with mixed mipmap parm\n", name );
+				}
+				if ( image->allowPicmip != allowPicmip ) {
+					ri.Printf( PRINT_WARNING, "WARNING: reused image %s with mixed allowPicmip parm\n", name );
+				}
+				if ( image->wrapClampMode != glWrapClampMode ) {
+					ri.Printf( PRINT_WARNING, "WARNING: reused image %s with mixed glWrapClampMode parm\n", name );
+				}
+			}
+			return image;
+		}
+	}
+
+	//
+	// load the pic from disk
+    //
+    R_LoadImage2( name, &pic, &width, &height );
+	if (pic == NULL)
+	{
+        return NULL;
+    }
+
+	image = R_CreateImage( name, pic, width, height,
+							mipmap, allowPicmip, glWrapClampMode );
+	ri.Free( pic );
+	return image;
+}
 
 
 void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
@@ -542,11 +691,11 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int
         tr.scratchImage[client]->height = tr.scratchImage[client]->uploadHeight = rows;
 
         // VULKAN
-        struct Vk_Image* pImage = &vk_world.images[tr.scratchImage[client]->index];
+        struct Vk_Image* pImage = &s_vkImages[tr.scratchImage[client]->index];
         qvkDestroyImage(vk.device, pImage->handle, NULL);
         qvkDestroyImageView(vk.device, pImage->view, NULL);
         qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
-        vk_world.images[tr.scratchImage[client]->index] = vk_create_image(cols, rows, VK_FORMAT_R8G8B8A8_UNORM, 1, 0);
+        s_vkImages[tr.scratchImage[client]->index] = vk_create_image(cols, rows, VK_FORMAT_R8G8B8A8_UNORM, 1, 0);
         vk_upload_image_data(pImage->handle, cols, rows, 0, data, 4);
     }
     else if (dirty)
@@ -554,7 +703,21 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int
         // otherwise, just subimage upload it so that
         // drivers can tell we are going to be changing
         // it and don't try and do a texture compression       
-        vk_upload_image_data(vk_world.images[tr.scratchImage[client]->index].handle, cols, rows, 0, data, 4);
+        vk_upload_image_data(s_vkImages[tr.scratchImage[client]->index].handle, cols, rows, 0, data, 4);
     }
 
 }
+
+
+void R_InitImages( void )
+{
+    memset(hashTable, 0, sizeof(hashTable));
+    // important
+
+	// build brightness translation tables
+	R_SetColorMappings();
+
+	// create default texture and white texture
+	R_CreateBuiltinImages();
+}
+

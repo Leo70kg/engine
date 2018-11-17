@@ -1566,6 +1566,7 @@ Q3MYDEVOBJ = \
 ######################  VULKAN  ######################
 
 Q3VKOBJ = \
+  $(B)/renderer_vulkan/mvp_matrix.o \
   $(B)/renderer_vulkan/tr_animation.o \
   $(B)/renderer_vulkan/tr_backend.o \
   $(B)/renderer_vulkan/tr_bsp.o \
@@ -1599,7 +1600,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/RB_TakeScreenshot.o \
   $(B)/renderer_vulkan/R_LoadImage.o \
   $(B)/renderer_vulkan/R_LoadImage2.o \
-  $(B)/renderer_vulkan/R_FindImageFile.o \
   $(B)/renderer_vulkan/R_FindShader.o \
   $(B)/renderer_vulkan/R_ListShader.o \
   $(B)/renderer_vulkan/R_LightScaleTexture.o \

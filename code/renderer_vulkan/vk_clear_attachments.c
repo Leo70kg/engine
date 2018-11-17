@@ -1,8 +1,27 @@
+#include "vk_clear_attachments.h"
 #include "tr_local.h"
-#include "qvk.h"
 
 
-void vk_clear_attachments(qboolean clear_depth_stencil, qboolean clear_color, float* color)
+// This flag is used to decide whether framebuffer's depth attachment should be cleared
+// with vmCmdClearAttachment (dirty_depth_attachment == true), or it have just been
+// cleared by render pass instance clear op (dirty_depth_attachment == false).
+
+// dirty_depth_attachment;
+
+static VkBool32 s_depth_attachment_dirty = 0;
+
+
+void set_depth_attachment(VkBool32 s)
+{   
+    s_depth_attachment_dirty = s;
+}
+
+VkBool32 get_depth_attachment(void)
+{
+    return s_depth_attachment_dirty;
+}
+
+void vk_clear_attachments(VkBool32 clear_depth_stencil, VkBool32 clear_color, float* color)
 {
 
 	if (!clear_depth_stencil && !clear_color)
