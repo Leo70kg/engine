@@ -1,6 +1,7 @@
 #include "qvk.h"
 #include "tr_local.h"
 #include "vk_clear_attachments.h"
+#include "vk_memory.h"
 
 
 void vk_begin_frame(void)

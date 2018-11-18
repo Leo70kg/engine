@@ -8,11 +8,6 @@
 
 
 
-
-#define IMAGE_CHUNK_SIZE        (32 * 1024 * 1024)
-
-
-
 #define VERTEX_CHUNK_SIZE   (512 * 1024)
 
 #define XYZ_SIZE            (4 * VERTEX_CHUNK_SIZE)
@@ -37,8 +32,6 @@ const char * cvtResToStr(VkResult result);
 		ri.Error(ERR_FATAL, \
         "Vulkan: error %s returned by %s", cvtResToStr(result), #function_call); \
 }
-
-
 
 
 
@@ -157,16 +150,6 @@ extern PFN_vkQueuePresentKHR							qvkQueuePresentKHR;
 
 
 
-//
-// Initialization.
-//
-
-// Initializes VK_Instance structure.
-// After calling this function we get fully functional vulkan subsystem.
-void vk_initialize(void);
-
-// Shutdown vulkan subsystem by releasing resources acquired by Vk_Instance.
-void vk_shutdown(void);
 
 
 //void vk_create_instance(void);
@@ -179,14 +162,11 @@ void vk_bind_geometry(void);
 VkRect2D get_scissor_rect(void);
 
 
-void record_buffer_memory_barrier(VkCommandBuffer cb, VkBuffer buffer,
-		VkPipelineStageFlags src_stages, VkPipelineStageFlags dst_stages,
-		VkAccessFlags src_access, VkAccessFlags dst_access);
+
 
 void record_image_layout_transition(VkCommandBuffer command_buffer, VkImage image, VkImageAspectFlags image_aspect_flags,
 	VkAccessFlags src_access_flags, VkImageLayout old_layout, VkAccessFlags dst_access_flags, VkImageLayout new_layout);
 
-uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t memory_type_bits, VkMemoryPropertyFlags properties);
 //
 // Resources allocation.
 //

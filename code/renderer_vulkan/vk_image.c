@@ -1,12 +1,14 @@
 #include "qvk.h"
 #include "tr_local.h"
 #include "image_sampler.h"
+#include "vk_memory.h"
 
 
 //
 // Memory allocations.
 //
 #define MAX_IMAGE_CHUNKS        16
+#define IMAGE_CHUNK_SIZE        (32 * 1024 * 1024)
 
 struct Chunk {
 	VkDeviceMemory memory;
@@ -23,12 +25,15 @@ struct Vk_Image {
 	VkDescriptorSet descriptor_set;
 };
 
-#define MAX_VK_IMAGES           2048 // should be the same as MAX_DRAWIMAGES
-static struct Vk_Image s_vkImages[MAX_VK_IMAGES] = {0};
+// should be the same as MAX_DRAWIMAGES
+#define MAX_VK_IMAGES   2048
+static struct Vk_Image  s_vkImages[MAX_VK_IMAGES] = {0};
 
 
 static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS] = {0};
 static int s_NumImageChunks = 0;
+
+
 
 ///////////////////////////////////////
 
@@ -123,7 +128,7 @@ void GL_Bind( image_t *image )
 void VK_TextureMode( void )
 {
 
-	vk_set_sampler(3);
+	//vk_set_sampler(3);
 	int i = 0;
 	// change all the existing mipmap texture objects
 	for ( i = 0 ; i < tr.numImages ; i++ )

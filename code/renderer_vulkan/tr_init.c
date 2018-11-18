@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 #include "VKimpl.h"
+#include "vk_initialize.h"
 
 glconfig_t	glConfig;
 glstate_t	glState;
@@ -147,6 +148,8 @@ void vulkanInfo_f( void )
 	// VULKAN
 
     ri.Printf( PRINT_ALL, "\nActive 3D API: Vulkan\n" );
+
+    // To query general properties of physical devices once enumerated
     VkPhysicalDeviceProperties props;
     qvkGetPhysicalDeviceProperties(vk.physical_device, &props);
 
@@ -181,6 +184,11 @@ void vulkanInfo_f( void )
     ri.Printf(PRINT_ALL, "Vk device id: 0x%X\n", props.deviceID);
     ri.Printf(PRINT_ALL, "Vk device type: %s\n", device_type);
     ri.Printf(PRINT_ALL, "Vk device name: %s\n", props.deviceName);
+
+    ri.Printf(PRINT_ALL, "\n The maximum number of sampler objects, as created by vkCreateSampler, which can simultaneously exist on a device is: %d\n", 
+        props.limits.maxSamplerAllocationCount);
+
+
 
 	if ( r_vertexLight->integer ) {
 		ri.Printf( PRINT_ALL, "HACK: using vertex lightmap approximation\n" );

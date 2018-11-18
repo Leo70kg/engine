@@ -1622,7 +1622,7 @@ void create_standard_pipelines(void);
 void qDestroyImage(void);
 void qDestroyALLPipeline(void);
 
-void vk_release_resources(void);
+
 void vk_bind_descriptor_sets(unsigned int numSet);
 
 
@@ -1642,7 +1642,6 @@ extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allo
 
 // VULKAN
 extern struct Vk_Instance	vk;				// shouldn't be cleared during ref re-init
-extern struct Vk_World		vk_world;		// this data is cleared during ref re-init
 
 
 #endif //TR_LOCAL_H
