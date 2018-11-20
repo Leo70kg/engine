@@ -1,12 +1,14 @@
 // VULKAN
 
 #include "qvk.h"
-#include "VKimpl.h"
 
 #include <string.h>
 #include <stdlib.h>
 
 #include "tr_local.h" //extern refimport_t ri; 
+#include "Vk_Instance.h"
+
+
 
 //
 // Vulkan API functions used by the renderer.
@@ -26,8 +28,6 @@ PFN_vkGetPhysicalDeviceFormatProperties			qvkGetPhysicalDeviceFormatProperties;
 PFN_vkGetPhysicalDeviceMemoryProperties			qvkGetPhysicalDeviceMemoryProperties;
 PFN_vkGetPhysicalDeviceProperties				qvkGetPhysicalDeviceProperties;
 PFN_vkGetPhysicalDeviceQueueFamilyProperties	qvkGetPhysicalDeviceQueueFamilyProperties;
-
-
 
 
 
@@ -121,7 +121,6 @@ PFN_vkQueuePresentKHR							qvkQueuePresentKHR;
 static void loadGlobalFunctions(void)
 {
     ri.Printf(PRINT_ALL, "...Load vulkan instance functions...\n");
-
 
 
     #define INIT_INSTANCE_FUNCTION(func)                                \
@@ -435,10 +434,6 @@ static void loadDeviceFunctions(void)
 }
 
 //// 
-
-
-
-
 
 void VK_GetProcAddress(void)
 {

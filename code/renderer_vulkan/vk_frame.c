@@ -2,6 +2,8 @@
 #include "tr_local.h"
 #include "vk_clear_attachments.h"
 #include "vk_memory.h"
+#include "vk_frame.h"
+#include "Vk_Instance.h"
 
 
 void vk_begin_frame(void)

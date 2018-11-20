@@ -719,7 +719,8 @@ static void LoadPCX ( const char *filename, unsigned char **pic, unsigned char *
 LoadPCX32
 ==============
 */
-static void LoadPCX32 ( const char *filename, unsigned char **pic, int *width, int *height) {
+static void LoadPCX32 ( const char *filename, unsigned char **pic, int *width, int *height)
+{
 	unsigned char	*palette;
 	unsigned char	*pic8;
 	int		i, c, p;

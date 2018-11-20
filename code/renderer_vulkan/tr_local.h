@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/tr_public.h"
 #include "../renderercommon/tr_common.h"
 
-#include "qvk.h"
+#include "VKimpl.h"
 
 
 
@@ -326,7 +326,7 @@ typedef struct {
 	waveForm_t		alphaWave;
 	alphaGen_t		alphaGen;
 
-	byte			constantColor[4];			// for CGEN_CONST and AGEN_CONST
+	unsigned char	constantColor[4];			// for CGEN_CONST and AGEN_CONST
 
 	unsigned		stateBits;					// GLS_xxxx mask
 
@@ -899,14 +899,6 @@ typedef struct {
 #define FUNCTABLE_MASK		(FUNCTABLE_SIZE-1)
 
 
-// the renderer front end should never modify glstate_t
-typedef struct {
-	int			currenttextures[2];
-	int			currenttmu;
-	int			texEnv[2];
-	int			faceCulling;
-	unsigned long	glStateBits;
-} glstate_t;
 
 
 typedef struct {
@@ -1215,14 +1207,12 @@ void    	R_Init( void );
 
 
 
-void		R_SetColorMappings( void );
-void		R_GammaCorrect( byte *buffer, int bufSize );
+
 
 void	R_ImageList_f( void );
 void	R_SkinList_f( void );
 // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=516
-const void *RB_TakeScreenshotCmd( const void *data );
-void	R_ScreenShot_f( void );
+
 
 void	R_InitFogTable( void );
 float	R_FogFactor( float s, float t );
@@ -1360,7 +1350,6 @@ SKIES
 
 ============================================================
 */
-void RE_SaveJPG(char * filename, int quality, int image_width, int image_height, unsigned char *image_buffer, int padding);
 void R_InitSkyTexCoords( float cloudLayerHeight );
 
 /*
@@ -1423,8 +1412,7 @@ void RB_SurfaceAnim( md4Surface_t *surfType );
 =============================================================
 =============================================================
 */
-void	R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,
-							vec4_t eye, vec4_t dst );
+
 
 void	RB_DeformTessGeometry( void );
 
@@ -1448,18 +1436,7 @@ void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
 void	RB_CalcSpecularAlpha( unsigned char *alphas );
 void	RB_CalcDiffuseColor( unsigned char (*colors)[4] );
 
-void myGlMultMatrix( const float *a, const float *b, float *out );
 
-/*
-=============================================================
-
-RENDERER BACK END FUNCTIONS
-
-=============================================================
-*/
-
-void RB_RenderThread( void );
-void RB_ExecuteRenderCommands( const void *data );
 
 /*
 =============================================================
@@ -1553,8 +1530,14 @@ typedef struct {
 } backEndData_t;
 
 
-void RB_IterateStagesGeneric( shaderCommands_t *input );
-void RB_Show_Vk_Dx_Images(void);
+/*
+=============================================================
+
+RENDERER BACK END FUNCTIONS
+
+=============================================================
+*/
+
 
 void *R_GetCommandBuffer( int bytes );
 void RB_ExecuteRenderCommands( const void *data );
@@ -1570,64 +1553,14 @@ void RE_SetColor( const float *rgba );
 void RE_StretchPic ( float x, float y, float w, float h, 
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_EndFrame( int *frontEndMsec, int *backEndMsec );
-void SaveJPG(char * filename, int quality, int image_width, int image_height, unsigned char *image_buffer);
+
 
 // font stuff
 void R_InitFreeType(void);
 void R_DoneFreeType(void);
 void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
-int SetWindowMode(glconfig_t *config, int mode, qboolean fullscreen );
 
-void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );
-void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height );
-
-image_t* R_FindImageFile(const char *name, qboolean mipmap,	qboolean allowPicmip, int glWrapClampMode);
-
-image_t *R_CreateImage( const char *name, unsigned char *pic, int width, int height,
-						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode );
-
-
-void R_LightScaleTexture (unsigned char* in, int inwidth, int inheight, int only_gamma );
-void R_GammaCorrect( unsigned char *buffer, int bufSize );
-void R_SetColorMappings( void );
-
-/* 
-static void R_MipMap(unsigned char *in, int width, int height);
-static void R_MipMap2(unsigned *in, int inWidth, int inHeight);
-*/
-
-void R_DisplayResolutionList_f(void);
-void R_GetModeInfo(unsigned int *width, unsigned int *height, float *windowAspect, int mode );
-void R_InitDisplayResolution( void );
-void R_CreateBuiltinImages(void);
-
-struct Image_Upload_Data
-{
-	unsigned char* buffer;
-	int buffer_size;
-	int mip_levels;
-	int base_level_width;
-	int base_level_height;
-};
-
-struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean repeat_texture);
-void generate_image_upload_data(struct Image_Upload_Data* upload_data, unsigned char* data,
-        int width, int height, qboolean mipmap, qboolean picmip);
-
-void create_pipelines_for_each_stage(shaderStage_t* pStage, shader_t* pShader); 
-void create_standard_pipelines(void);
-
-
-void qDestroyImage(void);
-void qDestroyALLPipeline(void);
-
-
-void vk_bind_descriptor_sets(unsigned int numSet);
-
-
-
-void R_ScreenShotJPEG_f(void);
 
 extern	refimport_t		ri;
 extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
@@ -1636,12 +1569,9 @@ extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
 extern backEndState_t	backEnd;
 extern trGlobals_t	tr;
 extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
-extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 extern	shaderCommands_t	tess;
 extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allocated
 
-// VULKAN
-extern struct Vk_Instance	vk;				// shouldn't be cleared during ref re-init
 
 
 #endif //TR_LOCAL_H

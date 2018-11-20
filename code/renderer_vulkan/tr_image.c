@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 
+#include "vk_image.h"
 
 
 /*
@@ -237,8 +238,6 @@ void R_DeleteTextures( void )
 	memset( tr.images, 0, sizeof( tr.images ) );
 
 	tr.numImages = 0;
-
-	memset( glState.currenttextures, 0, sizeof( glState.currenttextures ) );
 }
 
 /*

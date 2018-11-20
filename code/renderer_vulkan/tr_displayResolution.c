@@ -1,5 +1,5 @@
 #include "tr_local.h"
-
+#include "tr_displayResolution.h"
 
 typedef struct vidmode_s
 {

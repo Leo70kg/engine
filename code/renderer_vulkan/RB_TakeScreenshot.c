@@ -1,4 +1,7 @@
 #include "tr_local.h"
+#include "vk_read_pixels.h"
+#include "R_LightScaleTexture.h"
+#include "RB_TakeScreenshot.h"
 
 typedef struct {
 	int commandId;
@@ -29,7 +32,8 @@ FIXME: the statics don't get a reinit between fs_game changes
 */ 
 
 
-void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName )
+
+static void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName )
 {
 
 	int	i, c, temp;
@@ -80,20 +84,6 @@ void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName )
 }
 
 
-
-/*
-==================
-RB_TakeScreenshotCmd
-==================
-*/
-const void *RB_TakeScreenshotCmd( const void *data )
-{
-	const screenshotCommand_t* cmd = (const screenshotCommand_t *)data;
-	
-	RB_TakeScreenshot( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName);
-	
-	return (const void *)(cmd + 1);	
-}
 
 
 
@@ -154,20 +144,20 @@ static void R_LevelShot( void )
 	buffer[16] = 24;	// pixel size
 
     {
-    unsigned char* buffer2 = (unsigned char*) ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*4);
-    vk_read_pixels(buffer2);
+        unsigned char* buffer2 = (unsigned char*) ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*4);
+        vk_read_pixels(buffer2);
 
-    unsigned char* buffer_ptr = source;
-    unsigned char* buffer2_ptr = buffer2;
-    for (i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++)
-    {
-        buffer_ptr[0] = buffer2_ptr[0];
-        buffer_ptr[1] = buffer2_ptr[1];
-        buffer_ptr[2] = buffer2_ptr[2];
-        buffer_ptr += 3;
-        buffer2_ptr += 4;
-    }
-    ri.Hunk_FreeTempMemory(buffer2);
+        unsigned char* buffer_ptr = source;
+        unsigned char* buffer2_ptr = buffer2;
+        for (i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++)
+        {
+            buffer_ptr[0] = buffer2_ptr[0];
+            buffer_ptr[1] = buffer2_ptr[1];
+            buffer_ptr[2] = buffer2_ptr[2];
+            buffer_ptr += 3;
+            buffer2_ptr += 4;
+        }
+        ri.Hunk_FreeTempMemory(buffer2);
     }
 
 	// resample from source
@@ -356,5 +346,14 @@ void R_ScreenShotJPEG_f(void)
 	if ( !silent ) {
 		ri.Printf (PRINT_ALL, "Wrote %s\n", checkname);
 	}
-} 
+}
+
+const void *RB_TakeScreenshotCmd( const void *data )
+{
+	const screenshotCommand_t* cmd = (const screenshotCommand_t *)data;
+	
+	RB_TakeScreenshot( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName);
+	
+	return (const void *)(cmd + 1);	
+}
 

@@ -24,9 +24,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "VKimpl.h"
 #include "vk_initialize.h"
+#include "RB_TakeScreenshot.h"
+#include "tr_displayResolution.h"
+#include "Vk_Instance.h"
+#include "vk_create_pipeline.h"
+#include "vk_image.h"
+#include "vk_clear_attachments.h"
+#include "mvp_matrix.h"
+
 
 glconfig_t	glConfig;
-glstate_t	glState;
 
 // VULKAN
 struct Vk_Instance vk;
@@ -239,12 +246,6 @@ static void InitRenderAPI( void )
 	vulkanInfo_f();
 
 	VK_TextureMode();
-
-
-	//
-	// make sure our GL state vector is set correctly
-	//
-	glState.glStateBits = GLS_DEPTHTEST_DISABLE | GLS_DEPTHMASK_TRUE;
 }
 
 
@@ -490,15 +491,34 @@ void RE_Shutdown( qboolean destroyWindow )
 
 	R_DoneFreeType();
 
-    vk_release_resources();
-
-	// VULKAN
+    
+    
+    // VULKAN
     // Releases vulkan resources allocated during program execution.
     // This effectively puts vulkan subsystem into initial state 
     // (the state we have after vk_initialize call).
+
+    // contains vulkan resources/state, reinitialized on a map change.
+	qvkDeviceWaitIdle(vk.device);
+
+    qDestroyALLPipeline();
+ 
+    qDestroyImage();
+
+    set_depth_attachment(VK_FALSE);
+
+    reset_modelview_matrix();
+    
+
+	VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
+
+	// Reset geometry buffer's current offsets.
+	vk.xyz_elements = 0;
+	vk.color_st_elements = 0;
+	vk.index_buffer_offset = 0;
+
     if (destroyWindow)
     {
-
         vk_shutdown();
         VKimp_Shutdown();
     }

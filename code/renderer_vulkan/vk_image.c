@@ -2,8 +2,9 @@
 #include "tr_local.h"
 #include "image_sampler.h"
 #include "vk_memory.h"
-
-
+#include "R_LightScaleTexture.h"
+#include "vk_image.h"
+#include "Vk_Instance.h"
 //
 // Memory allocations.
 //
@@ -49,6 +50,13 @@ static VkDeviceSize s_StagingBufferSize = 0;
 
 // Descriptor sets corresponding to bound texture images.
 static VkDescriptorSet s_CurrentDescriptorSets[2] = {0};
+
+VkDescriptorSet* getCurDescriptorSetsPtr(void)
+{
+    return s_CurrentDescriptorSets;
+}
+
+
 
 static void vk_free_chunk(void)
 {
@@ -105,22 +113,31 @@ static void vk_update_descriptor_set(
 	qvkUpdateDescriptorSets(vk.device, 1, &descriptor_write, 0, NULL);
 }
 
-void vk_bind_descriptor_sets(unsigned int numSet)
-{
-	qvkCmdBindDescriptorSets(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline_layout, 0, numSet, s_CurrentDescriptorSets, 0, NULL);
-}
+
+
+// outside of TR since it shouldn't be cleared during ref re-init
+// the renderer front end should never modify glstate_t
+//typedef struct {
+	int			s_CurTextures[2];
+	int			s_CurTmu;
+//	int			texEnv[2];
+//	int			faceCulling;
+//	unsigned long	glStateBits;
+//} glstate_t;
+
+
 
 
 void GL_Bind( image_t *image )
 {
-	if ( glState.currenttextures[glState.currenttmu] != image->texnum )
+	if ( s_CurTextures[s_CurTmu] != image->texnum )
     {
-		glState.currenttextures[glState.currenttmu] = image->texnum;
+		s_CurTextures[s_CurTmu] = image->texnum;
 
         image->frameUsed = tr.frameCount;
 
 		// VULKAN
-		s_CurrentDescriptorSets[glState.currenttmu] = s_vkImages[image->index].descriptor_set;
+		s_CurrentDescriptorSets[s_CurTmu] = s_vkImages[image->index].descriptor_set;
 	}
 }
 
@@ -208,7 +225,7 @@ static void allocate_and_bind_image_memory(VkImage image)
 }
 
 
-static struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, qboolean repeat_texture)
+static struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, VkBool32 repeat_texture)
 {
 	struct Vk_Image image;
     ri.Printf(PRINT_DEVELOPER, "create image view\n");
@@ -270,7 +287,7 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 		VK_CHECK(qvkAllocateDescriptorSets(vk.device, &desc, &image.descriptor_set));
 
 		vk_update_descriptor_set(image.descriptor_set, image.view, mip_levels > 1, repeat_texture);
-		s_CurrentDescriptorSets[glState.currenttmu] = image.descriptor_set;
+		s_CurrentDescriptorSets[s_CurTmu] = image.descriptor_set;
 	}
 
 	return image;
@@ -445,9 +462,9 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
 }
 
-
+/*
 // VULKAN
-struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean isRepTex)
+static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean isRepTex)
 {
 	int w = upload_data->base_level_width;
 	int h = upload_data->base_level_height;
@@ -456,7 +473,7 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 	unsigned char* buffer = upload_data->buffer;
 	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 	int bytes_per_pixel = 4;
-/*
+
 	if (r_texturebits->integer <= 16)
     {
 
@@ -498,7 +515,7 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 				((uint32_t)((b/255.0) * 15.0 + 0.5) << 12);
 		}
 	}
-*/
+
 
 	struct Vk_Image image = vk_create_image(w, h, format, upload_data->mip_levels, isRepTex);
 	vk_upload_image_data(image.handle, w, h, upload_data->mip_levels > 1, buffer, bytes_per_pixel);
@@ -508,7 +525,7 @@ struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qbo
 
 	return image;
 }
-
+*/
 
 void qDestroyImage(void)
 {
@@ -541,6 +558,12 @@ void qDestroyImage(void)
     memset(s_vkImages, 0, MAX_VK_IMAGES*sizeof(struct Vk_Image));
 	
     memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
+
+    R_resetGammaIntensityTable();
+
+    ///////////////////////////////////
+    s_CurTextures[0] = s_CurTextures[1] = 0;
+	s_CurTmu = 0;
 }
 
 
@@ -586,27 +609,27 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 	}
 
 	// Create image_t object.
-	image_t* image = tr.images[tr.numImages] = (image_t*) ri.Hunk_Alloc( sizeof( image_t ), h_low );
-    image->index = tr.numImages;
-	image->texnum = 1024 + tr.numImages;
-	image->mipmap = mipmap;
-	image->allowPicmip = allowPicmip;
-	strcpy (image->imgName, name);
-	image->width = width;
-	image->height = height;
-	image->wrapClampMode = glWrapClampMode;
+	image_t* pImage = tr.images[tr.numImages] = (image_t*) ri.Hunk_Alloc( sizeof( image_t ), h_low );
+    pImage->index = tr.numImages;
+	pImage->texnum = 1024 + tr.numImages;
+	pImage->mipmap = mipmap;
+	pImage->allowPicmip = allowPicmip;
+	strcpy (pImage->imgName, name);
+	pImage->width = width;
+	pImage->height = height;
+	pImage->wrapClampMode = glWrapClampMode;
 
 	int hash = generateHashValue(name);
-	image->next = hashTable[hash];
-	hashTable[hash] = image;
+	pImage->next = hashTable[hash];
+	hashTable[hash] = pImage;
 
 	tr.numImages++;
 
 	// Create corresponding GPU resource.
 	int isLightmap = (strncmp(name, "*lightmap", 9) == 0);
-	glState.currenttmu = isLightmap;
+	s_CurTmu = isLightmap;
 	
-    GL_Bind(image);
+    GL_Bind(pImage);
 
 	struct Image_Upload_Data upload_data;
     memset(&upload_data, 0, sizeof(upload_data));
@@ -615,13 +638,23 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
     generate_image_upload_data(&upload_data, pic, width, height, mipmap, allowPicmip);
 
 
-	s_vkImages[image->index] = upload_vk_image(&upload_data, glWrapClampMode == GL_REPEAT);
+	// s_vkImages[image->index] = upload_vk_image(&upload_data, glWrapClampMode == GL_REPEAT);
+
+	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+	int bytes_per_pixel = 4;
+    
+    s_vkImages[pImage->index] = vk_create_image(upload_data.base_level_width, 
+        upload_data.base_level_height, format, upload_data.mip_levels, glWrapClampMode == GL_REPEAT);
+	
+    vk_upload_image_data(s_vkImages[pImage->index].handle, upload_data.base_level_width, 
+        upload_data.base_level_height, upload_data.mip_levels > 1, upload_data.buffer, bytes_per_pixel);
+
 
 	if (isLightmap) {
-		glState.currenttmu = 0;
+		s_CurTmu = 0;
 	}
 	ri.Hunk_FreeTempMemory(upload_data.buffer);
-	return image;
+	return pImage;
 }
 
 
@@ -718,6 +751,7 @@ void R_InitImages( void )
 {
     memset(hashTable, 0, sizeof(hashTable));
     // important
+    R_resetGammaIntensityTable();
 
 	// build brightness translation tables
 	R_SetColorMappings();

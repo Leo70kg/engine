@@ -1613,7 +1613,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/vk_read_pixels.o \
   $(B)/renderer_vulkan/vk_shade_geometry.o \
   $(B)/renderer_vulkan/vk_initialize.o \
-  $(B)/renderer_vulkan/vk_bind_geometry.o \
   \
   $(B)/renderer_vulkan/multi_texture_add_frag.o \
   $(B)/renderer_vulkan/multi_texture_clipping_plane_vert.o \

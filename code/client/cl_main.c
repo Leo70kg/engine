@@ -3180,7 +3180,7 @@ void CL_InitRef(void)
     
     Com_Printf("\n-------- USE_RENDERER_DLOPEN --------\n");
 
-	cl_renderer = Cvar_Get("cl_renderer", "opengl2", CVAR_ARCHIVE | CVAR_LATCH | CVAR_PROTECTED);
+	cl_renderer = Cvar_Get("cl_renderer", "vulkan", CVAR_ARCHIVE | CVAR_LATCH | CVAR_PROTECTED);
 
 	Com_sprintf(dllName, sizeof(dllName), "renderer_%s_" ARCH_STRING DLL_EXT, cl_renderer->string);
 
@@ -3188,19 +3188,22 @@ void CL_InitRef(void)
 
 	if(!rendererLib)
 	{        
-        if(strcmp(cl_renderer->string, cl_renderer->resetString))
-        {   
-		    Com_Printf("failed:\n\"%s\"\n", Sys_LibraryError());
-		    Cvar_ForceReset("cl_renderer");
-        
-		    Com_sprintf(dllName, sizeof(dllName), "renderer_opengl1_" ARCH_STRING DLL_EXT);
-		    rendererLib = Sys_LoadDll(dllName, qfalse);
-        }
+        Com_Printf("failed:\n\"%s\"\n", Sys_LibraryError());
+
+        Com_sprintf(dllName, sizeof(dllName), "renderer_opengl2_" ARCH_STRING DLL_EXT);
+        rendererLib = Sys_LoadDll(dllName, qfalse);
 
         if(!rendererLib)
 	    {
-		    Com_Printf("failed:\n\"%s\"\n", Sys_LibraryError());
-		    Com_Error(ERR_FATAL, "Failed to load renderer");
+		    Com_Printf("loading %s failed:\n\"%s\"\n", dllName, Sys_LibraryError());
+
+            Com_sprintf(dllName, sizeof(dllName), "renderer_opengl1_" ARCH_STRING DLL_EXT);
+            rendererLib = Sys_LoadDll(dllName, qfalse);
+            
+            if(!rendererLib)
+	        {
+                Com_Error(ERR_FATAL, "Failed to load renderer");
+            }
 	    }
         else
         {

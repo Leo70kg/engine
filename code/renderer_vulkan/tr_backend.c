@@ -27,6 +27,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "mvp_matrix.h"
 
+#include "vk_frame.h"
+
+#include "RB_TakeScreenshot.h"
+
+#include "vk_shade_geometry.h"
+
 backEndData_t	*backEndData[SMP_FRAMES];
 backEndState_t	backEnd;
 
@@ -85,8 +91,6 @@ void RB_BeginDrawingView (void)
 	// ensures that depth writes are enabled for the depth clear
     qboolean fast_sky = r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL );
 
-
-
 	// VULKAN
 	vk_clear_attachments(get_depth_attachment(), fast_sky, fast_sky_color);
 
@@ -99,10 +103,6 @@ void RB_BeginDrawingView (void)
 	{
 		backEnd.isHyperspace = qfalse;
 	}
-
-	glState.faceCulling = -1;		// force face culling to set next time
-
-
 }
 
 /*

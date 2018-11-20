@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 #include "vk_shade_geometry.h"
+#include "Vk_Instance.h"
+
+
 
 /*
 
@@ -42,14 +45,8 @@ SURFACE SHADERS
 */
 
 shaderCommands_t	tess;
-static qboolean	setArraysOnce;
 
-/*
-=================
-R_BindAnimatedImage
 
-=================
-*/
 static void R_BindAnimatedImage( textureBundle_t *bundle )
 {
 	int		index;
@@ -168,59 +165,6 @@ void RB_BeginSurface( shader_t *shader, int fogNum ) {
 	}
 
 
-}
-
-/*
-===================
-DrawMultitextured
-
-output = t0 * t1 or t0 + t1
-
-t0 = most upstream according to spec
-t1 = most downstream according to spec
-===================
-*/
-static void DrawMultitextured( shaderCommands_t *input, int stage ) {
-	shaderStage_t	*pStage;
-
-	pStage = tess.xstages[stage];
-
-
-	// this is an ugly hack to work around a GeForce driver
-	// bug with multitexture and clip planes
-
-
-	//
-	// base
-	//
-	glState.currenttmu = 0 ;
-	R_BindAnimatedImage( &pStage->bundle[0] );
-
-	//
-	// lightmap/secondary pass
-	//
-	glState.currenttmu = 1 ;
-
-    #define GL_REPLACE				0x1E01
-
-	if ( r_lightmap->integer )
-    {
-		glState.texEnv[glState.currenttmu] = GL_REPLACE;
-	}
-    else
-    {
-		glState.texEnv[glState.currenttmu] = tess.shader->multitextureEnv;
-	}
-
-
-	R_BindAnimatedImage( &pStage->bundle[1] );
-
-
-	//
-	// disable texturing on TEXTURE1, then select TEXTURE0
-	//
-
-	glState.currenttmu = 0;
 }
 
 
@@ -673,74 +617,18 @@ static void ComputeTexCoords( shaderStage_t *pStage ) {
 
 
 
-
-/*
-** RB_StageIteratorGeneric
-*/
 void RB_StageIteratorGeneric( void )
 {
-	shaderCommands_t *input;
+//	shaderCommands_t *input;
 
-	input = &tess;
+//	input = &tess;
 
 	RB_DeformTessGeometry();
 
-
-
-	// set face culling appropriately
-	// set polygon offset if necessary
-
-
-	//
-	// if there is only a single pass then we can enable color
-	// and texture arrays before we compile, otherwise we need
-	// to avoid compiling those arrays since they will change
-	// during multipass rendering
-	//
-	if ( tess.numPasses > 1 || input->shader->multitextureEnv )
-	{
-		setArraysOnce = qfalse;
-	}
-	else
-	{
-		setArraysOnce = qtrue;
-	}
-
-	//
-	// lock XYZ
-	//
-
-	//
-	// enable color and texcoord arrays after the lock if necessary
-	//
-
+    extern int s_CurTmu;
 	//
 	// call shader function
 	//
-	RB_IterateStagesGeneric( input );
-
-	// 
-	// now do any dynamic lighting needed
-	//
-	if ( tess.dlightBits && tess.shader->sort <= SS_OPAQUE
-		&& !(tess.shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY) ) ) {
-		ProjectDlightTexture();
-	}
-
-	//
-	// now do fog
-	//
-	if ( tess.fogNum && tess.shader->fogPass ) {
-		RB_FogPass();
-	}
-
-
-
-}
-
-
-void RB_IterateStagesGeneric( shaderCommands_t *input )
-{
 	// VULKAN
 
 	vk_bind_geometry();
@@ -749,51 +637,59 @@ void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 	for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ )
 	{
-		shaderStage_t *pStage = tess.xstages[stage];
-
-		if ( !pStage )
+		if ( NULL == tess.xstages[stage])
 		{
 			break;
 		}
 
-		ComputeColors( pStage );
-		ComputeTexCoords( pStage );
+		ComputeColors( tess.xstages[stage] );
+		ComputeTexCoords( tess.xstages[stage] );
 
+        // base
+        s_CurTmu = 0 ;
+
+        // set state
+		R_BindAnimatedImage( &tess.xstages[stage]->bundle[0] );
 		//
 		// do multitexture
 		//
-        qboolean multitexture = (pStage->bundle[1].image[0] != NULL);
+        qboolean multitexture = (tess.xstages[stage]->bundle[1].image[0] != NULL);
 
 		if ( multitexture )
 		{
-			DrawMultitextured( input, stage );
-		}
-		else
-		{
-			//
-			// set state
-			//
-			R_BindAnimatedImage( &pStage->bundle[0] );
+            // DrawMultitextured( input, stage );
+            // output = t0 * t1 or t0 + t1
 
-			//
-			// draw
-			//
+            // t0 = most upstream according to spec
+            // t1 = most downstream according to spec
+            // this is an ugly hack to work around a GeForce driver
+            // bug with multitexture and clip planes
+
+
+            // lightmap/secondary pass
+            s_CurTmu = 1 ;
+
+            R_BindAnimatedImage( &tess.xstages[stage]->bundle[1] );
+            // disable texturing on TEXTURE1, then select TEXTURE0
+            s_CurTmu = 0;
 		}
 
 		// VULKAN
 
-
-        VkPipeline vk_pipeline = pStage->vk_pipeline;
-
+        VkPipeline vk_pipeline;
         if (backEnd.viewParms.isMirror) {
-            vk_pipeline = pStage->vk_mirror_pipeline;
+            vk_pipeline = tess.xstages[stage]->vk_mirror_pipeline;
         }
         else if (backEnd.viewParms.isPortal) {
-            vk_pipeline = pStage->vk_portal_pipeline;
+            vk_pipeline = tess.xstages[stage]->vk_portal_pipeline;
+        }
+        else
+        {
+            vk_pipeline = tess.xstages[stage]->vk_pipeline;
         }
 
         enum Vk_Depth_Range depth_range = normal;
-        if (input->shader->isSky) {
+        if (tess.shader->isSky) {
             depth_range = force_one;
             if (r_showsky->integer)
                 depth_range = force_zero;
@@ -809,12 +705,29 @@ void RB_IterateStagesGeneric( shaderCommands_t *input )
         
 
 		// allow skipping out to show just lightmaps during development
-		if ( r_lightmap->integer && ( pStage->bundle[0].isLightmap || pStage->bundle[1].isLightmap ) )
+		if ( r_lightmap->integer && ( tess.xstages[stage]->bundle[0].isLightmap || tess.xstages[stage]->bundle[1].isLightmap ) )
 		{
 			break;
 		}
 	}
+
+	// 
+	// now do any dynamic lighting needed
+	//
+	if ( tess.dlightBits && tess.shader->sort <= SS_OPAQUE
+		&& !(tess.shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY) ) ) {
+		ProjectDlightTexture();
+	}
+
+	//
+	// now do fog
+	//
+	if ( tess.fogNum && tess.shader->fogPass ) {
+		RB_FogPass();
+	}
 }
+
+
 
 
 

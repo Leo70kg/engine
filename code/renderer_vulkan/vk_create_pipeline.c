@@ -1,5 +1,7 @@
 #include "qvk.h"
 #include "tr_local.h"
+#include "Vk_Instance.h"
+#include "vk_create_pipeline.h"
 
 /*
 static VkPipelineShaderStageCreateInfo get_shader_stage_desc(
@@ -453,32 +455,12 @@ static VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def)
 	return pipeline;
 }
 
-
-void qDestroyALLPipeline(void)
-{
-    int i;
-    for (i = 0; i < s_numPipelines; i++)
-    {
-		qvkDestroyPipeline(vk.device, s_pipelines[i], NULL);
-
-        memset(&s_pipelines[i], 0, sizeof(VkPipeline) );
-
-        memset(&s_pipeline_defs[i], 0, sizeof(struct Vk_Pipeline_Def));
-    }
-    s_numPipelines = 0;
-
-    s_pipelineCreateTime = 0;
-}
-
-
-
 void qTotalPipelinesCreateTime(void)
 {
 	// VULKAN
 	ri.Printf(PRINT_ALL, "Vulkan: pipelines create time %d msec\n", s_pipelineCreateTime);
 
 }
-
 
 
 void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
@@ -670,3 +652,19 @@ void create_standard_pipelines(void)
     }
 }
 
+
+void qDestroyALLPipeline(void)
+{
+    int i;
+    for (i = 0; i < s_numPipelines; i++)
+    {
+		qvkDestroyPipeline(vk.device, s_pipelines[i], NULL);
+
+        memset(&s_pipelines[i], 0, sizeof(VkPipeline) );
+
+        memset(&s_pipeline_defs[i], 0, sizeof(struct Vk_Pipeline_Def));
+    }
+    s_numPipelines = 0;
+
+    s_pipelineCreateTime = 0;
+}

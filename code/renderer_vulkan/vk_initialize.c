@@ -1,11 +1,13 @@
 #include "qvk.h"
 #include "tr_local.h"
-#include "vk_clear_attachments.h"
-#include "mvp_matrix.h"
 
 #include "vk_initialize.h"
 #include "vk_memory.h"
+#include "vk_image.h"
 
+#include "Vk_Instance.h"
+#include "vk_shade_geometry.h"
+#include "vk_create_pipeline.h"
 
 #ifndef NDEBUG
 
@@ -710,29 +712,3 @@ void vk_initialize(void)
     create_standard_pipelines();
 
 }
-
-
-// contains vulkan resources/state, reinitialized on a map change.
-
-void vk_release_resources(void)
-{
-	qvkDeviceWaitIdle(vk.device);
-
-
-    qDestroyALLPipeline();
- 
-    
-    qDestroyImage();
-
-    set_depth_attachment(VK_FALSE);
-    reset_modelview_matrix();
-    
-
-	VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
-
-	// Reset geometry buffer's current offsets.
-	vk.xyz_elements = 0;
-	vk.color_st_elements = 0;
-	vk.index_buffer_offset = 0;
-}
-

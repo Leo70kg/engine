@@ -25,6 +25,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "mvp_matrix.h"
 
 #include "vk_shade_geometry.h"
+#include "Vk_Instance.h"
+
+static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,
+							vec4_t eye, vec4_t dst );
 
 
 trGlobals_t		tr;
@@ -198,14 +202,9 @@ void R_WorldToLocal (vec3_t world, vec3_t local) {
 	local[2] = DotProduct(world, tr.or.axis[2]);
 }
 
-/*
-==========================
-R_TransformModelToClip
 
-==========================
-*/
-void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,
-							vec4_t eye, vec4_t dst ) {
+static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix, vec4_t eye, vec4_t dst )
+{
 	int i;
 
 	for ( i = 0 ; i < 4 ; i++ ) {

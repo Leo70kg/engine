@@ -1,15 +1,11 @@
+#include "vk_memory.h"
 #include "tr_local.h"
 
-
-#include "vk_memory.h"
-
-
-
-uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t memory_type_bits, VkMemoryPropertyFlags properties)
+unsigned int find_memory_type(VkPhysicalDevice physical_device, uint32_t memory_type_bits, VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties memory_properties;
 	qvkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
-    uint32_t i;
+    unsigned int i;
 	for (i = 0; i < memory_properties.memoryTypeCount; i++)
     {
 		if ( ((memory_type_bits & (1 << i)) != 0) && (memory_properties.memoryTypes[i].propertyFlags & properties) == properties)

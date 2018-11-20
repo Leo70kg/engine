@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "qvk.h"
 #include "VKimpl.h"
 #include "tr_local.h"
+#include "tr_displayResolution.h"
+#include "Vk_Instance.h"
 
 #ifdef _WIN32
 	#include "../SDL2/include/SDL.h"
@@ -477,7 +479,6 @@ void VKimp_Shutdown( void )
     //Sys_UnloadLibrary(vk_library_handle);
 	
     memset(&glConfig, 0, sizeof(glConfig));
-	memset(&glState, 0, sizeof(glState));
 
     SDL_DestroyWindow( SDL_window );
     SDL_window = NULL;
@@ -505,9 +506,9 @@ void VKimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 
 	for (i = 0; i < 256; i++)
 	{
-		table[0][i] = ( ( ( Uint16 ) red[i] ) << 8 ) | red[i];
-		table[1][i] = ( ( ( Uint16 ) green[i] ) << 8 ) | green[i];
-		table[2][i] = ( ( ( Uint16 ) blue[i] ) << 8 ) | blue[i];
+		table[0][i] = ( red[i] << 8 ) | red[i];
+		table[1][i] = ( green[i] << 8 ) | green[i];
+		table[2][i] = ( blue[i]  << 8 ) | blue[i];
 	}
 
 

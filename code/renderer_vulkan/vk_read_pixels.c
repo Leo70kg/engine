@@ -1,5 +1,8 @@
 #include "tr_local.h"
 #include "vk_memory.h"
+#include "vk_read_pixels.h"
+#include "Vk_Instance.h"
+
 
 void record_image_layout_transition( 
         VkCommandBuffer command_buffer,

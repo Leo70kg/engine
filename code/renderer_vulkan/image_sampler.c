@@ -1,5 +1,8 @@
 #include "tr_local.h"
 #include "image_sampler.h"
+#include "Vk_Instance.h"
+#include "qvk.h"
+
 
 //static cvar_t* r_textureMode;
 

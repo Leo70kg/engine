@@ -1,10 +1,16 @@
 #include "tr_local.h"
-
+#include "R_LightScaleTexture.h"
 
 static unsigned char s_intensitytable[256];
 static unsigned char s_gammatable[256];
 
+void R_resetGammaIntensityTable()
+{
+    int i = 0;
+    for (i = 0; i < 255; i++)
+        s_intensitytable[i] = s_gammatable[i] = i;
 
+}
 
 void R_GammaCorrect(unsigned char* buffer, int bufSize)
 {

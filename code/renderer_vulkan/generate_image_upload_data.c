@@ -1,5 +1,6 @@
 #include "tr_local.h"
-
+#include "R_LightScaleTexture.h"
+#include "vk_image.h"
 
 
 static const unsigned char mipBlendColors[16][4] =

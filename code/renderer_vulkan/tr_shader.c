@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #include "tr_local.h"
+#include "vk_image.h"
+#include "vk_create_pipeline.h"
 
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
@@ -1916,7 +1918,6 @@ shader_t *FinishShader( void )
 	}
 
 	
-    // create_pipelines_for_each_stage(); 
     // VULKAN: create pipelines for each shader stage
     int i = 0;
     for (i=0; i < stage; i++)
