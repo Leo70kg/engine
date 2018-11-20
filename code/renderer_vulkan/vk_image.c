@@ -118,8 +118,8 @@ static void vk_update_descriptor_set(
 // outside of TR since it shouldn't be cleared during ref re-init
 // the renderer front end should never modify glstate_t
 //typedef struct {
-	int			s_CurTextures[2];
-	int			s_CurTmu;
+static int	s_CurTextures[2];
+int	s_CurTmu;
 //	int			texEnv[2];
 //	int			faceCulling;
 //	unsigned long	glStateBits;
@@ -352,7 +352,7 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size, const unsigned c
 
 
 static void vk_upload_image_data(VkImage image, int width, int height, 
-        qboolean mipmap, const unsigned char* pixels, int bytes_per_pixel)
+        VkBool32 mipmap, const unsigned char* pixels, int bytes_per_pixel)
 {
 
 	VkBufferImageCopy regions[16];
@@ -452,19 +452,14 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 	submit_info.signalSemaphoreCount = 0;
 	submit_info.pSignalSemaphores = NULL;
 
-	VkResult res = qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE);	
-	if (res < 0) 
-		ri.Error(ERR_FATAL,
-        "vk_upload_image_data: error code %d returned by qvkQueueSubmit", res);
-
-
+	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));	
     VK_CHECK(qvkQueueWaitIdle(vk.queue));
 	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
 }
 
 /*
 // VULKAN
-static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, qboolean isRepTex)
+static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, VkBool32 isRepTex)
 {
 	int w = upload_data->base_level_width;
 	int h = upload_data->base_level_height;
@@ -477,7 +472,7 @@ static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_da
 	if (r_texturebits->integer <= 16)
     {
 
-    	qboolean has_alpha = qfalse;
+    	VkBool32 has_alpha = qfalse;
 	    for (int i = 0; i < w * h; i++) {
 		if (upload_data->buffer[i*4 + 3] != 255)  {
 			has_alpha = qtrue;
@@ -485,16 +480,16 @@ static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_da
 		}
 	    }
 
-		buffer = (byte*) ri.Hunk_AllocateTempMemory( upload_data->buffer_size / 2 );
+		buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( upload_data->buffer_size / 2 );
 		format = has_alpha ? VK_FORMAT_B4G4R4A4_UNORM_PACK16 : VK_FORMAT_A1R5G5B5_UNORM_PACK16;
 		bytes_per_pixel = 2;
 	}
 	if (format == VK_FORMAT_A1R5G5B5_UNORM_PACK16) {
 		uint16_t* p = (uint16_t*)buffer;
 		for (int i = 0; i < upload_data->buffer_size; i += 4, p++) {
-			byte r = upload_data->buffer[i+0];
-			byte g = upload_data->buffer[i+1];
-			byte b = upload_data->buffer[i+2];
+			unsigned char r = upload_data->buffer[i+0];
+			unsigned char g = upload_data->buffer[i+1];
+			unsigned char b = upload_data->buffer[i+2];
 
 			*p = (uint32_t)((b/255.0) * 31.0 + 0.5) |
 				((uint32_t)((g/255.0) * 31.0 + 0.5) << 5) |
@@ -504,10 +499,10 @@ static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_da
 	} else if (format == VK_FORMAT_B4G4R4A4_UNORM_PACK16) {
 		uint16_t* p = (uint16_t*)buffer;
 		for (int i = 0; i < upload_data->buffer_size; i += 4, p++) {
-			byte r = upload_data->buffer[i+0];
-			byte g = upload_data->buffer[i+1];
-			byte b = upload_data->buffer[i+2];
-			byte a = upload_data->buffer[i+3];
+			unsigned char r = upload_data->buffer[i+0];
+			unsigned char g = upload_data->buffer[i+1];
+			unsigned char b = upload_data->buffer[i+2];
+			unsigned char a = upload_data->buffer[i+3];
 
 			*p = (uint32_t)((a/255.0) * 15.0 + 0.5) |
 				((uint32_t)((r/255.0) * 15.0 + 0.5) << 4) |
@@ -598,7 +593,7 @@ This is the only way any image_t are created
 ================
 */
 image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int height,
-						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode )
+						VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode )
 {
 	if (strlen(name) >= MAX_QPATH ) {
 		ri.Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
@@ -626,11 +621,12 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 	tr.numImages++;
 
 	// Create corresponding GPU resource.
-	int isLightmap = (strncmp(name, "*lightmap", 9) == 0);
-	s_CurTmu = isLightmap;
+	s_CurTmu = (strncmp(name, "*lightmap", 9) == 0);
 	
     GL_Bind(pImage);
 
+
+	
 	struct Image_Upload_Data upload_data;
     memset(&upload_data, 0, sizeof(upload_data));
 
@@ -650,7 +646,7 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
         upload_data.base_level_height, upload_data.mip_levels > 1, upload_data.buffer, bytes_per_pixel);
 
 
-	if (isLightmap) {
+	if (s_CurTmu) {
 		s_CurTmu = 0;
 	}
 	ri.Hunk_FreeTempMemory(upload_data.buffer);
@@ -659,8 +655,8 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 
 
 
-image_t* R_FindImageFile(const char *name, qboolean mipmap, 
-						qboolean allowPicmip, int glWrapClampMode)
+image_t* R_FindImageFile(const char *name, VkBool32 mipmap, 
+						VkBool32 allowPicmip, int glWrapClampMode)
 {
 
    	image_t* image;
@@ -715,7 +711,7 @@ image_t* R_FindImageFile(const char *name, qboolean mipmap,
 }
 
 
-void RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
+void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *data, int client, VkBool32 dirty)
 {
     //ri.Printf(PRINT_ALL, "w=%d, h=%d, cols=%d, rows=%d, client=%d, dirty=%d\n", 
     //       w, h, cols, rows, client, dirty);

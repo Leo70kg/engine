@@ -119,13 +119,17 @@ void VK_ClearProcAddress(void);
 
 const char * cvtResToStr(VkResult result);
 
-
+#ifndef NDEDBG
 #define VK_CHECK(function_call) { \
 	VkResult result = function_call; \
 	if (result<0) \
 		ri.Error(ERR_FATAL, \
         "Vulkan: error %s returned by %s", cvtResToStr(result), #function_call); \
 }
+#else
+#define VK_CHECK(function_call)	\
+	function_call;
 
+#endif
 
 #endif
