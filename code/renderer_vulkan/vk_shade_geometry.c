@@ -177,7 +177,7 @@ void vk_bind_geometry(void)
 
 	//
 	// Specify push constants.
-	//
+	// 32 * 4 = 128 BYTES
 	float push_constants[16 + 12 + 4]; // mvp transform + eye transform + clipping plane in eye space
 
 	get_mvp_transform(push_constants);
@@ -215,11 +215,16 @@ void vk_bind_geometry(void)
 
 		push_constants_size += 64;
 	}
+
+    // As described above in section Pipeline Layouts, the pipeline layout defines shader push constants
+    // which are updated via Vulkan commands rather than via writes to memory or copy commands.
+    // Push constants represent a high speed path to modify constant data in pipelines
+    // that is expected to outperform memory-backed resource updates.
 	qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, push_constants_size, push_constants);
 }
 
 // VULKAN
-void RB_Show_Vk_Dx_Images(void)
+void RB_ShowImages(void)
 {
     int i = 0;
 	if ( !backEnd.projection2D )

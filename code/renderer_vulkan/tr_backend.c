@@ -289,12 +289,6 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 
 
 
-/*
-=============
-RB_SetColor
-
-=============
-*/
 const void	*RB_SetColor( const void *data ) {
 	const setColorCommand_t	*cmd;
 
@@ -308,11 +302,7 @@ const void	*RB_SetColor( const void *data ) {
 	return (const void *)(cmd + 1);
 }
 
-/*
-=============
-RB_StretchPic
-=============
-*/
+
 const void *RB_StretchPic ( const void *data ) {
 	const stretchPicCommand_t	*cmd;
 	shader_t *shader;
@@ -473,7 +463,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 
 	// texture swapping test
 	if ( r_showImages->integer ) {
-		RB_Show_Vk_Dx_Images();
+		RB_ShowImages();
 	}
 
 	cmd = (const swapBuffersCommand_t *)data;
