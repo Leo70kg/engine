@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Foobar; if not, write to the Free Software
+along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -27,7 +27,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qfiles.h"
 #include "../qcommon/qcommon.h"
-
 #include "../renderercommon/tr_public.h"
 #include "../renderercommon/tr_common.h"
 
@@ -102,27 +101,6 @@ typedef struct {
 	vec3_t		viewOrigin;		// viewParms->or.origin in local coordinates
 	float		modelMatrix[16];
 } orientationr_t;
-
-/*
-typedef struct image_s {
-	char		imgName[MAX_QPATH];		// game path, including extension
-	int			width, height;				// source image
-	int			uploadWidth, uploadHeight;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
-	GLuint		texnum;					// gl texture binding
-
-	int			frameUsed;			// for texture usage in frame statistics
-
-	int			internalFormat;
-
-	qboolean	mipmap;
-	qboolean	allowPicmip;
-	int			wrapClampMode;		// GL_CLAMP or GL_REPEAT
-
-    int         index; // this image == tr.images[index]
-
-	struct image_s*	next;
-} image_t;
-*/
 
 //===============================================================================
 
@@ -343,7 +321,6 @@ typedef struct {
 
 struct shaderCommands_s;
 
-
 typedef enum {
 	CT_FRONT_SIDED,
 	CT_BACK_SIDED,
@@ -470,7 +447,7 @@ typedef struct {
 typedef struct skin_s {
 	char		name[MAX_QPATH];		// game path, including extension
 	int			numSurfaces;
-	skinSurface_t	*surfaces[MD3_MAX_SURFACES];
+	skinSurface_t* surfaces[MD3_MAX_SURFACES];
 } skin_t;
 
 
@@ -521,6 +498,8 @@ typedef enum {
 	SF_TRIANGLES,
 	SF_POLY,
 	SF_MD3,
+	SF_MDR,
+	SF_IQM,
 	SF_MD4,
 	SF_FLARE,
 	SF_ENTITY,				// beams, rails, lightning, etc that can be determined by entity
@@ -548,6 +527,7 @@ typedef struct srfPoly_s {
 	int				numVerts;
 	polyVert_t		*verts;
 } srfPoly_t;
+
 
 typedef struct srfFlare_s {
 	surfaceType_t	surfaceType;
@@ -820,17 +800,20 @@ typedef enum {
 	MOD_BAD,
 	MOD_BRUSH,
 	MOD_MESH,
+	MOD_MDR,
+	MOD_IQM,
 	MOD_MD4
 } modtype_t;
 
 typedef struct model_s {
 	char		name[MAX_QPATH];
 	modtype_t	type;
-	int			index;				// model = tr.models[model->index]
+	int			index;		// model = tr.models[model->index]
 
-	int			dataSize;			// just for listing purposes
-	bmodel_t	*bmodel;			// only if type == MOD_BRUSH
+	int			dataSize;	// just for listing purposes
+	bmodel_t	*bmodel;		// only if type == MOD_BRUSH
 	md3Header_t	*md3[MD3_MAX_LODS];	// only if type == MOD_MESH
+	void	*modelData;			// only if type == (MOD_MDR | MOD_IQM)	
 	md4Header_t	*md4;				// only if type == MOD_MD4
 
 	int			 numLods;
@@ -844,7 +827,9 @@ model_t		*R_GetModelByHandle( qhandle_t hModel );
 int			R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFrame, 
 					 float frac, const char *tagName );
 void		R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs );
-void R_Modellist_f( void );
+
+void		R_Modellist_f (void);
+
 //====================================================
 
 #define	MAX_DRAWIMAGES			2048
@@ -874,9 +859,11 @@ the bits are allocated as follows:
 2-6   : fog index
 0-1   : dlightmap index
 */
-#define	QSORT_SHADERNUM_SHIFT	17
+#define	QSORT_FOGNUM_SHIFT	2
 #define	QSORT_ENTITYNUM_SHIFT	7
-#define	QSORT_FOGNUM_SHIFT		2
+#define	QSORT_SHADERNUM_SHIFT	17
+
+
 
 
 /*
@@ -1035,11 +1022,7 @@ extern cvar_t	*r_znear;				// near Z clip plane
 
 
 extern cvar_t	*r_depthbits;			// number of desired depth bits
-extern cvar_t	*r_texturebits;			// number of desired texture bits
-										// 0 = use framebuffer depth
-										// 16 = use 16-bit textures
-										// 32 = use 32-bit textures
-										// all else = error
+
 
 extern cvar_t	*r_lodbias;				// push/pull LOD transitions
 extern cvar_t	*r_lodscale;
@@ -1404,9 +1387,10 @@ ANIMATED MODELS
 
 =============================================================
 */
-
+void R_MDRAddAnimSurfaces( trRefEntity_t *ent );
 void R_AddAnimSurfaces( trRefEntity_t *ent );
-void RB_SurfaceAnim( md4Surface_t *surfType );
+
+void R_AddIQMSurfaces( trRefEntity_t *ent );
 
 /*
 =============================================================

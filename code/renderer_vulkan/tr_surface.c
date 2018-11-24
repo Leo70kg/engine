@@ -15,13 +15,15 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Foobar; if not, write to the Free Software
+along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 // tr_surf.c
 #include "tr_local.h"
-
+#include "RB_SurfaceAnim.h"
+#include "tr_model_iqm.h"
+#include "tr_flares.h"
 /*
 
   THIS ENTIRE FILE IS BACK END
@@ -38,16 +40,11 @@ use the shader system.
 
 
 //============================================================================
-
-
-/*
-==============
-RB_CheckOverflow
-==============
-*/
-void RB_CheckOverflow( int verts, int indexes ) {
-	if (tess.numVertexes + verts < SHADER_MAX_VERTEXES
-		&& tess.numIndexes + indexes < SHADER_MAX_INDEXES) {
+void RB_CheckOverflow( int verts, int indexes )
+{
+	if ( (tess.numVertexes + verts < SHADER_MAX_VERTEXES) &&
+		 (tess.numIndexes + indexes < SHADER_MAX_INDEXES) )
+	{
 		return;
 	}
 
@@ -64,14 +61,10 @@ void RB_CheckOverflow( int verts, int indexes ) {
 }
 
 
-/*
-==============
-RB_AddQuadStampExt
-==============
-*/
-void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, float s1, float t1, float s2, float t2 ) {
-	vec3_t		normal;
-	int			ndx;
+void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, float s1, float t1, float s2, float t2 )
+{
+	vec3_t normal;
+	int	ndx;
 
 	RB_CHECKOVERFLOW( 4, 6 );
 
@@ -136,36 +129,28 @@ void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, flo
 	tess.numIndexes += 6;
 }
 
-/*
-==============
-RB_AddQuadStamp
-==============
-*/
-void RB_AddQuadStamp( vec3_t origin, vec3_t left, vec3_t up, byte *color ) {
+
+void RB_AddQuadStamp( vec3_t origin, vec3_t left, vec3_t up, unsigned char *color )
+{
 	RB_AddQuadStampExt( origin, left, up, color, 0, 0, 1, 1 );
 }
 
-/*
-==============
-RB_SurfaceSprite
-==============
-*/
-static void RB_SurfaceSprite( void ) {
-	vec3_t		left, up;
-	float		radius;
+static void RB_SurfaceSprite( void )
+{
+	vec3_t left, up;
 
 	// calculate the xyz locations for the four corners
-	radius = backEnd.currentEntity->e.radius;
-	if ( backEnd.currentEntity->e.rotation == 0 ) {
+	float radius = backEnd.currentEntity->e.radius;
+	if ( backEnd.currentEntity->e.rotation == 0 )
+    {
 		VectorScale( backEnd.viewParms.or.axis[1], radius, left );
 		VectorScale( backEnd.viewParms.or.axis[2], radius, up );
-	} else {
-		float	s, c;
-		float	ang;
-		
-		ang = M_PI * backEnd.currentEntity->e.rotation / 180;
-		s = sin( ang );
-		c = cos( ang );
+	}
+    else
+    {
+		float ang = (M_PI / 180)* backEnd.currentEntity->e.rotation ;
+		float s = sin( ang );
+		float c = cos( ang );
 
 		VectorScale( backEnd.viewParms.or.axis[1], c * radius, left );
 		VectorMA( left, -s * radius, backEnd.viewParms.or.axis[2], left );
@@ -204,7 +189,8 @@ void RB_SurfacePolychain( srfPoly_t *p ) {
 	}
 
 	// generate fan indexes into the tess array
-	for ( i = 0; i < p->numVerts-2; i++ ) {
+	for ( i = 0; i < p->numVerts-2; i++ )
+    {
 		tess.indexes[tess.numIndexes + 0] = tess.numVertexes;
 		tess.indexes[tess.numIndexes + 1] = tess.numVertexes + i + 1;
 		tess.indexes[tess.numIndexes + 2] = tess.numVertexes + i + 2;
@@ -275,12 +261,6 @@ void RB_SurfaceTriangles( srfTriangles_t *srf ) {
 }
 
 
-
-/*
-==============
-RB_SurfaceBeam
-==============
-*/
 void RB_SurfaceBeam( void ) 
 {
 #define NUM_BEAM_SEGS 6
@@ -582,10 +562,6 @@ static void VectorArrayNormalize(vec4_t *normals, unsigned int count)
 }
 
 
-
-/*
-** LerpMeshVertexes
-*/
 static void LerpMeshVertexes (md3Surface_t *surf, float backlerp) 
 {
 	short	*oldXyz, *newXyz, *oldNormals, *newNormals;
@@ -609,62 +585,6 @@ static void LerpMeshVertexes (md3Surface_t *surf, float backlerp)
 	numVerts = surf->numVerts;
 
 	if ( backlerp == 0 ) {
-#if idppc_altivec
-		vector signed short newNormalsVec0;
-		vector signed short newNormalsVec1;
-		vector signed int newNormalsIntVec;
-		vector float newNormalsFloatVec;
-		vector float newXyzScaleVec;
-		vector unsigned char newNormalsLoadPermute;
-		vector unsigned char newNormalsStorePermute;
-		vector float zero;
-		
-		newNormalsStorePermute = vec_lvsl(0,(float *)&newXyzScaleVec);
-		newXyzScaleVec = *(vector float *)&newXyzScale;
-		newXyzScaleVec = vec_perm(newXyzScaleVec,newXyzScaleVec,newNormalsStorePermute);
-		newXyzScaleVec = vec_splat(newXyzScaleVec,0);		
-		newNormalsLoadPermute = vec_lvsl(0,newXyz);
-		newNormalsStorePermute = vec_lvsr(0,outXyz);
-		zero = (vector float)vec_splat_s8(0);
-		//
-		// just copy the vertexes
-		//
-		for (vertNum=0 ; vertNum < numVerts ; vertNum++,
-			newXyz += 4, newNormals += 4,
-			outXyz += 4, outNormal += 4) 
-		{
-			newNormalsLoadPermute = vec_lvsl(0,newXyz);
-			newNormalsStorePermute = vec_lvsr(0,outXyz);
-			newNormalsVec0 = vec_ld(0,newXyz);
-			newNormalsVec1 = vec_ld(16,newXyz);
-			newNormalsVec0 = vec_perm(newNormalsVec0,newNormalsVec1,newNormalsLoadPermute);
-			newNormalsIntVec = vec_unpackh(newNormalsVec0);
-			newNormalsFloatVec = vec_ctf(newNormalsIntVec,0);
-			newNormalsFloatVec = vec_madd(newNormalsFloatVec,newXyzScaleVec,zero);
-			newNormalsFloatVec = vec_perm(newNormalsFloatVec,newNormalsFloatVec,newNormalsStorePermute);
-			//outXyz[0] = newXyz[0] * newXyzScale;
-			//outXyz[1] = newXyz[1] * newXyzScale;
-			//outXyz[2] = newXyz[2] * newXyzScale;
-
-			lat = ( newNormals[0] >> 8 ) & 0xff;
-			lng = ( newNormals[0] & 0xff );
-			lat *= (FUNCTABLE_SIZE/256);
-			lng *= (FUNCTABLE_SIZE/256);
-
-			// decode X as cos( lat ) * sin( long )
-			// decode Y as sin( lat ) * sin( long )
-			// decode Z as cos( long )
-
-			outNormal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
-			outNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
-			outNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
-
-			vec_ste(newNormalsFloatVec,0,outXyz);
-			vec_ste(newNormalsFloatVec,4,outXyz);
-			vec_ste(newNormalsFloatVec,8,outXyz);
-		}
-		
-#else
 		//
 		// just copy the vertexes
 		//
@@ -690,7 +610,6 @@ static void LerpMeshVertexes (md3Surface_t *surf, float backlerp)
 			outNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
 			outNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
 		}
-#endif
 	} else {
 		//
 		// interpolate and copy the vertex and normal
@@ -735,7 +654,6 @@ static void LerpMeshVertexes (md3Surface_t *surf, float backlerp)
 			outNormal[1] = uncompressedOldNormal[1] * oldNormalScale + uncompressedNewNormal[1] * newNormalScale;
 			outNormal[2] = uncompressedOldNormal[2] * oldNormalScale + uncompressedNewNormal[2] * newNormalScale;
 
-//			VectorNormalize (outNormal);
 		}
     	VectorArrayNormalize((vec4_t *)tess.normal[tess.numVertexes], numVerts);
    	}
@@ -1103,7 +1021,9 @@ void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) = {
 	(void(*)(void*))RB_SurfaceTriangles,	// SF_TRIANGLES,
 	(void(*)(void*))RB_SurfacePolychain,	// SF_POLY,
 	(void(*)(void*))RB_SurfaceMesh,			// SF_MD3,
+	(void(*)(void*))RB_MDRSurfaceAnim,		// SF_MDR,
+	(void(*)(void*))RB_IQMSurfaceAnim,		// SF_IQM,
 	(void(*)(void*))RB_SurfaceAnim,			// SF_MD4,
-	(void(*)(void*))RB_SurfaceSkip,		    // SF_FLARE,
+	(void(*)(void*))RB_SurfaceFlare,		// SF_FLARE,
 	(void(*)(void*))RB_SurfaceEntity,		// SF_ENTITY
 };

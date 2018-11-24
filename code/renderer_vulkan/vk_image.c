@@ -226,7 +226,6 @@ static void allocate_and_bind_image_memory(VkImage image)
 static struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, VkBool32 repeat_texture)
 {
 	struct Vk_Image image;
-    ri.Printf(PRINT_DEVELOPER, "create image view\n");
 	// create image
 	{
 		VkImageCreateInfo desc;
@@ -417,24 +416,23 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 	
     //// recorder(command_buffer);
     //// recorder = [&image, &num_regions, &regions](VkCommandBuffer command_buffer)
-    {
-        VkCommandBuffer cb = command_buffer;
-            record_buffer_memory_barrier(cb, s_StagingBuffer,
-			VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-	    record_image_layout_transition(cb, image, VK_IMAGE_ASPECT_COLOR_BIT,
+    record_buffer_memory_barrier(command_buffer, s_StagingBuffer,
+            VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+    record_image_layout_transition(command_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
             0, VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-	    qvkCmdCopyBufferToImage(cb, s_StagingBuffer, image,
+    qvkCmdCopyBufferToImage(command_buffer, s_StagingBuffer, image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, num_regions, regions);
 
-	    record_image_layout_transition(cb, image,
+    record_image_layout_transition(command_buffer, image,
             VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    }
+
     ////////
     
     VK_CHECK(qvkEndCommandBuffer(command_buffer));

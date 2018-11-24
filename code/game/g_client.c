@@ -1589,7 +1589,6 @@ void ClientBegin( int clientNum ) {
 	if(strlen(custom_vote_info)) {
 		SendCustomVoteCommands(clientNum);
 	}
-
 }
 
 /*

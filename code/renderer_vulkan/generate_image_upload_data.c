@@ -227,7 +227,7 @@ void generate_image_upload_data(
         struct Image_Upload_Data* upload_data, 
         unsigned char* data,
         int width, int height,
-        qboolean mipmap, qboolean picmip)
+        VkBool32 mipmap, VkBool32 picmip)
 {
 
     // ri.Printf (PRINT_ALL, "generate_image_upload_data: %s\n", name);

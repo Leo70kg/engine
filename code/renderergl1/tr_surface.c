@@ -19,7 +19,7 @@ along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-
+#include "tr_local.h"
 /*
 
 tr_surf.c: this entire file is back end.
@@ -34,13 +34,14 @@ It is safe to actually issue drawing commands here
 if you don't want to use the shader system.
 */
 
-#include "tr_local.h"
+
 
 
 void RB_CheckOverflow( int verts, int indexes )
 {
-	if (tess.numVertexes + verts < SHADER_MAX_VERTEXES &&
-		tess.numIndexes + indexes < SHADER_MAX_INDEXES) {
+	if ( (tess.numVertexes + verts < SHADER_MAX_VERTEXES) &&
+		 (tess.numIndexes + indexes < SHADER_MAX_INDEXES) )
+	{
 		return;
 	}
 
@@ -165,7 +166,7 @@ static void RB_SurfaceSprite( void )
 	}
     else
     {
-		float ang = M_PI * backEnd.currentEntity->e.rotation / 180;
+		float ang = (M_PI / 180)* backEnd.currentEntity->e.rotation ;
 		float s = sin( ang );
 		float c = cos( ang );
 
@@ -671,7 +672,7 @@ static void VectorArrayNormalize(vec4_t *normals, unsigned int count)
 }
 
 
-static void LerpMeshVertexes(md3Surface_t *surf, float backlerp)
+static void LerpMeshVertexes (md3Surface_t *surf, float backlerp) 
 {
 	short	*oldXyz, *newXyz, *oldNormals, *newNormals;
 	float	*outXyz, *outNormal;

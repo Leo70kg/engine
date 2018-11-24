@@ -1,14 +1,6 @@
 #include "tr_local.h"
 #include "tr_displayResolution.h"
 
-typedef struct vidmode_s
-{
-    const char *description;
-    int         width, height;
-	float		pixelAspect;		// pixel width / height
-} vidmode_t;
-
-
 cvar_t* r_mode;
 
 
@@ -16,6 +8,13 @@ cvar_t* r_mode;
 static cvar_t* r_customwidth;
 static cvar_t* r_customheight;
 static cvar_t* r_customaspect;
+
+typedef struct vidmode_s
+{
+    const char *description;
+    int         width, height;
+	float		pixelAspect;		// pixel width / height
+} vidmode_t;
 
 
 static const vidmode_t r_vidModes[] =
@@ -31,7 +30,7 @@ static const vidmode_t r_vidModes[] =
 	{ "Mode  8: 1280x1024",		1280,	1024,	1 },
 	{ "Mode  9: 1600x1200",		1600,	1200,	1 },
 	{ "Mode 10: 2048x1536",		2048,	1536,	1 },
-	{ "Mode 11: 856x480",		856,	480,	1 },		// Q3 MODES END HERE AND EXTENDED MODES BEGIN
+	{ "Mode 11: 856x480",		856,	480,	1 }, // Q3 MODES END HERE AND EXTENDED MODES BEGIN
 	{ "Mode 12: 1280x720 (720p)",	1280,	720,	1 },
 	{ "Mode 13: 1280x768",		1280,	768,	1 },
 	{ "Mode 14: 1280x800",		1280,	800,	1 },

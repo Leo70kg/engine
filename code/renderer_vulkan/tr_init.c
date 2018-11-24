@@ -83,7 +83,7 @@ cvar_t	*r_lightmap;
 cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
 cvar_t	*r_shadows;
-
+cvar_t	*r_flares;
 cvar_t	*r_singleShader;
 cvar_t	*r_roundImagesDown;
 cvar_t	*r_colorMipLevels;
@@ -236,13 +236,8 @@ static void InitRenderAPI( void )
 		vk_initialize();
 
 	}
-	    // This values force the UI to disable driver selection
-	glConfig.driverType = GLDRV_ICD;
-	glConfig.hardwareType = GLHW_GENERIC;
-	// init command buffers and SMP
-	glConfig.smpActive = qfalse;
-
-	// print info
+	
+    // print info
 	vulkanInfo_f();
 
 	VK_TextureMode();
@@ -292,6 +287,7 @@ void R_Register( void )
 	// archived variables that can change at any time
 	//
 	r_lodCurveError = ri.Cvar_Get( "r_lodCurveError", "250", CVAR_ARCHIVE|CVAR_CHEAT );
+    r_flares = ri.Cvar_Get ("r_flares", "0", CVAR_ARCHIVE );
 	r_lodbias = ri.Cvar_Get( "r_lodbias", "0", CVAR_ARCHIVE );
 	r_znear = ri.Cvar_Get( "r_znear", "4", CVAR_CHEAT );
 	AssertCvarRange( r_znear, 0.001f, 200, qtrue );

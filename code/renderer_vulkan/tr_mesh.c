@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Foobar; if not, write to the Free Software
+along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -178,13 +178,32 @@ int R_ComputeLOD( trRefEntity_t *ent ) {
 	{
 		// multiple LODs exist, so compute projected bounding sphere
 		// and use that as a criteria for selecting LOD
+		mdrHeader_t *mdr;
+		mdrFrame_t *mdrframe;
+		if(tr.currentModel->type == MOD_MDR)
+		{
+			int frameSize;
+			mdr = (mdrHeader_t *) tr.currentModel->modelData;
+			frameSize = (size_t) (&((mdrFrame_t *)0)->bones[mdr->numBones]);
+			
+			mdrframe = (mdrFrame_t *) ((byte *) mdr + mdr->ofsFrames + frameSize * ent->e.frame);
+			
+			radius = RadiusFromBounds(mdrframe->bounds[0], mdrframe->bounds[1]);
+		}
+		else
+		{
+			frame = ( md3Frame_t * ) ( ( ( unsigned char * ) tr.currentModel->md3[0] ) + tr.currentModel->md3[0]->ofsFrames );
 
+			frame += ent->e.frame;
+
+			radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
+		}
+/*
 		frame = ( md3Frame_t * ) ( ( ( unsigned char * ) tr.currentModel->md3[0] ) + tr.currentModel->md3[0]->ofsFrames );
-
 		frame += ent->e.frame;
 
 		radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
-
+*/
 		if ( ( projectedRadius = ProjectRadius( radius, ent->e.origin ) ) != 0 )
 		{
 			lodscale = r_lodscale->value;
@@ -264,17 +283,17 @@ R_AddMD3Surfaces
 */
 void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 	int				i;
-	md3Header_t		*header = 0;
-	md3Surface_t	*surface = 0;
-	md3Shader_t		*md3Shader = 0;
-	shader_t		*shader = 0;
+	md3Header_t		*header = NULL;
+	md3Surface_t	*surface = NULL;
+	md3Shader_t		*md3Shader = NULL;
+	shader_t		*shader = NULL;
 	int				cull;
 	int				lod;
 	int				fogNum;
 	qboolean		personalModel;
 
 	// don't add third_person objects if not in a portal
-	personalModel = (qboolean) ((ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal);
+	personalModel = (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal;
 
 	if ( ent->e.renderfx & RF_WRAP_FRAMES ) {
 		ent->e.frame %= tr.currentModel->md3[0]->numFrames;
@@ -286,12 +305,27 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 	// This will write directly into the entity structure, so
 	// when the surfaces are rendered, they don't need to be
 	// range checked again.
-	//
+	
+    /*
+	ri.Printf( PRINT_ALL, "\n ----- R_AddMD3Surfaces ----- \n");
+
+	ri.Printf( PRINT_ALL, " frame: %d, oldframe: %d\n", ent->e.oldframe, ent->e.frame);
+	
+	ri.Printf( PRINT_ALL, " tr.currentModel: %p\n", tr.currentModel);
+
+	ri.Printf( PRINT_ALL, " tr.currentModel->name: %s\n", tr.currentModel->name);
+
+	ri.Printf( PRINT_ALL, " tr.currentModel->md3[0]: %p\n", tr.currentModel->md3[0]);
+
+	ri.Printf( PRINT_ALL, " tr.currentModel->md3[0]->numFrames: %d\n", tr.currentModel->md3[0]->numFrames);
+    */
+
 	if ( (ent->e.frame >= tr.currentModel->md3[0]->numFrames) 
 		|| (ent->e.frame < 0)
 		|| (ent->e.oldframe >= tr.currentModel->md3[0]->numFrames)
-		|| (ent->e.oldframe < 0) ) {
-			ri.Printf( PRINT_DEVELOPER, "R_AddMD3Surfaces: no such frame %d to %d for '%s'\n",
+		|| (ent->e.oldframe < 0) )
+	{
+			ri.Printf( PRINT_ALL, "R_AddMD3Surfaces: no such frame %d to %d for '%s'\n",
 				ent->e.oldframe, ent->e.frame,
 				tr.currentModel->name );
 			ent->e.frame = 0;
@@ -372,7 +406,7 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 			&& fogNum == 0
 			&& !(ent->e.renderfx & ( RF_NOSHADOW | RF_DEPTHHACK ) ) 
 			&& shader->sort == SS_OPAQUE ) {
-			R_AddDrawSurf( (surfaceType_t*) (void *)surface, tr.shadowShader, 0, qfalse );
+			R_AddDrawSurf( (void *)surface, tr.shadowShader, 0, qfalse );
 		}
 
 		// projection shadows work fine with personal models
@@ -380,12 +414,12 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 			&& fogNum == 0
 			&& (ent->e.renderfx & RF_SHADOW_PLANE )
 			&& shader->sort == SS_OPAQUE ) {
-			R_AddDrawSurf((surfaceType_t*) (void *)surface, tr.projectionShadowShader, 0, qfalse);
+			R_AddDrawSurf( (void *)surface, tr.projectionShadowShader, 0, qfalse );
 		}
 
 		// don't add third_person objects if not viewing through a portal
 		if ( !personalModel ) {
-			R_AddDrawSurf((surfaceType_t*) (void *)surface, shader, fogNum, qfalse);
+			R_AddDrawSurf( (void *)surface, shader, fogNum, qfalse );
 		}
 
 		surface = (md3Surface_t *)( (byte *)surface + surface->ofsEnd );

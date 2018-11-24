@@ -462,6 +462,9 @@ void VK_GetProcAddress(void)
 
 void VK_ClearProcAddress(void)
 {
+
+    ri.Printf( PRINT_ALL, "VK_ClearProcAddress()\n" );
+
 	qvkCreateInstance                           = NULL;
 	qvkEnumerateInstanceExtensionProperties		= NULL;
 

@@ -1,3 +1,10 @@
+
+extern cvar_t	*r_texturebits;			// number of desired texture bits
+										// 0 = use framebuffer depth
+										// 16 = use 16-bit textures
+										// 32 = use 32-bit textures
+										// all else = error
+
 /*
 // VULKAN
 static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, VkBool32 isRepTex)

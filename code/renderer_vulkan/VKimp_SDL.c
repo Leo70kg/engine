@@ -455,11 +455,20 @@ success:
 
 
     // These values force the UI to disable driver selection
-    glConfig.driverType = GLDRV_ICD;
-    glConfig.hardwareType = GLHW_GENERIC;
+	glConfig.driverType = GLDRV_ICD;
+	glConfig.hardwareType = GLHW_GENERIC;
 
     // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
-    glConfig.deviceSupportsGamma = qtrue ;
+    glConfig.deviceSupportsGamma = qtrue;
+
+    glConfig.textureEnvAddAvailable = qtrue;
+
+    glConfig.textureCompression = TC_NONE;
+
+	// init command buffers and SMP
+	glConfig.smpActive = qfalse;
+	glConfig.stereoDisabled = qfalse;
+
 
 
 	ri.Printf(PRINT_ALL,  "MODE: %s, %d x %d, refresh rate: %dhz\n",
@@ -474,7 +483,7 @@ success:
 
 void VKimp_Shutdown( void )
 {
-    ri.Printf(PRINT_ALL, "Shutting down Vulkan subsystem...\n");
+    ri.Printf(PRINT_ALL, "VKimp_Shutdown()\n");
 
     //Sys_UnloadLibrary(vk_library_handle);
 	

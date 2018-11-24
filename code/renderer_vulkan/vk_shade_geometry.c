@@ -9,7 +9,53 @@
 #include "vk_image.h"
 
 
-static VkRect2D get_viewport_rect(void)
+static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
+{
+	//VkRect2D r = get_viewport_rect();
+	VkViewport viewport;
+
+	if (backEnd.projection2D)
+	{
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = glConfig.vidWidth;
+		viewport.height = glConfig.vidHeight;
+	}
+	else
+	{
+		viewport.x = backEnd.viewParms.viewportX;
+		viewport.y = glConfig.vidHeight - (backEnd.viewParms.viewportY + backEnd.viewParms.viewportHeight);
+		viewport.width = backEnd.viewParms.viewportWidth;
+		viewport.height = backEnd.viewParms.viewportHeight;
+	}
+
+
+	if (depth_range == force_zero)
+    {
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 0.0f;
+	}
+    else if (depth_range == force_one)
+    {
+		viewport.minDepth = 1.0f;
+		viewport.maxDepth = 1.0f;
+	}
+    else if (depth_range == weapon)
+    {
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 0.3f;
+	}
+    else
+    {
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+	}
+	
+    return viewport;
+}
+
+
+VkRect2D get_scissor_rect(void)
 {
 	VkRect2D r;
 	if (backEnd.projection2D)
@@ -25,50 +71,24 @@ static VkRect2D get_viewport_rect(void)
 		r.offset.y = glConfig.vidHeight - (backEnd.viewParms.viewportY + backEnd.viewParms.viewportHeight);
 		r.extent.width = backEnd.viewParms.viewportWidth;
 		r.extent.height = backEnd.viewParms.viewportHeight;
-	}
-	return r;
-}
 
 
-static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
-{
-	VkRect2D r = get_viewport_rect();
+        if (r.offset.x < 0)
+            r.offset.x = 0;
+        if (r.offset.y < 0)
+            r.offset.y = 0;
 
-	VkViewport viewport;
-	viewport.x = (float)r.offset.x;
-	viewport.y = (float)r.offset.y;
-	viewport.width = (float)r.extent.width;
-	viewport.height = (float)r.extent.height;
 
-	if (depth_range == force_zero) {
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 0.0f;
-	} else if (depth_range == force_one) {
-		viewport.minDepth = 1.0f;
-		viewport.maxDepth = 1.0f;
-	} else if (depth_range == weapon) {
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 0.3f;
-	} else {
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-	}
-	return viewport;
-}
+        if (r.offset.x + r.extent.width > glConfig.vidWidth)
+            r.extent.width = glConfig.vidWidth - r.offset.x;
+        
+        /*
+        
+        if (r.offset.y + r.extent.height > glConfig.vidHeight)
+            r.extent.height = glConfig.vidHeight - r.offset.y;
 
-VkRect2D get_scissor_rect(void)
-{
-	VkRect2D r = get_viewport_rect();
-
-	if (r.offset.x < 0)
-		r.offset.x = 0;
-	if (r.offset.y < 0)
-		r.offset.y = 0;
-
-	if (r.offset.x + r.extent.width > glConfig.vidWidth)
-		r.extent.width = glConfig.vidWidth - r.offset.x;
-	if (r.offset.y + r.extent.height > glConfig.vidHeight)
-		r.extent.height = glConfig.vidHeight - r.offset.y;
+        */
+    }
 
 	return r;
 }

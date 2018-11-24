@@ -199,7 +199,7 @@ static VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevic
 static VkFormat get_depth_format(VkPhysicalDevice physical_device)
 {
 	VkFormat formats[2];
-	if (1)
+	if (0)
     {
 		formats[0] = VK_FORMAT_D24_UNORM_S8_UINT;
 		formats[1] = VK_FORMAT_D32_SFLOAT_S8_UINT;
@@ -247,6 +247,7 @@ static VkShaderModule create_shader_module(const unsigned char* pBytes, int coun
 
 void vk_shutdown()
 {
+    ri.Printf( PRINT_ALL, "vk_shutdown()\n" );
     unsigned int i = 0, j = 0, k = 0;
 
 	qvkDestroyImage(vk.device, vk.depth_image, NULL);
@@ -476,7 +477,7 @@ void vk_initialize(void)
 		VkImageAspectFlags image_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
 		
         //r_stencilbits->integer
-        if (1)
+        if (0)
 			image_aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
 
@@ -520,10 +521,7 @@ void vk_initialize(void)
     	submit_info.signalSemaphoreCount = 0;
     	submit_info.pSignalSemaphores = NULL;
 
-    	VkResult res = qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE);
-        if (res < 0)
-		    ri.Error(ERR_FATAL, "vk_initialize: error code %d returned by qvkQueueSubmit\n", res);
-
+    	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
     	VK_CHECK(qvkQueueWaitIdle(vk.queue));
     	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &pCB);
 

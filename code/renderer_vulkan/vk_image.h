@@ -10,8 +10,7 @@ struct Image_Upload_Data
 	int base_level_height;
 };
 
-void generate_image_upload_data(struct Image_Upload_Data* upload_data, unsigned char* data,
-        int width, int height, qboolean mipmap, qboolean picmip);
+void generate_image_upload_data(struct Image_Upload_Data* upload_data, unsigned char* data, int width, int height, VkBool32 mipmap, VkBool32 picmip);
 
 
 void record_image_layout_transition(VkCommandBuffer command_buffer, VkImage image, VkImageAspectFlags image_aspect_flags,
@@ -20,9 +19,9 @@ void record_image_layout_transition(VkCommandBuffer command_buffer, VkImage imag
 
 void qDestroyImage(void);
 
-image_t* R_FindImageFile(const char *name, qboolean mipmap,	qboolean allowPicmip, int glWrapClampMode);
+image_t* R_FindImageFile(const char *name, VkBool32 mipmap,	VkBool32 allowPicmip, int glWrapClampMode);
 image_t *R_CreateImage( const char *name, unsigned char *pic, int width, int height,
-						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode );
+						VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode );
 
 
 

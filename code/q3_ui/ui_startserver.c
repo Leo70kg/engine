@@ -478,7 +478,7 @@ static void StartServer_LevelshotDraw( void *self ) {
 	int				w;
 	int				h;
 	int				n;
-        const char		*info;
+    const char		*info;
 
 	b = (menubitmap_s *)self;
 
@@ -570,7 +570,7 @@ static void StartServer_MenuInit( void ) {
 	s_startserver.framer.width  	   = 256;
 	s_startserver.framer.height  	   = 334;
 
-        s_startserver.autonextmap.generic.type		= MTYPE_RADIOBUTTON;
+    s_startserver.autonextmap.generic.type		= MTYPE_RADIOBUTTON;
 	s_startserver.autonextmap.generic.name		= "Auto change map:";
 	s_startserver.autonextmap.generic.flags	= QMF_PULSEIFFOCUS|QMF_SMALLFONT;
 	s_startserver.autonextmap.generic.callback	= StartServer_MenuEvent;
@@ -589,9 +589,7 @@ static void StartServer_MenuInit( void ) {
 
 	for (i=0; i<MAX_MAPSPERPAGE; i++)
 	{
-		//x =	(i % MAX_MAPCOLS) * (128+8) + 188;
-		//y = (i / MAX_MAPROWS) * (128+8) + 96;
-                x = (640-MAX_MAPROWS*140)/2 + ( (i % MAX_MAPROWS) * 140 );
+        x = (640-MAX_MAPROWS*140)/2 + ( (i % MAX_MAPROWS) * 140 );
  		y = 96 + ( (i / MAX_MAPROWS) * 140 );
 
 		s_startserver.mappics[i].generic.type   = MTYPE_BITMAP;
@@ -690,13 +688,13 @@ static void StartServer_MenuInit( void ) {
 	Menu_AddItem( &s_startserver.menu, &s_startserver.framer );
 
 	Menu_AddItem( &s_startserver.menu, &s_startserver.gametype );
-        Menu_AddItem( &s_startserver.menu, &s_startserver.autonextmap );
 	for (i=0; i<MAX_MAPSPERPAGE; i++)
 	{
 		Menu_AddItem( &s_startserver.menu, &s_startserver.mappics[i] );
 		Menu_AddItem( &s_startserver.menu, &s_startserver.mapbuttons[i] );
 	}
 
+    Menu_AddItem( &s_startserver.menu, &s_startserver.autonextmap );
 	Menu_AddItem( &s_startserver.menu, &s_startserver.arrows );
 	Menu_AddItem( &s_startserver.menu, &s_startserver.prevpage );
 	Menu_AddItem( &s_startserver.menu, &s_startserver.nextpage );
@@ -720,7 +718,7 @@ void StartServer_Cache( void )
 	const char		*info;
 	qboolean		precache;
 	char			picname[64];
-        char			mapname[ MAX_NAMELENGTH ];
+    char			mapname[ MAX_NAMELENGTH ];
 
 	trap_R_RegisterShaderNoMip( GAMESERVER_BACK0 );	
 	trap_R_RegisterShaderNoMip( GAMESERVER_BACK1 );	
@@ -737,18 +735,18 @@ void StartServer_Cache( void )
 
 	precache = trap_Cvar_VariableValue("com_buildscript");
 
-        if( precache )
-	{
-		for( i = 0; i < UI_GetNumArenas(); i++ )
-		{
-			info = UI_GetArenaInfoByNumber( i );
-			Q_strncpyz( mapname, Info_ValueForKey( info, "map"), MAX_NAMELENGTH );
-			Q_strupr( mapname );
-	
-			Com_sprintf( picname, sizeof(picname), "levelshots/%s", mapname );
-			trap_R_RegisterShaderNoMip(picname);
-		}
-	}
+    if( precache )
+    {
+        for( i = 0; i < UI_GetNumArenas(); i++ )
+        {
+            info = UI_GetArenaInfoByNumber( i );
+            Q_strncpyz( mapname, Info_ValueForKey( info, "map"), MAX_NAMELENGTH );
+            Q_strupr( mapname );
+
+            Com_sprintf( picname, sizeof(picname), "levelshots/%s", mapname );
+            trap_R_RegisterShaderNoMip(picname);
+        }
+    }
 }
 
 
@@ -790,20 +788,19 @@ typedef struct {
 	menubitmap_s		mappic;
 	menubitmap_s		picframe;
 
-//	menulist_s			dedicated;
 	menufield_s			timelimit;
 	menufield_s			fraglimit;
 	menufield_s			flaglimit;
 	menuradiobutton_s	friendlyfire;
 	menufield_s			hostname;
 	menuradiobutton_s	pure;
-        menuradiobutton_s	lan;
-        menulist_s		pmove;
-        //Here are the elimination stuff
-        menuradiobutton_s	oneway;
-        menuradiobutton_s	instantgib;
-        menuradiobutton_s	rockets;
-        menulist_s			lmsMode;
+    menuradiobutton_s	lan;
+    menulist_s		pmove;
+    //Here are the elimination stuff
+    menuradiobutton_s	oneway;
+    menuradiobutton_s	instantgib;
+    menuradiobutton_s	rockets;
+    menulist_s			lmsMode;
 	menulist_s			botSkill;
 
 	menutext_s			player0;
@@ -823,18 +820,10 @@ typedef struct {
 	qboolean			newBot;
 	int					newBotIndex;
 	char				newBotName[16];
-	
-	//menulist_s		punkbuster;
 } serveroptions_t;
 
 static serveroptions_t s_serveroptions;
 
-/*static const char *dedicated_list[] = {
-	"No",
-	"LAN",
-	"Internet",
-	NULL
-};*/
 
 static const char *playerType_list[] = {
 	"Open",
@@ -868,10 +857,10 @@ static const char *lmsMode_list[] = {
 };
 
 static const char *pmove_list[] = {
-	"Framerate dependent",
-	"Fixed framerate 125Hz",
-        "Fixed framerate 91Hz",
-	"Accurate",
+    "Framerate dependent",
+    "Fixed framerate 125Hz",
+    "Fixed framerate 91Hz",
+    "Accurate",
 	NULL
 };
 
@@ -909,19 +898,18 @@ static void ServerOptions_Start( void ) {
 	int		timelimit;
 	int		fraglimit;
 	int		maxclients;
-//	int		dedicated;
 	int		friendlyfire;
 	int		flaglimit;
 	int		pure;
-        int             pmove;
-        int             lan;
-        int             instantgib;
-        int             rockets;
-        int             oneway;
-        int             lmsMode;
+    int     pmove;
+    int     lan;
+    int     instantgib;
+    int     rockets;
+    int     oneway;
+    int     lmsMode;
 	int		skill;
 	int		n;
-        const char		*info;
+    const char		*info;
 	char	buf[64];
 
 
@@ -931,13 +919,13 @@ static void ServerOptions_Start( void ) {
 //	dedicated	 = s_serveroptions.dedicated.curvalue;
 	friendlyfire = s_serveroptions.friendlyfire.curvalue;
 	pure		 = s_serveroptions.pure.curvalue;
-        lan              = s_serveroptions.lan.curvalue;
-        pmove            = s_serveroptions.pmove.curvalue;
-        instantgib       = s_serveroptions.instantgib.curvalue;
-        rockets          = s_serveroptions.rockets.curvalue;
-        oneway		 = s_serveroptions.oneway.curvalue;
-        //Sago: For some reason you need to add 1 to curvalue to get the UI to show the right thing (fixed?)
-        lmsMode          = s_serveroptions.lmsMode.curvalue; //+1;
+    lan         = s_serveroptions.lan.curvalue;
+    pmove       = s_serveroptions.pmove.curvalue;
+    instantgib  = s_serveroptions.instantgib.curvalue;
+    rockets     = s_serveroptions.rockets.curvalue;
+    oneway		= s_serveroptions.oneway.curvalue;
+    //Sago: For some reason you need to add 1 to curvalue to get the UI to show the right thing (fixed?)
+    lmsMode          = s_serveroptions.lmsMode.curvalue; //+1;
 	skill		 = s_serveroptions.botSkill.curvalue + 1;
 
 	//set maxclients
@@ -1153,27 +1141,12 @@ ServerOptions_SetPlayerItems
 =================
 */
 static void ServerOptions_SetPlayerItems( void ) {
-	int		start;
+	int		start = 1;
 	int		n;
 
-	// types
-//	for( n = 0; n < PLAYER_SLOTS; n++ ) {
-//		if( (!s_serveroptions.multiplayer) && (n > 0) && (s_serveroptions.playerType[n].curvalue == 0) ) {
-//			s_serveroptions.playerType[n].curvalue = 1;
-//		}
-//	}
+    s_serveroptions.player0.string = "Human";
+    s_serveroptions.playerName[0].generic.flags &= ~((unsigned int)QMF_HIDDEN);
 
-	// names
-//	if( s_serveroptions.dedicated.curvalue == 0 ) {
-		s_serveroptions.player0.string = "Human";
-		s_serveroptions.playerName[0].generic.flags &= ~((unsigned int)QMF_HIDDEN);
-
-		start = 1;
-/*	}
-	else {
-		s_serveroptions.player0.string = "Open";
-		start = 0;
-	}*/
 	for( n = start; n < PLAYER_SLOTS; n++ ) {
 		if( s_serveroptions.playerType[n].curvalue == 1 ) {
 			s_serveroptions.playerName[n].generic.flags &= ~( (unsigned int)(QMF_INACTIVE|QMF_HIDDEN));
@@ -1206,9 +1179,6 @@ ServerOptions_Event
 static void ServerOptions_Event( void* ptr, int event ) {
 	switch( ((menucommon_s*)ptr)->id ) {
 	
-	//if( event != QM_ACTIVATED && event != QM_LOSTFOCUS) {
-	//	return;
-	//}
 	case ID_PLAYER_TYPE:
 		if( event != QM_ACTIVATED ) {
 			break;
@@ -1217,7 +1187,6 @@ static void ServerOptions_Event( void* ptr, int event ) {
 		break;
 
 	case ID_MAXCLIENTS:
-//	case ID_DEDICATED:
 		ServerOptions_SetPlayerItems();
 		break;
 	case ID_GO:
@@ -1260,7 +1229,7 @@ ServerOptions_StatusBar
 =================
 */
 static void ServerOptions_StatusBar( void* ptr ) {
-		UI_DrawString( 320, 440, "0 = NO LIMIT", UI_CENTER|UI_SMALLFONT, colorWhite );
+	UI_DrawString( 320, 440, "0 = NO LIMIT", UI_CENTER|UI_SMALLFONT, colorWhite );
 }
 
 /*
@@ -1269,7 +1238,7 @@ ServerOptions_StatusBar_Instantgib
 =================
 */
 static void ServerOptions_StatusBar_Instantgib( void* ptr ) {
-		UI_DrawString( 320, 440, "Only railgun and instant kill", UI_CENTER|UI_SMALLFONT, colorWhite );
+	UI_DrawString( 320, 440, "Only railgun and instant kill", UI_CENTER|UI_SMALLFONT, colorWhite );
 }
 
 /*
@@ -1278,7 +1247,7 @@ ServerOptions_StatusBar_Allrockets
 =================
 */
 static void ServerOptions_StatusBar_Allrockets( void* ptr ) {
-		UI_DrawString( 320, 440, "Only Rocket launcher with Inf. ammo", UI_CENTER|UI_SMALLFONT, colorWhite );
+	UI_DrawString( 320, 440, "Only Rocket launcher with Inf. ammo", UI_CENTER|UI_SMALLFONT, colorWhite );
 }
 
 /*
@@ -1287,7 +1256,7 @@ ServerOptions_StatusBar_Pure
 =================
 */
 static void ServerOptions_StatusBar_Pure( void* ptr ) {
-		UI_DrawString( 320, 440, "Require identical pk3 files", UI_CENTER|UI_SMALLFONT, colorWhite );
+	UI_DrawString( 320, 440, "Require identical pk3 files", UI_CENTER|UI_SMALLFONT, colorWhite );
 }
 
 /*
@@ -1296,7 +1265,7 @@ ServerOptions_StatusBar_Oneway
 =================
 */
 static void ServerOptions_StatusBar_Oneway( void* ptr ) {
-		UI_DrawString( 320, 440, "Only one team can capture in a round", UI_CENTER|UI_SMALLFONT, colorWhite );
+	UI_DrawString( 320, 440, "Only one team can capture in a round", UI_CENTER|UI_SMALLFONT, colorWhite );
 }
 
 /*
@@ -1319,7 +1288,7 @@ static void ServerOptions_StatusBar_Pmove( void* ptr ) {
             UI_DrawString( 320, 440, "Physics are calculated exactly", UI_CENTER|UI_SMALLFONT, colorWhite );
             UI_DrawString( 320, 460, "All players are equal", UI_CENTER|UI_SMALLFONT, colorWhite );
             break;
-	default:
+        default:
             UI_DrawString( 320, 440, "Framerate dependent or not", UI_CENTER|UI_SMALLFONT, colorWhite );
             break;
     }
@@ -1757,14 +1726,6 @@ static void ServerOptions_MenuInit( qboolean multiplayer ) {
 	s_serveroptions.pure.generic.name			= "Pure Server:";
 	s_serveroptions.pure.generic.statusbar  = ServerOptions_StatusBar_Pure;
 
-	if( s_serveroptions.multiplayer ) {
-		y += BIGCHAR_HEIGHT+2;
-		s_serveroptions.lan.generic.type			= MTYPE_RADIOBUTTON;
-		s_serveroptions.lan.generic.flags			= QMF_PULSEIFFOCUS|QMF_SMALLFONT;
-		s_serveroptions.lan.generic.x				= OPTIONS_X;
-		s_serveroptions.lan.generic.y				= y;
-		s_serveroptions.lan.generic.name			= "Optimize for LAN:";
-	}
 
 	//Insantgib option
 	y += BIGCHAR_HEIGHT+2;
@@ -1792,8 +1753,6 @@ static void ServerOptions_MenuInit( qboolean multiplayer ) {
 		s_serveroptions.lmsMode.generic.x				=  OPTIONS_X; //32 + (strlen(s_serveroptions.botSkill.generic.name) + 2 ) * SMALLCHAR_WIDTH;
 		s_serveroptions.lmsMode.generic.y				= y;
 		s_serveroptions.lmsMode.itemnames				= lmsMode_list;
-		//s_serveroptions.lmsMode.curvalue				= 0;
-
 	}
 
 	y += BIGCHAR_HEIGHT+2;
@@ -1806,6 +1765,13 @@ static void ServerOptions_MenuInit( qboolean multiplayer ) {
 	s_serveroptions.pmove.generic.statusbar  = ServerOptions_StatusBar_Pmove;
 
 	if( s_serveroptions.multiplayer ) {
+        y += BIGCHAR_HEIGHT+2;
+		s_serveroptions.lan.generic.type			= MTYPE_RADIOBUTTON;
+		s_serveroptions.lan.generic.flags			= QMF_PULSEIFFOCUS|QMF_SMALLFONT;
+		s_serveroptions.lan.generic.x				= OPTIONS_X;
+		s_serveroptions.lan.generic.y				= y;
+		s_serveroptions.lan.generic.name			= "Optimize for LAN:";
+		
 		y += BIGCHAR_HEIGHT+2;
 		s_serveroptions.hostname.generic.type       = MTYPE_FIELD;
 		s_serveroptions.hostname.generic.name       = "Hostname:";
