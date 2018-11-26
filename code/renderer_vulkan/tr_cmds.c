@@ -37,7 +37,8 @@ int R_SumOfUsedImages( void ) {
 }
 
 
-void R_PerformanceCounters( void ) {
+void R_PerformanceCounters( void )
+{
 	if ( !r_speeds->integer ) {
 		// clear the counters even if we aren't printing
 		memset( &tr.pc, 0, sizeof( tr.pc ) );
@@ -86,7 +87,8 @@ R_IssueRenderCommands
 int	c_blockedOnRender;
 int	c_blockedOnMain;
 
-void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
+void R_IssueRenderCommands( qboolean runPerformanceCounters )
+{
 	renderCommandList_t	*cmdList;
 
 	cmdList = &backEndData[tr.smpFrame]->commands;
@@ -107,7 +109,6 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 	if ( !r_skipBackEnd->integer ) {
 		// let it start on the new batch
 		RB_ExecuteRenderCommands( cmdList->cmds );
-
 	}
 }
 
@@ -118,12 +119,16 @@ R_IssuePendingRenderCommands
 Issue any pending commands and wait for them to complete.
 ====================
 */
-void R_IssuePendingRenderCommands( void ) {
+
+void R_IssuePendingRenderCommands( void )
+{
 	if ( !tr.registered ) {
 		return;
 	}
 	R_IssueRenderCommands( qfalse );
 }
+
+
 /*
 ====================
 R_SyncRenderThread
@@ -134,7 +139,8 @@ and will remain idle and the main thread is free to issue
 OpenGL calls until R_IssueRenderCommands is called.
 ====================
 */
-void R_SyncRenderThread( void ) {
+void R_SyncRenderThread( void )
+{
 	if ( !tr.registered ) {
 		return;
 	}

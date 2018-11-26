@@ -31,7 +31,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vk_image.h"
 #include "vk_clear_attachments.h"
 #include "mvp_matrix.h"
-
+#include "R_LerpTag.h"
+#include "R_ModelBounds.h"
+#include "RE_RegisterModel.h"
 
 glconfig_t	glConfig;
 

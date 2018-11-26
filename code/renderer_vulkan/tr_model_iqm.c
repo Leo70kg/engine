@@ -59,11 +59,7 @@ static void Matrix34Multiply( float *a, float *b, float *out ) {
 	out[10] = a[8] * b[2] + a[9] * b[6] + a[10] * b[10];
 	out[11] = a[8] * b[3] + a[9] * b[7] + a[10] * b[11] + a[11];
 }
-static void Matrix34Multiply_OnlySetOrigin( float *a, float *b, float *out ) {
-	out[ 3] = a[0] * b[3] + a[1] * b[7] + a[ 2] * b[11] + a[ 3];
-	out[ 7] = a[4] * b[3] + a[5] * b[7] + a[ 6] * b[11] + a[ 7];
-	out[11] = a[8] * b[3] + a[9] * b[7] + a[10] * b[11] + a[11];
-}
+
 static void InterpolateMatrix( float *a, float *b, float lerp, float *mat ) {
 	float unLerp = 1.0f - lerp;
 
@@ -942,7 +938,7 @@ void R_AddIQMSurfaces( trRefEntity_t *ent ) {
 }
 
 
-static void ComputePoseMats( iqmData_t *data, int frame, int oldframe,
+void ComputePoseMats( iqmData_t *data, int frame, int oldframe,
 			      float backlerp, float *mat ) {
 	float	*mat1, *mat2;
 	int	*joint = data->jointParents;
@@ -987,23 +983,6 @@ static void ComputePoseMats( iqmData_t *data, int frame, int oldframe,
 						   backlerp, mat );
 			}
 		}
-	}
-}
-
-static void ComputeJointMats( iqmData_t *data, int frame, int oldframe,
-			      float backlerp, float *mat ) {
-	float	*mat1;
-	int	i;
-
-	ComputePoseMats( data, frame, oldframe, backlerp, mat );
-
-	for( i = 0; i < data->num_joints; i++ ) {
-		float outmat[12];
-		mat1 = mat + 12 * i;
-
-		memcpy(outmat, mat1, sizeof(outmat));
-
-		Matrix34Multiply_OnlySetOrigin( outmat, data->jointMats + 12 * i, mat1 );
 	}
 }
 
@@ -1148,39 +1127,4 @@ void RB_IQMSurfaceAnim( surfaceType_t *surface ) {
 	tess.numVertexes += surf->num_vertexes;
 }
 
-int R_IQMLerpTag( orientation_t *tag, iqmData_t *data,
-		  int startFrame, int endFrame, 
-		  float frac, const char *tagName ) {
-	float	jointMats[IQM_MAX_JOINTS * 12];
-	int	joint;
-	char	*names = data->names;
 
-	// get joint number by reading the joint names
-	for( joint = 0; joint < data->num_joints; joint++ ) {
-		if( !strcmp( tagName, names ) )
-			break;
-		names += strlen( names ) + 1;
-	}
-	if( joint >= data->num_joints ) {
-        memset(tag, 0, sizeof(orientation_t));
-
-		return qfalse;
-	}
-
-	ComputeJointMats( data, startFrame, endFrame, frac, jointMats );
-
-	tag->axis[0][0] = jointMats[12 * joint + 0];
-	tag->axis[1][0] = jointMats[12 * joint + 1];
-	tag->axis[2][0] = jointMats[12 * joint + 2];
-	tag->origin[0] = jointMats[12 * joint + 3];
-	tag->axis[0][1] = jointMats[12 * joint + 4];
-	tag->axis[1][1] = jointMats[12 * joint + 5];
-	tag->axis[2][1] = jointMats[12 * joint + 6];
-	tag->origin[1] = jointMats[12 * joint + 7];
-	tag->axis[0][2] = jointMats[12 * joint + 8];
-	tag->axis[1][2] = jointMats[12 * joint + 9];
-	tag->axis[2][2] = jointMats[12 * joint + 10];
-	tag->origin[2] = jointMats[12 * joint + 11];
-
-	return qtrue;
-}
