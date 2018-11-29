@@ -22,8 +22,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "tr_local.h"
-#include "../renderercommon/iqm.h"
-#include "tr_model_iqm.h"
+#include "tr_globals.h"
+
+#include "tr_model.h"
+
 #define	LL(x) x=LittleLong(x)
 
 // 3x4 identity matrix

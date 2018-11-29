@@ -704,130 +704,6 @@ typedef struct {
 //======================================================================
 
 
-/*
-==============================================================================
-
-MD4 file format
-
-==============================================================================
-*/
-
-#define MD4_IDENT			(('4'<<24)+('P'<<16)+('D'<<8)+'I')
-#define MD4_VERSION			1
-#define	MD4_MAX_BONES		128
-
-typedef struct {
-	int			boneIndex;		// these are indexes into the boneReferences,
-	float		   boneWeight;		// not the global per-frame bone list
-	vec3_t		offset;
-} md4Weight_t;
-
-typedef struct {
-	vec3_t		normal;
-	vec2_t		texCoords;
-	int			numWeights;
-	md4Weight_t	weights[1];		// variable sized
-} md4Vertex_t;
-
-typedef struct {
-	int			indexes[3];
-} md4Triangle_t;
-
-typedef struct {
-	int			ident;
-
-	char		name[MAX_QPATH];	// polyset name
-	char		shader[MAX_QPATH];
-	int			shaderIndex;		// for in-game use
-
-	int			ofsHeader;			// this will be a negative number
-
-	int			numVerts;
-	int			ofsVerts;
-
-	int			numTriangles;
-	int			ofsTriangles;
-
-	// Bone references are a set of ints representing all the bones
-	// present in any vertex weights for this surface.  This is
-	// needed because a model may have surfaces that need to be
-	// drawn at different sort times, and we don't want to have
-	// to re-interpolate all the bones for each surface.
-	int			numBoneReferences;
-	int			ofsBoneReferences;
-
-	int			ofsEnd;				// next surface follows
-} md4Surface_t;
-
-typedef struct {
-	float		matrix[3][4];
-} md4Bone_t;
-
-typedef struct {
-	vec3_t		bounds[2];			// bounds of all surfaces of all LOD's for this frame
-	vec3_t		localOrigin;		// midpoint of bounds, used for sphere cull
-	float		radius;				// dist from localOrigin to corner
-	md4Bone_t	bones[1];			// [numBones]
-} md4Frame_t;
-
-typedef struct {
-	int			numSurfaces;
-	int			ofsSurfaces;		// first surface, others follow
-	int			ofsEnd;				// next lod follows
-} md4LOD_t;
-
-typedef struct {
-	int			ident;
-	int			version;
-
-	char		name[MAX_QPATH];	// model name
-
-	// frames and bones are shared by all levels of detail
-	int			numFrames;
-	int			numBones;
-	int			ofsBoneNames;		// char	name[ MAX_QPATH ]
-	int			ofsFrames;			// md4Frame_t[numFrames]
-
-	// each level of detail has completely separate sets of surfaces
-	int			numLODs;
-	int			ofsLODs;
-
-	int			ofsEnd;				// end of file
-} md4Header_t;
-
-
-typedef enum {
-	MOD_BAD,
-	MOD_BRUSH,
-	MOD_MESH,
-	MOD_MDR,
-	MOD_IQM,
-	MOD_MD4
-} modtype_t;
-
-typedef struct model_s {
-	char		name[MAX_QPATH];
-	modtype_t	type;
-	int			index;		// model = tr.models[model->index]
-
-	int			dataSize;	// just for listing purposes
-	bmodel_t	*bmodel;		// only if type == MOD_BRUSH
-	md3Header_t	*md3[MD3_MAX_LODS];	// only if type == MOD_MESH
-	void	*modelData;			// only if type == (MOD_MDR | MOD_IQM)	
-	md4Header_t	*md4;				// only if type == MOD_MD4
-
-	int			 numLods;
-} model_t;
-
-
-#define	MAX_MOD_KNOWN	1024
-
-void		R_ModelInit (void);
-model_t		*R_GetModelByHandle( qhandle_t hModel );
-
-void		R_Modellist_f (void);
-
-//====================================================
 
 #define	MAX_DRAWIMAGES			2048
 #define	MAX_LIGHTMAPS			256
@@ -910,104 +786,14 @@ typedef struct {
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
 } backEndState_t;
 
-/*
-** trGlobals_t 
-**
-** Most renderer globals are defined here.
-** backend functions should never modify any of these fields,
-** but may read fields that aren't dynamically modified
-** by the frontend.
-*/
-typedef struct {
-	qboolean				registered;		// cleared at shutdown, set at beginRegistration
 
-	int						visCount;		// incremented every time a new vis cluster is entered
-	int						frameCount;		// incremented every frame
-	int						viewCount;		// incremented every view (twice a scene if portaled)
-											// and every R_MarkFragments call
-
-	int						smpFrame;		// toggles from 0 to 1 every endFrame
-
-	qboolean				worldMapLoaded;
-	world_t					*world;
-
-	const unsigned char		*externalVisData;	// from RE_SetWorldVisData, shared with CM_Load
-
-	image_t					*defaultImage;
-	image_t					*scratchImage[32];
-	image_t					*fogImage;
-	image_t					*dlightImage;	// inverse-quare highlight for projective adding
-	image_t					*whiteImage;			// full of 0xff
-	image_t					*identityLightImage;	// full of tr.identityLightByte
-
-	shader_t				*defaultShader;
-    shader_t                *cinematicShader;
-	shader_t				*shadowShader;
-	shader_t				*projectionShadowShader;
-
-	int						numLightmaps;
-	image_t					*lightmaps[MAX_LIGHTMAPS];
-
-	trRefEntity_t			*currentEntity;
-	trRefEntity_t			worldEntity;		// point currentEntity at this when rendering world
-	int						currentEntityNum;
-	int						shiftedEntityNum;	// currentEntityNum << QSORT_ENTITYNUM_SHIFT
-	model_t					*currentModel;
-
-	viewParms_t				viewParms;
-
-	float					identityLight;		// 1.0 / ( 1 << overbrightBits )
-	int						identityLightByte;	// identityLight * 255
-	int						overbrightBits;		// r_overbrightBits->integer, but set to 0 if no hw gamma
-
-	orientationr_t			or;					// for current entity
-
-	trRefdef_t				refdef;
-
-	int						viewCluster;
-
-	vec3_t					sunLight;			// from the sky shader for this level
-	vec3_t					sunDirection;
-
-	frontEndCounters_t		pc;
-	int						frontEndMsec;		// not in pc due to clearing issue
-
-	//
-	// put large tables at the end, so most elements will be
-	// within the +/32K indexed range on risc processors
-	//
-	model_t					*models[MAX_MOD_KNOWN];
-	int						numModels;
-
-	int						numImages;
-	image_t					*images[MAX_DRAWIMAGES];
-
-	// shader indexes from other modules will be looked up in tr.shaders[]
-	// shader indexes from drawsurfs will be looked up in sortedShaders[]
-	// lower indexed sortedShaders must be rendered first (opaque surfaces before translucent)
-	int						numShaders;
-	shader_t				*shaders[MAX_SHADERS];
-	shader_t				*sortedShaders[MAX_SHADERS];
-
-	int						numSkins;
-	skin_t					*skins[MAX_SKINS];
-
-	float					sinTable[FUNCTABLE_SIZE];
-	float					squareTable[FUNCTABLE_SIZE];
-	float					triangleTable[FUNCTABLE_SIZE];
-	float					sawToothTable[FUNCTABLE_SIZE];
-	float					inverseSawToothTable[FUNCTABLE_SIZE];
-	float					fogTable[FOG_TABLE_SIZE];
-} trGlobals_t;
 
 
 
 //
 // cvars
 //
-//extern cvar_t	*r_renderAPI;			// 3D API to use: 0 - OpenGL, 1 - Vulkan, 2 - DX12
 
-// extern cvar_t	*r_twinMode;			// Debug feature to compare rendering output between OpenGL/Vulkan/DX12 APIs
 
 extern cvar_t	*r_railWidth;
 extern cvar_t	*r_railCoreWidth;
@@ -1181,7 +967,7 @@ void		RE_Shutdown( qboolean destroyWindow );
 
 qboolean	R_GetEntityToken( char *buffer, int size );
 
-model_t		*R_AllocModel( void );
+
 
 void    	R_Init( void );
 
@@ -1548,7 +1334,7 @@ extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
 
 
 extern backEndState_t	backEnd;
-extern trGlobals_t	tr;
+
 extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
 extern	shaderCommands_t	tess;
 extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allocated

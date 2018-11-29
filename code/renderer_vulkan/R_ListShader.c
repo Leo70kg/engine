@@ -1,6 +1,5 @@
-
 #include "tr_local.h"
-
+#include "tr_globals.h"
 
 /*
 ===============

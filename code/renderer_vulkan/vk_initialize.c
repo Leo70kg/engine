@@ -8,6 +8,8 @@
 #include "Vk_Instance.h"
 #include "vk_shade_geometry.h"
 #include "vk_create_pipeline.h"
+#include "vk_frame.h"
+
 
 #ifndef NDEBUG
 
@@ -270,9 +272,10 @@ void vk_shutdown()
 	qvkDestroyBuffer(vk.device, vk.vertex_buffer, NULL);
 	qvkDestroyBuffer(vk.device, vk.index_buffer, NULL);
 	qvkFreeMemory(vk.device, vk.geometry_buffer_memory, NULL);
-	qvkDestroySemaphore(vk.device, vk.image_acquired, NULL);
-	qvkDestroySemaphore(vk.device, vk.rendering_finished, NULL);
-	qvkDestroyFence(vk.device, vk.rendering_finished_fence, NULL);
+
+    vk_destroy_sync_primitives();
+
+
 
 	qvkDestroyShaderModule(vk.device, vk.single_texture_vs, NULL);
 	qvkDestroyShaderModule(vk.device, vk.single_texture_clipping_plane_vs, NULL);
@@ -367,21 +370,7 @@ void vk_initialize(void)
 	//
 	// Sync primitives.
 	//
-	{
-		VkSemaphoreCreateInfo desc;
-		desc.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		desc.pNext = NULL;
-		desc.flags = 0;
-
-		VK_CHECK(qvkCreateSemaphore(vk.device, &desc, NULL, &vk.image_acquired));
-		VK_CHECK(qvkCreateSemaphore(vk.device, &desc, NULL, &vk.rendering_finished));
-
-		VkFenceCreateInfo fence_desc;
-		fence_desc.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fence_desc.pNext = NULL;
-		fence_desc.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		VK_CHECK(qvkCreateFence(vk.device, &fence_desc, NULL, &vk.rendering_finished_fence));
-	}
+    vk_create_sync_primitives();
 
 	//
 	// Command pool.

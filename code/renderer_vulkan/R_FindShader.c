@@ -1,5 +1,5 @@
 #include "tr_local.h"
-
+#include "tr_globals.h"
 #include "fun_log.h"
 #include "vk_image.h"
 

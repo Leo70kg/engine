@@ -7,7 +7,7 @@
 
 #include "mvp_matrix.h"
 #include "vk_image.h"
-
+#include "tr_globals.h"
 
 static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 {
@@ -140,7 +140,7 @@ void vk_shade_geometry(VkPipeline pipeline, qboolean multitexture, enum Vk_Depth
     Any bindings that were previously applied via these sets are no longer valid.
 */
 	qvkCmdBindDescriptorSets(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-            vk.pipeline_layout, 0, (multitexture ? 2 : 1), getCurDescriptorSetsPtr(), 0, NULL);
+        vk.pipeline_layout, 0, (multitexture ? 2 : 1), getCurDescriptorSetsPtr(), 0, NULL);
 
     // bind pipeline
 	qvkCmdBindPipeline(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -210,7 +210,8 @@ void vk_bind_geometry(void)
 		// NOTE: backEnd.or.modelMatrix incorporates s_flipMatrix, so it should be taken into account 
 		// when computing clipping plane too.
 		float* eye_xform = push_constants + 16;
-		for (i = 0; i < 12; i++) {
+		for (i = 0; i < 12; i++)
+        {
 			eye_xform[i] = backEnd.or.modelMatrix[(i%4)*4 + i/4 ];
 		}
 
@@ -243,7 +244,18 @@ void vk_bind_geometry(void)
 	qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, push_constants_size, push_constants);
 }
 
-// VULKAN
+
+/*
+===============
+RB_ShowImages
+
+Draw all the images to the screen, on top of whatever was there.
+This is used to test for texture thrashing.
+
+Also called by RE_EndRegistration
+===============
+*/
+
 void RB_ShowImages(void)
 {
     int i = 0;

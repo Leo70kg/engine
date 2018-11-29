@@ -1,8 +1,11 @@
 #include "tr_local.h"
+#include "tr_globals.h"
+#include "tr_model.h"
 
 
 
-void R_AddAnimSurfaces( trRefEntity_t *ent ) {
+void R_AddAnimSurfaces( trRefEntity_t *ent )
+{
 	md4Header_t		*header;
 	md4Surface_t	*surface;
 	md4LOD_t		*lod;

@@ -2,6 +2,7 @@
 #include "vk_read_pixels.h"
 #include "R_LightScaleTexture.h"
 #include "RB_TakeScreenshot.h"
+#include "tr_globals.h"
 
 typedef struct {
 	int commandId;

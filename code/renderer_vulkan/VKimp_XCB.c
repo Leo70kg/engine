@@ -1,14 +1,4 @@
-#include "tr_local.h"
 #include "VKimpl.h"
-#include "../qcommon/sys_loadlib.h"
-
-
-#ifdef _WIN32
-
-#define VK_USE_PLATFORM_WIN32_KHR
-#define NOMINMAX
-
-#else
 
 #define VK_USE_PLATFORM_XCB_KHR
 
@@ -17,12 +7,18 @@
 #include <xcb/xcb_atom.h>
 #include <vulkan/vulkan_xcb.h>
 
-#endif
+#include "tr_local.h"
+#include "qvk.h"
+#include "Vk_Instance.h"
+#include "tr_displayResolution.h"
+
+
+#include "../qcommon/sys_loadlib.h"
 
 // Allow a maximum of two outstanding presentation operations.
 #define FRAME_LAG 2
 
-
+cvar_t	*r_fullscreen;
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 #define APP_NAME_STR_LEN 80
@@ -80,7 +76,6 @@
 
 static void vk_resize( void )
 {
-    uint32_t i;
 /*
     // Don't react to resize until after first initialization.
     if (!demo->prepared) {
@@ -420,6 +415,7 @@ static void CreateWindow(int width, int height, qboolean fullscreen)
 
 void VKimp_Init(void)
 {
+    r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	ri.Printf(PRINT_ALL, "...Initializing Vulkan subsystem...\n");
 
 	// Load Vulkan DLL.
@@ -460,10 +456,7 @@ void VKimp_Init(void)
     else
     {
 		ri.Printf( PRINT_ALL, "...setting mode %d:", mode );
-		if (!R_GetModeInfo(&glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect, mode)) {
-			ri.Printf( PRINT_ALL, " invalid mode\n" );
-			ri.Error(ERR_FATAL, "SetMode - could not set the given mode (%d)\n", mode);
-		}
+		R_GetModeInfo(&glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect, mode);
 
 		// Ensure that window size does not exceed desktop size.
 		// CreateWindow Win32 API does not allow to create windows larger than desktop.
@@ -476,11 +469,9 @@ void VKimp_Init(void)
 			ri.Printf(PRINT_WARNING, "\nMode %d specifies width that is larger than desktop width: using default mode %d\n", mode, default_mode);
 			
 			ri.Printf( PRINT_ALL, "...setting mode %d:", default_mode );
-			if (!R_GetModeInfo(&glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect, default_mode)) {
-				ri.Printf( PRINT_ALL, " invalid mode\n" );
-				ri.Error(ERR_FATAL, "SetMode - could not set the given mode (%d)\n", default_mode);
-			}
-		}
+			
+            R_GetModeInfo(&glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect, default_mode);
+        }
 	}
 	glConfig.isFullscreen = fullscreen;
 	ri.Printf( PRINT_ALL, " %d %d %s\n", glConfig.vidWidth, glConfig.vidHeight, fullscreen ? "FS" : "W");
@@ -541,13 +532,7 @@ void VKimp_Shutdown(void)
 	WG_RestoreGamma();
 */
 	memset(&glConfig, 0, sizeof(glConfig));
-	memset(&glState, 0, sizeof(glState));
-/*
-	if (log_fp) {
-		fclose(log_fp);
-		log_fp = 0;
-	}
-*/
+
 }
 
 
@@ -747,6 +732,48 @@ void VKimp_CreateInstance(void)
     CreateInstanceImpl(enabled_extension_count, extension_names_supported);
 }
 
+
+void VKimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] )
+{
+	unsigned short int table[3][256];
+	int i, j;
+
+	for (i = 0; i < 256; i++)
+	{
+		table[0][i] = ( red[i] << 8 ) | red[i];
+		table[1][i] = ( green[i] << 8 ) | green[i];
+		table[2][i] = ( blue[i]  << 8 ) | blue[i];
+	}
+
+
+	// enforce constantly increasing
+	for (j = 0; j < 3; j++)
+	{
+		for (i = 1; i < 256; i++)
+		{
+			if (table[j][i] < table[j][i-1])
+				table[j][i] = table[j][i-1];
+		}
+	}
+
+}
+
+
+/*
+===============
+Minimize the game so that user is back at the desktop
+===============
+*/
+void VKimp_Minimize( void )
+{
+    if(r_fullscreen->integer == 1)
+    {
+        r_fullscreen->integer = 0;
+        ri.Cmd_ExecuteText (EXEC_NOW, "vid_restart\n");
+        r_fullscreen->integer = 1;
+    }
+
+}
 
 // doc
 

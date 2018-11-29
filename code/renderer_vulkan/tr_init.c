@@ -22,10 +22,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_init.c -- functions that are not called every frame
 
 #include "tr_local.h"
+#include "tr_globals.h"
+#include "tr_displayResolution.h"
+
 #include "VKimpl.h"
 #include "vk_initialize.h"
 #include "RB_TakeScreenshot.h"
-#include "tr_displayResolution.h"
 #include "Vk_Instance.h"
 #include "vk_create_pipeline.h"
 #include "vk_image.h"
@@ -33,7 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "mvp_matrix.h"
 #include "R_LerpTag.h"
 #include "R_ModelBounds.h"
-#include "RE_RegisterModel.h"
+#include "tr_model.h"
 
 glconfig_t	glConfig;
 

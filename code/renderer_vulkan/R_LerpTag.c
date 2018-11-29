@@ -1,6 +1,6 @@
 
 #include "tr_local.h"
-#include "tr_model_iqm.h"
+#include "tr_model.h"
 #include "R_LerpTag.h"
 
 

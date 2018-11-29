@@ -5,6 +5,8 @@
 #include "R_LightScaleTexture.h"
 #include "vk_image.h"
 #include "Vk_Instance.h"
+#include "tr_globals.h"
+
 //
 // Memory allocations.
 //

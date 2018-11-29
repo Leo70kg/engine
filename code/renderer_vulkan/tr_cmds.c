@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #include "tr_local.h"
+#include "tr_globals.h"
 #include "R_LightScaleTexture.h"
 
 int R_SumOfUsedImages( void ) {

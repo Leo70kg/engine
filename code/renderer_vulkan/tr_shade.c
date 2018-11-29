@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vk_shade_geometry.h"
 #include "Vk_Instance.h"
 
+#include "tr_globals.h"
 
 
 /*
@@ -82,9 +83,9 @@ DrawTris
 Draws triangle outlines for debugging
 ================
 */
-static void DrawTris (shaderCommands_t *input) {
+static void DrawTris (shaderCommands_t *input)
+{
 	GL_Bind( tr.whiteImage );
-
 
 
 	// VULKAN
@@ -514,16 +515,14 @@ static void ComputeColors( shaderStage_t *pStage )
 	}
 }
 
-/*
-===============
-ComputeTexCoords
-===============
-*/
-static void ComputeTexCoords( shaderStage_t *pStage ) {
+
+static void ComputeTexCoords( shaderStage_t *pStage )
+{
 	int		i;
 	int		b;
 
-	for ( b = 0; b < NUM_TEXTURE_BUNDLES; b++ ) {
+	for ( b = 0; b < NUM_TEXTURE_BUNDLES; b++ )
+    {
 		int tm;
 
 		//
@@ -531,41 +530,42 @@ static void ComputeTexCoords( shaderStage_t *pStage ) {
 		//
 		switch ( pStage->bundle[b].tcGen )
 		{
-		case TCGEN_IDENTITY:
-			memset( tess.svars.texcoords[b], 0, sizeof( float ) * 2 * tess.numVertexes );
-			break;
-		case TCGEN_TEXTURE:
-			for ( i = 0 ; i < tess.numVertexes ; i++ ) {
-				tess.svars.texcoords[b][i][0] = tess.texCoords[i][0][0];
-				tess.svars.texcoords[b][i][1] = tess.texCoords[i][0][1];
-			}
-			break;
-		case TCGEN_LIGHTMAP:
-			for ( i = 0 ; i < tess.numVertexes ; i++ ) {
-				tess.svars.texcoords[b][i][0] = tess.texCoords[i][1][0];
-				tess.svars.texcoords[b][i][1] = tess.texCoords[i][1][1];
-			}
-			break;
-		case TCGEN_VECTOR:
-			for ( i = 0 ; i < tess.numVertexes ; i++ ) {
-				tess.svars.texcoords[b][i][0] = DotProduct( tess.xyz[i], pStage->bundle[b].tcGenVectors[0] );
-				tess.svars.texcoords[b][i][1] = DotProduct( tess.xyz[i], pStage->bundle[b].tcGenVectors[1] );
-			}
-			break;
-		case TCGEN_FOG:
-			RB_CalcFogTexCoords( ( float * ) tess.svars.texcoords[b] );
-			break;
-		case TCGEN_ENVIRONMENT_MAPPED:
-			RB_CalcEnvironmentTexCoords( ( float * ) tess.svars.texcoords[b] );
-			break;
-		case TCGEN_BAD:
-			return;
+            case TCGEN_IDENTITY:
+                memset( tess.svars.texcoords[b], 0, sizeof( float ) * 2 * tess.numVertexes );
+                break;
+            case TCGEN_TEXTURE:
+                for ( i = 0 ; i < tess.numVertexes ; i++ ) {
+                    tess.svars.texcoords[b][i][0] = tess.texCoords[i][0][0];
+                    tess.svars.texcoords[b][i][1] = tess.texCoords[i][0][1];
+                }
+                break;
+            case TCGEN_LIGHTMAP:
+                for ( i = 0 ; i < tess.numVertexes ; i++ ) {
+                    tess.svars.texcoords[b][i][0] = tess.texCoords[i][1][0];
+                    tess.svars.texcoords[b][i][1] = tess.texCoords[i][1][1];
+                }
+                break;
+            case TCGEN_VECTOR:
+                for ( i = 0 ; i < tess.numVertexes ; i++ ) {
+                    tess.svars.texcoords[b][i][0] = DotProduct( tess.xyz[i], pStage->bundle[b].tcGenVectors[0] );
+                    tess.svars.texcoords[b][i][1] = DotProduct( tess.xyz[i], pStage->bundle[b].tcGenVectors[1] );
+                }
+                break;
+            case TCGEN_FOG:
+                RB_CalcFogTexCoords( ( float * ) tess.svars.texcoords[b] );
+                break;
+            case TCGEN_ENVIRONMENT_MAPPED:
+                RB_CalcEnvironmentTexCoords( ( float * ) tess.svars.texcoords[b] );
+                break;
+            case TCGEN_BAD:
+                return;
 		}
 
 		//
 		// alter texture coordinates
 		//
-		for ( tm = 0; tm < pStage->bundle[b].numTexMods ; tm++ ) {
+		for ( tm = 0; tm < pStage->bundle[b].numTexMods ; tm++ )
+        {
 			switch ( pStage->bundle[b].texMods[tm].type )
 			{
 			case TMOD_NONE:
@@ -677,7 +677,9 @@ void RB_StageIteratorGeneric( void )
 		// VULKAN
 
         VkPipeline vk_pipeline;
-        if (backEnd.viewParms.isMirror) {
+        
+        if (backEnd.viewParms.isMirror)
+        {
             vk_pipeline = tess.xstages[stage]->vk_mirror_pipeline;
         }
         else if (backEnd.viewParms.isPortal) {
@@ -688,12 +690,16 @@ void RB_StageIteratorGeneric( void )
             vk_pipeline = tess.xstages[stage]->vk_pipeline;
         }
 
+        
         enum Vk_Depth_Range depth_range = normal;
-        if (tess.shader->isSky) {
+        if (tess.shader->isSky)
+        {
             depth_range = force_one;
             if (r_showsky->integer)
                 depth_range = force_zero;
-        } else if (backEnd.currentEntity->e.renderfx & RF_DEPTHHACK) {
+        }
+        else if (backEnd.currentEntity->e.renderfx & RF_DEPTHHACK)
+        {
             depth_range = weapon;
         }
 
@@ -728,28 +734,20 @@ void RB_StageIteratorGeneric( void )
 }
 
 
+void RB_EndSurface( void )
+{
 
-
-
-/*
-** RB_EndSurface
-*/
-void RB_EndSurface( void ) {
-	shaderCommands_t *input;
-
-	input = &tess;
-
-	if (input->numIndexes == 0) {
+	if (tess.numIndexes == 0) {
 		return;
 	}
 	if (tess.shader->isSky && r_fastsky->integer) {
 		return;
 	}
 
-	if (input->indexes[SHADER_MAX_INDEXES-1] != 0) {
+	if (tess.indexes[SHADER_MAX_INDEXES-1] != 0) {
 		ri.Error (ERR_DROP, "RB_EndSurface() - SHADER_MAX_INDEXES hit");
 	}	
-	if (input->xyz[SHADER_MAX_VERTEXES-1][0] != 0) {
+	if (tess.xyz[SHADER_MAX_VERTEXES-1][0] != 0) {
 		ri.Error (ERR_DROP, "RB_EndSurface() - SHADER_MAX_VERTEXES hit");
 	}
 
@@ -782,11 +780,13 @@ void RB_EndSurface( void ) {
 	//
 	// draw debugging stuff
 	//
-	if ( r_showtris->integer ) {
-		DrawTris (input);
+	if ( r_showtris->integer )
+    {
+		DrawTris (&tess);
 	}
-	if ( r_shownormals->integer ) {
-		DrawNormals (input);
+	if ( r_shownormals->integer )
+    {
+		DrawNormals (&tess);
 	}
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;

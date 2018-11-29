@@ -1,6 +1,6 @@
 
 #include "tr_local.h"
-#include "R_LoadMDR.h"
+#include "tr_model.h"
 
 #define	LL(x) x=LittleLong(x)
 

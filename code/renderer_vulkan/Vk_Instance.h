@@ -23,9 +23,7 @@ struct Vk_Instance {
 	VkImageView swapchain_image_views[MAX_SWAPCHAIN_IMAGES];
 	uint32_t swapchain_image_index;
 
-	VkSemaphore image_acquired ;
-	VkSemaphore rendering_finished;
-	VkFence rendering_finished_fence;
+
 
 	VkCommandPool command_pool;
 	VkCommandBuffer command_buffer;

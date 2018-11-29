@@ -1,9 +1,8 @@
 #include "tr_local.h"
-#include "R_LoadMD3.h"
-#include "R_LoadMDR.h"
-#include "tr_model_iqm.h"
+#include "tr_model.h"
+#include "tr_globals.h"
 
-#include "RE_RegisterModel.h"
+
 
 qhandle_t R_RegisterMD4(const char *name, model_t *mod)
 {

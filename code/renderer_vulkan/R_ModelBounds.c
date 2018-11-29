@@ -2,46 +2,41 @@
 
 #include "R_ModelBounds.h"
 
-#include "tr_model_iqm.h"
+#include "tr_model.h"
 
 
 void R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs )
 {
-	model_t		*model;
+	model_t* model = R_GetModelByHandle( handle );
 
-	model = R_GetModelByHandle( handle );
-
-	if(model->type == MOD_BRUSH) {
+	if(model->type == MOD_BRUSH)
+    {
 		VectorCopy( model->bmodel->bounds[0], mins );
-		VectorCopy( model->bmodel->bounds[1], maxs );
-		
+		VectorCopy( model->bmodel->bounds[1], maxs );	
 		return;
-	} else if (model->type == MOD_MESH) {
-		md3Header_t	*header;
-		md3Frame_t	*frame;
+	}
+    else if (model->type == MOD_MESH)
+    {
+		md3Header_t* header = model->md3[0];
+		md3Frame_t* frame = (md3Frame_t *) ((unsigned char *)header + header->ofsFrames);
 
-		header = model->md3[0];
-		frame = (md3Frame_t *) ((byte *)header + header->ofsFrames);
+		VectorCopy( frame->bounds[0], mins );
+		VectorCopy( frame->bounds[1], maxs );
+		return;
+	}
+    else if (model->type == MOD_MDR)
+    {
+		mdrHeader_t* header = (mdrHeader_t *)model->modelData;
+		mdrFrame_t* frame = (mdrFrame_t *) ((unsigned char *)header + header->ofsFrames);
 
 		VectorCopy( frame->bounds[0], mins );
 		VectorCopy( frame->bounds[1], maxs );
 		
 		return;
-	} else if (model->type == MOD_MDR) {
-		mdrHeader_t	*header;
-		mdrFrame_t	*frame;
-
-		header = (mdrHeader_t *)model->modelData;
-		frame = (mdrFrame_t *) ((byte *)header + header->ofsFrames);
-
-		VectorCopy( frame->bounds[0], mins );
-		VectorCopy( frame->bounds[1], maxs );
-		
-		return;
-	} else if(model->type == MOD_IQM) {
-		iqmData_t *iqmData;
-		
-		iqmData = model->modelData;
+	}
+    else if(model->type == MOD_IQM)
+    {
+		iqmData_t* iqmData = model->modelData;
 
 		if(iqmData->bounds)
 		{

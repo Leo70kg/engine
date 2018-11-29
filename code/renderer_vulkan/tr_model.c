@@ -22,35 +22,34 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_models.c -- model loading and caching
 
 #include "tr_local.h"
+#include "tr_globals.h"
+
+#include "tr_model.h"
 
 
 
-model_t	*R_GetModelByHandle( qhandle_t index ) {
-	model_t		*mod;
-
-	// out of range gets the defualt model
-	if ( index < 1 || index >= tr.numModels ) {
+model_t* R_GetModelByHandle( qhandle_t index )
+{
+	if ( (index < 1) || (index >= tr.numModels) )
+    {
+        ri.Printf(PRINT_WARNING, " out of range gets the defualt model.\n");
 		return tr.models[0];
 	}
 
-	mod = tr.models[index];
-
-	return mod;
+	return tr.models[index];
 }
 
-//===============================================================================
 
-/*
-** R_AllocModel
-*/
-model_t *R_AllocModel( void ) {
-	model_t		*mod;
 
-	if ( tr.numModels == MAX_MOD_KNOWN ) {
+model_t* R_AllocModel( void )
+{
+	if ( tr.numModels == MAX_MOD_KNOWN )
+    {
+        ri.Printf(PRINT_WARNING, "R_AllocModel: MAX_MOD_KNOWN.\n");
 		return NULL;
 	}
 
-	mod = ri.Hunk_Alloc( sizeof( *tr.models[tr.numModels] ), h_low );
+	model_t* mod = ri.Hunk_Alloc( sizeof( model_t ), h_low );
 	mod->index = tr.numModels;
 	tr.models[tr.numModels] = mod;
 	tr.numModels++;
@@ -64,37 +63,32 @@ model_t *R_AllocModel( void ) {
 
 void R_ModelInit( void )
 {
-
     ri.Printf( PRINT_ALL, "R_ModelInit\n");
 
-
-	model_t		*mod;
-
 	// leave a space for NULL model
-	tr.numModels = 0;
+	model_t* mod = ri.Hunk_Alloc( sizeof( model_t ), h_low );
+	mod->index = tr.numModels = 0;
+    mod->type = MOD_BAD;
 
-	mod = R_AllocModel();
-	mod->type = MOD_BAD;
+	tr.models[tr.numModels] = mod;
+	tr.numModels++;
 }
 
 
-/*
-================
-R_Modellist_f
-================
-*/
-void R_Modellist_f( void ) {
-	int		i, j;
-	model_t	*mod;
-	int		total;
-	int		lods;
+void R_Modellist_f( void )
+{
+	int	i;
+	int	total = 0;
 
-	total = 0;
-	for ( i = 1 ; i < tr.numModels; i++ ) {
-		mod = tr.models[i];
-		lods = 1;
-		for ( j = 1 ; j < MD3_MAX_LODS ; j++ ) {
-			if ( mod->md3[j] && mod->md3[j] != mod->md3[j-1] ) {
+	for ( i = 1 ; i < tr.numModels; i++ )
+    {
+		model_t* mod = tr.models[i];
+		int lods = 1;
+        int j;
+		for ( j = 1 ; j < MD3_MAX_LODS ; j++ )
+        {
+			if ( mod->md3[j] && mod->md3[j] != mod->md3[j-1] )
+            {
 				lods++;
 			}
 		}
@@ -102,18 +96,4 @@ void R_Modellist_f( void ) {
 		total += mod->dataSize;
 	}
 	ri.Printf( PRINT_ALL, "%8i : Total models\n", total );
-
-#if	0		// not working right with new hunk
-	if ( tr.world ) {
-		ri.Printf( PRINT_ALL, "\n%8i : %s\n", tr.world->dataSize, tr.world->name );
-	}
-#endif
 }
-//=============================================================================
-
-
-
-
-
-
-

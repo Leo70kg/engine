@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vk_shade_geometry.h"
 
 #include "Vk_Instance.h"
+#include "tr_globals.h"
 
 
 #define SKY_SUBDIVISIONS		8
