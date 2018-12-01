@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define	LL(x) x=LittleLong(x)
 
 // 3x4 identity matrix
-static float identityMatrix[12] = {
+const static float identityMatrix[12] = {
 	1, 0, 0, 0,
 	0, 1, 0, 0,
 	0, 0, 1, 0
@@ -996,7 +996,8 @@ RB_AddIQMSurfaces
 Compute vertices for this model surface
 =================
 */
-void RB_IQMSurfaceAnim( surfaceType_t *surface ) {
+void RB_IQMSurfaceAnim( surfaceType_t *surface )
+{
 	srfIQModel_t	*surf = (srfIQModel_t *)surface;
 	iqmData_t	*data = surf->data;
 	float		jointMats[IQM_MAX_JOINTS * 12];
@@ -1012,8 +1013,8 @@ void RB_IQMSurfaceAnim( surfaceType_t *surface ) {
 	float	backlerp = backEnd.currentEntity->e.backlerp;
 
 	int		*tri;
-	glIndex_t	*ptr;
-	glIndex_t	base;
+	unsigned int* ptr;
+	unsigned int	base;
 
 	RB_CHECKOVERFLOW( surf->num_vertexes, surf->num_triangles * 3 );
 

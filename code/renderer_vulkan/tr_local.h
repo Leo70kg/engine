@@ -33,8 +33,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "VKimpl.h"
 
 
-
-
 // work around, will be removed
 
 #ifndef GL_REPEAT
@@ -53,9 +51,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define GL_ADD					0x0104
 #endif
 
-
-#define GL_INDEX_TYPE		GL_UNSIGNED_INT
-typedef unsigned int glIndex_t;
 
 
 // everything that is needed by the backend needs
@@ -913,11 +908,6 @@ int R_CullLocalPointAndRadius( vec3_t origin, float radius );
 
 void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, orientationr_t *or );
 
-/*
-** GL wrapper/helper functions
-*/
-void GL_Bind( image_t *image );
-void VK_TextureMode(void);
 
 #define GLS_SRCBLEND_ZERO						0x00000001
 #define GLS_SRCBLEND_ONE						0x00000002
@@ -1031,7 +1021,7 @@ typedef struct stageVars
 
 typedef struct shaderCommands_s 
 {
-	glIndex_t	indexes[SHADER_MAX_INDEXES];
+	unsigned int indexes[SHADER_MAX_INDEXES];
 	vec4_t		xyz[SHADER_MAX_VERTEXES];
 	vec4_t		normal[SHADER_MAX_VERTEXES];
 	vec2_t		texCoords[SHADER_MAX_VERTEXES][2];

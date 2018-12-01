@@ -1,18 +1,57 @@
 #include "qvk.h"
 #include "tr_local.h"
 #include "vk_clear_attachments.h"
-#include "vk_memory.h"
 #include "vk_frame.h"
 #include "Vk_Instance.h"
 
-/*
-    Fences are a synchronization primitive that can be used to insert a dependency
-    from a queue to the host. Fences have two states - signaled and unsignaled.
-    A fence can be signaled as part of the execution of a queue submission command. 
-    Fences can be unsignaled on the host with vkResetFences. Fences can be waited
-    on by the host with the vkWaitForFences command, and the current state can be
-    queried with vkGetFenceStatus.
-*/
+
+//  Synchronization of access to resources is primarily the responsibility
+//  of the application in Vulkan. The order of execution of commands with
+//  respect to the host and other commands on the device has few implicit
+//  guarantees, and needs to be explicitly specified. Memory caches and 
+//  other optimizations are also explicitly managed, requiring that the
+//  flow of data through the system is largely under application control.
+//  Whilst some implicit guarantees exist between commands, five explicit
+//  synchronization mechanisms are exposed by Vulkan:
+//
+//
+//                          Fences
+//
+//  Fences can be used to communicate to the host that execution of some 
+//  task on the device has completed. 
+//
+//  Fences are a synchronization primitive that can be used to insert a dependency
+//  from a queue to the host. Fences have two states - signaled and unsignaled.
+//  A fence can be signaled as part of the execution of a queue submission command. 
+//  Fences can be unsignaled on the host with vkResetFences. Fences can be waited
+//  on by the host with the vkWaitForFences command, and the current state can be
+//  queried with vkGetFenceStatus.
+//
+//
+//                          Semaphores
+//
+//  Semaphores can be used to control resource access across multiple queues.
+//
+//                          Events
+//
+//  Events provide a fine-grained synchronization primitive which can be
+//  signaled either within a command buffer or by the host, and can be 
+//  waited upon within a command buffer or queried on the host.
+//
+//                          Pipeline Barriers
+//
+//  Pipeline barriers also provide synchronization control within a command buffer,
+//  but at a single point, rather than with separate signal and wait operations.
+//
+//                          Render Passes
+//
+//  Render passes provide a useful synchronization framework for most rendering tasks,
+//  built upon the concepts in this chapter. Many cases that would otherwise need an
+//  application to use other synchronization primitives can be expressed more 
+//  efficiently as part of a render pass.
+//
+//
+
 
 
 VkSemaphore image_acquired;
@@ -35,7 +74,12 @@ VkFence rendering_finished_fence;
    application to generate command buffers referencing all of the images in
    the swapchain at initialization time, rather than in its main loop.
 
-   
+   Host access to fence must be externally synchronized.
+
+   When a fence is submitted to a queue as part of a queue submission command, 
+   it defines a memory dependency on the batches that were submitted as part
+   of that command, and defines a fence signal operation which sets the fence
+   to the signaled state.
 */
 
 void vk_create_sync_primitives(void)
@@ -45,6 +89,10 @@ void vk_create_sync_primitives(void)
     desc.pNext = NULL;
     desc.flags = 0;
 
+    // vk.device is the logical device that creates the semaphore.
+    // &desc is a pointer to an instance of the VkSemaphoreCreateInfo structure
+    // which contains information about how the semaphore is to be created.
+    // When created, the semaphore is in the unsignaled state.
     VK_CHECK(qvkCreateSemaphore(vk.device, &desc, NULL, &image_acquired));
     VK_CHECK(qvkCreateSemaphore(vk.device, &desc, NULL, &rendering_finished));
 
@@ -79,6 +127,9 @@ void vk_destroy_sync_primitives(void)
 {
 	qvkDestroySemaphore(vk.device, image_acquired, NULL);
 	qvkDestroySemaphore(vk.device, rendering_finished, NULL);
+
+    // To destroy a fence, 
+    // rendering_finished_fence is the handle of the fence to destroy.
 	qvkDestroyFence(vk.device, rendering_finished_fence, NULL);
 }
 
@@ -105,27 +156,114 @@ void vk_begin_frame(void)
     synchronization. Due to those costs, fences should be used sparingly. 
     In particular, try to group per-frame resources and track them together
 */
-	VK_CHECK(qvkWaitForFences(vk.device, 1, &rendering_finished_fence,
-                VK_FALSE, 1e9));
-    
+
+/*
+    To wait for one or more fences to enter the signaled state on the host,
+    call qvkWaitForFences.
+
+    If the condition is satisfied when vkWaitForFences is called, 
+    then vkWaitForFences returns immediately. If the condition is
+    not satisfied at the time vkWaitForFences is called, then
+    vkWaitForFences will block and wait up to timeout nanoseconds
+    for the condition to become satisfied.
+*/
+	VK_CHECK(qvkWaitForFences(vk.device, 1, &rendering_finished_fence, VK_FALSE, 1e8));
+   
+    // To set the state of fences to unsignaled from the host
+    // 1 is the number of fences to reset.
+    //rendering_finished_fence is a pointer to an array of fence handles to reset.
 	VK_CHECK(qvkResetFences(vk.device, 1, &rendering_finished_fence));
 
+    // commandBuffer must not be in the recording or pending state.
+    // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT specifies that
+    // each recording of the command buffer will only be submitted once,
+    // and the command buffer will be reset and recorded again between each submission.
+    
 	VkCommandBufferBeginInfo begin_info;
 	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	begin_info.pNext = NULL;
 	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	begin_info.pInheritanceInfo = NULL;
 
+    // To begin recording a command buffer
+    // begin_info is an instance of the VkCommandBufferBeginInfo structure,
+    // which defines additional information about how the command buffer begins recording.
 	VK_CHECK(qvkBeginCommandBuffer(vk.command_buffer, &begin_info));
 
 	// Ensure visibility of geometry buffers writes.
-	record_buffer_memory_barrier(vk.command_buffer, vk.vertex_buffer,
-		VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-		VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
 
-	record_buffer_memory_barrier(vk.command_buffer, vk.index_buffer,
-		VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-		VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_INDEX_READ_BIT);
+
+{
+
+	VkBufferMemoryBarrier barrier;
+	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	barrier.pNext = NULL;
+	barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.buffer = vk.index_buffer;
+	barrier.offset = 0;
+	barrier.size = VK_WHOLE_SIZE;
+
+    // vkCmdPipelineBarrier is a synchronization command that inserts a dependency
+    // between commands submitted to the same queue, or between commands in the 
+    // same subpass. When vkCmdPipelineBarrier is submitted to a queue, it defines
+    // a memory dependency between commands that were submitted before it, and 
+    // those submitted after it.
+    //
+    // If vkCmdPipelineBarrier was recorded outside a render pass instance, 
+    // the first synchronization scope includes all commands that occur earlier
+    // in submission order. 
+    //
+    // If vkCmdPipelineBarrier was recorded inside a render pass instance, 
+    // the first synchronization scope includes only commands that occur
+    // earlier in submission order within the same subpass. In either case,
+    // the first synchronization scope is limited to operations on the pipeline
+    // stages determined by the source stage mask specified by srcStageMask.
+    //
+    // If vkCmdPipelineBarrier was recorded outside a render pass instance, 
+    // the second synchronization scope includes all commands that occur later
+    // in submission order. If vkCmdPipelineBarrier was recorded inside a 
+    // render pass instance, the second synchronization scope includes only
+    // commands that occur later in submission order within the same subpass.
+    // In either case, the second synchronization scope is limited to operations
+    // on the pipeline stages determined by the destination stage mask specified
+    // by dstStageMask.
+    //
+    // The first access scope is limited to access in the pipeline stages
+    // determined by the source stage mask specified by srcStageMask. 
+    // Within that, the first access scope only includes the first access
+    // scopes defined by elements of the pMemoryBarriers, pBufferMemoryBarriers
+    // and pImageMemoryBarriers arrays, which each define a set of memory barriers.
+    // If no memory barriers are specified, then the first access scope includes
+    // no accesses.
+    //
+    // The second access scope is limited to access in the pipeline stages
+    // determined by the destination stage mask specified by dstStageMask.
+    // Within that, the second access scope only includes the second
+    // access scopes defined by elements of the pMemoryBarriers,
+    // pBufferMemoryBarriers and pImageMemoryBarriers arrays, 
+    // which each define a set of memory barriers. If no memory barriers
+    // are specified, then the second access scope includes no accesses.
+    //
+    // If dependencyFlags includes VK_DEPENDENCY_BY_REGION_BIT,
+    // then any dependency framebuffer-space pipeline stages is 
+    // framebuffer-local - otherwise it is framebuffer-global.
+
+    //To record a pipeline barrier
+    
+    // VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT specifies read access to a vertex buffer
+    // as part of a drawing command, bound by vkCmdBindVertexBuffers.
+	barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+	qvkCmdPipelineBarrier(vk.command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, NULL, 1, &barrier, 0, NULL);
+
+    // VK_ACCESS_INDEX_READ_BIT specifies read access to an index buffer 
+    // as part of an indexed drawing command, bound by vkCmdBindIndexBuffer.
+    barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
+    qvkCmdPipelineBarrier(vk.command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, NULL, 1, &barrier, 0, NULL);
+
+}
+
 
 	// Begin render pass.
 	VkClearValue clear_values[2];
@@ -176,11 +314,49 @@ void vk_end_frame(void)
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores = &rendering_finished;
 
-
+//  To submit command buffers to a queue
+//  queue is the queue that the command buffers will be submitted to.
+//  1 is the number of elements in the pSubmits array.
+//  pSubmits is a pointer to an array of VkSubmitInfo structures,
+//  each specifying a command buffer submission batch.
+//
+//  rendering_finished_fence is an optional handle to a fence to be signaled 
+//  once all submitted command buffers have completed execution. 
+//  If fence is not VK_NULL_HANDLE, it defines a fence signal operation.
+//
+//  Submission can be a high overhead operation, and applications should 
+//  attempt to batch work together into as few calls to vkQueueSubmit as possible.
+//
+//  vkQueueSubmit is a queue submission command, with each batch defined
+//  by an element of pSubmits as an instance of the VkSubmitInfo structure.
+//  Batches begin execution in the order they appear in pSubmits, but may
+//  complete out of order.
+//
+//  Fence and semaphore operations submitted with vkQueueSubmit 
+//  have additional ordering constraints compared to other 
+//  submission commands, with dependencies involving previous and
+//  subsequent queue operations. 
+//
+//  The order that batches appear in pSubmits is used to determine
+//  submission order, and thus all the implicit ordering guarantees
+//  that respect it. Other than these implicit ordering guarantees
+//  and any explicit synchronization primitives, these batches may
+//  overlap or otherwise execute out of order. If any command buffer
+//  submitted to this queue is in the executable state, it is moved
+//  to the pending state. Once execution of all submissions of a 
+//  command buffer complete, it moves from the pending state,
+//  back to the executable state.
+//
+//  If a command buffer was recorded with the 
+//  VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT flag,
+//  it instead moves back to the invalid state.
+    
     VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, rendering_finished_fence));
 
 
-//	VK_CHECK(qvkQueuePresentKHR(vk.queue, &present_info));   
+//  After queueing all rendering commands and transitioning the image
+//  to the correct layout, to queue an image for presentation
+
 
     VkPresentInfoKHR present_info;
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -197,9 +373,6 @@ void vk_end_frame(void)
     // for which presentation is supported from queue as
     // determined using a call to vkGetPhysicalDeviceSurfaceSupportKHR
 
-
-    // After queueing all rendering commands and transitioning the image
-    // to the correct layout, to queue an image for presentation
 
     // queue is a queue that is capable of presentation to the target 
     // surface¡¯s platform on the same device as the image¡¯s swapchain.

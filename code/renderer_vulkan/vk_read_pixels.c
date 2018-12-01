@@ -1,8 +1,11 @@
 #include "tr_local.h"
-#include "vk_memory.h"
+#include "qvk.h"
+
 #include "vk_read_pixels.h"
 #include "Vk_Instance.h"
+#include "vk_image.h"
 
+extern glconfig_t	glConfig;
 
 void record_image_layout_transition( 
         VkCommandBuffer command_buffer,

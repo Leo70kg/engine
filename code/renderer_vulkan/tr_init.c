@@ -218,19 +218,17 @@ void vulkanInfo_f( void )
 
 }
 
-/*
-** This function is responsible for initializing a valid OpenGL/Vulkan subsystem.
-*/
+
 static void InitRenderAPI( void )
 {
 	//
 	// initialize OS specific portions of the renderer
 	//
-	// GLimp_Init directly or indirectly references the following cvars:
+    // This function is responsible for initializing a valid Vulkan subsystem.
+
 
 	if ( glConfig.vidWidth == 0 )
 	{
-
         // VULKAN
 			
         VKimp_Init(); // create VK window
@@ -375,7 +373,6 @@ Touch all images to make sure they are resident
 void RE_EndRegistration( void )
 {
 	R_SyncRenderThread();
-
 }
 
 void R_Init( void )

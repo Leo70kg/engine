@@ -1,7 +1,6 @@
 #include "qvk.h"
 #include "tr_local.h"
 #include "image_sampler.h"
-#include "vk_memory.h"
 #include "R_LightScaleTexture.h"
 #include "vk_image.h"
 #include "Vk_Instance.h"
@@ -293,6 +292,23 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 }
 
 
+unsigned int find_memory_type(VkPhysicalDevice physical_device, unsigned int memory_type_bits, VkMemoryPropertyFlags properties)
+{
+	VkPhysicalDeviceMemoryProperties memory_properties;
+	qvkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
+    unsigned int i;
+	for (i = 0; i < memory_properties.memoryTypeCount; i++)
+    {
+		if ( ((memory_type_bits & (1 << i)) != 0) && (memory_properties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+			return i;
+		}
+	}
+
+	ri.Error(ERR_FATAL, "Vulkan: failed to find matching memory type with requested properties");
+	return -1;
+}
+
 
 static void ensure_staging_buffer_allocation(VkDeviceSize size, const unsigned char* pPix)
 {
@@ -419,9 +435,21 @@ static void vk_upload_image_data(VkImage image, int width, int height,
     //// recorder(command_buffer);
     //// recorder = [&image, &num_regions, &regions](VkCommandBuffer command_buffer)
 
-    record_buffer_memory_barrier(command_buffer, s_StagingBuffer,
-            VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+	VkBufferMemoryBarrier barrier;
+	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	barrier.pNext = NULL;
+	barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.buffer = s_StagingBuffer;
+	barrier.offset = 0;
+	barrier.size = VK_WHOLE_SIZE;
+    
+	qvkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 1, &barrier, 0, NULL);
+
+
 
     record_image_layout_transition(command_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
             0, VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -499,12 +527,12 @@ void qDestroyImage(void)
 
 
 #define FILE_HASH_SIZE	1024
-static	image_t*		hashTable[FILE_HASH_SIZE];
+static image_t*	hashTable[FILE_HASH_SIZE];
 
 
 static int generateHashValue( const char *fname )
 {
-	int		i = 0;
+	int	i = 0;
 	int	hash = 0;
 
 	while (fname[i] != '\0') {

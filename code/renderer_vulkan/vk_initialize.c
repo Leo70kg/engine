@@ -2,7 +2,7 @@
 #include "tr_local.h"
 
 #include "vk_initialize.h"
-#include "vk_memory.h"
+
 #include "vk_image.h"
 
 #include "Vk_Instance.h"
