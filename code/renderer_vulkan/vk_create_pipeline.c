@@ -1,6 +1,6 @@
 #include "qvk.h"
 #include "tr_local.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
 #include "vk_create_pipeline.h"
 
 /*

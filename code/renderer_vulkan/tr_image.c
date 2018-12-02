@@ -62,11 +62,7 @@ static void R_CreateDlightImage( void )
 }
 
 
-/*
-=================
-R_InitFogTable
-=================
-*/
+
 void R_InitFogTable( void )
 {
 	int		i;

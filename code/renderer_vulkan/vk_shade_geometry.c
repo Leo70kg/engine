@@ -3,11 +3,13 @@
 #include "vk_clear_attachments.h"
 
 #include "vk_shade_geometry.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
 
 #include "mvp_matrix.h"
 #include "vk_image.h"
 #include "tr_globals.h"
+#include "tr_cvar.h"
+
 
 static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 {
@@ -198,9 +200,9 @@ void vk_bind_geometry(void)
 	//
 	// Specify push constants.
 	// 32 * 4 = 128 BYTES
-	float push_constants[16 + 12 + 4]; // mvp transform + eye transform + clipping plane in eye space
+	float push_constants[16 + 12 + 4] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
 
-	get_mvp_transform(push_constants);
+	get_mvp_transform(push_constants, backEnd.projection2D);
 	int push_constants_size = 64;
     int i = 0 ;
 

@@ -24,11 +24,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "mvp_matrix.h"
 #include "tr_globals.h"
-
+#include "tr_cvar.h"
 
 #include "vk_shade_geometry.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
 #include "vk_image.h"
+#include "../renderercommon/matrix_multiplication.h"
 
 
 static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,
@@ -37,7 +38,7 @@ static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, 
 
 trGlobals_t		tr;
 
-static float	s_flipMatrix[16] = {
+const static float s_flipMatrix[16] QALIGN(16) = {
 	// convert from our coordinate system (looking down X)
 	// to OpenGL's coordinate system (looking down -Z)
 	0, 0, -1, 0,
@@ -225,32 +226,7 @@ static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, 
 	}
 }
 
-/*
-==========================
-myGlMultMatrix
 
-==========================
-*/
-//
-// NOTE; out = b * a,
-// a, b and c are specified in column-major order
-//
-void myGlMultMatrix( const float *a, const float *b, float *out )
-{
-	int	i, j;
-
-	for ( i = 0 ; i < 4 ; i++ )
-    {
-		for ( j = 0 ; j < 4 ; j++ )
-        {
-			out[ i * 4 + j ] =
-				  a [ i * 4 + 0 ] * b [ 0 * 4 + j ]
-				+ a [ i * 4 + 1 ] * b [ 1 * 4 + j ]
-				+ a [ i * 4 + 2 ] * b [ 2 * 4 + j ]
-				+ a [ i * 4 + 3 ] * b [ 3 * 4 + j ];
-		}
-	}
-}
 
 /*
 =================
@@ -263,7 +239,7 @@ Called by both the front end and the back end
 */
 void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
 					   orientationr_t *or ) {
-	float	glMatrix[16];
+	float	glMatrix[16] QALIGN(16);
 	vec3_t	delta;
 	float	axisLength;
 
@@ -298,7 +274,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
 	glMatrix[11] = 0;
 	glMatrix[15] = 1;
 
-	myGlMultMatrix( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
+	MatrixMultiply4x4_SSE( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
 
 	// calculate the viewer origin in the model's space
 	// needed for fog, specular, and environment mapping
@@ -330,7 +306,7 @@ Sets up the modelview matrix for a given viewParm
 */
 void R_RotateForViewer (void) 
 {
-	float	viewerMatrix[16];
+	float	viewerMatrix[16] QALIGN(16);
 	vec3_t	origin;
 
 	memset (&tr.or, 0, sizeof(tr.or));
@@ -364,7 +340,7 @@ void R_RotateForViewer (void)
 
 	// convert from our coordinate system (looking down X)
 	// to OpenGL's coordinate system (looking down -Z)
-	myGlMultMatrix( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
+	MatrixMultiply4x4_SSE( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
 
 	tr.viewParms.world = tr.or;
 

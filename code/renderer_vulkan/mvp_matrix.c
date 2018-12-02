@@ -1,7 +1,10 @@
-#include "tr_local.h"
 #include "mvp_matrix.h"
+#include "tr_cvar.h"
+#include "tr_globals.h"
+#include "../renderercommon/matrix_multiplication.h"
 
-static float s_modelview_matrix[16] = { 0 };
+
+static float s_modelview_matrix[16] QALIGN(16);
 
 void set_modelview_matrix(float mv[16])
 {
@@ -20,9 +23,9 @@ void reset_modelview_matrix(void)
 }
 
 
-void get_mvp_transform(float* mvp)
+void get_mvp_transform(float* mvp, int isProj2D)
 {
-	if (backEnd.projection2D)
+	if (isProj2D)
     {
 		float mvp0 = 2.0f / glConfig.vidWidth;
 		float mvp5 = 2.0f / glConfig.vidHeight;
@@ -34,14 +37,16 @@ void get_mvp_transform(float* mvp)
 	}
     else
     {
-		const float* p = backEnd.viewParms.projectionMatrix;
+//		const float* p = backEnd.viewParms.projectionMatrix;
 
 		// update q3's proj matrix (opengl) to vulkan conventions: z - [0, 1] instead of [-1, 1] and invert y direction
 		float zNear	= r_znear->value;
 		float zFar = backEnd.viewParms.zFar;
-		float P10 = -zFar / (zFar - zNear);
+/*	
+        float P10 = -zFar / (zFar - zNear);
 		float P14 = -zFar*zNear / (zFar - zNear);
-		float P5 = -p[5];
+
+        float P5 = -p[5];
 
 		float proj[16] =
         {
@@ -50,7 +55,15 @@ void get_mvp_transform(float* mvp)
 			p[8],  p[9],  P10,  p[11],
 			p[12], p[13], P14,  p[15]
 		};
+*/
 
-		myGlMultMatrix(s_modelview_matrix, proj, mvp);
+////
+        float proj[16];
+        memcpy(proj, backEnd.viewParms.projectionMatrix, 64);
+        proj[5] = -proj[5];
+        proj[10] = zFar / (zNear - zFar);
+        proj[14] = proj[10] * zNear;
+////
+		MatrixMultiply4x4_SSE(s_modelview_matrix, proj, mvp);
 	}
 }

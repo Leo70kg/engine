@@ -1,9 +1,9 @@
 #include "qvk.h"
 #include "tr_local.h"
-#include "image_sampler.h"
+#include "vk_image_sampler.h"
 #include "R_LightScaleTexture.h"
 #include "vk_image.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
 #include "tr_globals.h"
 
 //

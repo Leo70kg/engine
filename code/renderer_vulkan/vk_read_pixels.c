@@ -2,7 +2,7 @@
 #include "qvk.h"
 
 #include "vk_read_pixels.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
 #include "vk_image.h"
 
 extern glconfig_t	glConfig;

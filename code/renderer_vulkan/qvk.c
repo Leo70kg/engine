@@ -5,8 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "tr_local.h" //extern refimport_t ri; 
-#include "Vk_Instance.h"
+
+#include "vk_instance.h"
 
 
 

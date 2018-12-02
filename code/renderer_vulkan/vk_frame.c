@@ -2,8 +2,8 @@
 #include "tr_local.h"
 #include "vk_clear_attachments.h"
 #include "vk_frame.h"
-#include "Vk_Instance.h"
-
+#include "vk_instance.h"
+#include "tr_cvar.h"
 
 //  Synchronization of access to resources is primarily the responsibility
 //  of the application in Vulkan. The order of execution of commands with

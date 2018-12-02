@@ -1,6 +1,6 @@
-#include "tr_local.h"
+#include "ref_import.h"
 #include "qvk.h"
-#include "image_sampler.h"
+#include "vk_image_sampler.h"
 
 
 typedef struct {

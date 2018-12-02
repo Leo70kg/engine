@@ -53,11 +53,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 
-// everything that is needed by the backend needs
-// to be double buffered to allow it to run in
-// parallel on a dual cpu machine
-#define	SMP_FRAMES		2
-
 // 12 bits
 // see QSORT_SHADERNUM_SHIFT
 #define	MAX_SHADERS				16384
@@ -91,10 +86,10 @@ typedef struct {
 
 
 typedef struct {
-	vec3_t		origin;			// in world coordinates
+	float		modelMatrix[16] QALIGN(16);
 	vec3_t		axis[3];		// orientation in world
+    vec3_t		origin;			// in world coordinates
 	vec3_t		viewOrigin;		// viewParms->or.origin in local coordinates
-	float		modelMatrix[16];
 } orientationr_t;
 
 //===============================================================================
@@ -469,7 +464,7 @@ typedef struct {
 	cplane_t	portalPlane;		// clip anything behind this if mirroring
 	int			viewportX, viewportY, viewportWidth, viewportHeight;
 	float		fovX, fovY;
-	float		projectionMatrix[16];
+	float		projectionMatrix[16] QALIGN(16);
 	cplane_t	frustum[4];
 	vec3_t		visBounds[2];
 	float		zFar;
@@ -535,7 +530,7 @@ typedef struct srfGridMesh_s {
 	surfaceType_t	surfaceType;
 
 	// dynamic lighting information
-	int				dlightBits[SMP_FRAMES];
+	int				dlightBits;
 
 	// culling information
 	vec3_t			meshBounds[2];
@@ -565,7 +560,7 @@ typedef struct {
 	cplane_t	plane;
 
 	// dynamic lighting information
-	int			dlightBits[SMP_FRAMES];
+	int			dlightBits;
 
 	// triangle definitions (no normals at points)
 	int			numPoints;
@@ -581,7 +576,7 @@ typedef struct {
 	surfaceType_t	surfaceType;
 
 	// dynamic lighting information
-	int				dlightBits[SMP_FRAMES];
+	int				dlightBits;
 
 	// culling information (FIXME: use this!)
 	vec3_t			bounds[2];
@@ -765,118 +760,10 @@ typedef struct {
 	int		msec;			// total msec for backend run
 } backEndCounters_t;
 
-// all state modified by the back end is seperated
-// from the front end state
-typedef struct {
-	int			smpFrame;
-	trRefdef_t	refdef;
-	viewParms_t	viewParms;
-	orientationr_t	or;
-	backEndCounters_t	pc;
-	qboolean	isHyperspace;
-	trRefEntity_t	*currentEntity;
-
-	qboolean	projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
-	byte		color2D[4];
-	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
-} backEndState_t;
 
 
 
 
-
-//
-// cvars
-//
-
-
-extern cvar_t	*r_railWidth;
-extern cvar_t	*r_railCoreWidth;
-extern cvar_t	*r_railSegmentLength;
-
-extern cvar_t	*r_verbose;				// used for verbose debug spew
-
-extern cvar_t	*r_znear;				// near Z clip plane
-
-
-extern cvar_t	*r_depthbits;			// number of desired depth bits
-
-
-extern cvar_t	*r_lodbias;				// push/pull LOD transitions
-extern cvar_t	*r_lodscale;
-
-extern cvar_t	*r_inGameVideo;				// controls whether in game video should be draw
-extern cvar_t	*r_fastsky;				// controls whether sky should be cleared or drawn
-extern cvar_t	*r_dynamiclight;		// dynamic lights enabled/disabled
-
-extern	cvar_t	*r_norefresh;			// bypasses the ref rendering
-extern	cvar_t	*r_drawentities;		// disable/enable entity rendering
-extern	cvar_t	*r_drawworld;			// disable/enable world rendering
-extern	cvar_t	*r_speeds;				// various levels of information display
-
-extern	cvar_t	*r_novis;				// disable/enable usage of PVS
-extern	cvar_t	*r_nocull;
-extern	cvar_t	*r_facePlaneCull;		// enables culling of planar surfaces with back side test
-extern	cvar_t	*r_nocurves;
-extern	cvar_t	*r_showcluster;
-
-extern cvar_t	*r_mode;				// video mode
-extern cvar_t	*r_fullscreen;
-extern cvar_t	*r_gamma;
-extern cvar_t	*r_ignorehwgamma;		// overrides hardware gamma capabilities
-
-extern cvar_t	*r_ext_compressed_textures;		// these control use of specific extensions
-extern cvar_t	*r_ext_gamma_control;
-extern cvar_t	*r_ext_texenv_op;
-extern cvar_t	*r_ext_compiled_vertex_array;
-extern cvar_t	*r_ext_texture_env_add;
-
-
-extern	cvar_t	*r_singleShader;				// make most world faces use default shader
-extern	cvar_t	*r_roundImagesDown;
-extern	cvar_t	*r_colorMipLevels;				// development aid to see texture mip usage
-extern	cvar_t	*r_picmip;						// controls picmip values
-extern	cvar_t	*r_offsetFactor;
-extern	cvar_t	*r_offsetUnits;
-
-extern	cvar_t	*r_fullbright;					// avoid lightmap pass
-extern	cvar_t	*r_lightmap;					// render lightmaps only
-extern	cvar_t	*r_vertexLight;					// vertex lighting mode for better performance
-extern	cvar_t	*r_uiFullScreen;				// ui is running fullscreen
-
-extern	cvar_t	*r_logFile;						// number of frames to emit GL logs
-extern	cvar_t	*r_showtris;					// enables wireframe rendering of the world
-extern	cvar_t	*r_showsky;						// forces sky in front of all surfaces
-extern	cvar_t	*r_shownormals;					// draws wireframe normals
-extern	cvar_t	*r_clear;						// force screen clear every frame
-
-extern	cvar_t	*r_shadows;						// controls shadows: 0 = none, 1 = blur, 2 = stencil, 3 = black planar projection
-
-extern	cvar_t	*r_intensity;
-
-extern	cvar_t	*r_lockpvs;
-extern	cvar_t	*r_noportals;
-extern	cvar_t	*r_portalOnly;
-
-extern	cvar_t	*r_subdivisions;
-extern	cvar_t	*r_lodCurveError;
-extern	cvar_t	*r_skipBackEnd;
-
-extern	cvar_t	*r_ignoreGLErrors;
-
-extern	cvar_t	*r_overBrightBits;
-extern	cvar_t	*r_mapOverBrightBits;
-
-extern	cvar_t	*r_debugSurface;
-extern	cvar_t	*r_simpleMipMaps;
-
-extern	cvar_t	*r_showImages;
-extern	cvar_t	*r_debugSort;
-
-extern	cvar_t	*r_printShaders;
-extern	cvar_t	*r_saveFontData;
-
-//====================================================================
 
 float R_NoiseGet4f( float x, float y, float z, float t );
 void  R_NoiseInit( void );
@@ -918,7 +805,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 #define GLS_SRCBLEND_DST_ALPHA					0x00000007
 #define GLS_SRCBLEND_ONE_MINUS_DST_ALPHA		0x00000008
 #define GLS_SRCBLEND_ALPHA_SATURATE				0x00000009
-#define		GLS_SRCBLEND_BITS					0x0000000f
+#define	GLS_SRCBLEND_BITS		    			0x0000000f
 
 #define GLS_DSTBLEND_ZERO						0x00000010
 #define GLS_DSTBLEND_ONE						0x00000020
@@ -928,7 +815,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 #define GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA		0x00000060
 #define GLS_DSTBLEND_DST_ALPHA					0x00000070
 #define GLS_DSTBLEND_ONE_MINUS_DST_ALPHA		0x00000080
-#define		GLS_DSTBLEND_BITS					0x000000f0
+#define	GLS_DSTBLEND_BITS					    0x000000f0
 
 #define GLS_DEPTHMASK_TRUE						0x00000100
 
@@ -940,17 +827,17 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 #define GLS_ATEST_GT_0							0x10000000
 #define GLS_ATEST_LT_80							0x20000000
 #define GLS_ATEST_GE_80							0x40000000
-#define		GLS_ATEST_BITS						0x70000000
+#define	GLS_ATEST_BITS					    	0x70000000
 
 #define GLS_DEFAULT			GLS_DEPTHMASK_TRUE
 
 void	RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
 void	RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
 
-void		RE_BeginFrame( void );
-void		RE_BeginRegistration( glconfig_t *glconfig );
-void		RE_LoadWorldMap( const char *mapname );
-void		RE_SetWorldVisData( const byte *vis );
+void	RE_BeginFrame( void );
+void	RE_BeginRegistration( glconfig_t *glconfig );
+void	RE_LoadWorldMap( const char *mapname );
+void	RE_SetWorldVisData( const byte *vis );
 
 qhandle_t	RE_RegisterSkin( const char *name );
 void		RE_Shutdown( qboolean destroyWindow );
@@ -958,10 +845,7 @@ void		RE_Shutdown( qboolean destroyWindow );
 qboolean	R_GetEntityToken( char *buffer, int size );
 
 
-
-void    	R_Init( void );
-
-
+void    R_InitScene(void);
 
 
 
@@ -1263,28 +1147,12 @@ typedef enum {
 	RC_DRAW_SURFS,
 	RC_DRAW_BUFFER,
 	RC_SWAP_BUFFERS,
-	RC_SCREENSHOT
+	RC_SCREENSHOT,
+    RC_VIDEOFRAME
 } renderCommand_t;
 
 
-// these are sort of arbitrary limits.
-// the limits apply to the sum of all scenes in a frame --
-// the main view, all the 3D icons, etc
-#define	MAX_POLYS		600
-#define	MAX_POLYVERTS	3000
 
-// all of the information needed by the back end must be
-// contained in a backEndData_t.  This entire structure is
-// duplicated so the front and back end can run in parallel
-// on an SMP machine
-typedef struct {
-	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
-	dlight_t	dlights[MAX_DLIGHTS];
-	trRefEntity_t	entities[MAX_REFENTITIES];
-	srfPoly_t	*polys;//[MAX_POLYS];
-	polyVert_t	*polyVerts;//[MAX_POLYVERTS];
-	renderCommandList_t	commands;
-} backEndData_t;
 
 
 /*
@@ -1299,8 +1167,6 @@ RENDERER BACK END FUNCTIONS
 void *R_GetCommandBuffer( int bytes );
 void RB_ExecuteRenderCommands( const void *data );
 
-void R_InitCommandBuffers( void );
-void R_ShutdownCommandBuffers( void );
 
 void R_SyncRenderThread( void );
 
@@ -1319,15 +1185,11 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
 
 
-extern	refimport_t		ri;
 extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
 
 
-extern backEndState_t	backEnd;
+extern shaderCommands_t	tess;
 
-extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
-extern	shaderCommands_t	tess;
-extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allocated
 
 
 

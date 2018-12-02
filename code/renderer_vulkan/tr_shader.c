@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vk_image.h"
 #include "vk_create_pipeline.h"
 #include "tr_globals.h"
-
+#include "tr_cvar.h"
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
 
@@ -1977,7 +1977,7 @@ sortedIndex.
 */
 static void FixRenderCommandList( int newShader )
 {
-	renderCommandList_t	*cmdList = &backEndData[tr.smpFrame]->commands;
+	renderCommandList_t	*cmdList = &backEndData->commands;
 
 	if( cmdList ) {
 		const void *curCmd = cmdList->cmds;

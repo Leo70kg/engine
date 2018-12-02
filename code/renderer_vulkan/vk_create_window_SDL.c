@@ -23,9 +23,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "sdl_icon.h"
 #include "qvk.h"
 #include "VKimpl.h"
-#include "tr_local.h"
+
 #include "tr_displayResolution.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
+#include "tr_cvar.h"
+
+#include "tr_globals.h" // glConfig
+
 
 #ifdef _WIN32
 	#include "../SDL2/include/SDL.h"
@@ -46,10 +50,9 @@ static cvar_t* r_allowResize; // make window resizable
 static cvar_t* r_displayRefresh;
 
 // not used cvar, keep it for backward compatibility
-static cvar_t *r_sdlDriver;
+static cvar_t* r_sdlDriver;
 static cvar_t* r_displayIndex;
 
-cvar_t	*r_fullscreen;
 
 
 static void VKimp_DetectAvailableModes(void)

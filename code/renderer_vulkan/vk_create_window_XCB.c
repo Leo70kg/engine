@@ -9,7 +9,7 @@
 
 #include "tr_local.h"
 #include "qvk.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
 #include "tr_displayResolution.h"
 
 

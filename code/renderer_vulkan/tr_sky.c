@@ -24,9 +24,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "mvp_matrix.h"
 #include "vk_shade_geometry.h"
 
-#include "Vk_Instance.h"
+#include "vk_instance.h"
 #include "tr_globals.h"
 #include "vk_image.h"
+#include "tr_cvar.h"
+#include "../renderercommon/matrix_multiplication.h"
 
 #define SKY_SUBDIVISIONS		8
 #define HALF_SKY_SUBDIVISIONS	(SKY_SUBDIVISIONS/2)
@@ -689,7 +691,8 @@ All of the visible sky triangles are in tess
 Other things could be stuck in here, like birds in the sky, etc
 ================
 */
-void RB_StageIteratorSky( void ) {
+void RB_StageIteratorSky( void )
+{
 	// go through all the polygons and project them onto
 	// the sky box to see which blocks on each side need
 	// to be drawn
@@ -701,11 +704,11 @@ void RB_StageIteratorSky( void ) {
 	// draw the outer skybox
 	if ( tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage )
     {
-        float modelMatrix_original[16];
+        float modelMatrix_original[16] QALIGN(16);
         //memcpy(modelMatrix_original, vk_world.modelview_transform, sizeof(float[16]));
         get_modelview_matrix(modelMatrix_original);
         
-        float skybox_translate[16] = {
+        float skybox_translate[16] QALIGN(16) = {
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
@@ -713,8 +716,8 @@ void RB_StageIteratorSky( void ) {
         };
 
         {
-            float tmp[16];
-            myGlMultMatrix(skybox_translate, modelMatrix_original, tmp);
+            float tmp[16] QALIGN(16);
+            MatrixMultiply4x4_SSE(skybox_translate, modelMatrix_original, tmp);
             set_modelview_matrix(tmp);
         }
 		

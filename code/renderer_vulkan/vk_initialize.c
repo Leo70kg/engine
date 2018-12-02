@@ -5,7 +5,7 @@
 
 #include "vk_image.h"
 
-#include "Vk_Instance.h"
+#include "vk_instance.h"
 #include "vk_shade_geometry.h"
 #include "vk_create_pipeline.h"
 #include "vk_frame.h"

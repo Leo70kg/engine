@@ -32,9 +32,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "RB_TakeScreenshot.h"
 
 #include "vk_shade_geometry.h"
-
-backEndData_t	*backEndData[SMP_FRAMES];
-backEndState_t	backEnd;
+#include "tr_cvar.h"
 
 
 
@@ -490,8 +488,6 @@ void RB_ExecuteRenderCommands( const void *data ) {
 
 	t1 = ri.Milliseconds ();
 
-
-	backEnd.smpFrame = 0;
 
 	while ( 1 ) {
 		switch ( *(const int *)data ) {

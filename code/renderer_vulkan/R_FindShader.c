@@ -2,6 +2,9 @@
 #include "tr_globals.h"
 #include "fun_log.h"
 #include "vk_image.h"
+#include "tr_cvar.h"
+
+
 
 #define MAX_SHADERTEXT_HASH		2048
 static char** shaderTextHashTable[MAX_SHADERTEXT_HASH] ={ 0 };

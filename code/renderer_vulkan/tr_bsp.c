@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "tr_globals.h"
 #include "vk_image.h"
+#include "tr_cvar.h"
+
 /*
 
 Loads and prepares a map file for scene rendering.

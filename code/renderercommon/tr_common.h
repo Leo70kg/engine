@@ -172,7 +172,7 @@ void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );
 void VectorPerp( const vec3_t src, vec3_t dst );
 float MakeTwoPerpVectors(const float forward[3], float right[3], float up[3]);
 
-void MatrixMultiply4x4(const float A[16], const float B[16], float out[16]);
+
 void ClearBounds( vec3_t mins, vec3_t maxs );
 qboolean SkipBracedSection (char **program, int depth);
 

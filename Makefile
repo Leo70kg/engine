@@ -1430,6 +1430,7 @@ Q3R2OBJ = \
   $(B)/renderergl2/tr_vbo.o \
   $(B)/renderergl2/tr_world.o \
   $(B)/renderergl2/tr_common.o \
+  $(B)/renderergl2/matrix_multiplication.o \
   $(B)/renderergl2/sdl_glimp.o
 
 
@@ -1493,6 +1494,7 @@ Q3ROBJ = \
   $(B)/renderergl1/tr_surface.o \
   $(B)/renderergl1/tr_world.o \
   $(B)/renderergl1/tr_common.o \
+  $(B)/renderergl1/matrix_multiplication.o \
   $(B)/renderergl1/sdl_glimp.o
 
 
@@ -1524,8 +1526,8 @@ Q3ROAOBJ = \
   $(B)/renderer_oa/tr_surface.o \
   $(B)/renderer_oa/tr_world.o \
   $(B)/renderer_oa/tr_common.o \
-  $(B)/renderer_oa/sdl_glimp.o
-
+  $(B)/renderer_oa/matrix_multiplication.o \
+  $(B)/renderer_oa/sdl_glimp.o \
 
 ######################  MYDEV  ######################
 
@@ -1566,7 +1568,10 @@ Q3MYDEVOBJ = \
 ######################  VULKAN  ######################
 
 Q3VKOBJ = \
+  $(B)/renderer_vulkan/matrix_multiplication.o \
   $(B)/renderer_vulkan/mvp_matrix.o \
+  $(B)/renderer_vulkan/tr_globals.o \
+  $(B)/renderer_vulkan/tr_cvar.o \
   $(B)/renderer_vulkan/tr_animation.o \
   $(B)/renderer_vulkan/tr_backend.o \
   $(B)/renderer_vulkan/tr_bsp.o \
@@ -1574,11 +1579,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_curve.o \
   $(B)/renderer_vulkan/tr_font.o \
   $(B)/renderer_vulkan/tr_image.o \
-  $(B)/renderer_vulkan/tr_image_png.o \
-  $(B)/renderer_vulkan/tr_image_jpg.o \
-  $(B)/renderer_vulkan/tr_image_bmp.o \
-  $(B)/renderer_vulkan/tr_image_tga.o \
-  $(B)/renderer_vulkan/tr_image_pcx.o \
   $(B)/renderer_vulkan/tr_init.o \
   $(B)/renderer_vulkan/tr_light.o \
   $(B)/renderer_vulkan/tr_main.o \
@@ -1608,7 +1608,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_displayResolution.o \
   $(B)/renderer_vulkan/qvk.o \
   $(B)/renderer_vulkan/RB_TakeScreenshot.o \
-  $(B)/renderer_vulkan/R_LoadImage.o \
   $(B)/renderer_vulkan/R_LoadImage2.o \
   $(B)/renderer_vulkan/R_FindShader.o \
   $(B)/renderer_vulkan/R_ListShader.o \
@@ -1616,7 +1615,7 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/generate_image_upload_data.o \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
   $(B)/renderer_vulkan/vk_image.o \
-  $(B)/renderer_vulkan/image_sampler.o \
+  $(B)/renderer_vulkan/vk_image_sampler.o \
   $(B)/renderer_vulkan/vk_create_pipeline.o \
   $(B)/renderer_vulkan/vk_frame.o \
   $(B)/renderer_vulkan/vk_read_pixels.o \
@@ -1633,11 +1632,18 @@ Q3VKOBJ = \
   \
   $(B)/renderer_vulkan/fun_log.o
 
+#  $(B)/renderer_vulkan/tr_image_png.o \
+  $(B)/renderer_vulkan/tr_image_jpg.o \
+  $(B)/renderer_vulkan/tr_image_bmp.o \
+  $(B)/renderer_vulkan/tr_image_tga.o \
+  $(B)/renderer_vulkan/tr_image_pcx.o \
+  $(B)/renderer_vulkan/R_LoadImage.o \
+
 
 ifeq ($(BUILD_WITH_SDL), 1)
-  Q3VKOBJ += $(B)/renderer_vulkan/VKimp_SDL.o
+  Q3VKOBJ += $(B)/renderer_vulkan/vk_create_window_SDL.o
 else
-  Q3VKOBJ += $(B)/renderer_vulkan/VKimp_XCB.o
+  Q3VKOBJ += $(B)/renderer_vulkan/vk_create_window_XCB.o
 endif
 
 

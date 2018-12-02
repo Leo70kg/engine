@@ -22,10 +22,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 #include "tr_globals.h"
+#include "tr_cvar.h"
 
+// these are sort of arbitrary limits.
+// the limits apply to the sum of all scenes in a frame --
+// the main view, all the 3D icons, etc
+#define	MAX_POLYS		600
+#define	MAX_POLYVERTS	3000
 
-extern	int		max_polys;
-extern	int		max_polyverts;
+int		max_polys;
+int		max_polyverts;
 
 int			r_firstSceneDrawSurf;
 
@@ -41,18 +47,28 @@ int			r_firstScenePoly;
 int			r_numpolyverts;
 
 
-/*
-====================
-R_ToggleSmpFrame
 
-====================
-*/
-void R_ToggleSmpFrame( void ) {
+void R_InitScene(void)
+{
+	max_polys = r_maxpolys->integer;
+	if (max_polys < MAX_POLYS)
+		max_polys = MAX_POLYS;
 
-	tr.smpFrame = 0;
+	max_polyverts = r_maxpolyverts->integer;
+	if (max_polyverts < MAX_POLYVERTS)
+		max_polyverts = MAX_POLYVERTS;
+
+	unsigned char* ptr = ri.Hunk_Alloc( sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low);
+	backEndData = (backEndData_t *) ptr;
+	backEndData->polys = (srfPoly_t *) ((char *) ptr + sizeof( *backEndData ));
+	backEndData->polyVerts = (polyVert_t *) ((char *) ptr + sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys);
+}
 
 
-	backEndData[tr.smpFrame]->commands.used = 0;
+
+void R_ToggleSmpFrame( void )
+{
+	backEndData->commands.used = 0;
 
 	r_firstSceneDrawSurf = 0;
 
@@ -139,11 +155,11 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 			return;
 		}
 
-		poly = &backEndData[tr.smpFrame]->polys[r_numpolys];
+		poly = &backEndData->polys[r_numpolys];
 		poly->surfaceType = SF_POLY;
 		poly->hShader = hShader;
 		poly->numVerts = numVerts;
-		poly->verts = &backEndData[tr.smpFrame]->polyVerts[r_numpolyverts];
+		poly->verts = &backEndData->polyVerts[r_numpolyverts];
 		
 		memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
 
@@ -206,8 +222,8 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 		ri.Error( ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType );
 	}
 
-	backEndData[tr.smpFrame]->entities[r_numentities].e = *ent;
-	backEndData[tr.smpFrame]->entities[r_numentities].lightingCalculated = qfalse;
+	backEndData->entities[r_numentities].e = *ent;
+	backEndData->entities[r_numentities].lightingCalculated = qfalse;
 
 	r_numentities++;
 }
@@ -231,7 +247,7 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	if ( intensity <= 0 ) {
 		return;
 	}
-	dl = &backEndData[tr.smpFrame]->dlights[r_numdlights++];
+	dl = &backEndData->dlights[r_numdlights++];
 	VectorCopy (org, dl->origin);
 	dl->radius = intensity;
 	dl->color[0] = r;
@@ -333,16 +349,16 @@ void RE_RenderScene( const refdef_t *fd )
 	tr.refdef.floatTime = tr.refdef.time * 0.001f;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
-	tr.refdef.drawSurfs = backEndData[tr.smpFrame]->drawSurfs;
+	tr.refdef.drawSurfs = backEndData->drawSurfs;
 
 	tr.refdef.num_entities = r_numentities - r_firstSceneEntity;
-	tr.refdef.entities = &backEndData[tr.smpFrame]->entities[r_firstSceneEntity];
+	tr.refdef.entities = &backEndData->entities[r_firstSceneEntity];
 
 	tr.refdef.num_dlights = r_numdlights - r_firstSceneDlight;
-	tr.refdef.dlights = &backEndData[tr.smpFrame]->dlights[r_firstSceneDlight];
+	tr.refdef.dlights = &backEndData->dlights[r_firstSceneDlight];
 
 	tr.refdef.numPolys = r_numpolys - r_firstScenePoly;
-	tr.refdef.polys = &backEndData[tr.smpFrame]->polys[r_firstScenePoly];
+	tr.refdef.polys = &backEndData->polys[r_firstScenePoly];
 
 	// turn off dynamic lighting globally by clearing all the
 	// dlights if it needs to be disabled or if vertex lighting is enabled

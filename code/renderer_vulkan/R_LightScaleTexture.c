@@ -1,7 +1,7 @@
 #include "tr_local.h"
 #include "R_LightScaleTexture.h"
 #include "tr_globals.h"
-
+#include "tr_cvar.h"
 
 static unsigned char s_intensitytable[256];
 static unsigned char s_gammatable[256];

@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "tr_globals.h"
 #include "R_LightScaleTexture.h"
+#include "tr_cvar.h"
 
 int R_SumOfUsedImages( void ) {
 	int	total;
@@ -90,9 +91,7 @@ int	c_blockedOnMain;
 
 void R_IssueRenderCommands( qboolean runPerformanceCounters )
 {
-	renderCommandList_t	*cmdList;
-
-	cmdList = &backEndData[tr.smpFrame]->commands;
+	renderCommandList_t* cmdList = &backEndData->commands;
 	assert(cmdList); // bk001205
 	// add an end-of-list command
 	*(int *)(cmdList->cmds + cmdList->used) = RC_END_OF_LIST;
@@ -160,7 +159,7 @@ render thread if needed.
 */
 void* R_GetCommandBuffer( int bytes )
 {
-	renderCommandList_t	*cmdList = &backEndData[tr.smpFrame]->commands;
+	renderCommandList_t	*cmdList = &backEndData->commands;
 
 	// always leave room for the end of list command
 	if ( cmdList->used + bytes + 4 > MAX_RENDER_COMMANDS )

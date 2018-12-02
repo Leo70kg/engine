@@ -1,7 +1,8 @@
 #include "vk_clear_attachments.h"
-#include "tr_local.h"
 #include "vk_shade_geometry.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
+#include "tr_cvar.h"
+
 
 // This flag is used to decide whether framebuffer's depth attachment should be cleared
 // with vmCmdClearAttachment (dirty_depth_attachment == true), or it have just been
@@ -16,6 +17,7 @@ void set_depth_attachment(VkBool32 s)
 {   
     s_depth_attachment_dirty = s;
 }
+
 
 VkBool32 get_depth_attachment(void)
 {
