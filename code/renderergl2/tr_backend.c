@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "tr_fbo.h"
 #include "tr_dsa.h"
+#include "../renderercommon/matrix_multiplication.h"
 
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
@@ -270,14 +271,21 @@ void GL_State( unsigned long stateBits )
 void GL_SetProjectionMatrix(mat4_t matrix)
 {
 	Mat4Copy(matrix, glState.projection);
-	Mat4Multiply(glState.projection, glState.modelview, glState.modelviewProjection);	
+	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);	
 }
 
 
 void GL_SetModelviewMatrix(mat4_t matrix)
 {
 	Mat4Copy(matrix, glState.modelview);
-	Mat4Multiply(glState.projection, glState.modelview, glState.modelviewProjection);	
+	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);	
+}
+
+void GL_SetMvpMatrix(mat4_t MV, mat4_t P)
+{
+	Mat4Copy(MV, glState.modelview);
+	Mat4Copy(P, glState.projection);
+	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);
 }
 
 
@@ -588,7 +596,6 @@ RB_SetGL2D
 ================
 */
 void	RB_SetGL2D (void) {
-	mat4_t matrix;
 	int width, height;
 
 	if (backEnd.projection2D && backEnd.last2DFBO == glState.currentFBO)
@@ -612,10 +619,10 @@ void	RB_SetGL2D (void) {
 	qglViewport( 0, 0, width, height );
 	qglScissor( 0, 0, width, height );
 
-	Mat4Ortho(0, width, height, 0, 0, 1, matrix);
-	GL_SetProjectionMatrix(matrix);
-	Mat4Identity(matrix);
-	GL_SetModelviewMatrix(matrix);
+    Mat4Identity(glState.modelview);
+	Mat4Ortho(0, width, height, 0, 0, 1, glState.projection);
+	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);	
+
 
 	GL_State( GLS_DEPTHTEST_DISABLE |
 			  GLS_SRCBLEND_SRC_ALPHA |

@@ -114,11 +114,12 @@ typedef struct {
 
 
 typedef struct {
+    float		modelMatrix[16] QALIGN(16);
+	float		transformMatrix[16] QALIGN(16);
 	vec3_t		origin;			// in world coordinates
 	vec3_t		axis[3];		// orientation in world
 	vec3_t		viewOrigin;		// viewParms->or.origin in local coordinates
-	float		modelMatrix[16];
-	float		transformMatrix[16];
+
 } orientationr_t;
 
 // Ensure this is >= the ATTR_INDEX_COUNT enum below
@@ -825,7 +826,7 @@ typedef struct {
 	int         targetFboLayer;
 	int         targetFboCubemapIndex;
 	float		fovX, fovY;
-	float		projectionMatrix[16];
+	float		projectionMatrix[16] QALIGN(16);
 	cplane_t	frustum[5];
 	vec3_t		visBounds[2];
 	float		zFar;
@@ -1325,6 +1326,10 @@ typedef struct {
 
 // the renderer front end should never modify glstate_t
 typedef struct {
+    mat4_t      modelview QALIGN(16);
+	mat4_t      projection QALIGN(16);
+	mat4_t		modelviewProjection QALIGN(16);
+
 	qboolean	finishCalled;
 	int			texEnv[2];
 	int			faceCulling;
@@ -1336,9 +1341,6 @@ typedef struct {
 	uint32_t        vertexAttribsEnabled;  // global if no VAOs, tess only otherwise
 	FBO_t          *currentFBO;
 	vao_t          *currentVao;
-	mat4_t        modelview;
-	mat4_t        projection;
-	mat4_t		modelviewProjection;
 } glstate_t;
 
 typedef enum {

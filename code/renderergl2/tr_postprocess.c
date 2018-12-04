@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "tr_local.h"
+#include "../renderercommon/matrix_multiplication.h"
+
 
 void RB_ToneMap(FBO_t *hdrFbo, ivec4_t hdrBox, FBO_t *ldrFbo, ivec4_t ldrBox, int autoExposure)
 {
@@ -302,7 +304,6 @@ void RB_SunRays(FBO_t *srcFbo, ivec4_t srcBox, FBO_t *dstFbo, ivec4_t dstBox)
 	qboolean colorize = qtrue;
 
 //	float w, h, w2, h2;
-	mat4_t mvp;
 	vec4_t pos, hpos;
 
 	dot = DotProduct(tr.sunDirection, backEnd.viewParms.or.axis[0]);
@@ -314,27 +315,29 @@ void RB_SunRays(FBO_t *srcFbo, ivec4_t srcBox, FBO_t *dstFbo, ivec4_t dstBox)
 
 	// From RB_DrawSun()
 	{
-		float dist;
-		mat4_t trans, model;
+        mat4_t mvp QALIGN(16);
+		mat4_t trans QALIGN(16);
+        mat4_t model QALIGN(16);
 
 		Mat4Translation( backEnd.viewParms.or.origin, trans );
-		Mat4Multiply( backEnd.viewParms.world.modelMatrix, trans, model );
-		Mat4Multiply(backEnd.viewParms.projectionMatrix, model, mvp);
+		MatrixMultiply4x4_SSE( trans, backEnd.viewParms.world.modelMatrix, model );
+		MatrixMultiply4x4_SSE( model, backEnd.viewParms.projectionMatrix, mvp);
 
-		dist = backEnd.viewParms.zFar / 1.75;		// div sqrt(3)
+		float dist = backEnd.viewParms.zFar / 1.75;		// div sqrt(3)
 
 		VectorScale( tr.sunDirection, dist, pos );
+
+        	// project sun point
+        Mat4Transform(mvp, pos, hpos);
+
+        // transform to UV coords
+        hpos[3] = 0.5f / hpos[3];
+
+        pos[0] = 0.5f + hpos[0] * hpos[3];
+        pos[1] = 0.5f + hpos[1] * hpos[3];
 	}
 
-	// project sun point
-	//Mat4Multiply(backEnd.viewParms.projectionMatrix, backEnd.viewParms.world.modelMatrix, mvp);
-	Mat4Transform(mvp, pos, hpos);
 
-	// transform to UV coords
-	hpos[3] = 0.5f / hpos[3];
-
-	pos[0] = 0.5f + hpos[0] * hpos[3];
-	pos[1] = 0.5f + hpos[1] * hpos[3];
 
 	// initialize quarter buffers
 	{

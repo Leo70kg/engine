@@ -184,7 +184,6 @@ typedef int ivec4_t[4];
 void Mat4Zero( mat4_t out );
 void Mat4Identity( mat4_t out );
 void Mat4Copy( const mat4_t in, mat4_t out );
-void Mat4Multiply( const mat4_t in1, const mat4_t in2, mat4_t out );
 void Mat4Transform( const mat4_t in1, const vec4_t in2, vec4_t out );
 qboolean Mat4Compare(const mat4_t a, const mat4_t b);
 void Mat4Dump( const mat4_t in );

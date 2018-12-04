@@ -384,7 +384,12 @@ qboolean SkipBracedSection(char **program, int depth)
 }
 
 
-
+static const float Mat4x4Identity[16] = {
+    1.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 1.0f
+};
 
 
 // tr_extramath.c - extra math needed by the renderer not in qmath.c
@@ -393,50 +398,21 @@ qboolean SkipBracedSection(char **program, int depth)
 
 void Mat4Zero( mat4_t out )
 {
-	out[ 0] = 0.0f; out[ 4] = 0.0f; out[ 8] = 0.0f; out[12] = 0.0f;
-	out[ 1] = 0.0f; out[ 5] = 0.0f; out[ 9] = 0.0f; out[13] = 0.0f;
-	out[ 2] = 0.0f; out[ 6] = 0.0f; out[10] = 0.0f; out[14] = 0.0f;
-	out[ 3] = 0.0f; out[ 7] = 0.0f; out[11] = 0.0f; out[15] = 0.0f;
+    memset(out, 0, 64);
 }
 
 void Mat4Identity( mat4_t out )
 {
-	out[ 0] = 1.0f; out[ 4] = 0.0f; out[ 8] = 0.0f; out[12] = 0.0f;
-	out[ 1] = 0.0f; out[ 5] = 1.0f; out[ 9] = 0.0f; out[13] = 0.0f;
-	out[ 2] = 0.0f; out[ 6] = 0.0f; out[10] = 1.0f; out[14] = 0.0f;
-	out[ 3] = 0.0f; out[ 7] = 0.0f; out[11] = 0.0f; out[15] = 1.0f;
+    memcpy(out, Mat4x4Identity, 64);
 }
 
 void Mat4Copy( const mat4_t in, mat4_t out )
 {
-	out[ 0] = in[ 0]; out[ 4] = in[ 4]; out[ 8] = in[ 8]; out[12] = in[12]; 
-	out[ 1] = in[ 1]; out[ 5] = in[ 5]; out[ 9] = in[ 9]; out[13] = in[13]; 
-	out[ 2] = in[ 2]; out[ 6] = in[ 6]; out[10] = in[10]; out[14] = in[14]; 
-	out[ 3] = in[ 3]; out[ 7] = in[ 7]; out[11] = in[11]; out[15] = in[15]; 
+    memcpy(out, in, 64);
 }
 
-void Mat4Multiply( const mat4_t in1, const mat4_t in2, mat4_t out )
-{
-	out[ 0] = in1[ 0] * in2[ 0] + in1[ 4] * in2[ 1] + in1[ 8] * in2[ 2] + in1[12] * in2[ 3];
-	out[ 1] = in1[ 1] * in2[ 0] + in1[ 5] * in2[ 1] + in1[ 9] * in2[ 2] + in1[13] * in2[ 3];
-	out[ 2] = in1[ 2] * in2[ 0] + in1[ 6] * in2[ 1] + in1[10] * in2[ 2] + in1[14] * in2[ 3];
-	out[ 3] = in1[ 3] * in2[ 0] + in1[ 7] * in2[ 1] + in1[11] * in2[ 2] + in1[15] * in2[ 3];
 
-	out[ 4] = in1[ 0] * in2[ 4] + in1[ 4] * in2[ 5] + in1[ 8] * in2[ 6] + in1[12] * in2[ 7];
-	out[ 5] = in1[ 1] * in2[ 4] + in1[ 5] * in2[ 5] + in1[ 9] * in2[ 6] + in1[13] * in2[ 7];
-	out[ 6] = in1[ 2] * in2[ 4] + in1[ 6] * in2[ 5] + in1[10] * in2[ 6] + in1[14] * in2[ 7];
-	out[ 7] = in1[ 3] * in2[ 4] + in1[ 7] * in2[ 5] + in1[11] * in2[ 6] + in1[15] * in2[ 7];
 
-	out[ 8] = in1[ 0] * in2[ 8] + in1[ 4] * in2[ 9] + in1[ 8] * in2[10] + in1[12] * in2[11];
-	out[ 9] = in1[ 1] * in2[ 8] + in1[ 5] * in2[ 9] + in1[ 9] * in2[10] + in1[13] * in2[11];
-	out[10] = in1[ 2] * in2[ 8] + in1[ 6] * in2[ 9] + in1[10] * in2[10] + in1[14] * in2[11];
-	out[11] = in1[ 3] * in2[ 8] + in1[ 7] * in2[ 9] + in1[11] * in2[10] + in1[15] * in2[11];
-
-	out[12] = in1[ 0] * in2[12] + in1[ 4] * in2[13] + in1[ 8] * in2[14] + in1[12] * in2[15];
-	out[13] = in1[ 1] * in2[12] + in1[ 5] * in2[13] + in1[ 9] * in2[14] + in1[13] * in2[15];
-	out[14] = in1[ 2] * in2[12] + in1[ 6] * in2[13] + in1[10] * in2[14] + in1[14] * in2[15];
-	out[15] = in1[ 3] * in2[12] + in1[ 7] * in2[13] + in1[11] * in2[14] + in1[15] * in2[15];
-}
 
 void Mat4Transform( const mat4_t in1, const vec4_t in2, vec4_t out )
 {
@@ -464,19 +440,25 @@ void Mat4Dump( const mat4_t in )
 
 void Mat4Translation( vec3_t vec, mat4_t out )
 {
-	out[ 0] = 1.0f; out[ 4] = 0.0f; out[ 8] = 0.0f; out[12] = vec[0];
-	out[ 1] = 0.0f; out[ 5] = 1.0f; out[ 9] = 0.0f; out[13] = vec[1];
-	out[ 2] = 0.0f; out[ 6] = 0.0f; out[10] = 1.0f; out[14] = vec[2];
-	out[ 3] = 0.0f; out[ 7] = 0.0f; out[11] = 0.0f; out[15] = 1.0f;
+    memcpy(out, Mat4x4Identity, 64);
+    out[12] = vec[0];
+    out[13] = vec[1];
+    out[14] = vec[2];
 }
 
 void Mat4Ortho( float left, float right, float bottom, float top, float znear, float zfar, mat4_t out )
 {
-	out[ 0] = 2.0f / (right - left); out[ 4] = 0.0f;                  out[ 8] = 0.0f;                  out[12] = -(right + left) / (right - left);
-	out[ 1] = 0.0f;                  out[ 5] = 2.0f / (top - bottom); out[ 9] = 0.0f;                  out[13] = -(top + bottom) / (top - bottom);
-	out[ 2] = 0.0f;                  out[ 6] = 0.0f;                  out[10] = 2.0f / (zfar - znear); out[14] = -(zfar + znear) / (zfar - znear);
-	out[ 3] = 0.0f;                  out[ 7] = 0.0f;                  out[11] = 0.0f;                  out[15] = 1.0f;
+    float x = right - left;
+    float y = top - bottom;
+    float z = zfar - znear;
+
+	out[0] = 2.0f / x;  out[4] = 0.0f;      out[ 8] = 0.0f;     out[12] = -(right + left) / x;
+	out[1] = 0.0f;      out[5] = 2.0f / y;  out[ 9] = 0.0f;     out[13] = -(top + bottom) / y;
+	out[2] = 0.0f;      out[6] = 0.0f;      out[10] = 2.0f / z; out[14] = -(zfar + znear) / z;
+	out[3] = 0.0f;      out[7] = 0.0f;      out[11] = 0.0f;     out[15] = 1.0f;
 }
+
+
 
 void Mat4View(vec3_t axes[3], vec3_t origin, mat4_t out)
 {
@@ -501,6 +483,7 @@ void Mat4View(vec3_t axes[3], vec3_t origin, mat4_t out)
 	out[15] = 1;
 }
 
+
 void Mat4SimpleInverse( const mat4_t in, mat4_t out)
 {
 	vec3_t v;
@@ -523,9 +506,9 @@ void Mat4SimpleInverse( const mat4_t in, mat4_t out)
 
 void VectorLerp( vec3_t a, vec3_t b, float lerp, vec3_t c)
 {
-	c[0] = a[0] * (1.0f - lerp) + b[0] * lerp;
-	c[1] = a[1] * (1.0f - lerp) + b[1] * lerp;
-	c[2] = a[2] * (1.0f - lerp) + b[2] * lerp;
+	c[0] = a[0] + (b[0] - a[0]) * lerp;
+	c[1] = a[1] + (b[1] - a[1]) * lerp;
+	c[2] = a[2] + (b[2] - a[2]) * lerp;
 }
 
 qboolean SpheresIntersect(vec3_t origin1, float radius1, vec3_t origin2, float radius2)

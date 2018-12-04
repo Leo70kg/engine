@@ -1,8 +1,8 @@
     .text
     .align 32                           # 1. function entry alignment
-    .globl MatrixMultiply_ASM            #    (for a faster call)
-    .type MatrixMultiply_ASM, @function
-MatrixMultiply_ASM:
+    .globl MatrixMultiply4x4_ASM            #    (for a faster call)
+    .type MatrixMultiply4x4_ASM, @function
+MatrixMultiply4x4_ASM:
     movaps   (%rdi), %xmm0
     movaps 16(%rdi), %xmm1
     movaps 32(%rdi), %xmm2

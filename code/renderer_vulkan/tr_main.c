@@ -36,7 +36,7 @@ static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, 
 							vec4_t eye, vec4_t dst );
 
 
-trGlobals_t		tr;
+
 
 const static float s_flipMatrix[16] QALIGN(16) = {
 	// convert from our coordinate system (looking down X)

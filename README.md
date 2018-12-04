@@ -206,12 +206,5 @@ gprof openarena.x86_64 gmon.out > report.txt
 * E_AddRefEntityToScene passed a refEntity which has an origin with a NaN component
 * Unpure client detected. Invalid .PK3 files referenced!
 
-```
-suijingfeng entered the game
-$
-Thread 1 "openarena.x86_6" received signal SIGSEGV, Segmentation fault.
-0x00007fffe65a7fd2 in R_AddMD3Surfaces (ent=0x7fffe75966c8) at code/renderer_vulkan/tr_mesh.c:290
-290		if ( (ent->e.frame >= tr.currentModel->md3[0]->numFrames) 
-(gdb) quit
-A debugging session is active.
-```
+## TODO
+* merge rendergl1, rendereroa, renderer_mydev to one

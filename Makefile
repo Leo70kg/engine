@@ -1563,6 +1563,7 @@ Q3MYDEVOBJ = \
   $(B)/renderer_mydev/qgl.o \
   $(B)/renderer_mydev/qgl_log.o \
   $(B)/renderer_mydev/loadImage.o \
+  $(B)/renderer_vulkan/matrix_multiplication.o \
   $(B)/renderer_mydev/sdl_glimp.o
 
 ######################  VULKAN  ######################
@@ -2503,6 +2504,9 @@ $(B)/$(MISSIONPACK)/vm/ui.qvm: $(MPUIVMOBJ) $(UIDIR)/ui_syscalls.asm $(Q3ASM)
 #############################################################################
 ## CLIENT/SERVER RULES
 #############################################################################
+
+#$(B)/client/%.o: $(ASMDIR)/%.s
+#	$(DO_AS)
 
 $(B)/client/%.o: $(CDIR)/%.c
 	$(DO_CC)
