@@ -3,6 +3,7 @@
 #include "R_LightScaleTexture.h"
 #include "RB_TakeScreenshot.h"
 #include "tr_globals.h"
+#include "../renderercommon/ref_import.h"
 
 typedef struct {
 	int commandId;

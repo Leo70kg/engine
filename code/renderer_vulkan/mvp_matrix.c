@@ -18,8 +18,7 @@ void get_modelview_matrix(float* mv)
 
 void reset_modelview_matrix(void)
 {
-    memset(s_modelview_matrix, 0, 64);
-    s_modelview_matrix[3] = s_modelview_matrix[7] = s_modelview_matrix[11] = s_modelview_matrix[15] = 1;
+    Mat4Identity(s_modelview_matrix);
 }
 
 
@@ -57,13 +56,12 @@ void get_mvp_transform(float* mvp, int isProj2D)
 		};
 */
 
-////
         float proj[16];
         memcpy(proj, backEnd.viewParms.projectionMatrix, 64);
         proj[5] = -proj[5];
         proj[10] = zFar / (zNear - zFar);
         proj[14] = proj[10] * zNear;
-////
-		MatrixMultiply4x4_SSE(s_modelview_matrix, proj, mvp);
+		
+        MatrixMultiply4x4_SSE(s_modelview_matrix, proj, mvp);
 	}
 }

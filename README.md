@@ -208,3 +208,5 @@ gprof openarena.x86_64 gmon.out > report.txt
 
 ## TODO
 * merge rendergl1, rendereroa, renderer_mydev to one
+* r_gamma
+* \minimize

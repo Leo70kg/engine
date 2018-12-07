@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_flares.c
 
 #include "tr_local.h"
-
+#include "../renderercommon/matrix_multiplication.h"
 /*
 =============================================================================
 
@@ -472,7 +472,7 @@ void RB_RenderFlares (void) {
 	flare_t		*f;
 	flare_t		**prev;
 	qboolean	draw;
-	mat4_t    oldmodelview, oldprojection, matrix;
+	float    oldmodelview[16], oldprojection[16], matrix[16];
 
 	if ( !r_flares->integer ) {
 		return;

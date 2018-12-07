@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_main.c -- main control flow for each frame
 
 #include "tr_local.h"
-#include "mvp_matrix.h"
+
 #include "tr_globals.h"
 #include "tr_cvar.h"
 
@@ -30,7 +30,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vk_instance.h"
 #include "vk_image.h"
 #include "../renderercommon/matrix_multiplication.h"
+#include "../renderercommon/ref_import.h"
 
+
+#include "R_DEBUG.h"
 
 static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,
 							vec4_t eye, vec4_t dst );
@@ -48,7 +51,6 @@ const static float s_flipMatrix[16] QALIGN(16) = {
 };
 
 
-refimport_t	ri;
 
 // entities that will have procedurally generated surfaces will just
 // point at this for their sorting surface
@@ -237,8 +239,8 @@ Does NOT produce any GL calls
 Called by both the front end and the back end
 =================
 */
-void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
-					   orientationr_t *or ) {
+void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, orientationr_t *or )
+{
 	float	glMatrix[16] QALIGN(16);
 	vec3_t	delta;
 	float	axisLength;
@@ -250,28 +252,33 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
 
 	VectorCopy( ent->e.origin, or->origin );
 
-	VectorCopy( ent->e.axis[0], or->axis[0] );
-	VectorCopy( ent->e.axis[1], or->axis[1] );
-	VectorCopy( ent->e.axis[2], or->axis[2] );
+	//VectorCopy( ent->e.axis[0], or->axis[0] );
+	//VectorCopy( ent->e.axis[1], or->axis[1] );
+	//VectorCopy( ent->e.axis[2], or->axis[2] );
+    memcpy(or->axis, ent->e.axis, 36);
+
 
 	glMatrix[0] = or->axis[0][0];
-	glMatrix[4] = or->axis[1][0];
-	glMatrix[8] = or->axis[2][0];
-	glMatrix[12] = or->origin[0];
-
 	glMatrix[1] = or->axis[0][1];
-	glMatrix[5] = or->axis[1][1];
-	glMatrix[9] = or->axis[2][1];
-	glMatrix[13] = or->origin[1];
-
 	glMatrix[2] = or->axis[0][2];
-	glMatrix[6] = or->axis[1][2];
-	glMatrix[10] = or->axis[2][2];
-	glMatrix[14] = or->origin[2];
-
 	glMatrix[3] = 0;
+
+
+    glMatrix[4] = or->axis[1][0];
+	glMatrix[5] = or->axis[1][1];
+	glMatrix[6] = or->axis[1][2];
 	glMatrix[7] = 0;
+	
+    
+    glMatrix[8] = or->axis[2][0];
+	glMatrix[9] = or->axis[2][1];
+	glMatrix[10] = or->axis[2][2];
 	glMatrix[11] = 0;
+
+
+	glMatrix[12] = or->origin[0];
+	glMatrix[13] = or->origin[1];
+	glMatrix[14] = or->origin[2];
 	glMatrix[15] = 1;
 
 	MatrixMultiply4x4_SSE( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
@@ -301,22 +308,37 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
 =================
 R_RotateForViewer
 
+typedef struct {
+	float		modelMatrix[16] QALIGN(16);
+	float		axis[3][3];		// orientation in world
+    float		origin[3];			// in world coordinates
+	float		viewOrigin[3];		// viewParms->or.origin in local coordinates
+} orientationr_t;
+
+
 Sets up the modelview matrix for a given viewParm
 =================
 */
 void R_RotateForViewer (void) 
 {
-	float	viewerMatrix[16] QALIGN(16);
-	vec3_t	origin;
+	float viewerMatrix[16] QALIGN(16);
+	vec3_t origin;
 
-	memset (&tr.or, 0, sizeof(tr.or));
-	tr.or.axis[0][0] = 1;
-	tr.or.axis[1][1] = 1;
-	tr.or.axis[2][2] = 1;
-	VectorCopy (tr.viewParms.or.origin, tr.or.viewOrigin);
+    tr.or.origin[0] = tr.or.origin[1] = tr.or.origin[2];
+//	tr.or.axis[0][0] = 1;
+//	tr.or.axis[1][1] = 1;
+//	tr.or.axis[2][2] = 1;
 
-	// transform by the camera placement
-	VectorCopy( tr.viewParms.or.origin, origin );
+    Mat3x3Identity(tr.or.axis);
+
+    // transform by the camera placement
+	// VectorCopy( tr.viewParms.or.origin, tr.or.viewOrigin );
+	// VectorCopy( tr.viewParms.or.origin, origin );
+
+    tr.or.viewOrigin[0] = origin[0] = tr.viewParms.or.origin[0];
+    tr.or.viewOrigin[1] = origin[1] = tr.viewParms.or.origin[1];
+    tr.or.viewOrigin[2] = origin[2] = tr.viewParms.or.origin[2];
+
 
 	viewerMatrix[0] = tr.viewParms.or.axis[0][0];
 	viewerMatrix[4] = tr.viewParms.or.axis[0][1];
@@ -346,119 +368,106 @@ void R_RotateForViewer (void)
 
 }
 
-/*
-** SetFarClip
-*/
-static void SetFarClip( void )
-{
-	float	farthestCornerDistance = 0;
-	int		i;
-
-	// if not rendering the world (icons, menus, etc)
-	// set a 2k far clip plane
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
-		tr.viewParms.zFar = 2048;
-		return;
-	}
-
-	//
-	// set far clipping planes dynamically
-	//
-	farthestCornerDistance = 0;
-	for ( i = 0; i < 8; i++ )
-	{
-		vec3_t v;
-		vec3_t vecTo;
-		float distance;
-
-		if ( i & 1 )
-		{
-			v[0] = tr.viewParms.visBounds[0][0];
-		}
-		else
-		{
-			v[0] = tr.viewParms.visBounds[1][0];
-		}
-
-		if ( i & 2 )
-		{
-			v[1] = tr.viewParms.visBounds[0][1];
-		}
-		else
-		{
-			v[1] = tr.viewParms.visBounds[1][1];
-		}
-
-		if ( i & 4 )
-		{
-			v[2] = tr.viewParms.visBounds[0][2];
-		}
-		else
-		{
-			v[2] = tr.viewParms.visBounds[1][2];
-		}
-
-		VectorSubtract( v, tr.viewParms.or.origin, vecTo );
-
-		distance = vecTo[0] * vecTo[0] + vecTo[1] * vecTo[1] + vecTo[2] * vecTo[2];
-
-		if ( distance > farthestCornerDistance )
-		{
-			farthestCornerDistance = distance;
-		}
-	}
-	tr.viewParms.zFar = sqrt( farthestCornerDistance );
-}
 
 
-/*
-===============
-R_SetupProjection
-===============
-*/
 void R_SetupProjection( void )
 {
-	float	xmin, xmax, ymin, ymax;
-	float	width, height, depth;
-	float	zNear, zFar;
+	float zFar;
+
+	// set the projection matrix with the minimum zfar
+	// now that we have the world bounded
+	// this needs to be done before entities are added, 
+    // because they use the projection matrix for lod calculation
 
 	// dynamically compute far clip plane distance
-	SetFarClip();
+	// if not rendering the world (icons, menus, etc), set a 2k far clip plane
+
+	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL )
+    {
+		zFar = tr.viewParms.zFar = 2048.0f;
+	}
+    else
+    {
+        float o[3];
+
+        o[0] = tr.viewParms.or.origin[0];
+        o[1] = tr.viewParms.or.origin[1];
+        o[2] = tr.viewParms.or.origin[2];
+
+        float farthestCornerDistance = 0;
+        int	i;
+
+        // set far clipping planes dynamically
+        for ( i = 0; i < 8; i++ )
+        {
+            float v[3];
+     
+            if ( i & 1 )
+            {
+                v[0] = tr.viewParms.visBounds[0][0] - o[0];
+            }
+            else
+            {
+                v[0] = tr.viewParms.visBounds[1][0] - o[0];
+            }
+
+            if ( i & 2 )
+            {
+                v[1] = tr.viewParms.visBounds[0][1] - o[1];
+            }
+            else
+            {
+                v[1] = tr.viewParms.visBounds[1][1] - o[1];
+            }
+
+            if ( i & 4 )
+            {
+                v[2] = tr.viewParms.visBounds[0][2] - o[2];
+            }
+            else
+            {
+                v[2] = tr.viewParms.visBounds[1][2] - o[2];
+            }
+
+            float distance = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+            if( distance > farthestCornerDistance )
+            {
+                farthestCornerDistance = distance;
+            }
+        }
+        
+        zFar = tr.viewParms.zFar = sqrtf(farthestCornerDistance);
+    }
+
 
 	//
 	// set up projection matrix
 	//
-	zNear	= r_znear->value;
-	zFar	= tr.viewParms.zFar;
+	float zNear	= r_znear->value;
+	float depth = zFar - zNear;
 
-	ymax = zNear * tan( tr.refdef.fov_y * M_PI / 360.0f );
-	ymin = -ymax;
+    float py = tan(tr.viewParms.fovY * (M_PI / 360.0f));
+    float px = tan(tr.viewParms.fovX * (M_PI / 360.0f));
+  
 
-	xmax = zNear * tan( tr.refdef.fov_x * M_PI / 360.0f );
-	xmin = -xmax;
-
-	width = xmax - xmin;
-	height = ymax - ymin;
-	depth = zFar - zNear;
-
-	tr.viewParms.projectionMatrix[0] = 2 * zNear / width;
+	tr.viewParms.projectionMatrix[0] = 1.0f / px;
 	tr.viewParms.projectionMatrix[4] = 0;
-	tr.viewParms.projectionMatrix[8] = ( xmax + xmin ) / width;	// normally 0
+	tr.viewParms.projectionMatrix[8] = 0;	// normally 0
 	tr.viewParms.projectionMatrix[12] = 0;
 
 	tr.viewParms.projectionMatrix[1] = 0;
-	tr.viewParms.projectionMatrix[5] = 2 * zNear / height;
-	tr.viewParms.projectionMatrix[9] = ( ymax + ymin ) / height;	// normally 0
+	tr.viewParms.projectionMatrix[5] = 1.0f / py;
+	tr.viewParms.projectionMatrix[9] =  0;
 	tr.viewParms.projectionMatrix[13] = 0;
 
 	tr.viewParms.projectionMatrix[2] = 0;
 	tr.viewParms.projectionMatrix[6] = 0;
 	tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
-	tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
+	tr.viewParms.projectionMatrix[14] = -2.0f * zFar * zNear / depth;
 
 	tr.viewParms.projectionMatrix[3] = 0;
 	tr.viewParms.projectionMatrix[7] = 0;
-	tr.viewParms.projectionMatrix[11] = -1;
+	tr.viewParms.projectionMatrix[11] = -1.0f;
 	tr.viewParms.projectionMatrix[15] = 0;
 }
 
@@ -471,43 +480,45 @@ Setup that culling frustum planes for the current view
 */
 void R_SetupFrustum (void)
 {
-	int		i;
-	float	ang = tr.viewParms.fovX * (M_PI / 360.0f);
-	float xs = sin( ang );
-	float xc = cos( ang );
+	
+    {
+        float ang = tr.viewParms.fovX * (M_PI / 360.0f);
+        float xs = sin( ang );
+        float xc = cos( ang );
 
-    float temp1[3];
-    float temp2[3];
+        float temp1[3];
+        float temp2[3];
 
-	VectorScale( tr.viewParms.or.axis[0], xs, temp1 );
-	VectorScale( tr.viewParms.or.axis[1], xc, temp2);
-    
-    VectorAdd(temp1, temp2, tr.viewParms.frustum[0].normal);
-    VectorSubtract(temp1, temp2, tr.viewParms.frustum[1].normal);
+        VectorScale( tr.viewParms.or.axis[0], xs, temp1 );
+        VectorScale( tr.viewParms.or.axis[1], xc, temp2);
 
+        VectorAdd(temp1, temp2, tr.viewParms.frustum[0].normal);
+        VectorSubtract(temp1, temp2, tr.viewParms.frustum[1].normal);
+    }
     // VectorMA( tr.viewParms.frustum[0].normal, xc, tr.viewParms.or.axis[1], tr.viewParms.frustum[0].normal );
-
 	//VectorScale( tr.viewParms.or.axis[0], xs, tr.viewParms.frustum[1].normal );
 	//VectorMA( tr.viewParms.frustum[1].normal, -xc, tr.viewParms.or.axis[1], tr.viewParms.frustum[1].normal );
+   
+    {
+        float ang = tr.viewParms.fovY * (M_PI / 360.0f);
+        float xs = sin( ang );
+        float xc = cos( ang );
+        float temp1[3];
+        float temp2[3];
 
-	ang = tr.viewParms.fovY * (M_PI / 360.0f);
-	xs = sin( ang );
-	xc = cos( ang );
+        VectorScale( tr.viewParms.or.axis[0], xs, temp1);
+        VectorScale( tr.viewParms.or.axis[2], xc, temp2);
 
-	VectorScale( tr.viewParms.or.axis[0], xs, temp1);
-	VectorScale( tr.viewParms.or.axis[2], xc, temp2);
-
-
-    VectorAdd(temp1, temp2, tr.viewParms.frustum[2].normal);
-    VectorSubtract(temp1, temp2, tr.viewParms.frustum[3].normal);
-
+        VectorAdd(temp1, temp2, tr.viewParms.frustum[2].normal);
+        VectorSubtract(temp1, temp2, tr.viewParms.frustum[3].normal);
+    }
 
 	//VectorScale( tr.viewParms.or.axis[0], xs, tr.viewParms.frustum[2].normal );
 	//VectorMA( tr.viewParms.frustum[2].normal, xc, tr.viewParms.or.axis[2], tr.viewParms.frustum[2].normal );
 
 	//VectorScale( tr.viewParms.or.axis[0], xs, tr.viewParms.frustum[3].normal );
 	//VectorMA( tr.viewParms.frustum[3].normal, -xc, tr.viewParms.or.axis[2], tr.viewParms.frustum[3].normal );
-
+	int	i;
 	for (i=0 ; i<4 ; i++)
     {
 		tr.viewParms.frustum[i].type = PLANE_NON_AXIAL;
@@ -522,30 +533,34 @@ void R_SetupFrustum (void)
 R_MirrorPoint
 =================
 */
-void R_MirrorPoint (vec3_t in, orientation_t *surface, orientation_t *camera, vec3_t out) {
+void R_MirrorPoint (vec3_t in, orientation_t *surface, orientation_t *camera, vec3_t out)
+{
+    ri.Printf(PRINT_ALL, "R_MirrorPoint\n");
 	int		i;
 	vec3_t	local;
 	vec3_t	transformed;
-	float	d;
 
 	VectorSubtract( in, surface->origin, local );
 
 	VectorClear( transformed );
-	for ( i = 0 ; i < 3 ; i++ ) {
-		d = DotProduct(local, surface->axis[i]);
+	for ( i = 0 ; i < 3 ; i++ )
+    {
+		float d = DotProduct(local, surface->axis[i]);
 		VectorMA( transformed, d, camera->axis[i], transformed );
 	}
 
 	VectorAdd( transformed, camera->origin, out );
 }
 
-void R_MirrorVector (vec3_t in, orientation_t *surface, orientation_t *camera, vec3_t out) {
+
+void R_MirrorVector (vec3_t in, orientation_t *surface, orientation_t *camera, vec3_t out)
+{
 	int		i;
-	float	d;
 
 	VectorClear( out );
-	for ( i = 0 ; i < 3 ; i++ ) {
-		d = DotProduct(in, surface->axis[i]);
+	for ( i = 0 ; i < 3 ; i++ )
+    {
+		float d = DotProduct(in, surface->axis[i]);
 		VectorMA( out, d, camera->axis[i], out );
 	}
 }
@@ -676,7 +691,7 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 			
 		// now get the camera origin and orientation
 		VectorCopy( e->e.oldorigin, camera->origin );
-		AxisCopy( e->e.axis, camera->axis );
+		memcpy(camera->axis, e->e.axis, 36);
 		VectorSubtract( vec3_origin, camera->axis[0], camera->axis[0] );
 		VectorSubtract( vec3_origin, camera->axis[1], camera->axis[1] );
 
@@ -721,6 +736,8 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 
 	return qfalse;
 }
+
+
 
 static qboolean IsMirror( const drawSurf_t *drawSurf, int entityNum )
 {
@@ -781,6 +798,7 @@ static qboolean IsMirror( const drawSurf_t *drawSurf, int entityNum )
 	}
 	return qfalse;
 }
+
 
 /*
 ** SurfIsOffscreen
@@ -889,7 +907,8 @@ R_MirrorViewBySurface
 Returns qtrue if another view has been rendered
 ========================
 */
-qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum) {
+qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
+{
 	vec4_t			clipDest[128];
 	viewParms_t		newParms;
 	viewParms_t		oldParms;
@@ -1361,130 +1380,7 @@ void R_AddEntitySurfaces (void)
 }
 
 
-/*
-================
-R_DebugPolygon
-================
-*/
-void R_DebugPolygon( int color, int numPoints, float *points )
-{
 
-	if (numPoints < 3 || numPoints >= SHADER_MAX_VERTEXES/2)
-		return;
-    int i;
-	// In Vulkan we don't have GL_POLYGON + GLS_POLYMODE_LINE equivalent, so we use lines to draw polygon outlines.
-	// This approach has additional implication that we need to do manual backface culling to reject outlines that
-	// belong to back facing polygons.
-	// The code assumes that polygons are convex.
-
-	// Backface culling.
-    vec3_t pa;
-	vec3_t pb;
-//	transform_to_eye_space(&points[0], pa);
-    
-    float m[15];
-    get_modelview_matrix(m);
-    
-
-    pa[0] = m[0]*points[0] + m[4]*points[1] + m[8 ]*points[2] + points[12];
-    pa[1] = m[1]*points[0] + m[5]*points[1] + m[9 ]*points[2] + points[13];
-    pa[2] = m[2]*points[0] + m[6]*points[1] + m[10]*points[2] + points[14];
-	
-    
-//   transform_to_eye_space(&points[3], pb);
-    {
-        float *v = &points[3];
-        float *v_eye = pb;
-        v_eye[0] = m[0]*v[0] + m[4]*v[1] + m[8 ]*v[2] + m[12];
-		v_eye[1] = m[1]*v[0] + m[5]*v[1] + m[9 ]*v[2] + m[13];
-		v_eye[2] = m[2]*v[0] + m[6]*v[1] + m[10]*v[2] + m[14];
-    }
-	vec3_t p;
-	VectorSubtract(pb, pa, p);
-	vec3_t n;
-	for (i = 2; i < numPoints; i++)
-    {
-		//transform_to_eye_space(&points[3*i], pb);
-        {
-            float *v = &points[3*i];
-            float *v_eye = pb;
-
-            v_eye[0] = m[0]*v[0] + m[4]*v[1] + m[8 ]*v[2] + m[12];
-		    v_eye[1] = m[1]*v[0] + m[5]*v[1] + m[9 ]*v[2] + m[13];
-		    v_eye[2] = m[2]*v[0] + m[6]*v[1] + m[10]*v[2] + m[14];
-        }
-
-		vec3_t q;
-		VectorSubtract(pb, pa, q);
-		CrossProduct(q, p, n);
-		if (VectorLength(n) > 1e-5)
-			break;
-	}
-	if (DotProduct(n, pa) >= 0)
-		return; // discard backfacing polygon
-
-	// Solid shade.
-	for (i = 0; i < numPoints; i++) {
-		VectorCopy(&points[3*i], tess.xyz[i]);
-
-		tess.svars.colors[i][0] = (color&1) ? 255 : 0;
-		tess.svars.colors[i][1] = (color&2) ? 255 : 0;
-		tess.svars.colors[i][2] = (color&4) ? 255 : 0;
-		tess.svars.colors[i][3] = 255;
-	}
-	tess.numVertexes = numPoints;
-
-	tess.numIndexes = 0;
-	for (i = 1; i < numPoints - 1; i++)
-    {
-		tess.indexes[tess.numIndexes + 0] = 0;
-		tess.indexes[tess.numIndexes + 1] = i;
-		tess.indexes[tess.numIndexes + 2] = i + 1;
-		tess.numIndexes += 3;
-	}
-
-
-    vk_bind_geometry();
-    vk_shade_geometry(vk.surface_debug_pipeline_solid, qfalse, normal, qtrue);
-
-
-	// Outline.
-	memset(tess.svars.colors, tr.identityLightByte, numPoints * 2 * sizeof(color4ub_t));
-
-	for (i = 0; i < numPoints; i++)
-    {
-		VectorCopy(&points[3*i], tess.xyz[2*i]);
-		VectorCopy(&points[3*((i + 1) % numPoints)], tess.xyz[2*i + 1]);
-	}
-	tess.numVertexes = numPoints * 2;
-	tess.numIndexes = 0;
-
-
-    vk_bind_geometry();
-    vk_shade_geometry(vk.surface_debug_pipeline_outline, qfalse, force_zero, qfalse);
-	
-    tess.numVertexes = 0;
-}
-
-/*
-====================
-R_DebugGraphics
-
-Visualization aid for movement clipping debugging
-====================
-*/
-void R_DebugGraphics( void )
-{
-	if ( !r_debugSurface->integer ) {
-		return;
-	}
-
-	// the render thread can't make callbacks to the main thread
-	R_SyncRenderThread();
-
-	GL_Bind( tr.whiteImage);
-	ri.CM_DrawDebugSurface( R_DebugPolygon );
-}
 
 
 /*
@@ -1532,9 +1428,9 @@ void R_RenderView (viewParms_t *parms)
 
 	R_SortDrawSurfs( tr.refdef.drawSurfs + firstDrawSurf, tr.refdef.numDrawSurfs - firstDrawSurf );
 
-	// draw main system development information (surface outlines, etc)
-	R_DebugGraphics();
+    if ( r_debugSurface->integer )
+    {
+        // draw main system development information (surface outlines, etc)
+		R_DebugGraphics();
+	}
 }
-
-
-

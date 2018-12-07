@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 #include "tr_dsa.h"
+#include "../renderercommon/matrix_multiplication.h"
 
 extern const char *fallbackShader_bokeh_vp;
 extern const char *fallbackShader_bokeh_fp;
@@ -790,7 +791,8 @@ void GLSL_SetUniformFloat5(shaderProgram_t *program, int uniformNum, const vec5_
 	qglProgramUniform1fvEXT(program->program, uniforms[uniformNum], 5, v);
 }
 
-void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const mat4_t matrix)
+
+void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const float matrix[16])
 {
 	GLint *uniforms = program->uniforms;
 	vec_t *compare = (float *)(program->uniformBuffer + program->uniformBufferOffsets[uniformNum]);
@@ -804,15 +806,17 @@ void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const mat4_t 
 		return;
 	}
 
-	if (Mat4Compare(matrix, compare))
+
+	if( matrix[ 0] != compare[ 0] || matrix[ 4] != compare[ 4] || matrix[ 8] != compare[ 8] || matrix[12] != compare[12] ||
+        matrix[ 1] != compare[ 1] || matrix[ 5] != compare[ 5] || matrix[ 9] != compare[ 9] || matrix[13] != compare[13] ||
+		matrix[ 2] != compare[ 2] || matrix[ 6] != compare[ 6] || matrix[10] != compare[10] || matrix[14] != compare[14] ||
+		matrix[ 3] != compare[ 3] || matrix[ 7] != compare[ 7] || matrix[11] != compare[11] || matrix[15] != compare[15] )
 	{
-		return;
+		Mat4Copy(matrix, compare);
+        qglProgramUniformMatrix4fvEXT(program->program, uniforms[uniformNum], 1, GL_FALSE, matrix);
 	}
-
-	Mat4Copy(matrix, compare);
-
-	qglProgramUniformMatrix4fvEXT(program->program, uniforms[uniformNum], 1, GL_FALSE, matrix);
 }
+
 
 void GLSL_DeleteGPUShader(shaderProgram_t *program)
 {

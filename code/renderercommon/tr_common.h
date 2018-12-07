@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static const float ORIGIN[3] = {0,0,0};
 // outside of TR since it shouldn't be cleared during ref re-init
-extern refimport_t ri;
+
 extern glconfig_t glConfig;	
 // These variables should live inside glConfig but can't because of
 // compatibility issues to the original ID vms.  If you release a stand-alone
@@ -121,26 +121,13 @@ void R_IssuePendingRenderCommands( void );
 //qhandle_t RE_RegisterShaderLightMap( const char *name, int lightmapIndex );
 qhandle_t RE_RegisterShader( const char *name );
 qhandle_t RE_RegisterShaderNoMip( const char *name );
-qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_t *image, qboolean mipRawImage);
+
 
 // font stuff
 void R_InitFreeType( void );
 void R_DoneFreeType( void );
 void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
-/*
-=============================================================
-
-IMAGE LOADERS
-
-=============================================================
-*/
-
-void R_LoadBMP( const char *name, byte **pic, int *width, int *height );
-void R_LoadJPG( const char *name, byte **pic, int *width, int *height );
-void R_LoadPCX( const char *name, byte **pic, int *width, int *height );
-void R_LoadPNG( const char *name, byte **pic, int *width, int *height );
-void R_LoadTGA( const char *name, byte **pic, int *width, int *height );
 
 /*
 =============================================================
@@ -176,21 +163,7 @@ float MakeTwoPerpVectors(const float forward[3], float right[3], float up[3]);
 void ClearBounds( vec3_t mins, vec3_t maxs );
 qboolean SkipBracedSection (char **program, int depth);
 
-typedef vec_t mat4_t[16];
-typedef int ivec2_t[2];
-typedef int ivec3_t[3];
-typedef int ivec4_t[4];
 
-void Mat4Zero( mat4_t out );
-void Mat4Identity( mat4_t out );
-void Mat4Copy( const mat4_t in, mat4_t out );
-void Mat4Transform( const mat4_t in1, const vec4_t in2, vec4_t out );
-qboolean Mat4Compare(const mat4_t a, const mat4_t b);
-void Mat4Dump( const mat4_t in );
-void Mat4Translation( vec3_t vec, mat4_t out );
-void Mat4Ortho( float left, float right, float bottom, float top, float znear, float zfar, mat4_t out );
-void Mat4View(vec3_t axes[3], vec3_t origin, mat4_t out);
-void Mat4SimpleInverse( const mat4_t in, mat4_t out);
 
 #define VectorCopy2(a,b)		((b)[0]=(a)[0],(b)[1]=(a)[1])
 #define VectorSet2(v,x,y)       ((v)[0]=(x),(v)[1]=(y));
@@ -207,7 +180,7 @@ void Mat4SimpleInverse( const mat4_t in, mat4_t out);
 #define ByteToFloat(a)          ((float)(a) * 1.0f/255.0f)
 #define FloatToByte(a)          (byte)((a) * 255.0f)
 
-static inline void VectorNorm( vec3_t v )
+static inline void VectorNorm( float v[3] )
 {
 	float length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
 
@@ -224,7 +197,7 @@ static inline void VectorNorm( vec3_t v )
 	v[2] *= length;
 }
 
-static inline void VectorNorm2(const vec3_t v, vec3_t out)
+static inline void VectorNorm2(const float v[3], float out[3])
 {
 	float ilength = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
 
@@ -242,14 +215,13 @@ static inline void VectorNorm2(const vec3_t v, vec3_t out)
 }
 
 
-void VectorLerp( vec3_t a, vec3_t b, float lerp, vec3_t c);
 static inline float VectorLen( const float v[3] )
 {
 	return sqrtf(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 }
 
-qboolean SpheresIntersect(vec3_t origin1, float radius1, vec3_t origin2, float radius2);
-void BoundingSphereOfSpheres(vec3_t origin1, float radius1, vec3_t origin2, float radius2, vec3_t origin3, float *radius3);
+qboolean SpheresIntersect(float origin1[3], float radius1, float origin2[3], float radius2);
+void BoundingSphereOfSpheres(float origin1[3], float radius1, float origin2[3], float radius2, float origin3[3], float *radius3);
 
 #ifndef SGN
 #define SGN(x) (((x) >= 0) ? !!(x) : -1)

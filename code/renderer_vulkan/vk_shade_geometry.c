@@ -170,6 +170,8 @@ void vk_shade_geometry(VkPipeline pipeline, qboolean multitexture, enum Vk_Depth
 
 void vk_bind_geometry(void) 
 {
+
+
 	// xyz stream
 	{
 		if ((vk.xyz_elements + tess.numVertexes) * sizeof(vec4_t) > XYZ_SIZE)

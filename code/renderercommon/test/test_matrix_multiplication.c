@@ -19,28 +19,42 @@
 void MatrixMultiply4x4(const float A[16], const float B[16], float out[16]);
 void MatrixMultiply4x4_ASM(const float A[16], const float B[16], float out[16]);
 
-void MatrixMultiply4x4(const float A[16], const float B[16], float out[16])
+/*
+void matMul( float result[4][4], float left[4][4], float right[4][4] )
 {
-    out[0] = A[0]*B[0] + A[1]*B[4] + A[2]*B[8] + A[3]*B[12];
-    out[1] = A[0]*B[1] + A[1]*B[5] + A[2]*B[9] + A[3]*B[13];
-    out[2] = A[0]*B[2] + A[1]*B[6] + A[2]*B[10] + A[3]*B[14];
-    out[3] = A[0]*B[3] + A[1]*B[7] + A[2]*B[11] + A[3]*B[15];
-
-    out[4] = A[4]*B[0] + A[5]*B[4] + A[6]*B[8] + A[7]*B[12];
-    out[5] = A[4]*B[1] + A[5]*B[5] + A[6]*B[9] + A[7]*B[13];
-    out[6] = A[4]*B[2] + A[5]*B[6] + A[6]*B[10] + A[7]*B[14];
-    out[7] = A[4]*B[3] + A[5]*B[7] + A[6]*B[11] + A[7]*B[15];
-
-    out[8] = A[8]*B[0] + A[9]*B[4] + A[10]*B[8] + A[11]*B[12];
-    out[9] = A[8]*B[1] + A[9]*B[5] + A[10]*B[9] + A[11]*B[13];
-    out[10] = A[8]*B[2] + A[9]*B[6] + A[10]*B[10] + A[11]*B[14];
-    out[11] = A[8]*B[3] + A[9]*B[7] + A[10]*B[11] + A[11]*B[15];
-
-    out[12] = A[12]*B[0] + A[13]*B[4] + A[14]*B[8] + A[15]*B[12];
-    out[13] = A[12]*B[1] + A[13]*B[5] + A[14]*B[9] + A[15]*B[13];
-    out[14] = A[12]*B[2] + A[13]*B[6] + A[14]*B[10] + A[15]*B[14];
-    out[15] = A[12]*B[3] + A[13]*B[7] + A[14]*B[11] + A[15]*B[15];
+    __asm
+    {
+        mov eax,left
+        mov edi,right
+        mov edx,result
+        movaps xmm4,[edi]
+        movaps xmm5,[edi+16]
+        movaps xmm6,[edi+32]
+        movaps xmm7,[edi+48]
+        mov edi,0
+        mov ecx,4
+l_:     movaps xmm0,[eax+edi]
+        movaps xmm1,xmm0
+        movaps xmm2,xmm0
+        movaps xmm3,xmm0
+        shufps xmm0,xmm0,00000000b
+        shufps xmm1,xmm1,01010101b
+        shufps xmm2,xmm2,10101010b
+        shufps xmm3,xmm3,11111111b
+        mulps xmm0,xmm4
+        mulps xmm1,xmm5
+        mulps xmm2,xmm6
+        mulps xmm3,xmm7
+        addps xmm2,xmm0
+        addps xmm3,xmm1
+        addps xmm3,xmm2
+        movaps [edx+edi],xmm3
+        add edi,16
+        loop l_
+    }
 }
+*/
+
 
 
 void MM4x4Print(float M[16])
@@ -82,8 +96,6 @@ int main(int argc, char *argv[])
     float out[16] = {0};
     float out2[16] = {0};
     float out3[16] = {0};
-
-
 
     {
 

@@ -1,5 +1,6 @@
 #include "tr_local.h"
 #include "tr_model.h"
+#include "../renderercommon/ref_import.h"
 
 #define	LL(x) x=LittleLong(x)
 

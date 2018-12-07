@@ -7,5 +7,5 @@ void R_SetColorMappings( void );
 void R_GammaCorrect(unsigned char* buffer, int bufSize);
 
 
-void R_LightScaleTexture (unsigned char* in, int inwidth, int inheight, int only_gamma );
+void R_LightScaleTexture (unsigned char* in, unsigned int nBytes, int only_gamma );
 #endif

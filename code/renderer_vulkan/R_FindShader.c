@@ -3,6 +3,7 @@
 #include "fun_log.h"
 #include "vk_image.h"
 #include "tr_cvar.h"
+#include "../renderercommon/ref_import.h"
 
 
 

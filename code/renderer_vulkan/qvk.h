@@ -2,7 +2,7 @@
 #define QVK_H_
 
 #include "VKimpl.h"
-#include "ref_import.h" //extern refimport_t ri; 
+#include "../renderercommon/ref_import.h" //extern refimport_t ri; 
 
 // Most of the renderer's code uses Vulkan API via function provides in this file but 
 // there are few places outside of vk.cpp where we use Vulkan commands directly.

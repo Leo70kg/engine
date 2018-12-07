@@ -384,132 +384,16 @@ qboolean SkipBracedSection(char **program, int depth)
 }
 
 
-static const float Mat4x4Identity[16] = {
-    1.0f, 0.0f, 0.0f, 0.0f,
-    0.0f, 1.0f, 0.0f, 0.0f,
-    0.0f, 0.0f, 1.0f, 0.0f,
-    0.0f, 0.0f, 0.0f, 1.0f
-};
-
 
 // tr_extramath.c - extra math needed by the renderer not in qmath.c
 // Some matrix helper functions
 // FIXME: do these already exist in ioq3 and I don't know about them?
 
-void Mat4Zero( mat4_t out )
-{
-    memset(out, 0, 64);
-}
-
-void Mat4Identity( mat4_t out )
-{
-    memcpy(out, Mat4x4Identity, 64);
-}
-
-void Mat4Copy( const mat4_t in, mat4_t out )
-{
-    memcpy(out, in, 64);
-}
 
 
 
 
-void Mat4Transform( const mat4_t in1, const vec4_t in2, vec4_t out )
-{
-	out[ 0] = in1[ 0] * in2[ 0] + in1[ 4] * in2[ 1] + in1[ 8] * in2[ 2] + in1[12] * in2[ 3];
-	out[ 1] = in1[ 1] * in2[ 0] + in1[ 5] * in2[ 1] + in1[ 9] * in2[ 2] + in1[13] * in2[ 3];
-	out[ 2] = in1[ 2] * in2[ 0] + in1[ 6] * in2[ 1] + in1[10] * in2[ 2] + in1[14] * in2[ 3];
-	out[ 3] = in1[ 3] * in2[ 0] + in1[ 7] * in2[ 1] + in1[11] * in2[ 2] + in1[15] * in2[ 3];
-}
 
-qboolean Mat4Compare( const mat4_t a, const mat4_t b )
-{
-	return !(a[ 0] != b[ 0] || a[ 4] != b[ 4] || a[ 8] != b[ 8] || a[12] != b[12] ||
-             a[ 1] != b[ 1] || a[ 5] != b[ 5] || a[ 9] != b[ 9] || a[13] != b[13] ||
-		     a[ 2] != b[ 2] || a[ 6] != b[ 6] || a[10] != b[10] || a[14] != b[14] ||
-		     a[ 3] != b[ 3] || a[ 7] != b[ 7] || a[11] != b[11] || a[15] != b[15]);
-}
-
-void Mat4Dump( const mat4_t in )
-{
-	ri.Printf(PRINT_ALL, "%3.5f %3.5f %3.5f %3.5f\n", in[ 0], in[ 4], in[ 8], in[12]);
-	ri.Printf(PRINT_ALL, "%3.5f %3.5f %3.5f %3.5f\n", in[ 1], in[ 5], in[ 9], in[13]);
-	ri.Printf(PRINT_ALL, "%3.5f %3.5f %3.5f %3.5f\n", in[ 2], in[ 6], in[10], in[14]);
-	ri.Printf(PRINT_ALL, "%3.5f %3.5f %3.5f %3.5f\n", in[ 3], in[ 7], in[11], in[15]);
-}
-
-void Mat4Translation( vec3_t vec, mat4_t out )
-{
-    memcpy(out, Mat4x4Identity, 64);
-    out[12] = vec[0];
-    out[13] = vec[1];
-    out[14] = vec[2];
-}
-
-void Mat4Ortho( float left, float right, float bottom, float top, float znear, float zfar, mat4_t out )
-{
-    float x = right - left;
-    float y = top - bottom;
-    float z = zfar - znear;
-
-	out[0] = 2.0f / x;  out[4] = 0.0f;      out[ 8] = 0.0f;     out[12] = -(right + left) / x;
-	out[1] = 0.0f;      out[5] = 2.0f / y;  out[ 9] = 0.0f;     out[13] = -(top + bottom) / y;
-	out[2] = 0.0f;      out[6] = 0.0f;      out[10] = 2.0f / z; out[14] = -(zfar + znear) / z;
-	out[3] = 0.0f;      out[7] = 0.0f;      out[11] = 0.0f;     out[15] = 1.0f;
-}
-
-
-
-void Mat4View(vec3_t axes[3], vec3_t origin, mat4_t out)
-{
-	out[0]  = axes[0][0];
-	out[1]  = axes[1][0];
-	out[2]  = axes[2][0];
-	out[3]  = 0;
-
-	out[4]  = axes[0][1];
-	out[5]  = axes[1][1];
-	out[6]  = axes[2][1];
-	out[7]  = 0;
-
-	out[8]  = axes[0][2];
-	out[9]  = axes[1][2];
-	out[10] = axes[2][2];
-	out[11] = 0;
-
-	out[12] = -DotProduct(origin, axes[0]);
-	out[13] = -DotProduct(origin, axes[1]);
-	out[14] = -DotProduct(origin, axes[2]);
-	out[15] = 1;
-}
-
-
-void Mat4SimpleInverse( const mat4_t in, mat4_t out)
-{
-	vec3_t v;
-	float invSqrLen;
- 
-	VectorCopy(in + 0, v);
-	invSqrLen = 1.0f / DotProduct(v, v); VectorScale(v, invSqrLen, v);
-	out[ 0] = v[0]; out[ 4] = v[1]; out[ 8] = v[2]; out[12] = -DotProduct(v, &in[12]);
-
-	VectorCopy(in + 4, v);
-	invSqrLen = 1.0f / DotProduct(v, v); VectorScale(v, invSqrLen, v);
-	out[ 1] = v[0]; out[ 5] = v[1]; out[ 9] = v[2]; out[13] = -DotProduct(v, &in[12]);
-
-	VectorCopy(in + 8, v);
-	invSqrLen = 1.0f / DotProduct(v, v); VectorScale(v, invSqrLen, v);
-	out[ 2] = v[0]; out[ 6] = v[1]; out[10] = v[2]; out[14] = -DotProduct(v, &in[12]);
-
-	out[ 3] = 0.0f; out[ 7] = 0.0f; out[11] = 0.0f; out[15] = 1.0f;
-}
-
-void VectorLerp( vec3_t a, vec3_t b, float lerp, vec3_t c)
-{
-	c[0] = a[0] + (b[0] - a[0]) * lerp;
-	c[1] = a[1] + (b[1] - a[1]) * lerp;
-	c[2] = a[2] + (b[2] - a[2]) * lerp;
-}
 
 qboolean SpheresIntersect(vec3_t origin1, float radius1, vec3_t origin2, float radius2)
 {

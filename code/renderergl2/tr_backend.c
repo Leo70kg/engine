@@ -268,20 +268,20 @@ void GL_State( unsigned long stateBits )
 }
 
 
-void GL_SetProjectionMatrix(mat4_t matrix)
+void GL_SetProjectionMatrix(float matrix[16])
 {
 	Mat4Copy(matrix, glState.projection);
 	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);	
 }
 
 
-void GL_SetModelviewMatrix(mat4_t matrix)
+void GL_SetModelviewMatrix(float matrix[16])
 {
 	Mat4Copy(matrix, glState.modelview);
 	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);	
 }
 
-void GL_SetMvpMatrix(mat4_t MV, mat4_t P)
+void GL_SetMvpMatrix(float MV[16], float P[16])
 {
 	Mat4Copy(MV, glState.modelview);
 	Mat4Copy(P, glState.projection);
@@ -1441,7 +1441,8 @@ const void *RB_PostProcess(const void *data)
 		srcFbo = tr.msaaResolveFbo;
 	}
 
-	ivec4_t srcBox, dstBox;
+	int srcBox[4];
+    int dstBox[4];
 
 	dstBox[0] = backEnd.viewParms.viewportX;
 	dstBox[1] = backEnd.viewParms.viewportY;

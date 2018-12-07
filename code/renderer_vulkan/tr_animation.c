@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_globals.h"
 #include "tr_cvar.h"
 
+#include "../renderercommon/ref_import.h"
+
 /*
 
 All bones should be an identity orientation to display the mesh exactly

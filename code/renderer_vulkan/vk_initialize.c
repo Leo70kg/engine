@@ -201,17 +201,17 @@ static VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevic
 static VkFormat get_depth_format(VkPhysicalDevice physical_device)
 {
 	VkFormat formats[2];
-	if (0)
+	if (1)
     {
 		formats[0] = VK_FORMAT_D24_UNORM_S8_UINT;
 		formats[1] = VK_FORMAT_D32_SFLOAT_S8_UINT;
-		glConfig.stencilBits = 8;
+		//glConfig.stencilBits = 8;
 	}
     else
     {
 		formats[0] = VK_FORMAT_X8_D24_UNORM_PACK32;
 		formats[1] = VK_FORMAT_D32_SFLOAT;
-		glConfig.stencilBits = 0;
+		//glConfig.stencilBits = 0;
 	}
 
     int i;
@@ -466,7 +466,7 @@ void vk_initialize(void)
 		VkImageAspectFlags image_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
 		
         //r_stencilbits->integer
-        if (0)
+        if (1)
 			image_aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
 

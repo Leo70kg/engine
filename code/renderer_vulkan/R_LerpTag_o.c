@@ -41,7 +41,7 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 
 	model = R_GetModelByHandle( handle );
 	if ( !model->md3[0] ) {
-		AxisClear( tag->axis );
+		memset( tag->axis, 0, 36  );
 		VectorClear( tag->origin );
 		return qfalse;
 	}
@@ -49,7 +49,7 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 	start = R_GetTag( model->md3[0], startFrame, tagName );
 	end = R_GetTag( model->md3[0], endFrame, tagName );
 	if ( !start || !end ) {
-		AxisClear( tag->axis );
+		memset( tag->axis, 0, 36  );;
 		VectorClear( tag->origin );
 		return qfalse;
 	}

@@ -1042,8 +1042,6 @@ extern struct Vk_World		vk_world;		// this data is cleared during ref re-init
 //
 //extern cvar_t	*r_renderAPI;			// 3D API to use: 0 - OpenGL, 1 - Vulkan, 2 - DX12
 
-extern cvar_t	*r_twinMode;			// Debug feature to compare rendering output between OpenGL/Vulkan/DX12 APIs
-
 extern cvar_t	*r_railWidth;
 extern cvar_t	*r_railCoreWidth;
 extern cvar_t	*r_railSegmentLength;
@@ -1079,13 +1077,6 @@ extern	cvar_t	*r_showcluster;
 extern cvar_t	*r_mode;				// video mode
 extern cvar_t	*r_fullscreen;
 extern cvar_t	*r_gamma;
-extern cvar_t	*r_ignorehwgamma;		// overrides hardware gamma capabilities
-
-extern cvar_t	*r_ext_compressed_textures;		// these control use of specific extensions
-extern cvar_t	*r_ext_gamma_control;
-extern cvar_t	*r_ext_texenv_op;
-extern cvar_t	*r_ext_compiled_vertex_array;
-extern cvar_t	*r_ext_texture_env_add;
 
 extern	cvar_t	*r_nobind;						// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;				// make most world faces use default shader

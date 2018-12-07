@@ -483,9 +483,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 		}
 		else
 		{
-			Mat4Zero(tr.refdef.sunShadowMvp[0]);
-			Mat4Zero(tr.refdef.sunShadowMvp[1]);
-			Mat4Zero(tr.refdef.sunShadowMvp[2]);
+            memset(tr.refdef.sunShadowMvp, 0, 64 * 3);
 		}
 
 		// only rerender last cascade if sun has changed position

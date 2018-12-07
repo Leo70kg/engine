@@ -38,12 +38,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_model.h"
 #include "tr_cvar.h"
 
-
-
-// VULKAN
-struct Vk_Instance vk;
-
-
+refimport_t	ri;
 
 
 void vulkanInfo_f( void ) 
@@ -119,7 +114,6 @@ static void InitRenderAPI( void )
 	//
     // This function is responsible for initializing a valid Vulkan subsystem.
 
-
 	if ( glConfig.vidWidth == 0 )
 	{
         // VULKAN
@@ -135,11 +129,8 @@ static void InitRenderAPI( void )
     // print info
 	vulkanInfo_f();
 
-	VK_TextureMode();
+//	VK_TextureMode();
 }
-
-
-
 
 
 
@@ -266,8 +257,6 @@ void RE_Shutdown( qboolean destroyWindow )
 
 	R_DoneFreeType();
 
-    
-    
     // VULKAN
     // Releases vulkan resources allocated during program execution.
     // This effectively puts vulkan subsystem into initial state 
@@ -318,8 +307,6 @@ void RE_BeginRegistration(glconfig_t *glconfigOut)
 
    	ri.Printf(PRINT_ALL, "RE_BeginRegistration finished.\n");
 }
-
-
 
 /*
 @@@@@@@@@@@@@@@@@@@@@
@@ -384,4 +371,3 @@ refexport_t* GetRefAPI(int apiVersion, refimport_t *rimp)
 
 	return &re;
 }
-

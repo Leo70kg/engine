@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_extratypes.h"
 #include "tr_fbo.h"
 #include "tr_postprocess.h"
+#include "../renderercommon/ref_import.h"
 
 #define GLE(ret, name, ...) extern name##proc * qgl##name;
 QGL_1_1_PROCS;
@@ -1326,9 +1327,9 @@ typedef struct {
 
 // the renderer front end should never modify glstate_t
 typedef struct {
-    mat4_t      modelview QALIGN(16);
-	mat4_t      projection QALIGN(16);
-	mat4_t		modelviewProjection QALIGN(16);
+    float       modelview[16] QALIGN(16);
+	float       projection[16] QALIGN(16);
+	float       modelviewProjection[16] QALIGN(16);
 
 	qboolean	finishCalled;
 	int			texEnv[2];
@@ -1853,8 +1854,8 @@ void	GL_TextureMode( const char *string );
 void	GL_CheckErrs( char *file, int line );
 #define GL_CheckErrors(...) GL_CheckErrs(__FILE__, __LINE__)
 void	GL_State( unsigned long stateVector );
-void    GL_SetProjectionMatrix(mat4_t matrix);
-void    GL_SetModelviewMatrix(mat4_t matrix);
+void    GL_SetProjectionMatrix(float matrix[16]);
+void    GL_SetModelviewMatrix(float matrix[16]);
 void	GL_Cull( int cullType );
 
 #define GLS_SRCBLEND_ZERO						0x00000001
@@ -2171,7 +2172,7 @@ void GLSL_SetUniformFloat5(shaderProgram_t *program, int uniformNum, const vec5_
 void GLSL_SetUniformVec2(shaderProgram_t *program, int uniformNum, const vec2_t v);
 void GLSL_SetUniformVec3(shaderProgram_t *program, int uniformNum, const vec3_t v);
 void GLSL_SetUniformVec4(shaderProgram_t *program, int uniformNum, const vec4_t v);
-void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const mat4_t matrix);
+void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const float matrix[16]);
 
 shaderProgram_t *GLSL_GetGenericShaderProgram(int stage);
 

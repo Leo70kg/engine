@@ -803,7 +803,7 @@ void RB_DrawSun( float scale, shader_t *shader ) {
 	//qglTranslatef (backEnd.viewParms.or.origin[0], backEnd.viewParms.or.origin[1], backEnd.viewParms.or.origin[2]);
 	{
 		// FIXME: this could be a lot cleaner
-		mat4_t translation QALIGN(16);
+		float translation[16] QALIGN(16);
 
 		Mat4Translation( backEnd.viewParms.or.origin, translation );
 		MatrixMultiply4x4_SSE( translation, backEnd.viewParms.world.modelMatrix, glState.modelview );
@@ -866,7 +866,7 @@ void RB_StageIteratorSky( void ) {
 
 	// draw the outer skybox
 	if ( tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage ) {
-		mat4_t oldmodelview;
+		float oldmodelview[16];
 		
 		GL_State( 0 );
 		GL_Cull( CT_FRONT_SIDED );
@@ -874,8 +874,8 @@ void RB_StageIteratorSky( void ) {
 
 		{
 			// FIXME: this could be a lot cleaner
-			mat4_t trans QALIGN(16);
-            mat4_t product QALIGN(16);
+			float trans[16] QALIGN(16);
+            float product[16] QALIGN(16);
 
 			Mat4Copy( glState.modelview, oldmodelview );
 			Mat4Translation( backEnd.viewParms.or.origin, trans );

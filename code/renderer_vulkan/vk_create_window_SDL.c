@@ -231,6 +231,8 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 		SDL_window = NULL;
 	}
 
+
+
 	if( fullscreen )
 	{
 		flags |= SDL_WINDOW_FULLSCREEN;
@@ -401,7 +403,12 @@ void VKimp_Init()
 
 	r_displayIndex = ri.Cvar_Get( "r_displayIndex", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "60", CVAR_LATCH );
-    r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
+
+
+    // hardcode it
+    glConfig.colorBits = 32;
+    glConfig.depthBits = 24;
+    glConfig.stencilBits = 8;
 
 
 	ri.Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );

@@ -87,9 +87,9 @@ typedef struct {
 
 typedef struct {
 	float		modelMatrix[16] QALIGN(16);
-	vec3_t		axis[3];		// orientation in world
-    vec3_t		origin;			// in world coordinates
-	vec3_t		viewOrigin;		// viewParms->or.origin in local coordinates
+	float		axis[3][3];		// orientation in world
+    float		origin[3];			// in world coordinates
+	float		viewOrigin[3];		// viewParms->or.origin in local coordinates
 } orientationr_t;
 
 //===============================================================================

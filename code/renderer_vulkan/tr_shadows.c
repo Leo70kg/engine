@@ -277,12 +277,12 @@ void RB_ShadowFinish( void )
     tess.numVertexes = 4;
 
 
-    // set backEnd.or.modelMatrix to identity matrix
+
     float bak[16];
      
    
     get_modelview_matrix(bak);
-
+    // set backEnd.or.modelMatrix to identity matrix
     reset_modelview_matrix();
 
     vk_bind_geometry();

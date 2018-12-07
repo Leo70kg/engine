@@ -670,7 +670,8 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 			
 		// now get the camera origin and orientation
 		VectorCopy( e->e.oldorigin, camera->origin );
-		AxisCopy( e->e.axis, camera->axis );
+		//AxisCopy( e->e.axis, camera->axis );
+        memcpy(camera->axis, e->e.axis, 36);
 		VectorSubtract( vec3_origin, camera->axis[0], camera->axis[0] );
 		VectorSubtract( vec3_origin, camera->axis[1], camera->axis[1] );
 

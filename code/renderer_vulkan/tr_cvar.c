@@ -1,6 +1,6 @@
 
 #include "tr_cvar.h"
-#include "ref_import.h"
+#include "../renderercommon/ref_import.h"
 
 cvar_t	*r_railWidth;
 cvar_t	*r_railCoreWidth;
@@ -12,7 +12,6 @@ cvar_t	*r_znear;
 
 cvar_t	*r_skipBackEnd;
 
-cvar_t	*r_ignorehwgamma;
 
 cvar_t	*r_inGameVideo;
 cvar_t	*r_fastsky;
@@ -32,10 +31,6 @@ cvar_t	*r_facePlaneCull;
 cvar_t	*r_showcluster;
 cvar_t	*r_nocurves;
 
-cvar_t	*r_ext_compressed_textures;
-cvar_t	*r_ext_gamma_control;
-cvar_t	*r_ext_compiled_vertex_array;
-cvar_t	*r_ext_texture_env_add;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_logFile;
@@ -114,16 +109,11 @@ void R_Register( void )
 	//
 	// latched and archived variables
 	//
-	r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compressed_textures", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_gamma_control = ri.Cvar_Get( "r_ext_gamma_control", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_compiled_vertex_array = ri.Cvar_Get( "r_ext_compiled_vertex_array", "1", CVAR_ARCHIVE | CVAR_LATCH);
-	r_ext_texture_env_add = ri.Cvar_Get( "r_ext_texture_env_add", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_picmip = ri.Cvar_Get ("r_picmip", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_roundImagesDown = ri.Cvar_Get ("r_roundImagesDown", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_colorMipLevels = ri.Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
 	AssertCvarRange( r_picmip, 0, 16, qtrue );
-	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
+	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
@@ -135,7 +125,7 @@ void R_Register( void )
 	//
 	r_fullbright = ri.Cvar_Get ("r_fullbright", "0", CVAR_LATCH|CVAR_CHEAT );
 	r_mapOverBrightBits = ri.Cvar_Get ("r_mapOverBrightBits", "2", CVAR_LATCH );
-	r_intensity = ri.Cvar_Get ("r_intensity", "1", CVAR_LATCH );
+	r_intensity = ri.Cvar_Get ("r_intensity", "1.2", CVAR_LATCH );
 	r_singleShader = ri.Cvar_Get ("r_singleShader", "0", CVAR_CHEAT | CVAR_LATCH );
 
 	//

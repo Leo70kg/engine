@@ -43,7 +43,6 @@ cvar_t	*r_smp;
 cvar_t	*r_showSmp;
 cvar_t	*r_skipBackEnd;
 
-cvar_t	*r_ignorehwgamma;
 
 cvar_t	*r_inGameVideo;
 cvar_t	*r_fastsky;
@@ -63,10 +62,6 @@ cvar_t	*r_facePlaneCull;
 cvar_t	*r_showcluster;
 cvar_t	*r_nocurves;
 
-cvar_t	*r_ext_compressed_textures;
-cvar_t	*r_ext_gamma_control;
-cvar_t	*r_ext_compiled_vertex_array;
-cvar_t	*r_ext_texture_env_add;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_logFile;
@@ -864,10 +859,6 @@ void R_Register( void )
 	//
 	// latched and archived variables
 	//
-	r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compressed_textures", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_gamma_control = ri.Cvar_Get( "r_ext_gamma_control", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_compiled_vertex_array = ri.Cvar_Get( "r_ext_compiled_vertex_array", "1", CVAR_ARCHIVE | CVAR_LATCH);
-	r_ext_texture_env_add = ri.Cvar_Get( "r_ext_texture_env_add", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_picmip = ri.Cvar_Get ("r_picmip", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_roundImagesDown = ri.Cvar_Get ("r_roundImagesDown", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_colorMipLevels = ri.Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
@@ -876,7 +867,6 @@ void R_Register( void )
 	r_stencilbits = ri.Cvar_Get( "r_stencilbits", "8", CVAR_ARCHIVE | CVAR_LATCH );
 	r_depthbits = ri.Cvar_Get( "r_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_mode = ri.Cvar_Get( "r_mode", "3", CVAR_ARCHIVE | CVAR_LATCH );
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_customwidth = ri.Cvar_Get( "r_customwidth", "960", CVAR_ARCHIVE | CVAR_LATCH );

@@ -1,4 +1,5 @@
 #include "tr_local.h"
+#include "../renderercommon/ref_import.h"
 
 #include "R_LightScaleTexture.h"
 #include "vk_image.h"
@@ -34,12 +35,12 @@ Apply a color blend over a set of pixels
 static void R_BlendOverTexture(unsigned char* data, int pixelCount, const unsigned char blend[4])
 {
 	int	i;
-
+    int alpha = blend[3];
 	int inverseAlpha = 255 - blend[3];
     
-	int bR = blend[0] * blend[3];
-	int bG = blend[1] * blend[3];
-	int bB = blend[2] * blend[3];
+	int bR = blend[0] * alpha;
+	int bG = blend[1] * alpha;
+	int bB = blend[2] * alpha;
 
 	for ( i = 0; i < pixelCount; i++, data+=4 )
     {
@@ -58,54 +59,71 @@ Operates in place, quartering the size of the texture
 Proper linear filter
 ================
 */
-static void R_MipMap2( unsigned *in, int inWidth, int inHeight )
+static void R_MipMap2( unsigned char * in, unsigned int inWidth, unsigned int inHeight )
 {
-	int	i, j, k;
-	
+
+	int	i, j;
+
 	if ( (inWidth == 1) && (inWidth == 1) )
 		return;
+	//ri.Printf (PRINT_ALL, "\n---R_MipMap2---\n");
+    // Not run time funs, can be used for best view effects
 
-	int outWidth = inWidth >> 1;
-	int outHeight = inHeight >> 1;
-	
-    unsigned* temp = ri.Hunk_AllocateTempMemory( outWidth * outHeight * 4 );
+	unsigned int outWidth = inWidth >> 1;
+	unsigned int outHeight = inHeight >> 1;
+    unsigned int nBytes = outWidth * outHeight * 4;
 
-	int inWidthMask = inWidth - 1;
-	int inHeightMask = inHeight - 1;
+    unsigned char * temp = ri.Hunk_AllocateTempMemory( nBytes );
+
+	const unsigned int inWidthMask = inWidth - 1;
+	const unsigned int inHeightMask = inHeight - 1;
 
 	for ( i = 0 ; i < outHeight ; i++ )
     {
 		for ( j = 0 ; j < outWidth ; j++ )
         {
-			unsigned char* outpix = (unsigned char *) ( temp + i * outWidth + j );
+            unsigned int outIndex = i * outWidth + j;
+            unsigned int k;
 			for ( k = 0 ; k < 4 ; k++ )
             {
-				int total = 
-					1 * ((unsigned char *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					1 * ((unsigned char *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
+                unsigned int r0 = ((i*2-1) & inHeightMask) * inWidth;
+                unsigned int r1 = ((i*2 ) & inHeightMask) * inWidth;
+                unsigned int r2 = ((i*2+1) & inHeightMask) * inWidth;
+                unsigned int r3 = ((i*2+2) & inHeightMask) * inWidth;
 
-					2 * ((unsigned char *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					4 * ((unsigned char *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					4 * ((unsigned char *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
+                unsigned int c0 = ((j*2-1) & inWidthMask);
+                unsigned int c1 = ((j*2 ) & inWidthMask);
+                unsigned int c2 = ((j*2+1) & inWidthMask);
+                unsigned int c3 = ((j*2+2) & inWidthMask);
 
-					2 * ((unsigned char *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					4 * ((unsigned char *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					4 * ((unsigned char *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
 
-					1 * ((unsigned char *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					2 * ((unsigned char *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					1 * ((unsigned char *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k];
-				outpix[k] = total / 36;
+				unsigned int total = 
+					1 * in[(r0 + c0) * 4 + k] +
+					2 * in[(r0 + c1) * 4 + k] +
+					2 * in[(r0 + c2) * 4 + k] +
+					1 * in[(r0 + c3) * 4 + k] +
+
+					2 * in[(r1 + c0) * 4 + k] +
+					4 * in[(r1 + c1) * 4 + k] +
+					4 * in[(r1 + c2) * 4 + k] +
+					2 * in[(r1 + c3) * 4 + k] +
+
+					2 * in[(r2 + c0) * 4 + k] +
+					4 * in[(r2 + c1) * 4 + k] +
+					4 * in[(r2 + c2) * 4 + k] +
+					2 * in[(r2 + c3) * 4 + k] +
+
+					1 * in[(r3 + c0) * 4 + k] +
+					2 * in[(r3 + c1) * 4 + k] +
+					2 * in[(r3 + c2) * 4 + k] +
+					1 * in[(r3 + c3) * 4 + k] ;
+				
+                temp[4*outIndex + k] = (total + 18) / 36;
 			}
 		}
 	}
 
-	memcpy( in, temp, outWidth * outHeight * 4 );
+	memcpy( in, temp, nBytes );
 	ri.Hunk_FreeTempMemory( temp );
 }
 
@@ -120,13 +138,13 @@ R_MipMap
 Operates in place, quartering the size of the texture
 ================
 */
-static void R_MipMap(unsigned char *in, int width, int height)
+static void R_MipMap(unsigned char* in, unsigned int width, unsigned int height)
 {
 
 	if ( (width == 1) && (height == 1) )
 		return;
 
-    int	i, j;
+    unsigned int i;
 
     const unsigned int row = width * 4;
     unsigned char* out = in;
@@ -148,6 +166,7 @@ static void R_MipMap(unsigned char *in, int width, int height)
     {   
         for (i=0; i<height; i++, in+=row)
         {
+            unsigned int j;
             for (j=0; j<width; j++, out+=4, in+=8)
             {
                 out[0] = (in[0] + in[4] + in[row+0] + in[row+4])>>2;
@@ -242,10 +261,13 @@ void generate_image_upload_data(
 		;
 	for (scaled_height = 1 ; scaled_height < height ; scaled_height<<=1)
 		;
-	if ( r_roundImagesDown->integer && scaled_width > width )
+	
+    if ( r_roundImagesDown->integer && scaled_width > width )
 		scaled_width >>= 1;
 	if ( r_roundImagesDown->integer && scaled_height > height )
 		scaled_height >>= 1;
+
+
 
 	upload_data->buffer = (unsigned char*) ri.Hunk_AllocateTempMemory(2 * 4 * scaled_width * scaled_height);
 
@@ -326,13 +348,15 @@ void generate_image_upload_data(
             height = 1; 
 	}
 
+
+    
 	// At this point width == scaled_width and height == scaled_height.
     unsigned int nBytes = scaled_width * scaled_height * sizeof( unsigned int);
 	unsigned char * scaled_buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( nBytes );
 	
     memcpy(scaled_buffer, data, nBytes);
 	
-    R_LightScaleTexture(scaled_buffer, scaled_width, scaled_height, !mipmap);
+    R_LightScaleTexture(scaled_buffer, nBytes, !mipmap);
 
 	int miplevel = 0;
 

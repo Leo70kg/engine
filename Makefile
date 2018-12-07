@@ -526,7 +526,7 @@ ifdef MINGW
 
 
   ifeq ($(ARCH),x86_64)
-	OPTIMIZEVM = -O3 -funroll-loops -fomit-frame-pointer -funroll-loops -mmmx -msse2
+	OPTIMIZEVM = -O3  -fomit-frame-pointer -funroll-loops -msse2
 	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 	HAVE_VM_COMPILED = true
   endif
@@ -1569,6 +1569,7 @@ Q3MYDEVOBJ = \
 ######################  VULKAN  ######################
 
 Q3VKOBJ = \
+  $(B)/renderer_vulkan/R_DEBUG.o \
   $(B)/renderer_vulkan/matrix_multiplication.o \
   $(B)/renderer_vulkan/mvp_matrix.o \
   $(B)/renderer_vulkan/tr_globals.o \
@@ -1580,6 +1581,11 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_curve.o \
   $(B)/renderer_vulkan/tr_font.o \
   $(B)/renderer_vulkan/tr_image.o \
+  $(B)/renderer_vulkan/RB_TakeScreenshot.o \
+  $(B)/renderer_vulkan/R_LoadImage2.o \
+  $(B)/renderer_vulkan/R_FindShader.o \
+  $(B)/renderer_vulkan/R_ListShader.o \
+  $(B)/renderer_vulkan/R_LightScaleTexture.o \
   $(B)/renderer_vulkan/tr_init.o \
   $(B)/renderer_vulkan/tr_light.o \
   $(B)/renderer_vulkan/tr_main.o \
@@ -1608,11 +1614,7 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_common.o \
   $(B)/renderer_vulkan/tr_displayResolution.o \
   $(B)/renderer_vulkan/qvk.o \
-  $(B)/renderer_vulkan/RB_TakeScreenshot.o \
-  $(B)/renderer_vulkan/R_LoadImage2.o \
-  $(B)/renderer_vulkan/R_FindShader.o \
-  $(B)/renderer_vulkan/R_ListShader.o \
-  $(B)/renderer_vulkan/R_LightScaleTexture.o \
+  $(B)/renderer_vulkan/vk_instance.o \
   $(B)/renderer_vulkan/generate_image_upload_data.o \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
   $(B)/renderer_vulkan/vk_image.o \
