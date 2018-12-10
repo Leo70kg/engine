@@ -396,6 +396,7 @@ static long FS_HashFileName( const char *fname, int hashSize ) {
 	return hash;
 }
 
+
 static fileHandle_t	FS_HandleForFile(void)
 {
 	int	i;
@@ -409,6 +410,7 @@ static fileHandle_t	FS_HandleForFile(void)
 	Com_Error( ERR_DROP, "FS_HandleForFile: none free" );
 	return 0;
 }
+
 
 static FILE	*FS_FileForHandle( fileHandle_t f ) {
 	if ( f < 1 || f >= MAX_FILE_HANDLES ) {
@@ -424,10 +426,9 @@ static FILE	*FS_FileForHandle( fileHandle_t f ) {
 	return fsh[f].handleFiles.file.o;
 }
 
-void	FS_ForceFlush( fileHandle_t f ) {
-	FILE *file;
-
-	file = FS_FileForHandle(f);
+void FS_ForceFlush( fileHandle_t f )
+{
+	FILE *file = FS_FileForHandle(f);
 	setvbuf( file, NULL, _IONBF, 0 );
 }
 

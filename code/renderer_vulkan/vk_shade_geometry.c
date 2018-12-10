@@ -13,7 +13,6 @@
 
 static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 {
-	//VkRect2D r = get_viewport_rect();
 	VkViewport viewport;
 
 	if (backEnd.projection2D)
@@ -96,7 +95,7 @@ VkRect2D get_scissor_rect(void)
 }
 
 
-void vk_shade_geometry(VkPipeline pipeline, qboolean multitexture, enum Vk_Depth_Range depth_range, qboolean indexed)
+void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed)
 {
 	// color
 	{

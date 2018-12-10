@@ -1108,8 +1108,8 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 
 	// decide which agens we can skip
 	if ( stage->alphaGen == AGEN_IDENTITY ) {
-		if ( stage->rgbGen == CGEN_IDENTITY
-			|| stage->rgbGen == CGEN_LIGHTING_DIFFUSE ) {
+		if ( stage->rgbGen == CGEN_IDENTITY || stage->rgbGen == CGEN_LIGHTING_DIFFUSE )
+		{
 			stage->alphaGen = AGEN_SKIP;
 		}
 	}
@@ -1302,8 +1302,7 @@ static void ParseSkyParms( char **text ) {
 	}
 	if ( strcmp( token, "-" ) ) {
 		for (i=0 ; i<6 ; i++) {
-			snprintf( pathname, sizeof(pathname), "%s_%s.tga"
-				, token, suf[i] );
+			snprintf( pathname, sizeof(pathname), "%s_%s.tga", token, suf[i] );
 			shader.sky.outerbox[i] = R_FindImageFile( ( char * ) pathname, IMGTYPE_COLORALPHA, imgFlags | IMGFLAG_CLAMPTOEDGE );
 
 			if ( !shader.sky.outerbox[i] ) {
@@ -1333,8 +1332,7 @@ static void ParseSkyParms( char **text ) {
 	}
 	if ( strcmp( token, "-" ) ) {
 		for (i=0 ; i<6 ; i++) {
-			snprintf( pathname, sizeof(pathname), "%s_%s.tga"
-				, token, suf[i] );
+			snprintf( pathname, sizeof(pathname), "%s_%s.tga", token, suf[i] );
 			shader.sky.innerbox[i] = R_FindImageFile( ( char * ) pathname, IMGTYPE_COLORALPHA, imgFlags );
 			if ( !shader.sky.innerbox[i] ) {
 				shader.sky.innerbox[i] = tr.defaultImage;
@@ -1514,7 +1512,6 @@ static qboolean ParseShader( char **text )
 			}
 			stages[s].active = qtrue;
 			s++;
-
 			continue;
 		}
 		// skip stuff that only the QuakeEdRadient needs
@@ -1541,11 +1538,11 @@ static qboolean ParseShader( char **text )
 
 			token = R_ParseExt( text, qfalse );
 			a = atof( token );
-			a = a / 180 * M_PI;
+			a *= (M_PI/180.0f);
 
 			token = R_ParseExt( text, qfalse );
 			b = atof( token );
-			b = b / 180 * M_PI;
+			b *= (M_PI/180.0f);
 
 			tr.sunDirection[0] = cos( a ) * cos( b );
 			tr.sunDirection[1] = sin( a ) * cos( b );
@@ -1716,7 +1713,6 @@ SHADER OPTIMIZATION AND FOGGING
 
 ========================================================================================
 */
-
 
 typedef struct {
 	int		blendA;

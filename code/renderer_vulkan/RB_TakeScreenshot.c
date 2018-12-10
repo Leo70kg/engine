@@ -35,12 +35,14 @@ FIXME: the statics don't get a reinit between fs_game changes
 
 
 
-static void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName )
+static void RB_TakeScreenshot( int width, int height, char *fileName )
 {
 
 	int	i, c, temp;
-		
-	unsigned char* buffer = (unsigned char*) ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*3+18);
+
+    const unsigned int cnPixels = glConfig.vidWidth * glConfig.vidHeight;
+
+	unsigned char* buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( cnPixels * 3 + 18);
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
 	buffer[12] = width & 255;
@@ -50,13 +52,13 @@ static void RB_TakeScreenshot( int x, int y, int width, int height, char *fileNa
 	buffer[16] = 24;	// pixel size
 
 
-    unsigned char* buffer2 = (unsigned char*) ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*4);
+    unsigned char* buffer2 = (unsigned char*) ri.Hunk_AllocateTempMemory( cnPixels * 4);
 
     vk_read_pixels(buffer2);
 
     unsigned char* buffer_ptr = buffer + 18;
     unsigned char* buffer2_ptr = buffer2;
-    for (i = 0; i < glConfig.vidWidth * glConfig.vidHeight; i++)
+    for (i = 0; i < cnPixels; i++)
     {
         buffer_ptr[0] = buffer2_ptr[0];
         buffer_ptr[1] = buffer2_ptr[1];
@@ -77,7 +79,7 @@ static void RB_TakeScreenshot( int x, int y, int width, int height, char *fileNa
 
 	// gamma correct
 	if ( ( tr.overbrightBits > 0 ) && glConfig.deviceSupportsGamma ) {
-		R_GammaCorrect( buffer + 18, glConfig.vidWidth * glConfig.vidHeight * 3 );
+		R_GammaCorrect( buffer + 18, cnPixels * 3 );
 	}
 
 	ri.FS_WriteFile( fileName, buffer, c );
@@ -354,7 +356,7 @@ const void *RB_TakeScreenshotCmd( const void *data )
 {
 	const screenshotCommand_t* cmd = (const screenshotCommand_t *)data;
 	
-	RB_TakeScreenshot( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName);
+	RB_TakeScreenshot( cmd->width, cmd->height, cmd->fileName);
 	
 	return (const void *)(cmd + 1);	
 }

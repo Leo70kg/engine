@@ -10,7 +10,7 @@ struct Image_Upload_Data
 	int base_level_height;
 };
 
-void generate_image_upload_data(struct Image_Upload_Data* upload_data, unsigned char* data, int width, int height, VkBool32 mipmap, VkBool32 picmip);
+void generate_image_upload_data(const char *name, struct Image_Upload_Data* upload_data, unsigned char* data, int width, int height, VkBool32 mipmap, VkBool32 picmip);
 unsigned int find_memory_type(VkPhysicalDevice physical_device, unsigned int memory_type_bits, VkMemoryPropertyFlags properties);
 
 void record_image_layout_transition(VkCommandBuffer command_buffer, VkImage image, VkImageAspectFlags image_aspect_flags,

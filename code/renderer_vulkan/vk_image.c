@@ -526,6 +526,9 @@ void qDestroyImage(void)
 
 
 
+
+
+
 #define FILE_HASH_SIZE	1024
 static image_t*	hashTable[FILE_HASH_SIZE];
 
@@ -594,7 +597,8 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
     memset(&upload_data, 0, sizeof(upload_data));
 
 
-    generate_image_upload_data(&upload_data, pic, width, height, mipmap, allowPicmip);
+
+    generate_image_upload_data(name, &upload_data, pic, width, height, mipmap, allowPicmip);
 
 
 	// s_vkImages[image->index] = upload_vk_image(&upload_data, glWrapClampMode == GL_REPEAT);
@@ -618,8 +622,7 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 
 
 
-image_t* R_FindImageFile(const char *name, VkBool32 mipmap, 
-						VkBool32 allowPicmip, int glWrapClampMode)
+image_t* R_FindImageFile(const char *name, VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode)
 {
 
    	image_t* image;
