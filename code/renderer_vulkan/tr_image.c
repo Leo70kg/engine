@@ -123,7 +123,7 @@ static void R_CreateFogImage( void )
 
 	int		x,y;
 
-	unsigned char* data = (unsigned char*) ri.Hunk_AllocateTempMemory( FOG_S * FOG_T * 4 );
+	unsigned char* data = (unsigned char*) malloc( FOG_S * FOG_T * 4 );
 
 	// S is distance, T is depth
 	for (x=0 ; x<FOG_S ; x++)
@@ -142,7 +142,7 @@ static void R_CreateFogImage( void )
 	// the border color at the edges.  OpenGL 1.2 has clamp-to-edge, which does
 	// what we want.
 	tr.fogImage = R_CreateImage("*fog", (unsigned char *)data, FOG_S, FOG_T, qfalse, qfalse, GL_CLAMP );
-	ri.Hunk_FreeTempMemory( data );
+	free( data );
 }
 
 /*

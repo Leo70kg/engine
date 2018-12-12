@@ -1,16 +1,6 @@
 #ifndef VK_IMAGE_H_
 #define VK_IMAGE_H_
 
-struct Image_Upload_Data
-{
-	unsigned char* buffer;
-	int buffer_size;
-	int mip_levels;
-	int base_level_width;
-	int base_level_height;
-};
-
-void generate_image_upload_data(const char *name, struct Image_Upload_Data* upload_data, unsigned char* data, int width, int height, VkBool32 mipmap, VkBool32 picmip);
 unsigned int find_memory_type(VkPhysicalDevice physical_device, unsigned int memory_type_bits, VkMemoryPropertyFlags properties);
 
 void record_image_layout_transition(VkCommandBuffer command_buffer, VkImage image, VkImageAspectFlags image_aspect_flags,

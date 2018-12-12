@@ -1,7 +1,7 @@
 #include "qvk.h"
 #include "tr_local.h"
 #include "vk_image_sampler.h"
-#include "R_LightScaleTexture.h"
+#include "R_ImageProcess.h"
 #include "vk_image.h"
 #include "vk_instance.h"
 #include "tr_globals.h"
@@ -553,8 +553,6 @@ static int generateHashValue( const char *fname )
 
 /*
 ================
-R_CreateImage
-
 This is the only way any image_t are created
 ================
 */
@@ -562,11 +560,11 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 						VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode )
 {
 	if (strlen(name) >= MAX_QPATH ) {
-		ri.Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
+		ri.Error (ERR_DROP, "CreateImage: \"%s\" is too long\n", name);
 	}
 
 	if ( tr.numImages == MAX_DRAWIMAGES ) {
-		ri.Error( ERR_DROP, "R_CreateImage: MAX_DRAWIMAGES hit\n");
+		ri.Error( ERR_DROP, "CreateImage: MAX_DRAWIMAGES hit\n");
 	}
 
 	// Create image_t object.

@@ -1585,7 +1585,7 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/R_LoadImage2.o \
   $(B)/renderer_vulkan/R_FindShader.o \
   $(B)/renderer_vulkan/R_ListShader.o \
-  $(B)/renderer_vulkan/R_LightScaleTexture.o \
+  $(B)/renderer_vulkan/R_ImageProcess.o \
   $(B)/renderer_vulkan/tr_init.o \
   $(B)/renderer_vulkan/tr_light.o \
   $(B)/renderer_vulkan/tr_main.o \
@@ -1615,7 +1615,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_displayResolution.o \
   $(B)/renderer_vulkan/qvk.o \
   $(B)/renderer_vulkan/vk_instance.o \
-  $(B)/renderer_vulkan/generate_image_upload_data.o \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
   $(B)/renderer_vulkan/vk_image.o \
   $(B)/renderer_vulkan/vk_image_sampler.o \

@@ -1,7 +1,7 @@
 #include "tr_local.h"
 #include "vk_read_pixels.h"
-#include "R_LightScaleTexture.h"
 #include "RB_TakeScreenshot.h"
+#include "R_ImageProcess.h"
 #include "tr_globals.h"
 #include "../renderercommon/ref_import.h"
 
