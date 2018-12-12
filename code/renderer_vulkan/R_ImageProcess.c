@@ -97,7 +97,7 @@ void R_SetColorMappings( void )
 Scale up the pixel values in a texture to increase the lighting range
 ================
 */
-static void R_LightScaleTexture (unsigned char* dst, const unsigned char* in, unsigned int nBytes, int only_gamma )
+static void R_LightScaleTexture (unsigned char* dst, const unsigned char* in, unsigned int nBytes)
 {
     unsigned int i;
 
@@ -195,8 +195,8 @@ Operates in place, quartering the size of the texture, no error checking
 static void R_MipMap(unsigned char* in, unsigned int width, unsigned int height)
 {
 
-	// if ( (width == 1) && (height == 1) )
-	//	return;
+	if ( (width == 1) && (height == 1) )
+		return;
 
     unsigned int i;
 
@@ -246,8 +246,8 @@ static void R_MipMap2( unsigned char * in, unsigned int inWidth, unsigned int in
 
 	int	i, j;
 
-	//if ( (inWidth == 1) && (inWidth == 1) )
-	//	return;
+	if ( (inWidth == 1) && (inWidth == 1) )
+		return;
 	//ri.Printf (PRINT_ALL, "\n---R_MipMap2---\n");
     // Not run time funs, can be used for best view effects
 
@@ -321,7 +321,7 @@ is greater than half the original size.
 If a larger shrinking is needed, use the mipmap function before or after.
 ================
 */
-static void DEBUG_resample(const char *name, unsigned char* data, unsigned char* resampled_buffer,
+static void DEBUG_resample(const char *name, unsigned char* data, unsigned char* pBuffer,
        unsigned int width, unsigned int height, unsigned int scaled_width, unsigned int scaled_height)
 {
     const char *slash = strrchr(name, '/');
@@ -333,7 +333,7 @@ static void DEBUG_resample(const char *name, unsigned char* data, unsigned char*
     strcat(tmpName2, tmpName);
 
     imsave(tmpName , data, width, height);            
-    imsave(tmpName2, resampled_buffer, scaled_width, scaled_height);
+    imsave(tmpName2, pBuffer, scaled_width, scaled_height);
 
     ri.Printf( PRINT_ALL, "tmpName: %s\n", tmpName);
     ri.Printf( PRINT_ALL, "tmpName2: %s\n",  tmpName2);
@@ -449,19 +449,13 @@ void generate_image_upload_data(
 	unsigned int scaled_width, scaled_height;
     GetScaledDimension(width, height, &scaled_width, &scaled_height, picmip);
 
-
-//    ri.Printf( PRINT_ALL, "%s, width: %d, height: %d, outwidth: %d, outheight: %d\n",
-//               name, width, height, scaled_width, scaled_height );
-
     const unsigned int nBytes = 4 * scaled_width * scaled_height;
 
     unsigned char* resampled_buffer = NULL;
 
-
 	if ( (scaled_width != width) || (scaled_height != height) )
     {
-		resampled_buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( nBytes );
-        //resampled_buffer = (unsigned char*) malloc ( nBytes );
+        resampled_buffer = (unsigned char*) malloc ( nBytes );
 
         ResampleTexture (pDat, width, height, resampled_buffer, scaled_width, scaled_height);
     	
@@ -475,27 +469,7 @@ void generate_image_upload_data(
     // there no need to go down from [width, height] to [scaled_width, scaled_height]
     
 
-	if (!mipmap)
-    {
-		upload_data->mip_levels = 1;
-	    upload_data->base_level_width = scaled_width;
-	    upload_data->base_level_height = scaled_height;
-        upload_data->buffer_size = nBytes;
-		upload_data->buffer = (unsigned char*) ri.Hunk_AllocateTempMemory(nBytes);
- 
-        memcpy(upload_data->buffer, pDat, nBytes);
-        
-        if (resampled_buffer != NULL)
-        {
-            ri.Hunk_FreeTempMemory(resampled_buffer);
-            //free(resampled_buffer);
-
-            resampled_buffer = NULL;
-        }
-        ri.Printf( PRINT_WARNING, "%s, width: %d, height: %d, outwidth: %d, outheight: %d\n",
-               name, width, height, scaled_width, scaled_height );
-	}
-    else
+	if (mipmap)
     {
         // In computer graphics, mipmaps (also MIP maps) or pyramids are pre-calculated,
         // optimized sequences of images, each of which is a progressively lower resolution
@@ -519,19 +493,19 @@ void generate_image_upload_data(
         
         // mip-mapping of 1/3 more memory per texture. 3/2 > 4/3
 
-
-	    upload_data->buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( (nBytes >> 1) + nBytes);
+        unsigned int nBs = 4 * scaled_width * scaled_height;
+	    
+        upload_data->buffer = (unsigned char*) malloc( 2 * nBs);
 	    upload_data->base_level_width = scaled_width;
 	    upload_data->base_level_height = scaled_height;
 
         //unsigned int nBytes = scaled_width * scaled_height * sizeof( unsigned int);
-        //unsigned char * scaled_buffer = (unsigned char*) ri.Hunk_AllocateTempMemory( nBytes );
-        unsigned char * scaled_buffer = (unsigned char *)malloc( nBytes );
+        unsigned char * scaled_buffer = (unsigned char *)malloc( nBs );
 
-        R_LightScaleTexture(scaled_buffer, pDat, nBytes, !mipmap);
+        R_LightScaleTexture(scaled_buffer, pDat, nBs);
 
-        memcpy(upload_data->buffer, scaled_buffer, nBytes);
-        upload_data->buffer_size = nBytes;
+        memcpy(upload_data->buffer, scaled_buffer, nBs);
+        upload_data->buffer_size = nBs;
 
         
         unsigned int miplevel = 0;
@@ -548,6 +522,10 @@ void generate_image_upload_data(
                 R_MipMap2(scaled_buffer, scaled_width, scaled_height);
             }
 
+            //ri.Printf( PRINT_WARNING, "%s, width: %d, height: %d, scaled_width: %d, scaled_height: %d\n",
+            //name, width, height, scaled_width, scaled_height );
+
+
             scaled_width >>= 1;
             if (scaled_width < 1)
                 scaled_width = 1;
@@ -555,28 +533,39 @@ void generate_image_upload_data(
             scaled_height >>= 1;
             if (scaled_height < 1)
                 scaled_height = 1;
-
+            
+            miplevel++;
+            unsigned int mip_level_size = scaled_width * scaled_height * 4;
 
             if ( r_colorMipLevels->integer ) {
                 R_BlendOverTexture( scaled_buffer, scaled_width * scaled_height, mipBlendColors[miplevel] );
             }
             
-            unsigned int mip_level_size = scaled_width * scaled_height * 4;
             memcpy(upload_data->buffer+upload_data->buffer_size, scaled_buffer, mip_level_size);
             upload_data->buffer_size += mip_level_size;
-            
-            miplevel++;
         }
 
         upload_data->mip_levels = miplevel + 1;
 
         free(scaled_buffer);
     }
+    else
+    {
+        const unsigned int nB = 4 * scaled_width * scaled_height;
+
+		upload_data->mip_levels = 1;
+	    upload_data->base_level_width = scaled_width;
+	    upload_data->base_level_height = scaled_height;
+        upload_data->buffer_size = nB;
+		upload_data->buffer = (unsigned char*) malloc(nB);
+ 
+        memcpy(upload_data->buffer, pDat, nB);
+	}
+
 
     if (resampled_buffer != NULL)
     {
-        ri.Hunk_FreeTempMemory(resampled_buffer);
-        //free(resampled_buffer);
+        free(resampled_buffer);
         
         resampled_buffer = NULL;
     }
@@ -685,4 +674,3 @@ static void imsave(char *fileName, unsigned char* buffer2, unsigned int width, u
 
     ri.Printf( PRINT_ALL, "imsave: %s\n", fileName );
 }
-

@@ -371,9 +371,9 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 {
 
 	VkBufferImageCopy regions[16];
-	int num_regions = 0;
+	unsigned int num_regions = 0;
 
-	int buffer_size = 0;
+	unsigned int buffer_size = 0;
 
 	while (1)
     {
@@ -595,7 +595,6 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
     memset(&upload_data, 0, sizeof(upload_data));
 
 
-
     generate_image_upload_data(name, &upload_data, pic, width, height, mipmap, allowPicmip);
 
 
@@ -614,8 +613,14 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 	if (s_CurTmu) {
 		s_CurTmu = 0;
 	}
-	ri.Hunk_FreeTempMemory(upload_data.buffer);
-	return pImage;
+    
+    
+    if(upload_data.buffer != NULL)
+    {
+        free(upload_data.buffer);
+        upload_data.buffer = NULL;
+    }
+    return pImage;
 }
 
 
