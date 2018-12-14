@@ -167,7 +167,7 @@ void vk_begin_frame(void)
     vkWaitForFences will block and wait up to timeout nanoseconds
     for the condition to become satisfied.
 */
-	VK_CHECK(qvkWaitForFences(vk.device, 1, &rendering_finished_fence, VK_FALSE, 1e8));
+	VK_CHECK(qvkWaitForFences(vk.device, 1, &rendering_finished_fence, VK_FALSE, 1e9));
    
     // To set the state of fences to unsignaled from the host
     // 1 is the number of fences to reset.

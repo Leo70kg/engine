@@ -63,6 +63,7 @@ void stripExtension(const char *in, char *out, int destsize)
 }
 
 
+
 char* getExtension( const char *name )
 {
 	char* dot = strrchr(name, '.');

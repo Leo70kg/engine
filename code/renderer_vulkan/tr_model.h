@@ -127,15 +127,20 @@ model_t*    R_AllocModel( void );
 void        R_Modellist_f( void );
 
 //====================================================
-
-qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name );
 qhandle_t RE_RegisterModel( const char *name );
 
+
+qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name );
+qhandle_t R_RegisterMD3(const char *name, model_t *mod);
+
 qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char *mod_name ); 
+qhandle_t R_RegisterMDR(const char *name, model_t *mod);
 
 qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name );
+qhandle_t R_RegisterMD4(const char *name, model_t *mod);
 
-
+qboolean R_LoadIQM (model_t *mod, void *buffer, int filesize, const char *name );
+qhandle_t R_RegisterIQM(const char *name, model_t *mod);
 
 
 //====================================================
@@ -185,7 +190,7 @@ typedef struct srfIQModel_s {
 	int		first_triangle, num_triangles;
 } srfIQModel_t;
 
-qboolean R_LoadIQM (model_t *mod, void *buffer, int filesize, const char *name );
+
 void R_AddIQMSurfaces( trRefEntity_t *ent );
 void RB_IQMSurfaceAnim( surfaceType_t *surface );
 void ComputePoseMats( iqmData_t *data, int frame, int oldframe, float backlerp, float *mat ); 

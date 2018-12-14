@@ -151,3 +151,83 @@ qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name )
 
 	return qtrue;
 }
+
+
+
+qhandle_t R_RegisterMD4(const char *name, model_t *mod)
+{
+	qboolean	loaded;
+	int numLoaded = 0;
+	int lod = 0;
+	for ( lod = MD3_MAX_LODS - 1 ; lod >= 0 ; lod-- )
+    {
+		char filename[1024];
+
+		strcpy( filename, name );
+
+		if ( lod != 0 )
+        {
+			char namebuf[80];
+
+			if ( strrchr( filename, '.' ) ) {
+				*strrchr( filename, '.' ) = 0;
+			}
+			sprintf( namebuf, "_%d.md3", lod );
+			strcat( filename, namebuf );
+		}
+
+        char* buf = NULL;
+		ri.R_ReadFile( filename, &buf );
+		if ( !buf ) {
+			continue;
+		}
+		
+		int ident = LittleLong(*(unsigned *)buf);
+		if ( ident == MD4_IDENT ) {
+			loaded = R_LoadMD4( mod, buf, name );
+		} else {
+			if ( ident != MD3_IDENT ) {
+				ri.Printf (PRINT_WARNING,"RE_RegisterModel: unknown fileid for %s\n", name);
+				goto fail;
+			}
+
+			loaded = R_LoadMD3( mod, lod, buf, name );
+		}
+		
+		ri.FS_FreeFile (buf);
+
+		if ( !loaded ) {
+			if ( lod == 0 ) {
+				goto fail;
+			} else {
+				break;
+			}
+		} else {
+			mod->numLods++;
+			numLoaded++;
+			// if we have a valid model and are biased
+			// so that we won't see any higher detail ones,
+			// stop loading them
+//			if ( lod <= r_lodbias->integer ) {
+//				break;
+//			}
+		}
+	}
+
+	if ( numLoaded ) {
+		// duplicate into higher lod spots that weren't
+		// loaded, in case the user changes r_lodbias on the fly
+		for ( lod-- ; lod >= 0 ; lod-- ) {
+			mod->numLods++;
+			mod->md3[lod] = mod->md3[lod+1];
+		}
+
+		return mod->index;
+	}
+
+fail:
+	// we still keep the model_t around, so if the model name is asked for
+	// again, we won't bother scanning the filesystem
+	mod->type = MOD_BAD;
+	return 0;
+}

@@ -4,165 +4,6 @@
 #include "../renderercommon/ref_import.h"
 
 
-
-qhandle_t R_RegisterMD4(const char *name, model_t *mod)
-{
-	ri.Printf(PRINT_WARNING,"Not Impl R_RegisterMD4: name = %s\n", name);
-	return 0;
-}
-
-
-qhandle_t R_RegisterMD3(const char *name, model_t *mod)
-{
-	
-	char* buf;
-	int			lod;
-	qboolean	loaded = qfalse;
-	int			numLoaded;
-	char filename[MAX_QPATH], namebuf[MAX_QPATH+20];
-	char *fext, defex[] = "md3";
-
-	numLoaded = 0;
-
-	strcpy(filename, name);
-
-	fext = strchr(filename, '.');
-	if(!fext)
-		fext = defex;
-	else
-	{
-		*fext = '\0';
-		fext++;
-	}
-
-	for (lod = MD3_MAX_LODS - 1 ; lod >= 0 ; lod--)
-	{
-		if(lod)
-			snprintf(namebuf, sizeof(namebuf), "%s_%d.%s", filename, lod, fext);
-		else
-			snprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
-
-		ri.R_ReadFile( namebuf, &buf );
-		if(!buf)
-			continue;
-		
-#if defined( Q3_BIG_ENDIAN )		
-		int ident = LittleLong(*(int *)buf);
-#else
-		int ident = *(int *)buf;
-#endif
-		if (ident == MD3_IDENT)
-			loaded = R_LoadMD3(mod, lod, buf, name);
-		else
-			ri.Printf(PRINT_WARNING,"R_RegisterMD3: unknown fileid for %s\n", name);
-		
-		ri.FS_FreeFile(buf);
-
-		if(loaded)
-		{
-			mod->numLods++;
-			numLoaded++;
-		}
-		else
-			break;
-	}
-
-	if(numLoaded)
-	{
-		// duplicate into higher lod spots that weren't
-		// loaded, in case the user changes r_lodbias on the fly
-		for(lod--; lod >= 0; lod--)
-		{
-			mod->numLods++;
-			mod->md3[lod] = mod->md3[lod + 1];
-		}
-
-		return mod->index;
-	}
-
-#ifdef _DEBUG
-	ri.Printf(PRINT_WARNING,"R_RegisterMD3: couldn't load %s\n", name);
-#endif
-
-	mod->type = MOD_BAD;
-	return 0;
-}
-
-/*
-====================
-R_RegisterMDR
-====================
-*/
-qhandle_t R_RegisterMDR(const char *name, model_t *mod)
-{
-	
-	char* buf;
-
-	qboolean loaded = qfalse;
-	int filesize = ri.R_ReadFile(name, &buf);
-	if(!buf)
-	{
-		mod->type = MOD_BAD;
-		return 0;
-	}
-	
-
-#if defined( Q3_BIG_ENDIAN )		
-	int ident = LittleLong(*(int *)buf);
-#else
-	int ident = *(int *)buf;
-#endif	
-
-	
-	if(ident == MDR_IDENT)
-		loaded = R_LoadMDR(mod, buf, filesize, name);
-
-	ri.FS_FreeFile(buf);
-	
-	if(!loaded)
-	{
-		ri.Printf(PRINT_WARNING,"R_RegisterMDR: couldn't load mdr file %s\n", name);
-		mod->type = MOD_BAD;
-		return 0;
-	}
-	
-	return mod->index;
-}
-
-/*
-====================
-R_RegisterIQM
-====================
-*/
-qhandle_t R_RegisterIQM(const char *name, model_t *mod)
-{
-	char* buf;
-	
-	qboolean loaded = qfalse;
-	int filesize;
-
-	filesize = ri.R_ReadFile(name, &buf);
-	if(!buf)
-	{
-		mod->type = MOD_BAD;
-		return 0;
-	}
-	
-	loaded = R_LoadIQM(mod, buf, filesize, name);
-
-	ri.FS_FreeFile (buf);
-	
-	if(!loaded)
-	{
-		ri.Printf(PRINT_WARNING,"R_RegisterIQM: couldn't load iqm file %s\n", name);
-		mod->type = MOD_BAD;
-		return 0;
-	}
-	
-	return mod->index;
-}
-
-
 typedef struct
 {
 	char *ext;
@@ -198,8 +39,7 @@ qhandle_t RE_RegisterModel( const char *name )
 	qhandle_t	hModel;
 	qboolean	orgNameFailed = qfalse;
 	int			orgLoader = -1;
-	char		localName[ MAX_QPATH ];
-	const char	*ext;
+
 
 
 	if ( !name || !name[0] ) {
@@ -245,9 +85,10 @@ qhandle_t RE_RegisterModel( const char *name )
 	//
 	// load the files
 	//
-	Q_strncpyz( localName, name, MAX_QPATH );
+	char localName[ MAX_QPATH ] = {0};
+	strncpy( localName, name, MAX_QPATH );
 
-	ext = getExtension( localName );
+	const char* ext = getExtension( localName );
 
 	if( *ext )
 	{
@@ -280,11 +121,16 @@ qhandle_t RE_RegisterModel( const char *name )
 				return mod->index;
 			}
 		}
-	}
+		else
+		{
+			ri.Printf( PRINT_WARNING, "RegisterModel: %s not find \n ", name);
+		}
 
-	// Try and find a suitable match using all
-	// the model formats supported
-    {
+	}
+	else
+    	ri.Printf( PRINT_WARNING, "RegisterModel: %s without extention. Try and find a suitable match using all the model formats supported\n ", name);
+    
+	{
         int i;
         for( i = 0; i < numModelLoaders; i++ )
         {
@@ -301,7 +147,7 @@ qhandle_t RE_RegisterModel( const char *name )
             {
                 if( orgNameFailed )
                 {
-                    ri.Printf( PRINT_DEVELOPER, "WARNING: %s not present, using %s instead\n",
+                    ri.Printf( PRINT_ALL, "WARNING: %s not present, using %s instead\n",
                             name, altName );
                 }
 

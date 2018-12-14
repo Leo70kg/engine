@@ -299,14 +299,18 @@ Blends a fog texture on top of everything else
 ===================
 */
 static void RB_FogPass( void ) {
-	fog_t		*fog;
-	int			i;
 
+	unsigned int i;
 
-	fog = tr.world->fogs + tess.fogNum;
+	fog_t* fog = tr.world->fogs + tess.fogNum;
 
-	for ( i = 0; i < tess.numVertexes; i++ ) {
-		* ( int * )&tess.svars.colors[i] = fog->colorInt;
+    const unsigned int nVerts = tess.numVertexes;
+	for (i = 0; i < nVerts; i++)
+	{
+		tess.svars.colors[i][0] = fog->colorRGBA[0];
+		tess.svars.colors[i][1] = fog->colorRGBA[1];
+		tess.svars.colors[i][2] = fog->colorRGBA[2];
+		tess.svars.colors[i][3] = fog->colorRGBA[3];
 	}
 
 	RB_CalcFogTexCoords( ( float * ) tess.svars.texcoords[0] );
@@ -329,8 +333,7 @@ ComputeColors
 */
 static void ComputeColors( shaderStage_t *pStage )
 {
-	int		i;
-
+	int		i, nVerts;
 	//
 	// rgbGen
 	//
@@ -350,8 +353,12 @@ static void ComputeColors( shaderStage_t *pStage )
 			memcpy( tess.svars.colors, tess.vertexColors, tess.numVertexes * sizeof( tess.vertexColors[0] ) );
 			break;
 		case CGEN_CONST:
-			for ( i = 0; i < tess.numVertexes; i++ ) {
-				*(int *)tess.svars.colors[i] = *(int *)pStage->constantColor;
+            
+            nVerts = tess.numVertexes;
+
+			for ( i = 0; i < nVerts; i++ )
+            {
+				memcpy(tess.svars.colors[i], pStage->constantColor, 4);
 			}
 			break;
 		case CGEN_VERTEX:
@@ -391,16 +398,19 @@ static void ComputeColors( shaderStage_t *pStage )
 			}
 			break;
 		case CGEN_FOG:
+		{
+			fog_t* fog = tr.world->fogs + tess.fogNum;
+
+            nVerts = tess.numVertexes;
+
+			for (i = 0; i < nVerts; i++)
 			{
-				fog_t		*fog;
-
-				fog = tr.world->fogs + tess.fogNum;
-
-				for ( i = 0; i < tess.numVertexes; i++ ) {
-					* ( int * )&tess.svars.colors[i] = fog->colorInt;
-				}
+				tess.svars.colors[i][0] = fog->colorRGBA[0];
+				tess.svars.colors[i][1] = fog->colorRGBA[1];
+				tess.svars.colors[i][2] = fog->colorRGBA[2];
+				tess.svars.colors[i][3] = fog->colorRGBA[3];
 			}
-			break;
+		}break;
 		case CGEN_WAVEFORM:
 			RB_CalcWaveColor( &pStage->rgbWave, ( unsigned char * ) tess.svars.colors );
 			break;

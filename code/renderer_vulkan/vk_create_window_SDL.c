@@ -20,6 +20,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
+
+// the window surface needs to be createdd right after the instance creation
+// because it can actually influence the physical device selection
+
 #include "sdl_icon.h"
 #include "qvk.h"
 #include "VKimpl.h"
@@ -294,17 +298,19 @@ void checkInstanceExt(void)
         VK_CHECK(qvkEnumerateInstanceExtensionProperties( NULL, &nInsExt, pInsExt));
             
         unsigned int i = 0;
+
+		unsigned int indicator = 0;
         for (i = 0; i < nInsExt; i++)
         {
             //ri.Printf(PRINT_ALL, "%s\n", pInsExt[i].extensionName );
-            
-            strcat(glConfig.extensions_string, pInsExt[i].extensionName);
-            strcat(glConfig.extensions_string, "\n");
+            unsigned int len = strlen(pInsExt[i].extensionName);
+            memcpy(glConfig.extensions_string + indicator, pInsExt[i].extensionName, len);
+			indicator += len;
+			glConfig.extensions_string[indicator++] = ' ';
         }
             
         free(pInsExt);
     }
-
 }
 
 
@@ -405,6 +411,19 @@ void VKimp_Init()
 	r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "60", CVAR_LATCH );
 
 
+    // These values force the UI to disable driver selection
+	glConfig.driverType = GLDRV_ICD;
+	glConfig.hardwareType = GLHW_GENERIC;
+
+    // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
+    glConfig.deviceSupportsGamma = qtrue;
+
+    glConfig.textureEnvAddAvailable = 0; // not used
+    glConfig.textureCompression = TC_NONE; // not used
+	// init command buffers and SMP
+	glConfig.stereoDisabled = 1;
+	glConfig.smpActive = qfalse; // not used
+
     // hardcode it
     glConfig.colorBits = 32;
     glConfig.depthBits = 24;
@@ -464,20 +483,7 @@ success:
     }
 
 
-    // These values force the UI to disable driver selection
-	glConfig.driverType = GLDRV_ICD;
-	glConfig.hardwareType = GLHW_GENERIC;
 
-    // Only using SDL_SetWindowBrightness to determine if hardware gamma is supported
-    glConfig.deviceSupportsGamma = qtrue;
-
-    glConfig.textureEnvAddAvailable = qtrue;
-
-    glConfig.textureCompression = TC_NONE;
-
-	// init command buffers and SMP
-	glConfig.smpActive = qfalse;
-	glConfig.stereoDisabled = qfalse;
 
 
 

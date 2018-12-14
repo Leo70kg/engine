@@ -1133,4 +1133,30 @@ void RB_IQMSurfaceAnim( surfaceType_t *surface )
 	tess.numVertexes += surf->num_vertexes;
 }
 
+qhandle_t R_RegisterIQM(const char *name, model_t *mod)
+{
+	char* buf;
+	
+	qboolean loaded = qfalse;
+	int filesize;
 
+	filesize = ri.R_ReadFile(name, &buf);
+	if(!buf)
+	{
+		mod->type = MOD_BAD;
+		return 0;
+	}
+	
+	loaded = R_LoadIQM(mod, buf, filesize, name);
+
+	ri.FS_FreeFile (buf);
+	
+	if(!loaded)
+	{
+		ri.Printf(PRINT_WARNING,"R_RegisterIQM: couldn't load iqm file %s\n", name);
+		mod->type = MOD_BAD;
+		return 0;
+	}
+	
+	return mod->index;
+}

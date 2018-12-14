@@ -121,7 +121,7 @@ static void R_CreateFogImage( void )
     #define	FOG_S	256
     #define	FOG_T	32
 
-	int		x,y;
+	unsigned int x,y;
 
 	unsigned char* data = (unsigned char*) malloc( FOG_S * FOG_T * 4 );
 
@@ -132,17 +132,19 @@ static void R_CreateFogImage( void )
         {
 			float d = R_FogFactor( ( x + 0.5f ) / FOG_S, ( y + 0.5f ) / FOG_T );
 
-			data[(y*FOG_S+x)*4+0] = 
-			data[(y*FOG_S+x)*4+1] = 
-			data[(y*FOG_S+x)*4+2] = 255;
-			data[(y*FOG_S+x)*4+3] = 255*d;
+            unsigned int index = (y*FOG_S+x)*4;
+			data[index ] = 
+			data[index+1] = 
+			data[index+2] = 255;
+			data[index+3] = 255*d;
 		}
 	}
 	// standard openGL clamping doesn't really do what we want -- it includes
 	// the border color at the edges.  OpenGL 1.2 has clamp-to-edge, which does
 	// what we want.
 	tr.fogImage = R_CreateImage("*fog", (unsigned char *)data, FOG_S, FOG_T, qfalse, qfalse, GL_CLAMP );
-	free( data );
+	
+    free( data );
 }
 
 /*
@@ -150,15 +152,17 @@ static void R_CreateFogImage( void )
 R_CreateDefaultImage
 ==================
 */
-#define	DEFAULT_SIZE	16
 static void R_CreateDefaultImage( void )
 {
-	int		x;
-	unsigned char	data[DEFAULT_SIZE][DEFAULT_SIZE][4];
+    #define	DEFAULT_SIZE	16
+
+	unsigned char data[DEFAULT_SIZE][DEFAULT_SIZE][4];
 
 	// the default image will be a box, to allow you to see the mapping coordinates
 	memset( data, 32, sizeof( data ) );
-	for ( x = 0 ; x < DEFAULT_SIZE ; x++ )
+
+    unsigned int x;
+	for ( x = 0; x < DEFAULT_SIZE; x++ )
     {
 		data[0][x][0] =
 		data[0][x][1] =
@@ -213,7 +217,8 @@ void R_CreateBuiltinImages( void )
 	tr.identityLightImage = R_CreateImage("*identityLight", (unsigned char *)data, 8, 8, qfalse, qfalse, GL_REPEAT );
 
 
-	for(x=0;x<32;x++) {
+	for(x=0;x<32;x++)
+    {
 		// scratchimage is usually used for cinematic drawing
 		tr.scratchImage[x] = R_CreateImage("*scratch", (unsigned char *)data, DEFAULT_SIZE, DEFAULT_SIZE, qfalse, qtrue, GL_CLAMP );
 	}
@@ -224,18 +229,7 @@ void R_CreateBuiltinImages( void )
 
 
 
-/*
-===============
-R_DeleteTextures
-===============
-*/
-void R_DeleteTextures( void )
-{
 
-	memset( tr.images, 0, sizeof( tr.images ) );
-
-	tr.numImages = 0;
-}
 
 /*
 ============================================================================

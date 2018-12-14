@@ -161,3 +161,79 @@ qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name )
     
 	return qtrue;
 }
+
+qhandle_t R_RegisterMD3(const char *name, model_t *mod)
+{
+	
+	char* buf;
+	int			lod;
+	qboolean	loaded = qfalse;
+	int			numLoaded;
+	char filename[MAX_QPATH], namebuf[MAX_QPATH+20];
+	char *fext, defex[] = "md3";
+
+	numLoaded = 0;
+
+	strcpy(filename, name);
+
+	fext = strchr(filename, '.');
+	if(!fext)
+		fext = defex;
+	else
+	{
+		*fext = '\0';
+		fext++;
+	}
+
+	for (lod = MD3_MAX_LODS - 1 ; lod >= 0 ; lod--)
+	{
+		if(lod)
+			snprintf(namebuf, sizeof(namebuf), "%s_%d.%s", filename, lod, fext);
+		else
+			snprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
+
+		ri.R_ReadFile( namebuf, &buf );
+		if(!buf)
+			continue;
+		
+#if defined( Q3_BIG_ENDIAN )		
+		int ident = LittleLong(*(int *)buf);
+#else
+		int ident = *(int *)buf;
+#endif
+		if (ident == MD3_IDENT)
+			loaded = R_LoadMD3(mod, lod, buf, name);
+		else
+			ri.Printf(PRINT_WARNING,"R_RegisterMD3: unknown fileid for %s\n", name);
+		
+		ri.FS_FreeFile(buf);
+
+		if(loaded)
+		{
+			mod->numLods++;
+			numLoaded++;
+		}
+		else
+			break;
+	}
+
+	if(numLoaded)
+	{
+		// duplicate into higher lod spots that weren't
+		// loaded, in case the user changes r_lodbias on the fly
+		for(lod--; lod >= 0; lod--)
+		{
+			mod->numLods++;
+			mod->md3[lod] = mod->md3[lod + 1];
+		}
+
+		return mod->index;
+	}
+
+#ifdef _DEBUG
+	ri.Printf(PRINT_WARNING,"R_RegisterMD3: couldn't load %s\n", name);
+#endif
+
+	mod->type = MOD_BAD;
+	return 0;
+}

@@ -445,7 +445,7 @@ typedef struct {
 	int			originalBrushNumber;
 	vec3_t		bounds[2];
 
-	unsigned	colorInt;				// in packed byte format
+	unsigned char colorRGBA[4];			// in packed byte format
 	float		tcScale;				// texture coordinate vector scales
 	fogParms_t	parms;
 
@@ -857,7 +857,6 @@ void	R_SkinList_f( void );
 void	R_InitFogTable( void );
 float	R_FogFactor( float s, float t );
 void	R_InitImages( void );
-void	R_DeleteTextures( void );
 int		R_SumOfUsedImages( void );
 void	R_InitSkins( void );
 skin_t	*R_GetSkinByHandle( qhandle_t hSkin );
@@ -1183,7 +1182,7 @@ void R_InitFreeType(void);
 void R_DoneFreeType(void);
 void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
-
+void R_IssueRenderCommands( qboolean runPerformanceCounters );
 
 extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
 

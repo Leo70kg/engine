@@ -761,7 +761,6 @@ RB_StretchPic
 */
 const void *RB_StretchPic ( const void *data )
 {
-	int	numVerts, numIndexes;
 
     const stretchPicCommand_t* cmd = (const stretchPicCommand_t *)data;
 
@@ -788,57 +787,84 @@ const void *RB_StretchPic ( const void *data )
     }
 
 
-	numVerts = tess.numVertexes;
-	numIndexes = tess.numIndexes;
+	const unsigned int n0 = tess.numVertexes;
+	const unsigned int n1 = n0 + 1;
+	const unsigned int n2 = n0 + 2;
+	const unsigned int n3 = n0 + 3;
+
+	{
+		unsigned int numIndexes = tess.numIndexes;
+
+		tess.indexes[ numIndexes ] = n3;
+		tess.indexes[ numIndexes + 1 ] = n0;
+		tess.indexes[ numIndexes + 2 ] = n2;
+		tess.indexes[ numIndexes + 3 ] = n2;
+		tess.indexes[ numIndexes + 4 ] = n0;
+		tess.indexes[ numIndexes + 5 ] = n1;
+	}
+
+	{
+		const uint16_t r = backEnd.color2D[0] * 257;
+		const uint16_t g = backEnd.color2D[1] * 257;
+		const uint16_t b = backEnd.color2D[2] * 257;
+		const uint16_t a = backEnd.color2D[3] * 257;
+
+		tess.vertexColors[ n0 ][ 0 ] = r;
+		tess.vertexColors[ n0 ][ 1 ] = g;
+		tess.vertexColors[ n0 ][ 2 ] = b;
+		tess.vertexColors[ n0 ][ 3 ] = a;
+
+		tess.vertexColors[ n1 ][ 0 ] = r;
+		tess.vertexColors[ n1 ][ 1 ] = g;
+		tess.vertexColors[ n1 ][ 2 ] = b;
+		tess.vertexColors[ n1 ][ 3 ] = a;
+
+		tess.vertexColors[ n2 ][ 0 ] = r;
+		tess.vertexColors[ n2 ][ 1 ] = g;
+		tess.vertexColors[ n2 ][ 2 ] = b;
+		tess.vertexColors[ n2 ][ 3 ] = a;
+
+		tess.vertexColors[ n3 ][ 0 ] = r;
+		tess.vertexColors[ n3 ][ 1 ] = g;
+		tess.vertexColors[ n3 ][ 2 ] = b;
+		tess.vertexColors[ n3 ][ 3 ] = a;
+	}
+
+
+	{
+		tess.xyz[ n0 ][0] = cmd->x;
+		tess.xyz[ n0 ][1] = cmd->y;
+		tess.xyz[ n0 ][2] = 0;
+
+		tess.xyz[ n1 ][0] = cmd->x + cmd->w;
+		tess.xyz[ n1 ][1] = cmd->y;
+		tess.xyz[ n1 ][2] = 0;
+
+		tess.xyz[ n2 ][0] = cmd->x + cmd->w;
+		tess.xyz[ n2 ][1] = cmd->y + cmd->h;
+		tess.xyz[ n2 ][2] = 0;
+
+		tess.xyz[ n3 ][0] = cmd->x;
+		tess.xyz[ n3 ][1] = cmd->y + cmd->h;
+		tess.xyz[ n3 ][2] = 0;
+	}
+
+	{
+		tess.texCoords[ n0 ][0] = cmd->s1;
+		tess.texCoords[ n0 ][1] = cmd->t1;
+
+		tess.texCoords[ n1 ][0] = cmd->s2;
+		tess.texCoords[ n1 ][1] = cmd->t1;
+
+		tess.texCoords[ n2 ][0] = cmd->s2;
+		tess.texCoords[ n2 ][1] = cmd->t2;
+
+		tess.texCoords[ n3 ][0] = cmd->s1;
+		tess.texCoords[ n3 ][1] = cmd->t2;
+	}
 
 	tess.numVertexes += 4;
 	tess.numIndexes += 6;
-
-	tess.indexes[ numIndexes ] = numVerts + 3;
-	tess.indexes[ numIndexes + 1 ] = numVerts + 0;
-	tess.indexes[ numIndexes + 2 ] = numVerts + 2;
-	tess.indexes[ numIndexes + 3 ] = numVerts + 2;
-	tess.indexes[ numIndexes + 4 ] = numVerts + 0;
-	tess.indexes[ numIndexes + 5 ] = numVerts + 1;
-
-	{
-		uint16_t color[4];
-
-		VectorScale4(backEnd.color2D, 257, color);
-
-		VectorCopy4(color, tess.color[ numVerts ]);
-		VectorCopy4(color, tess.color[ numVerts + 1]);
-		VectorCopy4(color, tess.color[ numVerts + 2]);
-		VectorCopy4(color, tess.color[ numVerts + 3 ]);
-	}
-
-	tess.xyz[ numVerts ][0] = cmd->x;
-	tess.xyz[ numVerts ][1] = cmd->y;
-	tess.xyz[ numVerts ][2] = 0;
-
-	tess.texCoords[ numVerts ][0] = cmd->s1;
-	tess.texCoords[ numVerts ][1] = cmd->t1;
-
-	tess.xyz[ numVerts + 1 ][0] = cmd->x + cmd->w;
-	tess.xyz[ numVerts + 1 ][1] = cmd->y;
-	tess.xyz[ numVerts + 1 ][2] = 0;
-
-	tess.texCoords[ numVerts + 1 ][0] = cmd->s2;
-	tess.texCoords[ numVerts + 1 ][1] = cmd->t1;
-
-	tess.xyz[ numVerts + 2 ][0] = cmd->x + cmd->w;
-	tess.xyz[ numVerts + 2 ][1] = cmd->y + cmd->h;
-	tess.xyz[ numVerts + 2 ][2] = 0;
-
-	tess.texCoords[ numVerts + 2 ][0] = cmd->s2;
-	tess.texCoords[ numVerts + 2 ][1] = cmd->t2;
-
-	tess.xyz[ numVerts + 3 ][0] = cmd->x;
-	tess.xyz[ numVerts + 3 ][1] = cmd->y + cmd->h;
-	tess.xyz[ numVerts + 3 ][2] = 0;
-
-	tess.texCoords[ numVerts + 3 ][0] = cmd->s1;
-	tess.texCoords[ numVerts + 3 ][1] = cmd->t2;
 
 	return (const void *)(cmd + 1);
 }

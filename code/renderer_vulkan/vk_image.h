@@ -26,6 +26,5 @@ VkDescriptorSet* getCurDescriptorSetsPtr(void);
 
 
 void GL_Bind( image_t *image );
-void VK_TextureMode(void);
 
 #endif

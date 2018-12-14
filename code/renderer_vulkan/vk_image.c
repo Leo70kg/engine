@@ -28,10 +28,10 @@ struct Vk_Image {
 
 // should be the same as MAX_DRAWIMAGES
 #define MAX_VK_IMAGES   2048
-static struct Vk_Image  s_vkImages[MAX_VK_IMAGES] = {0};
+static struct Vk_Image  s_vkImages[MAX_VK_IMAGES];
 
 #define MAX_IMAGE_CHUNKS        16
-static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS] = {0};
+static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS];
 static int s_NumImageChunks = 0;
 
 
@@ -139,35 +139,6 @@ void GL_Bind( image_t* pImage )
 		s_CurrentDescriptorSets[s_CurTmu] = s_vkImages[pImage->index].descriptor_set;
 	}
 }
-
-
-void VK_TextureMode( void )
-{
-
-	//vk_set_sampler(3);
-	int i = 0;
-	// change all the existing mipmap texture objects
-	for ( i = 0 ; i < tr.numImages ; i++ )
-	{
-		image_t* glt = tr.images[ i ];
-		if ( glt->mipmap )
-		{
-			GL_Bind (glt);
-		}
-	}
-
-    // VULKAN
-
-    VK_CHECK(qvkDeviceWaitIdle(vk.device));
-    for ( i = 0; i < tr.numImages; i++ )
-    {
-        if (tr.images[i]->mipmap)
-        {
-            vk_update_descriptor_set(s_vkImages[i].descriptor_set, s_vkImages[i].view, 1, tr.images[i]->wrapClampMode == GL_REPEAT);
-        }
-    }
-}
-
 
 
 static void allocate_and_bind_image_memory(VkImage image)
@@ -549,7 +520,35 @@ static int generateHashValue( const char *fname )
 	return hash;
 }
 
+void record_image_layout_transition( 
+        VkCommandBuffer command_buffer,
+        VkImage image,
+        VkImageAspectFlags image_aspect_flags,
+        VkAccessFlags src_access_flags,
+        VkImageLayout old_layout,
+        VkAccessFlags dst_access_flags,
+        VkImageLayout new_layout )
+{
 
+	VkImageMemoryBarrier barrier = {0};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = NULL;
+	barrier.srcAccessMask = src_access_flags;
+	barrier.dstAccessMask = dst_access_flags;
+	barrier.oldLayout = old_layout;
+	barrier.newLayout = new_layout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = image;
+	barrier.subresourceRange.aspectMask = image_aspect_flags;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+	qvkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,	0, NULL, 0, NULL, 1, &barrier);
+}
 
 /*
 ================

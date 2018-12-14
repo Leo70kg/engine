@@ -83,11 +83,12 @@ void R_SetColorMappings( void )
 		}
 		s_intensitytable[i] = j;
 	}
-
+/*
 	if ( glConfig.deviceSupportsGamma )
 	{
 		VKimp_SetGamma( s_gammatable, s_gammatable, s_gammatable );
 	}
+*/
 }
 
 
@@ -101,7 +102,7 @@ static void R_LightScaleTexture (unsigned char* dst, const unsigned char* in, un
 {
     unsigned int i;
 
-    if ( 1 )
+    if ( 0 )
     {
         for (i=0; i<nBytes; i+=4)
         {
@@ -459,7 +460,8 @@ void generate_image_upload_data(
 
         ResampleTexture (pDat, width, height, resampled_buffer, scaled_width, scaled_height);
     	
-        //DEBUG_resample(name, pIn, pOut, width, height, outwidth, outheight);
+        if(0)
+            DEBUG_resample(name, pDat, resampled_buffer, width, height, scaled_width, scaled_height);
         
         // this is tricky
         pDat = resampled_buffer;

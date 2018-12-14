@@ -32,8 +32,6 @@ cvar_t	*r_showcluster;
 cvar_t	*r_nocurves;
 
 
-cvar_t	*r_ignoreGLErrors;
-cvar_t	*r_logFile;
 
 cvar_t* r_fullscreen;
 
@@ -109,11 +107,11 @@ void R_Register( void )
 	// latched and archived variables
 	//
 	r_picmip = ri.Cvar_Get ("r_picmip", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_colorMipLevels = ri.Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
-	AssertCvarRange( r_picmip, 0, 16, qtrue );
-	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "0", CVAR_ARCHIVE | CVAR_LATCH );
-
+    AssertCvarRange( r_picmip, 0, 4, qtrue );
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
+	r_colorMipLevels = ri.Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
+
+	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
 	r_subdivisions = ri.Cvar_Get ("r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH);
@@ -134,11 +132,10 @@ void R_Register( void )
 	r_lodbias = ri.Cvar_Get( "r_lodbias", "0", CVAR_ARCHIVE );
 	r_znear = ri.Cvar_Get( "r_znear", "4", CVAR_CHEAT );
 	AssertCvarRange( r_znear, 0.001f, 200, qtrue );
-	r_ignoreGLErrors = ri.Cvar_Get( "r_ignoreGLErrors", "1", CVAR_ARCHIVE );
 	r_fastsky = ri.Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE );
 	r_inGameVideo = ri.Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE );
 	r_dynamiclight = ri.Cvar_Get( "r_dynamiclight", "1", CVAR_ARCHIVE );
-	r_gamma = ri.Cvar_Get( "r_gamma", "1", CVAR_ARCHIVE );
+	r_gamma = ri.Cvar_Get( "r_gamma", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_facePlaneCull = ri.Cvar_Get ("r_facePlaneCull", "1", CVAR_ARCHIVE );
 
 	r_railWidth = ri.Cvar_Get( "r_railWidth", "16", CVAR_ARCHIVE );
@@ -173,7 +170,6 @@ void R_Register( void )
 	r_showcluster = ri.Cvar_Get ("r_showcluster", "0", CVAR_CHEAT);
 	r_speeds = ri.Cvar_Get ("r_speeds", "0", CVAR_CHEAT);
 	r_verbose = ri.Cvar_Get( "r_verbose", "0", CVAR_CHEAT );
-	r_logFile = ri.Cvar_Get( "r_logFile", "0", CVAR_CHEAT );
 	r_debugSurface = ri.Cvar_Get ("r_debugSurface", "0", CVAR_CHEAT);
 	r_showtris = ri.Cvar_Get ("r_showtris", "0", CVAR_CHEAT);
 	r_showsky = ri.Cvar_Get ("r_showsky", "0", CVAR_CHEAT);

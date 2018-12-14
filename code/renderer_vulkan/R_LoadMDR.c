@@ -489,3 +489,39 @@ qboolean R_LoadMDR( model_t *mod, void *buffer, int filesize, const char *mod_na
 	return qtrue;
 }
 
+
+qhandle_t R_RegisterMDR(const char *name, model_t *mod)
+{
+	
+	char* buf;
+
+	qboolean loaded = qfalse;
+	int filesize = ri.R_ReadFile(name, &buf);
+	if(!buf)
+	{
+		mod->type = MOD_BAD;
+		return 0;
+	}
+	
+
+#if defined( Q3_BIG_ENDIAN )		
+	int ident = LittleLong(*(int *)buf);
+#else
+	int ident = *(int *)buf;
+#endif	
+
+	
+	if(ident == MDR_IDENT)
+		loaded = R_LoadMDR(mod, buf, filesize, name);
+
+	ri.FS_FreeFile(buf);
+	
+	if(!loaded)
+	{
+		ri.Printf(PRINT_WARNING,"R_RegisterMDR: couldn't load mdr file %s\n", name);
+		mod->type = MOD_BAD;
+		return 0;
+	}
+	
+	return mod->index;
+}

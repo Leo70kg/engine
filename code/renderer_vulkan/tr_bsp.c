@@ -1556,21 +1556,6 @@ R_LoadFogs
 
 =================
 */
-
-
-static unsigned ColorBytes4 (float r, float g, float b, float a) {
-	unsigned	i;
-
-	( (byte *)&i )[0] = r * 255;
-	( (byte *)&i )[1] = g * 255;
-	( (byte *)&i )[2] = b * 255;
-	( (byte *)&i )[3] = a * 255;
-
-	return i;
-}
-
-
-
 static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump ) {
 	int			i;
 	fog_t		*out;
@@ -1655,9 +1640,10 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump ) {
 
 		out->parms = shader->fogParms;
 
-		out->colorInt = ColorBytes4 ( shader->fogParms.color[0] * tr.identityLight, 
-			                          shader->fogParms.color[1] * tr.identityLight, 
-			                          shader->fogParms.color[2] * tr.identityLight, 1.0 );
+        out->colorRGBA[0] = shader->fogParms.color[0] * tr.identityLight * 255;
+        out->colorRGBA[1] = shader->fogParms.color[1] * tr.identityLight * 255;
+        out->colorRGBA[2] = shader->fogParms.color[2] * tr.identityLight * 255;
+        out->colorRGBA[3] = 255;
 
 		d = shader->fogParms.depthForOpaque < 1 ? 1 : shader->fogParms.depthForOpaque;
 		out->tcScale = 1.0f / ( d * 8 );
@@ -1680,12 +1666,6 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump ) {
 }
 
 
-/*
-================
-R_LoadLightGrid
-
-================
-*/
 void R_LoadLightGrid( lump_t *l )
 {
     ri.Printf (PRINT_ALL, "\n---R_LoadLightGrid---\n");
@@ -1783,7 +1763,7 @@ void R_LoadEntities( lump_t *l )
 
 		// check for remapping of shaders for vertex lighting
 		s = "vertexremapshader";
-		if (!Q_strncmp(keyname, s, (int)strlen(s)) ) {
+		if (!Q_strncmp(keyname, s, strlen(s)) ) {
 			s = strchr(value, ';');
 			if (!s) {
 				ri.Printf( PRINT_WARNING, "WARNING: no semi colon in vertexshaderremap '%s'\n", value );
@@ -1860,7 +1840,7 @@ void RE_LoadWorldMap( const char *name )
 
 	VectorNormalize( tr.sunDirection );
 
-	tr.worldMapLoaded = qtrue;
+
 
 	// load it
     ri.R_ReadFile( name, &buffer );
@@ -1907,11 +1887,10 @@ void RE_LoadWorldMap( const char *name )
 	R_LoadEntities( &header->lumps[LUMP_ENTITIES] );
 	R_LoadLightGrid( &header->lumps[LUMP_LIGHTGRID] );
 
-	s_worldData.dataSize = (byte *)ri.Hunk_Alloc(0, h_low) - startMarker;
+	s_worldData.dataSize = (unsigned char *)ri.Hunk_Alloc(0, h_low) - startMarker;
 
 	// only set tr.world now that we know the entire level has loaded properly
 	tr.world = &s_worldData;
-
+	tr.worldMapLoaded = qtrue;
     ri.FS_FreeFile( buffer );
 }
-

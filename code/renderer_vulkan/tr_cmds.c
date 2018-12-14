@@ -291,11 +291,7 @@ void RE_BeginFrame( void )
 		R_SetColorMappings();
 	}
 
-    // check for errors
-    if ( !r_ignoreGLErrors->integer ) {
 
-		R_SyncRenderThread();
-    }
 
 	//
 	// draw buffer stuff

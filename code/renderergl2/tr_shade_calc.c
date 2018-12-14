@@ -417,7 +417,7 @@ static void AutospriteDeform( void ) {
         VectorScale(up, axisLength, up);
     }
 
-		VectorScale4(tess.color[i], 1.0f / 65535.0f, color);
+		VectorScale4(tess.vertexColors[i], 1.0f / 65535.0f, color);
 		RB_AddQuadStamp( mid, left, up, color );
 	}
 }

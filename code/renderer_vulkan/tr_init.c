@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "VKimpl.h"
 #include "vk_initialize.h"
-#include "RB_TakeScreenshot.h"
+#include "vk_screenshot.h"
 #include "vk_instance.h"
 #include "vk_create_pipeline.h"
 #include "vk_image.h"
@@ -84,9 +84,10 @@ void vulkanInfo_f( void )
     ri.Printf(PRINT_ALL, "Vk device type: %s\n", device_type);
     ri.Printf(PRINT_ALL, "Vk device name: %s\n", props.deviceName);
 
-    ri.Printf(PRINT_ALL, "\n The maximum number of sampler objects, as created by vkCreateSampler, which can simultaneously exist on a device is: %d\n", 
-        props.limits.maxSamplerAllocationCount);
-
+//    ri.Printf(PRINT_ALL, "\n The maximum number of sampler objects,  
+//    as created by vkCreateSampler, which can simultaneously exist on a device is: %d\n", 
+//        props.limits.maxSamplerAllocationCount);
+//	 4000
 
 
 	if ( r_vertexLight->integer ) {
@@ -101,8 +102,15 @@ void vulkanInfo_f( void )
 	//
 	// Info that doesn't depend on r_renderAPI
 	//
+	strncpy( glConfig.vendor_string, vendor_name, sizeof( glConfig.vendor_string ) );
+	strncpy( glConfig.renderer_string, props.deviceName, sizeof( glConfig.renderer_string ) );
+    if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
+         glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;     
+	char tmpBuf[128] = {0};
 
-	ri.Printf( PRINT_ALL, "picmip: %d\n\n", r_picmip->integer );
+    snprintf(tmpBuf, 128,"Vk api version: %d.%d.%d ", major, minor, patch);
+	
+    strncpy( glConfig.version_string, tmpBuf, sizeof( glConfig.version_string ) );
 
 }
 
@@ -250,9 +258,13 @@ void RE_Shutdown( qboolean destroyWindow )
 	ri.Cmd_RemoveCommand("vkinfo");
 
 
-	if ( tr.registered ) {
-		R_SyncRenderThread();
-		R_DeleteTextures();
+	if ( tr.registered )
+    {
+        R_IssueRenderCommands( qfalse );
+		
+        memset( tr.images, 0, sizeof( tr.images ) );
+
+	    tr.numImages = 0;;
 	}
 
 	R_DoneFreeType();

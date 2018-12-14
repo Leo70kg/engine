@@ -1581,7 +1581,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_curve.o \
   $(B)/renderer_vulkan/tr_font.o \
   $(B)/renderer_vulkan/tr_image.o \
-  $(B)/renderer_vulkan/RB_TakeScreenshot.o \
   $(B)/renderer_vulkan/R_LoadImage2.o \
   $(B)/renderer_vulkan/R_FindShader.o \
   $(B)/renderer_vulkan/R_ListShader.o \
@@ -1620,7 +1619,7 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/vk_image_sampler.o \
   $(B)/renderer_vulkan/vk_create_pipeline.o \
   $(B)/renderer_vulkan/vk_frame.o \
-  $(B)/renderer_vulkan/vk_read_pixels.o \
+  $(B)/renderer_vulkan/vk_screenshot.o \
   $(B)/renderer_vulkan/vk_shade_geometry.o \
   $(B)/renderer_vulkan/vk_initialize.o \
   \
