@@ -10,5 +10,5 @@ void vk_initialize(void);
 // Shutdown vulkan subsystem by releasing resources acquired by Vk_Instance.
 void vk_shutdown(void);
 
-
+void vulkanInfo_f( void ); 
 #endif

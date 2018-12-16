@@ -50,7 +50,7 @@ static qboolean IQM_CheckRange( iqmHeader_t *header, int offset,
 }
 // "multiply" 3x4 matrices, these are assumed to be the top 3 rows
 // of a 4x4 matrix with the last row = (0 0 0 1)
-static void Matrix34Multiply( float *a, float *b, float *out ) {
+static void Matrix34Multiply( float *a, float const *b, float *out ) {
 	out[ 0] = a[0] * b[0] + a[1] * b[4] + a[ 2] * b[ 8];
 	out[ 1] = a[0] * b[1] + a[1] * b[5] + a[ 2] * b[ 9];
 	out[ 2] = a[0] * b[2] + a[1] * b[6] + a[ 2] * b[10];

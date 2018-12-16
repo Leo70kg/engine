@@ -567,15 +567,30 @@ float Q_rsqrt( float number )
 
 ID_INLINE void MatrixMultiply(float in1[3][3], float in2[3][3], float out[3][3])
 {
-	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +	in1[0][2] * in2[2][0];
-	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +	in1[0][2] * in2[2][1];
-	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] +	in1[0][2] * in2[2][2];
-	out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] +	in1[1][2] * in2[2][0];
-	out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] + in1[1][2] * in2[2][1];
-	out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] +	in1[1][2] * in2[2][2];
-	out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] +	in1[2][2] * in2[2][0];
-	out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] +	in1[2][2] * in2[2][1];
-	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] +	in1[2][2] * in2[2][2];
+    const float a = in1[0][0];
+    const float b = in1[1][0];
+    const float c = in1[2][0];
+
+    const float e = in1[0][1];
+    const float f = in1[1][1];
+    const float g = in1[2][1];
+
+    const float h = in1[0][2];
+    const float i = in1[1][2];
+    const float j = in1[2][2];
+
+
+	out[0][0] = a * in2[0][0] + e * in2[1][0] +	h * in2[2][0];
+	out[0][1] = a * in2[0][1] + e * in2[1][1] +	h * in2[2][1];
+	out[0][2] = a * in2[0][2] + e * in2[1][2] +	h * in2[2][2];
+	
+    out[1][0] = b * in2[0][0] + f * in2[1][0] +	i * in2[2][0];
+	out[1][1] = b * in2[0][1] + f * in2[1][1] + i * in2[2][1];
+	out[1][2] = b * in2[0][2] + f * in2[1][2] +	i * in2[2][2];
+
+	out[2][0] = c * in2[0][0] + g * in2[1][0] +	j * in2[2][0];
+	out[2][1] = c * in2[0][1] + g * in2[1][1] +	j * in2[2][1];
+	out[2][2] = c * in2[0][2] + g * in2[1][2] +	j * in2[2][2];
 }
 
 

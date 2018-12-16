@@ -318,9 +318,6 @@ void RE_BeginFrame(void) {
 		if ((err = qglGetError()) != GL_NO_ERROR)
 			ri.Error(ERR_FATAL, "RE_BeginFrame() - glGetError() failed (0x%x)!", err);
 	}
-
-	
- 
 	
 }
 

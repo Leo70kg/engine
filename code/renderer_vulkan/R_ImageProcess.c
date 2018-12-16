@@ -1,4 +1,3 @@
-#include "tr_local.h"
 #include "tr_cvar.h"
 #include "tr_globals.h"
 
@@ -32,7 +31,6 @@ void R_GammaCorrect(unsigned char* buffer, const unsigned int Size)
 void R_SetColorMappings( void )
 {
 	int		i, j;
-	float	g;
 	int		inf;
 	int		shift;
 
@@ -48,13 +46,7 @@ void R_SetColorMappings( void )
 		ri.Cvar_Set( "r_intensity", "1" );
 	}
 
-	if ( r_gamma->value < 0.5f ) {
-		ri.Cvar_Set( "r_gamma", "0.5" );
-	} else if ( r_gamma->value > 3.0f ) {
-		ri.Cvar_Set( "r_gamma", "3.0" );
-	}
-
-	g = r_gamma->value;
+	float g = r_gamma->value;
 
 	shift = tr.overbrightBits;
 
@@ -83,12 +75,7 @@ void R_SetColorMappings( void )
 		}
 		s_intensitytable[i] = j;
 	}
-/*
-	if ( glConfig.deviceSupportsGamma )
-	{
-		VKimp_SetGamma( s_gammatable, s_gammatable, s_gammatable );
-	}
-*/
+
 }
 
 

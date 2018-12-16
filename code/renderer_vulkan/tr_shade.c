@@ -88,13 +88,11 @@ static void DrawTris (shaderCommands_t *input)
 {
 	GL_Bind( tr.whiteImage );
 
-
 	// VULKAN
 
     memset(tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
     VkPipeline pipeline = backEnd.viewParms.isMirror ? vk.tris_mirror_debug_pipeline : vk.tris_debug_pipeline;
     vk_shade_geometry(pipeline, qfalse, force_zero, qtrue);
-
 
 }
 

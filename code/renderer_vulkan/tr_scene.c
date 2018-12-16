@@ -59,16 +59,15 @@ void R_InitScene(void)
 	if (max_polyverts < MAX_POLYVERTS)
 		max_polyverts = MAX_POLYVERTS;
 
-	unsigned char* ptr = ri.Hunk_Alloc( sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low);
+	unsigned int len = sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts;
+    
+    char* ptr = ri.Hunk_Alloc( len, h_low);
+    memset(ptr, 0, len);
+
 	backEndData = (backEndData_t *) ptr;
-	backEndData->polys = (srfPoly_t *) ((char *) ptr + sizeof( *backEndData ));
-	backEndData->polyVerts = (polyVert_t *) ((char *) ptr + sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys);
-}
+	backEndData->polys = (srfPoly_t *) (ptr + sizeof( *backEndData ));
+	backEndData->polyVerts = (polyVert_t *) (ptr + sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys);
 
-
-
-void R_ToggleSmpFrame( void )
-{
 	backEndData->commands.used = 0;
 
 	r_firstSceneDrawSurf = 0;
@@ -86,6 +85,24 @@ void R_ToggleSmpFrame( void )
 }
 
 
+void R_ToggleSmpFrame(void )
+{
+
+	backEndData->commands.used = 0;
+
+	r_firstSceneDrawSurf = 0;
+
+	r_numdlights = 0;
+	r_firstSceneDlight = 0;
+
+	r_numentities = 0;
+	r_firstSceneEntity = 0;
+
+	r_numpolys = 0;
+	r_firstScenePoly = 0;
+
+	r_numpolyverts = 0;
+}
 
 void RE_ClearScene( void ) {
 	r_firstSceneDlight = r_numdlights;

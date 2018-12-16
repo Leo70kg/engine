@@ -18,7 +18,6 @@
 // Allow a maximum of two outstanding presentation operations.
 #define FRAME_LAG 2
 
-cvar_t	*r_fullscreen;
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 #define APP_NAME_STR_LEN 80
@@ -413,32 +412,11 @@ static void CreateWindow(int width, int height, qboolean fullscreen)
 
 
 
-void VKimp_Init(void)
+void vk_createWindow(void)
 {
-    r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	ri.Printf(PRINT_ALL, "...Initializing Vulkan subsystem...\n");
 
-	// Load Vulkan DLL.
-#if defined( _WIN32 )
-    const char* dll_name = "vulkan-1.dll";
-#elif defined(MACOS_X)
-    const char* dll_name = "what???";
-#else
-    const char* dll_name = "libvulkan.so.1";
-#endif
+	ri.Printf(PRINT_ALL, "...vk_createWindow...\n");
 
-	ri.Printf(PRINT_ALL, "...calling LoadLibrary('%s')\n", dll_name);
-	vk_library_handle = Sys_LoadLibrary(dll_name);
-
-	if (vk_library_handle == NULL) {
-		ri.Error(ERR_FATAL, "VKimp_init - could not load %s\n", dll_name);
-	}
-
-	qvkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)Sys_LoadFunction(vk_library_handle, "vkGetInstanceProcAddr");
-    if( qvkGetInstanceProcAddr == NULL)
-    {
-        ri.Error(ERR_FATAL, "Failed to find entrypoint vkGetInstanceProcAddr\n"); 
-    }
 
     
 	// Create window.
@@ -486,7 +464,31 @@ void VKimp_Init(void)
 }
 
 
+void vk_getInstanceProcAddrImpl(void)
+{
+    // Load Vulkan DLL.
+#if defined( _WIN32 )
+    const char* dll_name = "vulkan-1.dll";
+#elif defined(MACOS_X)
+    const char* dll_name = "what???";
+#else
+    const char* dll_name = "libvulkan.so.1";
+#endif
 
+    ri.Printf(PRINT_ALL, "...calling LoadLibrary('%s')\n", dll_name);
+    vk_library_handle = Sys_LoadLibrary(dll_name);
+
+    if (vk_library_handle == NULL) {
+        ri.Error(ERR_FATAL, "VKimp_init - could not load %s\n", dll_name);
+    }
+
+    qvkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)Sys_LoadFunction(vk_library_handle, "vkGetInstanceProcAddr");
+    if( qvkGetInstanceProcAddr == NULL)
+    {
+        ri.Error(ERR_FATAL, "Failed to find entrypoint vkGetInstanceProcAddr\n"); 
+    }
+
+}
 
 
 void VKimp_Shutdown(void)

@@ -5,7 +5,7 @@
 void create_pipelines_for_each_stage(shaderStage_t* pStage, shader_t* pShader); 
 void create_standard_pipelines(void);
 
-void qDestroyALLPipeline(void);
+void vk_destroyALLPipeline(void);
 
 
 #endif

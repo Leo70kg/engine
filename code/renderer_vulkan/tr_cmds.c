@@ -21,9 +21,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "tr_local.h"
 #include "tr_globals.h"
-#include "R_ImageProcess.h"
+
 #include "tr_cvar.h"
 #include "../renderercommon/ref_import.h"
+
+
+extern void R_ToggleSmpFrame(void);
+
 
 int R_SumOfUsedImages( void ) {
 	int	total;
@@ -87,8 +91,6 @@ void R_PerformanceCounters( void )
 R_IssueRenderCommands
 ====================
 */
-int	c_blockedOnRender;
-int	c_blockedOnMain;
 
 void R_IssueRenderCommands( qboolean runPerformanceCounters )
 {
@@ -113,11 +115,15 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters )
 	}
 }
 
+
 /*
 ====================
 R_IssuePendingRenderCommands
 
 Issue any pending commands and wait for them to complete.
+After exiting, the render thread will have completed its work
+and will remain idle and the main thread is free to issue
+OpenGL calls until R_IssueRenderCommands is called.
 ====================
 */
 
@@ -128,26 +134,6 @@ void R_IssuePendingRenderCommands( void )
 	}
 	R_IssueRenderCommands( qfalse );
 }
-
-
-/*
-====================
-R_SyncRenderThread
-
-Issue any pending commands and wait for them to complete.
-After exiting, the render thread will have completed its work
-and will remain idle and the main thread is free to issue
-OpenGL calls until R_IssueRenderCommands is called.
-====================
-*/
-void R_SyncRenderThread( void )
-{
-	if ( !tr.registered ) {
-		return;
-	}
-	R_IssueRenderCommands( qfalse );
-}
-
 
 
 /*
@@ -184,7 +170,8 @@ R_AddDrawSurfCmd
 
 =============
 */
-void	R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs )
+{
 	drawSurfsCommand_t	*cmd;
 
 	cmd = (drawSurfsCommand_t*) R_GetCommandBuffer(sizeof(*cmd));
@@ -208,43 +195,43 @@ RE_SetColor
 Passing NULL will set the color to white
 =============
 */
-void	RE_SetColor( const float *rgba ) {
-	setColorCommand_t	*cmd;
-
-  if ( !tr.registered ) {
-    return;
-  }
-  cmd = (setColorCommand_t*) R_GetCommandBuffer(sizeof(*cmd));
+void RE_SetColor( const float *rgba )
+{
+    if ( !tr.registered ) {
+        return;
+    }
+    
+    setColorCommand_t* cmd = (setColorCommand_t*) R_GetCommandBuffer(sizeof(setColorCommand_t));
 	if ( !cmd ) {
 		return;
 	}
 	cmd->commandId = RC_SET_COLOR;
-	if ( !rgba ) {
-		static float colorWhite[4] = { 1, 1, 1, 1 };
-
-		rgba = colorWhite;
-	}
-
-	cmd->color[0] = rgba[0];
-	cmd->color[1] = rgba[1];
-	cmd->color[2] = rgba[2];
-	cmd->color[3] = rgba[3];
+	
+    if(rgba)
+    {
+        cmd->color[0] = rgba[0];
+        cmd->color[1] = rgba[1];
+        cmd->color[2] = rgba[2];
+        cmd->color[3] = rgba[3];
+    }
+    else
+    {
+        // color white
+        cmd->color[0] = 1.0f;
+        cmd->color[1] = 1.0f;
+        cmd->color[2] = 1.0f;
+        cmd->color[3] = 1.0f;
+    }
 }
 
 
-/*
-=============
-RE_StretchPic
-=============
-*/
 void RE_StretchPic ( float x, float y, float w, float h, 
-					  float s1, float t1, float s2, float t2, qhandle_t hShader ) {
-	stretchPicCommand_t	*cmd;
-
-  if (!tr.registered) {
-    return;
-  }
-  cmd = (stretchPicCommand_t*) R_GetCommandBuffer(sizeof(*cmd));
+					  float s1, float t1, float s2, float t2, qhandle_t hShader )
+{
+    if (!tr.registered) {
+        return;
+    }
+    stretchPicCommand_t* cmd = (stretchPicCommand_t*) R_GetCommandBuffer(sizeof(stretchPicCommand_t));
 	if ( !cmd ) {
 		return;
 	}
@@ -272,7 +259,6 @@ for each RE_EndFrame
 
 void RE_BeginFrame( void )
 {
-	drawBufferCommand_t	*cmd;
 
 	if ( !tr.registered ) {
 		return;
@@ -280,23 +266,10 @@ void RE_BeginFrame( void )
 
 	tr.frameCount++;
 
-
-	//
-	// gamma stuff
-	//
-	if ( r_gamma->modified ) {
-		r_gamma->modified = qfalse;
-
-		R_SyncRenderThread();
-		R_SetColorMappings();
-	}
-
-
-
 	//
 	// draw buffer stuff
 	//
-	cmd = (drawBufferCommand_t*) R_GetCommandBuffer(sizeof(*cmd));
+	drawBufferCommand_t* cmd = (drawBufferCommand_t*) R_GetCommandBuffer(sizeof(drawBufferCommand_t));
 	if ( !cmd ) {
 		return;
 	}
@@ -312,13 +285,13 @@ RE_EndFrame
 Returns the number of msec spent in the back end
 =============
 */
-void RE_EndFrame( int *frontEndMsec, int *backEndMsec ) {
-	swapBuffersCommand_t	*cmd;
+void RE_EndFrame( int *frontEndMsec, int *backEndMsec )
+{
 
 	if ( !tr.registered ) {
 		return;
 	}
-	cmd = (swapBuffersCommand_t*) R_GetCommandBuffer(sizeof(*cmd));
+	swapBuffersCommand_t* cmd = (swapBuffersCommand_t*) R_GetCommandBuffer(sizeof(swapBuffersCommand_t));
 	if ( !cmd ) {
 		return;
 	}

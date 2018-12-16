@@ -9,6 +9,7 @@
 #include "vk_shade_geometry.h"
 #include "vk_create_pipeline.h"
 #include "vk_frame.h"
+#include "vk_shaders.h"
 
 
 #ifndef NDEBUG
@@ -129,47 +130,52 @@ static VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevic
 	if ((surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) == 0)
 		ri.Error(ERR_FATAL, "create_swapchain: VK_IMAGE_USAGE_TRANSFER_SRC_BIT is not supported by the swapchain");
 
+
+
 	// determine present mode and swapchain image count
-	uint32_t nPM, i;
-	qvkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &nPM, NULL);
-    //std::vector<VkPresentModeKHR> present_modes(nPM);
-	
-    VkPresentModeKHR *pPresentModes = 
-        (VkPresentModeKHR *)malloc(nPM * sizeof(VkPresentModeKHR));
+    VkPresentModeKHR present_mode;
+    uint32_t image_count;
 
-    qvkGetPhysicalDeviceSurfacePresentModesKHR(
-            physical_device, surface, &nPM, pPresentModes);
-
-	int mailbox_supported = 0;
-	int immediate_supported = 0;
-
-    for ( i = 0; i < nPM; i++)
     {
-		if (pPresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
-			mailbox_supported = 1;
-		else if (pPresentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
-			immediate_supported = 1;
-	}
+        uint32_t nPM, i;
+        qvkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &nPM, NULL);
 
-    free(pPresentModes);
+        VkPresentModeKHR *pPresentModes = 
+            (VkPresentModeKHR *)malloc(nPM * sizeof(VkPresentModeKHR));
+
+        qvkGetPhysicalDeviceSurfacePresentModesKHR(
+                physical_device, surface, &nPM, pPresentModes);
+
+        VkBool32 mailbox_supported = 0;
+        VkBool32 immediate_supported = 0;
+
+        for ( i = 0; i < nPM; i++)
+        {
+            if (pPresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+                mailbox_supported = 1;
+            else if (pPresentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+                immediate_supported = 1;
+        }
+
+        free(pPresentModes);
 
 
-	VkPresentModeKHR present_mode;
-	uint32_t image_count;
-	if (mailbox_supported)
-    {
-		present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
-		image_count = MAX(3u, surface_caps.minImageCount);
-	}
-    else
-    {
-		present_mode = immediate_supported ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR;
-		image_count = MAX(2u, surface_caps.minImageCount);
-	}
+        if (mailbox_supported)
+        {
+            present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+            image_count = MAX(3u, surface_caps.minImageCount);
+        }
+        else
+        {
+            present_mode = immediate_supported ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR;
+            image_count = MAX(2u, surface_caps.minImageCount);
+        }
 
-	if (surface_caps.maxImageCount > 0) {
-		image_count = MIN(image_count, surface_caps.maxImageCount);
-	}
+        if (surface_caps.maxImageCount > 0) {
+            image_count = MIN(image_count, surface_caps.maxImageCount);
+        }
+    }
+
 
 	// create swap chain
 	VkSwapchainCreateInfoKHR desc;
@@ -229,25 +235,10 @@ static VkFormat get_depth_format(VkPhysicalDevice physical_device)
 }
 
 
-static VkShaderModule create_shader_module(const unsigned char* pBytes, int count)
-{
-	if (count % 4 != 0) {
-		ri.Error(ERR_FATAL, "Vulkan: SPIR-V binary buffer size is not multiple of 4");
-	}
-	VkShaderModuleCreateInfo desc;
-	desc.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	desc.pNext = NULL;
-	desc.flags = 0;
-	desc.codeSize = count;
-	desc.pCode = (const uint32_t*)pBytes;
-			   
-	VkShaderModule module;
-	VK_CHECK(qvkCreateShaderModule(vk.device, &desc, NULL, &module));
-	return module;
-};
 
 
-void vk_shutdown()
+
+void vk_shutdown(void)
 {
     ri.Printf( PRINT_ALL, "vk_shutdown()\n" );
     unsigned int i = 0, j = 0, k = 0;
@@ -274,16 +265,8 @@ void vk_shutdown()
 	qvkFreeMemory(vk.device, vk.geometry_buffer_memory, NULL);
 
     vk_destroy_sync_primitives();
-
-
-
-	qvkDestroyShaderModule(vk.device, vk.single_texture_vs, NULL);
-	qvkDestroyShaderModule(vk.device, vk.single_texture_clipping_plane_vs, NULL);
-	qvkDestroyShaderModule(vk.device, vk.single_texture_fs, NULL);
-	qvkDestroyShaderModule(vk.device, vk.multi_texture_vs, NULL);
-	qvkDestroyShaderModule(vk.device, vk.multi_texture_clipping_plane_vs, NULL);
-	qvkDestroyShaderModule(vk.device, vk.multi_texture_mul_fs, NULL);
-	qvkDestroyShaderModule(vk.device, vk.multi_texture_add_fs, NULL);
+    
+    vk_destroyShaderModules();
 
 	qvkDestroyPipeline(vk.device, vk.skybox_pipeline, NULL);
 	for (i = 0; i < 2; i++)
@@ -312,7 +295,9 @@ void vk_shutdown()
 
 	qvkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);
 	qvkDestroyDevice(vk.device, NULL);
-	qvkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
+	
+    // make sure that the surface is destroyed before the instance
+    qvkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
 
 #ifndef NDEBUG
 	qvkDestroyDebugReportCallbackEXT(vk.instance, debug_callback, NULL);
@@ -321,7 +306,8 @@ void vk_shutdown()
 	qvkDestroyInstance(vk.instance, NULL);
 
 	memset(&vk, 0, sizeof(vk));
-	VK_ClearProcAddress();
+
+	vk_clearProcAddress();
 }
 
 
@@ -330,14 +316,14 @@ void vk_initialize(void)
 {
     uint32_t i = 0;
 
-	qvkGetDeviceQueue(vk.device, vk.queue_family_index, 0, &vk.queue);
+
 #ifndef NDEBUG
 	// Create debug callback.
     createDebugCallback();
 #endif
 	//
 	// Swapchain.
-	//
+    //
 	{
 		vk.swapchain = create_swapchain(vk.physical_device, vk.device, vk.surface, vk.surface_format);
 
@@ -662,36 +648,7 @@ void vk_initialize(void)
 	//
 	// Shader modules.
 	//
-	{
-
-		extern unsigned char single_texture_vert_spv[];
-		extern long long single_texture_vert_spv_size;
-		vk.single_texture_vs = create_shader_module(single_texture_vert_spv, single_texture_vert_spv_size);
-
-		extern unsigned char single_texture_clipping_plane_vert_spv[];
-		extern long long single_texture_clipping_plane_vert_spv_size;
-		vk.single_texture_clipping_plane_vs = create_shader_module(single_texture_clipping_plane_vert_spv, single_texture_clipping_plane_vert_spv_size);
-
-		extern unsigned char single_texture_frag_spv[];
-		extern long long single_texture_frag_spv_size;
-		vk.single_texture_fs = create_shader_module(single_texture_frag_spv, single_texture_frag_spv_size);
-
-		extern unsigned char multi_texture_vert_spv[];
-		extern long long multi_texture_vert_spv_size;
-		vk.multi_texture_vs = create_shader_module(multi_texture_vert_spv, multi_texture_vert_spv_size);
-
-		extern unsigned char multi_texture_clipping_plane_vert_spv[];
-		extern long long multi_texture_clipping_plane_vert_spv_size;
-		vk.multi_texture_clipping_plane_vs = create_shader_module(multi_texture_clipping_plane_vert_spv, multi_texture_clipping_plane_vert_spv_size);
-
-		extern unsigned char multi_texture_mul_frag_spv[];
-		extern long long multi_texture_mul_frag_spv_size;
-		vk.multi_texture_mul_fs = create_shader_module(multi_texture_mul_frag_spv, multi_texture_mul_frag_spv_size);
-
-		extern unsigned char multi_texture_add_frag_spv[];
-		extern long long multi_texture_add_frag_spv_size;
-		vk.multi_texture_add_fs = create_shader_module(multi_texture_add_frag_spv, multi_texture_add_frag_spv_size);
-	}
+	vk_createShaderModules();
 
 	//
 	// Standard pipelines.
@@ -699,3 +656,95 @@ void vk_initialize(void)
     create_standard_pipelines();
 
 }
+
+void vulkanInfo_f( void ) 
+{
+
+	// VULKAN
+
+    ri.Printf( PRINT_ALL, "\nActive 3D API: Vulkan\n" );
+
+    // To query general properties of physical devices once enumerated
+    VkPhysicalDeviceProperties props;
+    qvkGetPhysicalDeviceProperties(vk.physical_device, &props);
+
+    uint32_t major = VK_VERSION_MAJOR(props.apiVersion);
+    uint32_t minor = VK_VERSION_MINOR(props.apiVersion);
+    uint32_t patch = VK_VERSION_PATCH(props.apiVersion);
+
+    const char* device_type;
+    if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+        device_type = "INTEGRATED_GPU";
+    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        device_type = "DISCRETE_GPU";
+    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU)
+        device_type = "VIRTUAL_GPU";
+    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU)
+        device_type = "CPU";
+    else
+        device_type = "Unknown";
+
+    const char* vendor_name = "unknown";
+    if (props.vendorID == 0x1002) {
+        vendor_name = "Advanced Micro Devices, Inc.";
+    } else if (props.vendorID == 0x10DE) {
+        vendor_name = "NVIDIA";
+    } else if (props.vendorID == 0x8086) {
+        vendor_name = "Intel Corporation";
+    }
+
+    ri.Printf(PRINT_ALL, "Vk api version: %d.%d.%d\n", major, minor, patch);
+    ri.Printf(PRINT_ALL, "Vk driver version: %d\n", props.driverVersion);
+    ri.Printf(PRINT_ALL, "Vk vendor id: 0x%X (%s)\n", props.vendorID, vendor_name);
+    ri.Printf(PRINT_ALL, "Vk device id: 0x%X\n", props.deviceID);
+    ri.Printf(PRINT_ALL, "Vk device type: %s\n", device_type);
+    ri.Printf(PRINT_ALL, "Vk device name: %s\n", props.deviceName);
+
+//    ri.Printf(PRINT_ALL, "\n The maximum number of sampler objects,  
+//    as created by vkCreateSampler, which can simultaneously exist on a device is: %d\n", 
+//        props.limits.maxSamplerAllocationCount);
+//	 4000
+
+    // Look for device extensions
+    {
+        uint32_t nDevExts = 0;
+
+        // To query the extensions available to a given physical device
+        VK_CHECK( qvkEnumerateDeviceExtensionProperties( vk.physical_device, NULL, &nDevExts, NULL) );
+
+        VkExtensionProperties* pDeviceExt = 
+            (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * nDevExts);
+
+        qvkEnumerateDeviceExtensionProperties(
+                vk.physical_device, NULL, &nDevExts, pDeviceExt);
+
+
+
+        ri.Printf(PRINT_ALL, "---------- Total Device Extension Supported ---------- \n");
+        uint32_t i;
+        for (i=0; i<nDevExts; i++)
+        {
+            ri.Printf(PRINT_ALL, " %s \n", pDeviceExt[i].extensionName);
+        }
+        ri.Printf(PRINT_ALL, "---------- -------------------------------- ---------- \n");
+    }
+
+    ri.Printf(PRINT_ALL, "Vk instance extensions: \n%s\n",
+            glConfig.extensions_string);
+
+
+	//
+	// Info that for UI display
+	//
+	strncpy( glConfig.vendor_string, vendor_name, sizeof( glConfig.vendor_string ) );
+	strncpy( glConfig.renderer_string, props.deviceName, sizeof( glConfig.renderer_string ) );
+    if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
+         glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;     
+	char tmpBuf[128] = {0};
+
+    snprintf(tmpBuf, 128,"Vk api version: %d.%d.%d ", major, minor, patch);
+	
+    strncpy( glConfig.version_string, tmpBuf, sizeof( glConfig.version_string ) );
+
+}
+

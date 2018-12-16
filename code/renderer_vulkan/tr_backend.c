@@ -254,7 +254,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	if ( !tr.registered ) {
 		return;
 	}
-	R_SyncRenderThread();
+	R_IssuePendingRenderCommands();
 
 	start = end = 0;
 	if ( r_speeds->integer ) {
@@ -511,7 +511,8 @@ This function will be called synchronously if running without
 smp extensions, or asynchronously by another thread.
 ====================
 */
-void RB_ExecuteRenderCommands( const void *data ) {
+void RB_ExecuteRenderCommands( const void *data )
+{
 	int		t1, t2;
 
 	t1 = ri.Milliseconds ();

@@ -653,8 +653,9 @@ void create_standard_pipelines(void)
 }
 
 
-void qDestroyALLPipeline(void)
+void vk_destroyALLPipeline(void)
 {
+    qvkDeviceWaitIdle(vk.device);
     int i;
     for (i = 0; i < s_numPipelines; i++)
     {

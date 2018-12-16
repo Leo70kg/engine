@@ -489,7 +489,9 @@ void qDestroyImage(void)
     memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
 
     R_resetGammaIntensityTable();
-
+	
+    VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
+    
     ///////////////////////////////////
     s_CurTextures[0] = s_CurTextures[1] = 0;
 	s_CurTmu = 0;

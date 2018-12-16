@@ -64,7 +64,7 @@ qhandle_t RE_RegisterModel( const char *name )
 
 
 	// make sure the render thread is stopped
-	R_SyncRenderThread();
+	R_IssuePendingRenderCommands();
 
 	mod->type = MOD_BAD;
 	mod->numLods = 0;

@@ -81,7 +81,7 @@ asked for again.
 */
 qhandle_t RE_RegisterModel( const char *name ) {
 	model_t		*mod;
-	unsigned	*buf;
+	char	*buf;
 	int			lod;
 	int			ident;
 	qboolean	loaded;

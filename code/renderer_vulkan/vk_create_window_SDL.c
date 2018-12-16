@@ -27,9 +27,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "sdl_icon.h"
 #include "qvk.h"
 #include "VKimpl.h"
-
-#include "tr_displayResolution.h"
 #include "vk_instance.h"
+#include "tr_displayResolution.h"
+
 #include "tr_cvar.h"
 
 #include "tr_globals.h" // glConfig
@@ -49,9 +49,6 @@ static SDL_Window *SDL_window = NULL;
 
 static cvar_t* r_allowResize; // make window resizable
 
-
-// display refresh rate
-static cvar_t* r_displayRefresh;
 
 // not used cvar, keep it for backward compatibility
 static cvar_t* r_sdlDriver;
@@ -399,7 +396,7 @@ void VKimp_CreateInstance(void)
 /*
  * This routine is responsible for initializing the OS specific portions of Vulkan
  */
-void VKimp_Init()
+void vk_createWindow(void)
 {
 	ri.Printf(PRINT_ALL, "...Initializing Vulkan subsystem...\n");
 
@@ -408,7 +405,7 @@ void VKimp_Init()
 	r_sdlDriver = ri.Cvar_Get( "r_sdlDriver", "", CVAR_ROM );
 
 	r_displayIndex = ri.Cvar_Get( "r_displayIndex", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "60", CVAR_LATCH );
+
 
 
     // These values force the UI to disable driver selection
@@ -430,7 +427,7 @@ void VKimp_Init()
     glConfig.stencilBits = 8;
 
 
-	ri.Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );
+
 
 	if(ri.Cvar_VariableIntegerValue( "com_abnormalExit" ) )
 	{
@@ -473,6 +470,17 @@ void VKimp_Init()
 
 success:
 
+	ri.Printf(PRINT_ALL,  "MODE: %s, %d x %d, refresh rate: %dhz\n",
+        ((r_fullscreen->integer == 1) ? "fullscreen" : "windowed"), 
+        glConfig.vidWidth, glConfig.vidHeight, glConfig.refresh_rate);
+    
+	// This depends on SDL_INIT_VIDEO, hence having it here
+	ri.IN_Init(SDL_window, 0);
+}
+
+
+void vk_getInstanceProcAddrImpl(void)
+{
 	SDL_Vulkan_LoadLibrary(NULL);    
     // Create the window 
 
@@ -481,19 +489,6 @@ success:
     {
         ri.Error(ERR_FATAL, "Failed to find entrypoint vkGetInstanceProcAddr\n"); 
     }
-
-
-
-
-
-
-	ri.Printf(PRINT_ALL,  "MODE: %s, %d x %d, refresh rate: %dhz\n",
-        ((r_fullscreen->integer == 1) ? "fullscreen" : "windowed"), 
-        glConfig.vidWidth, glConfig.vidHeight, glConfig.refresh_rate);
-
-    
-	// This depends on SDL_INIT_VIDEO, hence having it here
-	ri.IN_Init(SDL_window, 0);
 }
 
 

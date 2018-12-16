@@ -6,6 +6,7 @@
 #include "tr_globals.h"
 #include "vk_image.h"
 
+
 void R_DebugPolygon( int color, int numPoints, float *points )
 {
 
@@ -116,7 +117,7 @@ Visualization aid for movement clipping debugging
 void R_DebugGraphics( void )
 {
 	// the render thread can't make callbacks to the main thread
-	R_SyncRenderThread();
+	R_IssuePendingRenderCommands();
 
 	GL_Bind( tr.whiteImage);
 	ri.CM_DrawDebugSurface( R_DebugPolygon );

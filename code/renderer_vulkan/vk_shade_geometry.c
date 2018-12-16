@@ -167,6 +167,15 @@ void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth
 }
 
 
+void vk_resetGeometryBuffer(void)
+{
+	// Reset geometry buffer's current offsets.
+	vk.xyz_elements = 0;
+	vk.color_st_elements = 0;
+	vk.index_buffer_offset = 0;
+}
+
+
 void vk_bind_geometry(void) 
 {
 

@@ -751,20 +751,6 @@ typedef struct {
 
 
 
-typedef struct {
-	int		c_surfaces, c_shaders, c_vertexes, c_indexes, c_totalIndexes;
-	
-	int		c_dlightVertexes;
-	int		c_dlightIndexes;
-
-	int		msec;			// total msec for backend run
-} backEndCounters_t;
-
-
-
-
-
-
 float R_NoiseGet4f( float x, float y, float z, float t );
 void  R_NoiseInit( void );
 
@@ -831,16 +817,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 
 #define GLS_DEFAULT			GLS_DEPTHMASK_TRUE
 
-void	RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
-void	RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
 
-void	RE_BeginFrame( void );
-void	RE_BeginRegistration( glconfig_t *glconfig );
-void	RE_LoadWorldMap( const char *mapname );
-void	RE_SetWorldVisData( const byte *vis );
-
-qhandle_t	RE_RegisterSkin( const char *name );
-void		RE_Shutdown( qboolean destroyWindow );
 
 qboolean	R_GetEntityToken( char *buffer, int size );
 
@@ -916,7 +893,7 @@ typedef struct shaderCommands_s
 	color4ub_t	constantColor255[SHADER_MAX_VERTEXES];
 
 	shader_t	*shader;
-  float   shaderTime;
+    float   shaderTime;
 	int			fogNum;
 
 	int			dlightBits;	// or together of all vertexDlightBits
@@ -1019,22 +996,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 				   int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer );
 
 
-/*
-============================================================
 
-SCENE GENERATION
-
-============================================================
-*/
-
-void R_ToggleSmpFrame( void );
-
-void RE_ClearScene( void );
-void RE_AddRefEntityToScene( const refEntity_t *ent );
-void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
-void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
-void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
-void RE_RenderScene( const refdef_t *fd );
 
 /*
 =============================================================
@@ -1045,7 +1007,6 @@ ANIMATED MODELS
 */
 void R_MDRAddAnimSurfaces( trRefEntity_t *ent );
 void R_AddAnimSurfaces( trRefEntity_t *ent );
-
 void R_AddIQMSurfaces( trRefEntity_t *ent );
 
 /*
@@ -1167,25 +1128,50 @@ void *R_GetCommandBuffer( int bytes );
 void RB_ExecuteRenderCommands( const void *data );
 
 
-void R_SyncRenderThread( void );
+void R_IssueRenderCommands( qboolean runPerformanceCounters );
+
 
 void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
+
+
+/*
+============================================================
+
+SCENE GENERATION
+
+============================================================
+*/
+
+void	RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
+void	RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
+
+void	RE_BeginFrame( void );
+void	RE_BeginRegistration( glconfig_t *glconfig );
+void	RE_LoadWorldMap( const char *mapname );
+void	RE_SetWorldVisData( const byte *vis );
+
+qhandle_t	RE_RegisterSkin( const char *name );
+void		RE_Shutdown( qboolean destroyWindow );
+
+void RE_ClearScene( void );
+void RE_AddRefEntityToScene( const refEntity_t *ent );
+void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
+void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
+void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
+void RE_RenderScene( const refdef_t *fd );
 
 void RE_SetColor( const float *rgba );
 void RE_StretchPic ( float x, float y, float w, float h, 
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_EndFrame( int *frontEndMsec, int *backEndMsec );
-
+void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
 // font stuff
 void R_InitFreeType(void);
 void R_DoneFreeType(void);
-void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 
-void R_IssueRenderCommands( qboolean runPerformanceCounters );
 
-extern	void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
-
+extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
 
 extern shaderCommands_t	tess;
 

@@ -115,8 +115,8 @@ extern PFN_vkGetSwapchainImagesKHR						qvkGetSwapchainImagesKHR;
 extern PFN_vkQueuePresentKHR							qvkQueuePresentKHR;
 
 
-void VK_GetProcAddress(void);
-void VK_ClearProcAddress(void);
+void vk_getProcAddress(void);
+void vk_clearProcAddress(void);
 
 const char * cvtResToStr(VkResult result);
 

@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "VKimpl.h"
 #include "vk_initialize.h"
 #include "vk_screenshot.h"
-#include "vk_instance.h"
+#include "vk_shade_geometry.h"
 #include "vk_create_pipeline.h"
 #include "vk_image.h"
 #include "vk_clear_attachments.h"
@@ -41,94 +41,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 refimport_t	ri;
 
 
-void vulkanInfo_f( void ) 
-{
-
-	// VULKAN
-
-    ri.Printf( PRINT_ALL, "\nActive 3D API: Vulkan\n" );
-
-    // To query general properties of physical devices once enumerated
-    VkPhysicalDeviceProperties props;
-    qvkGetPhysicalDeviceProperties(vk.physical_device, &props);
-
-    uint32_t major = VK_VERSION_MAJOR(props.apiVersion);
-    uint32_t minor = VK_VERSION_MINOR(props.apiVersion);
-    uint32_t patch = VK_VERSION_PATCH(props.apiVersion);
-
-    const char* device_type;
-    if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
-        device_type = "INTEGRATED_GPU";
-    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-        device_type = "DISCRETE_GPU";
-    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU)
-        device_type = "VIRTUAL_GPU";
-    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU)
-        device_type = "CPU";
-    else
-        device_type = "Unknown";
-
-    const char* vendor_name = "unknown";
-    if (props.vendorID == 0x1002) {
-        vendor_name = "Advanced Micro Devices, Inc.";
-    } else if (props.vendorID == 0x10DE) {
-        vendor_name = "NVIDIA";
-    } else if (props.vendorID == 0x8086) {
-        vendor_name = "Intel Corporation";
-    }
-
-    ri.Printf(PRINT_ALL, "Vk api version: %d.%d.%d\n", major, minor, patch);
-    ri.Printf(PRINT_ALL, "Vk driver version: %d\n", props.driverVersion);
-    ri.Printf(PRINT_ALL, "Vk vendor id: 0x%X (%s)\n", props.vendorID, vendor_name);
-    ri.Printf(PRINT_ALL, "Vk device id: 0x%X\n", props.deviceID);
-    ri.Printf(PRINT_ALL, "Vk device type: %s\n", device_type);
-    ri.Printf(PRINT_ALL, "Vk device name: %s\n", props.deviceName);
-
-//    ri.Printf(PRINT_ALL, "\n The maximum number of sampler objects,  
-//    as created by vkCreateSampler, which can simultaneously exist on a device is: %d\n", 
-//        props.limits.maxSamplerAllocationCount);
-//	 4000
-
-
-	if ( r_vertexLight->integer ) {
-		ri.Printf( PRINT_ALL, "HACK: using vertex lightmap approximation\n" );
-	}
-
-
-    ri.Printf(PRINT_ALL, "Vk instance extensions: \n%s\n",
-            glConfig.extensions_string);
-
-
-	//
-	// Info that doesn't depend on r_renderAPI
-	//
-	strncpy( glConfig.vendor_string, vendor_name, sizeof( glConfig.vendor_string ) );
-	strncpy( glConfig.renderer_string, props.deviceName, sizeof( glConfig.renderer_string ) );
-    if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
-         glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;     
-	char tmpBuf[128] = {0};
-
-    snprintf(tmpBuf, 128,"Vk api version: %d.%d.%d ", major, minor, patch);
-	
-    strncpy( glConfig.version_string, tmpBuf, sizeof( glConfig.version_string ) );
-
-}
 
 
 static void InitRenderAPI( void )
 {
-	//
-	// initialize OS specific portions of the renderer
-	//
-    // This function is responsible for initializing a valid Vulkan subsystem.
-
+	
 	if ( glConfig.vidWidth == 0 )
 	{
         // VULKAN
-			
-        VKimp_Init(); // create VK window
+		// initialize OS specific portions of the renderer	
+        vk_createWindow();
         
-        VK_GetProcAddress(); // vk function pointer
+        vk_getProcAddress(); 
+        // This function is responsible for initializing a valid Vulkan subsystem.
 
 		vk_initialize();
 
@@ -151,8 +76,12 @@ Touch all images to make sure they are resident
 */
 void RE_EndRegistration( void )
 {
-	R_SyncRenderThread();
+	if ( tr.registered ) {
+		R_IssueRenderCommands( qfalse );
+	}
 }
+
+
 
 void R_Init( void )
 {	
@@ -221,8 +150,6 @@ void R_Init( void )
 
     R_InitScene();
 
-	R_ToggleSmpFrame();
-
 	InitRenderAPI();
 
 	R_InitImages();
@@ -264,8 +191,10 @@ void RE_Shutdown( qboolean destroyWindow )
 		
         memset( tr.images, 0, sizeof( tr.images ) );
 
-	    tr.numImages = 0;;
+	    tr.numImages = 0;
+
 	}
+
 
 	R_DoneFreeType();
 
@@ -275,9 +204,9 @@ void RE_Shutdown( qboolean destroyWindow )
     // (the state we have after vk_initialize call).
 
     // contains vulkan resources/state, reinitialized on a map change.
-	qvkDeviceWaitIdle(vk.device);
 
-    qDestroyALLPipeline();
+
+    vk_destroyALLPipeline();
  
     qDestroyImage();
 
@@ -285,14 +214,9 @@ void RE_Shutdown( qboolean destroyWindow )
 
     reset_modelview_matrix();
     
-
-	VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
-
-	// Reset geometry buffer's current offsets.
-	vk.xyz_elements = 0;
-	vk.color_st_elements = 0;
-	vk.index_buffer_offset = 0;
-
+    
+    vk_resetGeometryBuffer();
+    
     if (destroyWindow)
     {
         vk_shutdown();
@@ -309,7 +233,7 @@ void RE_BeginRegistration(glconfig_t *glconfigOut)
 
 	*glconfigOut = glConfig;
 
-	R_SyncRenderThread();
+	R_IssuePendingRenderCommands();
 
 	tr.viewCluster = -1; // force markleafs to regenerate
 
@@ -319,6 +243,8 @@ void RE_BeginRegistration(glconfig_t *glconfigOut)
 
    	ri.Printf(PRINT_ALL, "RE_BeginRegistration finished.\n");
 }
+
+
 
 /*
 @@@@@@@@@@@@@@@@@@@@@

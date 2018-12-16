@@ -14,8 +14,9 @@ IMPLEMENTATION SPECIFIC FUNCTIONS
 #define VK_NO_PROTOTYPES
 #include "vulkan/vulkan.h"
 
+void vk_createWindow(void);
+void vk_getInstanceProcAddrImpl(void);
 
-void VKimp_Init(void);
 void VKimp_Shutdown(void);
 void VKimp_CreateSurface(void);
 void VKimp_CreateInstance(void);

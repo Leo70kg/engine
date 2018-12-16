@@ -85,6 +85,7 @@ extern cvar_t	*r_maxpolyverts;
 
 
 extern cvar_t* r_fullscreen;
+extern cvar_t* r_displayRefresh;
 
 void R_Register( void );
 

@@ -34,7 +34,8 @@ cvar_t	*r_nocurves;
 
 
 cvar_t* r_fullscreen;
-
+// display refresh rate
+cvar_t* r_displayRefresh;
 
 cvar_t	*r_lightmap;
 cvar_t	*r_vertexLight;
@@ -77,28 +78,6 @@ cvar_t	*r_saveFontData;
 cvar_t	*r_maxpolys;
 cvar_t	*r_maxpolyverts;
 
-static void AssertCvarRange( cvar_t *cv, float minVal, float maxVal, qboolean shouldBeIntegral )
-{
-	if ( shouldBeIntegral )
-	{
-		if ( ( int ) cv->value != cv->integer )
-		{
-			ri.Printf( PRINT_WARNING, "WARNING: cvar '%s' must be integral (%f)\n", cv->name, cv->value );
-			ri.Cvar_Set( cv->name, va( "%d", cv->integer ) );
-		}
-	}
-
-	if ( cv->value < minVal )
-	{
-		ri.Printf( PRINT_WARNING, "WARNING: cvar '%s' out of range (%f < %f)\n", cv->name, cv->value, minVal );
-		ri.Cvar_Set( cv->name, va( "%f", minVal ) );
-	}
-	else if ( cv->value > maxVal )
-	{
-		ri.Printf( PRINT_WARNING, "WARNING: cvar '%s' out of range (%f > %f)\n", cv->name, cv->value, maxVal );
-		ri.Cvar_Set( cv->name, va( "%f", maxVal ) );
-	}
-}
 
 
 void R_Register( void ) 
@@ -107,7 +86,8 @@ void R_Register( void )
 	// latched and archived variables
 	//
 	r_picmip = ri.Cvar_Get ("r_picmip", "1", CVAR_ARCHIVE | CVAR_LATCH );
-    AssertCvarRange( r_picmip, 0, 4, qtrue );
+    ri.Cvar_CheckRange( r_picmip, 0, 8, qtrue );
+
 	r_simpleMipMaps = ri.Cvar_Get( "r_simpleMipMaps", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_colorMipLevels = ri.Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
 
@@ -131,7 +111,8 @@ void R_Register( void )
     r_flares = ri.Cvar_Get ("r_flares", "0", CVAR_ARCHIVE );
 	r_lodbias = ri.Cvar_Get( "r_lodbias", "0", CVAR_ARCHIVE );
 	r_znear = ri.Cvar_Get( "r_znear", "4", CVAR_CHEAT );
-	AssertCvarRange( r_znear, 0.001f, 200, qtrue );
+    ri.Cvar_CheckRange( r_znear, 0.001f, 200, qtrue );
+
 	r_fastsky = ri.Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE );
 	r_inGameVideo = ri.Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE );
 	r_dynamiclight = ri.Cvar_Get( "r_dynamiclight", "1", CVAR_ARCHIVE );
@@ -185,5 +166,7 @@ void R_Register( void )
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", 3000), 0);
 
     r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
+    r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "60", CVAR_LATCH );
+    ri.Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );
 }
 

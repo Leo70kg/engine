@@ -4,6 +4,17 @@
 #include "tr_local.h"
 #include "tr_model.h"
 
+
+typedef struct {
+	int		c_surfaces, c_shaders, c_vertexes, c_indexes, c_totalIndexes;
+	
+	int		c_dlightVertexes;
+	int		c_dlightIndexes;
+
+	int		msec;			// total msec for backend run
+} backEndCounters_t;
+
+
 /*
 ** trGlobals_t 
 **
@@ -12,6 +23,8 @@
 ** but may read fields that aren't dynamically modified
 ** by the frontend.
 */
+
+
 typedef struct {
 	qboolean				registered;		// cleared at shutdown, set at beginRegistration
 
