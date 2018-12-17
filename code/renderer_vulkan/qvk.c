@@ -143,12 +143,14 @@ static void vk_loadGlobalFunctions(void)
 	INIT_INSTANCE_FUNCTION(vkEnumerateDeviceExtensionProperties)
 	INIT_INSTANCE_FUNCTION(vkEnumeratePhysicalDevices)
 	INIT_INSTANCE_FUNCTION(vkGetDeviceProcAddr)
-	INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceFeatures)
+
+    INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceFeatures)
     INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceProperties)
 	INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceFormatProperties)
 	INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceMemoryProperties)
 	INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceQueueFamilyProperties)
- 	INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)
+
+    INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)
 	INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceSurfaceFormatsKHR)
 	INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceSurfacePresentModesKHR)
 	INIT_INSTANCE_FUNCTION(vkGetPhysicalDeviceSurfaceSupportKHR)
@@ -190,12 +192,17 @@ static void vk_selectPhysicalDevice(void)
 
 
 
-static void selectSurfaceFormat(void)
+static void vk_selectSurfaceFormat(void)
 {
     uint32_t nSurfmt;
+    
+    ri.Printf(PRINT_ALL, "\n-------- SelectSurfaceFormat --------\n");
+
 
     // Get the list of VkFormat's that are supported
-
+    // To query the supported swapchain format-color space pairs for a surface
+    // surface is the surface that will be associated with the swapchain.
+    // surface must be a valid VkSurfaceKHR handle
     VK_CHECK(qvkGetPhysicalDeviceSurfaceFormatsKHR(vk.physical_device, vk.surface, &nSurfmt, NULL));
     assert(nSurfmt > 0);
 
@@ -209,13 +216,34 @@ static void selectSurfaceFormat(void)
     // supported format will be returned.
     if ((nSurfmt == 1) && (pSurfFmts[0].format == VK_FORMAT_UNDEFINED))
     { // special case that means we can choose any format
-        vk.surface_format.format = VK_FORMAT_R8G8B8A8_UNORM;
+        vk.surface_format.format = VK_FORMAT_B8G8R8A8_UNORM;
         vk.surface_format.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+        ri.Printf(PRINT_ALL, "VK_FORMAT_R8G8B8A8_UNORM\n");
+        ri.Printf(PRINT_ALL, "VK_COLORSPACE_SRGB_NONLINEAR_KHR\n");
     }
     else
     {
-        vk.surface_format = pSurfFmts[0];
+        uint32_t i;
+        ri.Printf(PRINT_ALL, " Total %d surface formats supported, we choose: \n", nSurfmt);
+
+        for( i = 0; i < nSurfmt; i++)
+        {
+            if( ( pSurfFmts[i].format == VK_FORMAT_B8G8R8A8_UNORM) &&
+                ( pSurfFmts[i].colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR) )
+            {
+
+                ri.Printf(PRINT_ALL, " format = VK_FORMAT_B8G8R8A8_UNORM \n");
+                ri.Printf(PRINT_ALL, " colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR \n");
+                
+                vk.surface_format = pSurfFmts[i];
+            }
+        }
+
+        if (i == nSurfmt)
+            vk.surface_format = pSurfFmts[0];
     }
+
+    ri.Printf(PRINT_ALL, "-------- ------------------- --------\n");
 
     free(pSurfFmts);
 }
@@ -226,7 +254,7 @@ static void vk_selectQueueFamilyForPresentation(void)
 
     uint32_t nSurfmt;
     uint32_t i;
-
+    ri.Printf(PRINT_ALL, " SelectQueueFamilyForPresentation \n");
     qvkGetPhysicalDeviceQueueFamilyProperties(vk.physical_device, &nSurfmt, NULL);
     
     assert(nSurfmt >= 1);
@@ -260,10 +288,8 @@ static void vk_selectQueueFamilyForPresentation(void)
     if (vk.queue_family_index == -1)
         ri.Error(ERR_FATAL, "Vulkan: failed to find queue family");
 
-
     free(pQueueFamilies);
 }
-
 
 
 
@@ -445,8 +471,6 @@ void vk_getProcAddress(void)
 
     vk_loadGlobalFunctions();
 
-	// select physical device
-
     // The window surface needs to be created right after the instance creation,
     // because it can actually influence the physical device selection.
 	VKimp_CreateSurface(); 
@@ -455,9 +479,11 @@ void vk_getProcAddress(void)
     // we need to look for and select a graphics card in the system
     // that supports the features we need. In fact we can select any
     // number of graphics cards and use them simultaneously.
-
+   
+    // select physical device
     vk_selectPhysicalDevice();
 
+    vk_selectSurfaceFormat(); 
 
 // Almosty every operation in Vulkan, anything from drawing textures,
 // requires commands to be submitted to a queue. There are different
@@ -480,7 +506,6 @@ void vk_getProcAddress(void)
 
     vk_checkSwapchainKHR();
 
-    selectSurfaceFormat();
 
 // After selecting a physical device to use we need to set up a logical device
 // to interface with it. The logical device creation process id similar to the
@@ -494,7 +519,8 @@ void vk_getProcAddress(void)
 
     // Get device level functions.
     loadDeviceFunctions();
-    
+
+   
     // a call to retrieve queue handle
 	qvkGetDeviceQueue(vk.device, vk.queue_family_index, 0, &vk.queue);
 }
