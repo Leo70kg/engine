@@ -137,12 +137,18 @@ static void vk_createSwapchain(VkPhysicalDevice physical_device, VkDevice device
 	VkSurfaceCapabilitiesKHR surface_caps;
 	VK_CHECK(qvkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_caps));
 
+    // The swap extent id the resolution of the swap chain images
+    // and its almost always exactly equal yo the resolution of 
+    // the window that we're drawing to.
 	VkExtent2D image_extent = surface_caps.currentExtent;
 	if ( (image_extent.width == 0xffffffff) && (image_extent.height == 0xffffffff))
     {
 		image_extent.width = MIN(surface_caps.maxImageExtent.width, MAX(surface_caps.minImageExtent.width, 640u));
 		image_extent.height = MIN(surface_caps.maxImageExtent.height, MAX(surface_caps.minImageExtent.height, 480u));
 	}
+
+    //ri.Printf(PRINT_ALL, " image_extent.width: %d, image_extent.height: %d",
+    //            image_extent.width, image_extent.height);
 
 	// VK_IMAGE_USAGE_TRANSFER_DST_BIT is required by image clear operations.
 	if ((surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0)
@@ -173,14 +179,17 @@ static void vk_createSwapchain(VkPhysicalDevice physical_device, VkDevice device
     //    to avoid tearing significantly less latency issues than standard vertical
     //    sync that uses double buffering.
     //
-    // Only the VK_PRESENT_MODE_FIFO_KHR mode is guaranteed to be available. so
     // we have to look for the best mode available.
 	// determine present mode and swapchain image count
     VkPresentModeKHR present_mode;
+
+    // The number of images in the swap chain, essentially the queue length
+    // The implementation specifies the minimum amount of images to functions
+    // properly
     uint32_t image_count;
 
     {
-        ri.Printf(PRINT_ALL, "\n-------- determine present mode --------\n");
+        ri.Printf(PRINT_ALL, "\n-------- Determine present mode --------\n");
         
         uint32_t nPM, i;
         qvkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &nPM, NULL);
@@ -192,18 +201,34 @@ static void vk_createSwapchain(VkPhysicalDevice physical_device, VkDevice device
                 physical_device, surface, &nPM, pPresentModes);
 
 
-        ri.Printf(PRINT_ALL, " Total %d present mode supported, we choose: \n", nPM);
+        ri.Printf(PRINT_ALL, "Minimaal mumber ImageCount required: %d, Total %d present mode supported: \n",surface_caps.minImageCount, nPM);
 
         VkBool32 mailbox_supported = 0;
         VkBool32 immediate_supported = 0;
 
         for ( i = 0; i < nPM; i++)
         {
-            if (pPresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
-                mailbox_supported = 1;
-            else if (pPresentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
-                immediate_supported = 1;
-        }
+            switch(pPresentModes[i])
+            {
+                case VK_PRESENT_MODE_IMMEDIATE_KHR:
+                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_IMMEDIATE_KHR \n");
+                    immediate_supported = VK_TRUE;
+                    break;
+                case VK_PRESENT_MODE_MAILBOX_KHR:
+                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_MAILBOX_KHR \n");
+                    mailbox_supported = VK_TRUE;
+                    break;
+                case VK_PRESENT_MODE_FIFO_KHR:
+                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_FIFO_KHR \n");
+                    break;
+                case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_FIFO_RELAXED_KHR \n");
+                    break;
+                default:
+                    ri.Printf(PRINT_ALL, " This device do not support presentation %d\n", pPresentModes[i]);
+                    break;
+            }
+         }
 
         free(pPresentModes);
 
@@ -213,19 +238,24 @@ static void vk_createSwapchain(VkPhysicalDevice physical_device, VkDevice device
             present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
             image_count = MAX(3u, surface_caps.minImageCount);
             
-            ri.Printf(PRINT_ALL, "\n VK_PRESENT_MODE_MAILBOX_KHR supported. \n");
+            ri.Printf(PRINT_ALL, "\n We choose VK_PRESENT_MODE_MAILBOX_KHR mode, minImageCount: %d. \n", image_count);
+        }
+        else if(immediate_supported)
+        {
+            present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+            image_count = MAX(2u, surface_caps.minImageCount);
+
+            ri.Printf(PRINT_ALL, "\n We choose VK_PRESENT_MODE_IMMEDIATE_KHR mode, minImageCount: %d. \n", image_count);
         }
         else
         {
-            present_mode = immediate_supported ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR;
+            // VK_PRESENT_MODE_FIFO_KHR mode is guaranteed to be available.
+            present_mode = VK_PRESENT_MODE_FIFO_KHR;
             image_count = MAX(2u, surface_caps.minImageCount);
-
-            if(immediate_supported)
-                ri.Printf(PRINT_ALL, "\n VK_PRESENT_MODE_IMMEDIATE_KHR supported. \n");
         }
 
         if (surface_caps.maxImageCount > 0) {
-            image_count = MIN(image_count, surface_caps.maxImageCount);
+            image_count = MIN(image_count, surface_caps.maxImageCount) + 1;
         }
 
         ri.Printf(PRINT_ALL, "\n-------- ----------------------- --------\n");
@@ -244,14 +274,38 @@ static void vk_createSwapchain(VkPhysicalDevice physical_device, VkDevice device
         desc.imageColorSpace = surface_format.colorSpace;
         desc.imageExtent = image_extent;
         desc.imageArrayLayers = 1;
+        
+        // render images to a separate image first to perform operations like post-processing
         desc.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        
+        // An image is owned by one queue family at a time and ownership
+        // must be explicitly transfered before using it in an another
+        // queue family. This option offers the best performance.
         desc.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         desc.queueFamilyIndexCount = 0;
         desc.pQueueFamilyIndices = NULL;
+        
+        // we can specify that a certain transform should be applied to
+        // images in the swap chain if it is support, like a 90 degree
+        // clockwise rotation  or horizontal flip, To specify that you
+        // do not want any transformation, simply dprcify the current
+        // transformation
         desc.preTransform = surface_caps.currentTransform;
+
+        // The compositeAlpha field specifies if the alpha channel
+        // should be used for blending with other windows int the
+        // windows system. 
         desc.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         desc.presentMode = present_mode;
+        
+        // we don't care about the color of pixels that are obscured.
         desc.clipped = VK_TRUE;
+
+
+        // With Vulkan it's possible that your swap chain becomes invalid or unoptimized
+        // while your application is running, for example because the window was resized.
+        // In that case the swap chain actually needs to be recreated from scratch and a
+        // reference to the old one must be specified in this field.
         desc.oldSwapchain = VK_NULL_HANDLE;
 
 
@@ -262,7 +316,7 @@ static void vk_createSwapchain(VkPhysicalDevice physical_device, VkDevice device
     {
         VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, NULL));
         vk.swapchain_image_count = MIN(vk.swapchain_image_count, MAX_SWAPCHAIN_IMAGES);
-        VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, vk.swapchain_images));
+        VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, vk.swapchain_images_array));
 
         uint32_t i;
         for (i = 0; i < vk.swapchain_image_count; i++)
@@ -271,7 +325,7 @@ static void vk_createSwapchain(VkPhysicalDevice physical_device, VkDevice device
             desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             desc.pNext = NULL;
             desc.flags = 0;
-            desc.image = vk.swapchain_images[i];
+            desc.image = vk.swapchain_images_array[i];
             desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
             desc.format = vk.surface_format.format;
             desc.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;

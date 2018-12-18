@@ -19,7 +19,14 @@ struct Chunk {
 
 struct Vk_Image {
 	VkImage handle;
-	VkImageView view;
+
+    // To use any VkImage, including those in the swap chain, int the render pipeline
+    // we have to create a VkImageView object. An image view is quite literally a
+    // view into image. It describe how to access the image and witch part of the
+    // image to access, if it should be treated as a 2D texture depth texture without
+    // any mipmapping levels.
+    
+    VkImageView view;
 
 	// Descriptor set that contains single descriptor used to access the given image.
 	// It is updated only once during image initialization.
@@ -195,9 +202,8 @@ static void allocate_and_bind_image_memory(VkImage image)
 }
 
 
-static struct Vk_Image vk_create_image(int width, int height, VkFormat format, int mip_levels, VkBool32 repeat_texture)
+static void vk_create_image(int width, int height, int mip_levels, VkBool32 repeat_texture, struct Vk_Image* pImg)
 {
-	struct Vk_Image image;
 	// create image
 	{
 		VkImageCreateInfo desc;
@@ -205,7 +211,7 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 		desc.pNext = NULL;
 		desc.flags = 0;
 		desc.imageType = VK_IMAGE_TYPE_2D;
-		desc.format = format;
+		desc.format = VK_FORMAT_R8G8B8A8_UNORM;
 		desc.extent.width = width;
 		desc.extent.height = height;
 		desc.extent.depth = 1;
@@ -219,8 +225,8 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 		desc.pQueueFamilyIndices = NULL;
 		desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &image.handle));
-		allocate_and_bind_image_memory(image.handle);
+		VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &pImg->handle));
+		allocate_and_bind_image_memory(pImg->handle);
 	}
 
 
@@ -230,19 +236,25 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 		desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		desc.pNext = NULL;
 		desc.flags = 0;
-		desc.image = image.handle;
+		desc.image = pImg->handle;
 		desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		desc.format = format;
+		desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+        // the components field allows you to swizzle the color channels around
 		desc.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 		desc.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
 		desc.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 		desc.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        // The subresourceRange field describes what the image's purpose is
+        // and which part of the image should be accessed. 
 		desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		desc.subresourceRange.baseMipLevel = 0;
 		desc.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 		desc.subresourceRange.baseArrayLayer = 0;
 		desc.subresourceRange.layerCount = 1;
-		VK_CHECK(qvkCreateImageView(vk.device, &desc, NULL, &image.view));
+		
+        VK_CHECK(qvkCreateImageView(vk.device, &desc, NULL, &pImg->view));
 	}
 
 	// create associated descriptor set
@@ -253,13 +265,11 @@ static struct Vk_Image vk_create_image(int width, int height, VkFormat format, i
 		desc.descriptorPool = vk.descriptor_pool;
 		desc.descriptorSetCount = 1;
 		desc.pSetLayouts = &vk.set_layout;
-		VK_CHECK(qvkAllocateDescriptorSets(vk.device, &desc, &image.descriptor_set));
+		VK_CHECK(qvkAllocateDescriptorSets(vk.device, &desc, &pImg->descriptor_set));
 
-		vk_update_descriptor_set(image.descriptor_set, image.view, mip_levels > 1, repeat_texture);
-		s_CurrentDescriptorSets[s_CurTmu] = image.descriptor_set;
+		vk_update_descriptor_set(pImg->descriptor_set, pImg->view, mip_levels > 1, repeat_texture);
+		s_CurrentDescriptorSets[s_CurTmu] = pImg->descriptor_set;
 	}
-
-	return image;
 }
 
 
@@ -468,19 +478,19 @@ void qDestroyImage(void)
 	int i = 0;
 	for (i = 0; i < MAX_VK_IMAGES; i++)
     {
-		struct Vk_Image* image = &s_vkImages[i];
+		struct Vk_Image* pImage = &s_vkImages[i];
 
-		if (image->handle != VK_NULL_HANDLE)
+		if (pImage->handle != VK_NULL_HANDLE)
         {
-			qvkDestroyImage(vk.device, image->handle, NULL);
-			qvkDestroyImageView(vk.device, image->view, NULL);
-            image->handle = VK_NULL_HANDLE;
+			qvkDestroyImage(vk.device, pImage->handle, NULL);
+			qvkDestroyImageView(vk.device, pImage->view, NULL);
+            pImage->handle = VK_NULL_HANDLE;
 		}
 
-        if(image->descriptor_set != VK_NULL_HANDLE)
+        if(pImage->descriptor_set != VK_NULL_HANDLE)
         {    
-            qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &image->descriptor_set);
-            image->descriptor_set = VK_NULL_HANDLE;
+            qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
+            pImage->descriptor_set = VK_NULL_HANDLE;
         }
 	}
     
@@ -599,13 +609,11 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
     generate_image_upload_data(name, &upload_data, pic, width, height, mipmap, allowPicmip);
 
 
-	// s_vkImages[image->index] = upload_vk_image(&upload_data, glWrapClampMode == GL_REPEAT);
 
-	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 	int bytes_per_pixel = 4;
     
-    s_vkImages[pImage->index] = vk_create_image(upload_data.base_level_width, 
-        upload_data.base_level_height, format, upload_data.mip_levels, glWrapClampMode == GL_REPEAT);
+      
+    vk_create_image(upload_data.base_level_width, upload_data.base_level_height, upload_data.mip_levels, glWrapClampMode == GL_REPEAT, &s_vkImages[pImage->index]);
 	
     vk_upload_image_data(s_vkImages[pImage->index].handle, upload_data.base_level_width, 
         upload_data.base_level_height, upload_data.mip_levels > 1, upload_data.buffer, bytes_per_pixel);
@@ -624,6 +632,23 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
     return pImage;
 }
 
+
+
+unsigned int R_SumOfUsedImages( void )
+{
+	unsigned int i;
+
+	unsigned int total = 0;
+	for ( i = 0; i < tr.numImages; i++ )
+    {
+		if ( tr.images[i]->frameUsed == tr.frameCount )
+        {
+			total += tr.images[i]->uploadWidth * tr.images[i]->uploadHeight;
+		}
+	}
+
+	return total;
+}
 
 
 image_t* R_FindImageFile(const char *name, VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode)
@@ -699,7 +724,7 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
         qvkDestroyImage(vk.device, pImage->handle, NULL);
         qvkDestroyImageView(vk.device, pImage->view, NULL);
         qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
-        s_vkImages[tr.scratchImage[client]->index] = vk_create_image(cols, rows, VK_FORMAT_R8G8B8A8_UNORM, 1, 0);
+        vk_create_image(cols, rows, 1, 0, pImage);
         vk_upload_image_data(pImage->handle, cols, rows, 0, data, 4);
     }
     else if (dirty)

@@ -110,7 +110,7 @@ static void vk_read_pixels(unsigned char* buffer)
 
         //recorder(command_buffer);
         record_image_layout_transition(command_buffer, 
-                vk.swapchain_images[vk.swapchain_image_index], 
+                vk.swapchain_images_array[vk.swapchain_image_index], 
                 VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_MEMORY_READ_BIT, 
                 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_TRANSFER_READ_BIT, 
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -201,7 +201,7 @@ static void vk_read_pixels(unsigned char* buffer)
             region.dstOffsets[1] = region.srcOffsets[1];
 
             qvkCmdBlitImage(command_buffer,
-                    vk.swapchain_images[vk.swapchain_image_index], 
+                    vk.swapchain_images_array[vk.swapchain_image_index], 
                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
                     VK_IMAGE_LAYOUT_GENERAL, 1, &region, VK_FILTER_NEAREST);
         }
@@ -262,7 +262,7 @@ static void vk_read_pixels(unsigned char* buffer)
             region.extent.depth = 1;
 
             qvkCmdCopyImage(command_buffer, 
-                    vk.swapchain_images[vk.swapchain_image_index], 
+                    vk.swapchain_images_array[vk.swapchain_image_index], 
                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
 		

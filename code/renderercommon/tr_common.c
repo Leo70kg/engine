@@ -393,9 +393,6 @@ qboolean SkipBracedSection(char **program, int depth)
 
 
 
-
-
-
 qboolean SpheresIntersect(vec3_t origin1, float radius1, vec3_t origin2, float radius2)
 {
 	float radiusSum = radius1 + radius2;
@@ -422,45 +419,8 @@ void BoundingSphereOfSpheres(vec3_t origin1, float radius1, vec3_t origin2, floa
 	*radius3 = VectorLen(diff) * 0.5f + MAX(radius1, radius2);
 }
 
-int NextPowerOfTwo(int in)
-{
-	int out;
-
-	for (out = 1; out < in; out <<= 1)
-		;
-
-	return out;
-}
 
 
-uint16_t FloatToHalf(float in)
-{
-	union f32_u f32;
-	union f16_u f16;
-
-	f32.f = in;
-
-	f16.pack.exponent = CLAMP((int)(f32.pack.exponent) - 112, 0, 31);
-	f16.pack.fraction = f32.pack.fraction >> 13;
-	f16.pack.sign     = f32.pack.sign;
-
-	return f16.ui;
-}
-
-
-float HalfToFloat(uint16_t in)
-{
-	union f32_u f32;
-	union f16_u f16;
-
-	f16.ui = in;
-
-	f32.pack.exponent = (int)(f16.pack.exponent) + 112;
-	f32.pack.fraction = f16.pack.fraction << 13;
-	f32.pack.sign = f16.pack.sign;
-
-	return f32.f;
-}
 
 
 

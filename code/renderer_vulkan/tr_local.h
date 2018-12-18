@@ -834,7 +834,6 @@ void	R_SkinList_f( void );
 void	R_InitFogTable( void );
 float	R_FogFactor( float s, float t );
 void	R_InitImages( void );
-int		R_SumOfUsedImages( void );
 void	R_InitSkins( void );
 skin_t	*R_GetSkinByHandle( qhandle_t hSkin );
 

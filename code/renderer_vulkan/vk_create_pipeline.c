@@ -3,6 +3,42 @@
 #include "vk_instance.h"
 #include "vk_create_pipeline.h"
 
+
+// The graphics pipeline is the sequence of operations that take the vertices
+// and textures of your meshes all the way to the pixels in the render targets
+//
+// The input assembler collects the raw vertex data from the buffers you specify
+// and may also use an index buffer to repeat cartain elements without having to
+// duplicate the vertex data itself.
+//
+// The vertex shader is run for every vertex and generally applies transformations
+// to turn vertex positions from model space to screen space. It also passes
+// per-vertex data down the pipeline
+//
+// The tessllation shaders allow you to subdivide geometry based on certain rules
+// to increase the mesh quality. This is often make surfaces like brick walls
+// and staircases look less flat when they are nearby.
+//
+// The geometry shader is run on every primitive(triangle, line, point) and can
+// discard it or output more primitives than came in. This is similar to the
+// tessellation shader, but much more flexible.
+//
+// The rasterization stage discretizes the primitives into fragments. These are
+// the pixel elements that they fill on the framebuffer. Any fragments that fall
+// outside the screen are discarded and the attributes outputted by the vertex
+// shader are interpolated across the fragments.
+//
+// The fragment shader is invoked for every fragment that servives and determines
+// which framebuffer(s) the fragment are written to and with which color and depth
+// values. It can do this using the interpolated data from the vertex shader,
+// which can include things like texture coordinates and normals for lighting.
+//
+// The color blending stage applies operations to mix different fragments that
+// map to the same pixel in the framebuffer. Fragments can simply overwrite
+// each other, add up or be mixed based opon transparency.
+//
+// 
+
 /*
 static VkPipelineShaderStageCreateInfo get_shader_stage_desc(
         VkShaderStageFlagBits stage, VkShaderModule shader_module, const char* entry)

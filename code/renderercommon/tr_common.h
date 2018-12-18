@@ -239,9 +239,5 @@ void BoundingSphereOfSpheres(float origin1[3], float radius1, float origin2[3], 
 #define CLAMP(a,b,c) MIN(MAX((a),(b)),(c))
 #endif
 
-int NextPowerOfTwo(int in);
-unsigned short FloatToHalf(float in);
-float HalfToFloat(unsigned short in);
-
 
 #endif

@@ -19,7 +19,7 @@ struct Vk_Instance {
 
 	VkSwapchainKHR swapchain;
 	uint32_t swapchain_image_count ;
-	VkImage swapchain_images[MAX_SWAPCHAIN_IMAGES];
+	VkImage swapchain_images_array[MAX_SWAPCHAIN_IMAGES];
 	VkImageView swapchain_image_views[MAX_SWAPCHAIN_IMAGES];
 	uint32_t swapchain_image_index;
 

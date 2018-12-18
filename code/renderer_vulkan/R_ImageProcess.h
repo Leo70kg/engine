@@ -4,7 +4,8 @@
 
 void R_resetGammaIntensityTable(void);
 void R_SetColorMappings( void );
-void R_GammaCorrect(unsigned char* buffer, const unsigned int Size);
+
+//void R_GammaCorrect(unsigned char* buffer, const unsigned int Size);
 
 
 

@@ -17,6 +17,7 @@ void R_resetGammaIntensityTable(void)
 
 }
 
+/*
 void R_GammaCorrect(unsigned char* buffer, const unsigned int Size)
 {
 	unsigned int i;
@@ -26,29 +27,21 @@ void R_GammaCorrect(unsigned char* buffer, const unsigned int Size)
 		buffer[i] = s_gammatable[buffer[i]];
 	}
 }
-
+*/
 
 void R_SetColorMappings( void )
 {
 	int		i, j;
 	int		inf;
-	int		shift;
+	int		shift = 0;
 
 	// setup the overbright lighting
-	tr.overbrightBits = r_overBrightBits->integer;
 
-
-	tr.identityLight = 1.0f / ( 1 << tr.overbrightBits );
+	tr.identityLight = 1.0f;
 	tr.identityLightByte = 255 * tr.identityLight;
 
 
-	if ( r_intensity->value <= 1 ) {
-		ri.Cvar_Set( "r_intensity", "1" );
-	}
-
 	float g = r_gamma->value;
-
-	shift = tr.overbrightBits;
 
 	for ( i = 0; i < 256; i++ ) {
 		if ( g == 1 ) {
@@ -66,6 +59,10 @@ void R_SetColorMappings( void )
 		s_gammatable[i] = inf;
 	}
 
+
+	if ( r_intensity->value <= 1 ) {
+		ri.Cvar_Set( "r_intensity", "1" );
+	}
 
 	for (i=0 ; i<256 ; i++)
     {
@@ -97,9 +94,9 @@ static void R_LightScaleTexture (unsigned char* dst, const unsigned char* in, un
             unsigned int n2 = i + 2;
             unsigned int n3 = i + 3;
 
-            dst[i] = s_intensitytable[in[i]];
-            dst[n1] = s_intensitytable[in[n1]];
-            dst[n2] = s_intensitytable[in[n2]];
+            dst[i] = s_gammatable[in[i]];
+            dst[n1] = s_gammatable[in[n1]];
+            dst[n2] = s_gammatable[in[n2]];
             dst[n3] = in[n3];
         }
     }

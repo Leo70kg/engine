@@ -1483,6 +1483,16 @@ RawImage_ScaleToPower2
 
 ===============
 */
+static inline int NextPowerOfTwo(int in)
+{
+	int out;
+
+	for (out = 1; out < in; out <<= 1)
+		;
+
+	return out;
+}
+
 static qboolean RawImage_ScaleToPower2( byte **data, int *inout_width, int *inout_height, imgType_t type, imgFlags_t flags, byte **resampledBuffer)
 {
 	int width =         *inout_width;
