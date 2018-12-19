@@ -32,13 +32,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/matrix_multiplication.h"
 #include "../renderercommon/ref_import.h"
 
-
+#include "mvp_matrix.h"
 #include "R_DEBUG.h"
-
-static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix,
-							vec4_t eye, vec4_t dst );
-
-
 
 
 const static float s_flipMatrix[16] QALIGN(16) = {
@@ -207,27 +202,6 @@ void R_WorldToLocal (vec3_t world, vec3_t local) {
 }
 
 
-static void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const float *projectionMatrix, vec4_t eye, vec4_t dst )
-{
-	int i;
-
-	for ( i = 0 ; i < 4 ; i++ ) {
-		eye[i] = 
-			src[0] * modelMatrix[ i + 0 * 4 ] +
-			src[1] * modelMatrix[ i + 1 * 4 ] +
-			src[2] * modelMatrix[ i + 2 * 4 ] +
-			1 * modelMatrix[ i + 3 * 4 ];
-	}
-
-	for ( i = 0 ; i < 4 ; i++ ) {
-		dst[i] = 
-			eye[0] * projectionMatrix[ i + 0 * 4 ] +
-			eye[1] * projectionMatrix[ i + 1 * 4 ] +
-			eye[2] * projectionMatrix[ i + 2 * 4 ] +
-			eye[3] * projectionMatrix[ i + 3 * 4 ];
-	}
-}
-
 
 
 /*
@@ -370,106 +344,7 @@ void R_RotateForViewer (void)
 
 
 
-void R_SetupProjection( void )
-{
-	float zFar;
 
-	// set the projection matrix with the minimum zfar
-	// now that we have the world bounded
-	// this needs to be done before entities are added, 
-    // because they use the projection matrix for lod calculation
-
-	// dynamically compute far clip plane distance
-	// if not rendering the world (icons, menus, etc), set a 2k far clip plane
-
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL )
-    {
-		zFar = tr.viewParms.zFar = 2048.0f;
-	}
-    else
-    {
-        float o[3];
-
-        o[0] = tr.viewParms.or.origin[0];
-        o[1] = tr.viewParms.or.origin[1];
-        o[2] = tr.viewParms.or.origin[2];
-
-        float farthestCornerDistance = 0;
-        int	i;
-
-        // set far clipping planes dynamically
-        for ( i = 0; i < 8; i++ )
-        {
-            float v[3];
-     
-            if ( i & 1 )
-            {
-                v[0] = tr.viewParms.visBounds[0][0] - o[0];
-            }
-            else
-            {
-                v[0] = tr.viewParms.visBounds[1][0] - o[0];
-            }
-
-            if ( i & 2 )
-            {
-                v[1] = tr.viewParms.visBounds[0][1] - o[1];
-            }
-            else
-            {
-                v[1] = tr.viewParms.visBounds[1][1] - o[1];
-            }
-
-            if ( i & 4 )
-            {
-                v[2] = tr.viewParms.visBounds[0][2] - o[2];
-            }
-            else
-            {
-                v[2] = tr.viewParms.visBounds[1][2] - o[2];
-            }
-
-            float distance = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-            if( distance > farthestCornerDistance )
-            {
-                farthestCornerDistance = distance;
-            }
-        }
-        
-        zFar = tr.viewParms.zFar = sqrtf(farthestCornerDistance);
-    }
-
-
-	//
-	// set up projection matrix
-	//
-	float zNear	= r_znear->value;
-	float depth = zFar - zNear;
-
-    float py = tan(tr.viewParms.fovY * (M_PI / 360.0f));
-    float px = tan(tr.viewParms.fovX * (M_PI / 360.0f));
-  
-
-	tr.viewParms.projectionMatrix[0] = 1.0f / px;
-	tr.viewParms.projectionMatrix[4] = 0;
-	tr.viewParms.projectionMatrix[8] = 0;	// normally 0
-	tr.viewParms.projectionMatrix[12] = 0;
-
-	tr.viewParms.projectionMatrix[1] = 0;
-	tr.viewParms.projectionMatrix[5] = 1.0f / py;
-	tr.viewParms.projectionMatrix[9] =  0;
-	tr.viewParms.projectionMatrix[13] = 0;
-
-	tr.viewParms.projectionMatrix[2] = 0;
-	tr.viewParms.projectionMatrix[6] = 0;
-	tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
-	tr.viewParms.projectionMatrix[14] = -2.0f * zFar * zNear / depth;
-
-	tr.viewParms.projectionMatrix[3] = 0;
-	tr.viewParms.projectionMatrix[7] = 0;
-	tr.viewParms.projectionMatrix[11] = -1.0f;
-	tr.viewParms.projectionMatrix[15] = 0;
-}
 
 /*
 =================
@@ -812,7 +687,7 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 	shader_t *shader;
 	int		fogNum;
 	int dlighted;
-	vec4_t clip, eye;
+	vec4_t clip;
 	int i;
 	unsigned int pointOr = 0;
 	unsigned int pointAnd = (unsigned int)~0;
@@ -825,13 +700,14 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 
 	assert( tess.numVertexes < 128 );
 
+    ri.Printf(PRINT_ALL, "numVertexes: %d\n", tess.numVertexes);
+
 	for ( i = 0; i < tess.numVertexes; i++ )
 	{
 		int j;
 		unsigned int pointFlags = 0;
 
-		R_TransformModelToClip( tess.xyz[i], tr.or.modelMatrix, tr.viewParms.projectionMatrix, eye, clip );
-
+        TransformModelToClip_SSE(tess.xyz[i], tr.or.modelMatrix, tr.viewParms.projectionMatrix, clip);
 		for ( j = 0; j < 3; j++ )
 		{
 			if ( clip[j] >= clip[3] )
@@ -1422,7 +1298,7 @@ void R_RenderView (viewParms_t *parms)
 	// this needs to be done before entities are
 	// added, because they use the projection
 	// matrix for lod calculation
-	R_SetupProjection ();
+	R_SetupProjection (tr.viewParms.projectionMatrix);
 
 	R_AddEntitySurfaces ();
 

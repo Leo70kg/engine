@@ -25,54 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_globals.h"
 #include "tr_cvar.h"
 #include "../renderercommon/ref_import.h"
+#include "mvp_matrix.h"
 
 
-static float ProjectRadius( float r, vec3_t location )
-{
-	float pr;
-	float dist;
-	float c;
-	vec3_t	p;
-	float	projected[4];
-
-	c = DotProduct( tr.viewParms.or.axis[0], tr.viewParms.or.origin );
-	dist = DotProduct( tr.viewParms.or.axis[0], location ) - c;
-
-	if ( dist <= 0 )
-		return 0;
-
-	p[0] = 0;
-	p[1] = fabs( r );
-	p[2] = -dist;
-
-	projected[0] = p[0] * tr.viewParms.projectionMatrix[0] + 
-		           p[1] * tr.viewParms.projectionMatrix[4] +
-				   p[2] * tr.viewParms.projectionMatrix[8] +
-				   tr.viewParms.projectionMatrix[12];
-
-	projected[1] = p[0] * tr.viewParms.projectionMatrix[1] + 
-		           p[1] * tr.viewParms.projectionMatrix[5] +
-				   p[2] * tr.viewParms.projectionMatrix[9] +
-				   tr.viewParms.projectionMatrix[13];
-
-	projected[2] = p[0] * tr.viewParms.projectionMatrix[2] + 
-		           p[1] * tr.viewParms.projectionMatrix[6] +
-				   p[2] * tr.viewParms.projectionMatrix[10] +
-				   tr.viewParms.projectionMatrix[14];
-
-	projected[3] = p[0] * tr.viewParms.projectionMatrix[3] + 
-		           p[1] * tr.viewParms.projectionMatrix[7] +
-				   p[2] * tr.viewParms.projectionMatrix[11] +
-				   tr.viewParms.projectionMatrix[15];
-
-
-	pr = projected[1] / projected[3];
-
-	if ( pr > 1.0f )
-		pr = 1.0f;
-
-	return pr;
-}
 
 /*
 =============
@@ -161,14 +116,11 @@ static int R_CullModel( md3Header_t *header, trRefEntity_t *ent ) {
 }
 
 
-/*
-=================
-R_ComputeLOD
 
-=================
-*/
-int R_ComputeLOD( trRefEntity_t *ent ) {
+int R_ComputeLOD( trRefEntity_t *ent )
+{
 	float radius;
+    // radius are guarentee large than 0;
 	float flod, lodscale;
 	float projectedRadius;
 	md3Frame_t *frame;
@@ -208,11 +160,13 @@ int R_ComputeLOD( trRefEntity_t *ent ) {
 
 		radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
 */
-		if ( ( projectedRadius = ProjectRadius( radius, ent->e.origin ) ) != 0 )
+		if ( ( projectedRadius = ProjectRadius( radius, ent->e.origin, tr.viewParms.projectionMatrix) ) != 0 )
 		{
 			lodscale = r_lodscale->value;
-			if (lodscale > 20) lodscale = 20;
-			flod = 1.0f - projectedRadius * lodscale;
+			if (lodscale > 20)
+                lodscale = 20;
+			
+            flod = 1.0f - projectedRadius * lodscale;
 		}
 		else
 		{

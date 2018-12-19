@@ -526,7 +526,7 @@ ifdef MINGW
 
 
   ifeq ($(ARCH),x86_64)
-	OPTIMIZEVM = -O3  -fomit-frame-pointer -funroll-loops -msse2
+	OPTIMIZEVM = -O3  -funroll-loops -msse2
 	OPTIMIZE = $(OPTIMIZEVM) -ffast-math
 	HAVE_VM_COMPILED = true
   endif

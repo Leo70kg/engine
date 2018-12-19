@@ -15,7 +15,7 @@
 #include <math.h>
 #include<sys/time.h>
 #include "../matrix_multiplication.h"
-
+void myGlMultMatrix(const float A[16], const float B[16], float out[16]);
 void MatrixMultiply4x4(const float A[16], const float B[16], float out[16]);
 void MatrixMultiply4x4_ASM(const float A[16], const float B[16], float out[16]);
 
@@ -104,7 +104,9 @@ int main(int argc, char *argv[])
         for(n = 0; n < runCount; n++ )
         {
             MatrixMultiply4x4(A, B, C);
-            A[n%16] = (n%16)/10;
+            A[n%16] = (n%16)/3+0.00001;
+            B[n%16] = (n%16)/2+0.00002;
+
         }
         gettimeofday(&tv_end, NULL);
 
@@ -123,7 +125,8 @@ int main(int argc, char *argv[])
         for(n = 0; n < runCount; n++ )
         {    
             MatrixMultiply4x4_SSE(A, B, out);
-            A[n%16] = (n%16)/10;
+            A[n%16] = (n%16)/3+0.00001;
+            B[n%16] = (n%16)/2+0.00002;
         }
         gettimeofday(&tv_end, NULL);
 
@@ -142,7 +145,8 @@ int main(int argc, char *argv[])
         for(n = 0; n < runCount; n++ )
         {
             myGlMultMatrix(A, B, out2);
-            A[n%16] = (n%16)/10;
+            A[n%16] = (n%16)/3+0.00001;
+            B[n%16] = (n%16)/2+0.00002;
         }
         
         gettimeofday(&tv_end, NULL);
@@ -162,7 +166,8 @@ int main(int argc, char *argv[])
         for(n = 0; n < runCount; n++ )
         {
             MatrixMultiply4x4_ASM(B, A, out3);
-            A[n%16] = (n%16)/10;
+            A[n%16] = (n%16)/3+0.00001;
+            B[n%16] = (n%16)/2+0.00002;
         }
         gettimeofday(&tv_end, NULL);
 

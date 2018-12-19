@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "tr_globals.h"
 #include "tr_cvar.h"
-
+#include "mvp_matrix.h"
 #include "../renderercommon/ref_import.h"
 
 /*
@@ -36,56 +36,11 @@ orientation of the bone in the base frame to the orientation in this
 frame.
 
 */
-static float ProjectRadius( float r, vec3_t location )
-{
-
-	float c = DotProduct( tr.viewParms.or.axis[0], tr.viewParms.or.origin );
-	float dist = DotProduct( tr.viewParms.or.axis[0], location ) - c;
-
-	if ( dist <= 0 )
-		return 0;
-	vec3_t	p;
-	p[0] = 0;
-	p[1] = fabs( r );
-	p[2] = -dist;
-
-	float projected[4];
-
-/*   
-    projected[0] = p[0] * tr.viewParms.projectionMatrix[0] + 
-		           p[1] * tr.viewParms.projectionMatrix[4] +
-				   p[2] * tr.viewParms.projectionMatrix[8] +
-				   tr.viewParms.projectionMatrix[12];
-
-    projected[2] = p[0] * tr.viewParms.projectionMatrix[2] + 
-		           p[1] * tr.viewParms.projectionMatrix[6] +
-				   p[2] * tr.viewParms.projectionMatrix[10] +
-				   tr.viewParms.projectionMatrix[14];
-*/
-
-	projected[1] = p[0] * tr.viewParms.projectionMatrix[1] + 
-		           p[1] * tr.viewParms.projectionMatrix[5] +
-				   p[2] * tr.viewParms.projectionMatrix[9] +
-				   tr.viewParms.projectionMatrix[13];
-
-
-	projected[3] = p[0] * tr.viewParms.projectionMatrix[3] + 
-		           p[1] * tr.viewParms.projectionMatrix[7] +
-				   p[2] * tr.viewParms.projectionMatrix[11] +
-				   tr.viewParms.projectionMatrix[15];
-
-
-	float pr = projected[1] / projected[3];
-
-	if ( pr > 1.0f )
-		pr = 1.0f;
-
-	return pr;
-}
 
 
 static int R_ComputeLOD( trRefEntity_t *ent )
 {
+    ri.Printf(PRINT_ALL, "\n------ R_ComputeLOD ------\n");
 	float flod;
 	int lod;
 
@@ -117,7 +72,7 @@ static int R_ComputeLOD( trRefEntity_t *ent )
 			radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
 		}
 
-        float projectedRadius = ProjectRadius( radius, ent->e.origin );
+        float projectedRadius = ProjectRadius( radius, ent->e.origin, tr.viewParms.projectionMatrix);
 		
         if ( projectedRadius != 0 )
 		{
@@ -281,6 +236,7 @@ static int R_MDRComputeFogNum( mdrHeader_t *header, trRefEntity_t *ent )
 
 	return 0;
 }
+
 // much stuff in there is just copied from R_AddMd3Surfaces in tr_mesh.c
 
 void R_MDRAddAnimSurfaces( trRefEntity_t *ent )

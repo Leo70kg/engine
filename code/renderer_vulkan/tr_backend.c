@@ -217,9 +217,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	}
 
 	// go back to the world modelview matrix
-	//glLoadMatrixf( backEnd.viewParms.world.modelMatrix );
-
-	// VULKAN
     set_modelview_matrix(backEnd.viewParms.world.modelMatrix);
 
 
