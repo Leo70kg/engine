@@ -20,5 +20,3 @@ find -type f -name "*.vspv" | \
 
 find -type f -name "*.fspv" | \
 	while read f; do ./bintoc ${f} `basename ${f%.*}`_frag_spv > ${f%.*}_frag.c; done
-
-

@@ -2,6 +2,7 @@
 #include "tr_local.h"
 #include "vk_instance.h"
 #include "vk_create_pipeline.h"
+#include "vk_shaders.h"
 
 
 // The graphics pipeline is the sequence of operations that take the vertices
@@ -39,27 +40,6 @@
 //
 // 
 
-/*
-static VkPipelineShaderStageCreateInfo get_shader_stage_desc(
-        VkShaderStageFlagBits stage, VkShaderModule shader_module, const char* entry)
-{
-	VkPipelineShaderStageCreateInfo desc;
-	desc.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	desc.pNext = NULL;
-	desc.flags = 0;
-	desc.stage = stage;
-	desc.module = shader_module;
-	desc.pName = entry;
-	desc.pSpecializationInfo = NULL;
-	return desc;
-};
-*/
-
-enum Vk_Shader_Type {
-	single_texture,
-	multi_texture_mul,
-	multi_texture_add
-};
 
 
 // used with cg_shadows == 2
@@ -71,97 +51,33 @@ enum Vk_Shadow_Phase {
 
 
 struct Vk_Pipeline_Def {
-	enum Vk_Shader_Type shader_type;
-	unsigned int state_bits; // GLS_XXX flags
+	uint32_t state_bits; // GLS_XXX flags
 	int face_culling;// cullType_t
 	VkBool32 polygon_offset;
 	VkBool32 clipping_plane;
 	VkBool32 mirror;
 	VkBool32 line_primitives;
+    enum Vk_Shader_Type shader_type;
 	enum Vk_Shadow_Phase shadow_phase;
 };
 
 
 
 static int s_numPipelines = 0;
-static int s_pipelineCreateTime = 0; // ms
 
 #define MAX_VK_PIPELINES        1024
-static struct Vk_Pipeline_Def s_pipeline_defs[MAX_VK_PIPELINES] = {0};
-static VkPipeline s_pipelines[MAX_VK_PIPELINES] = {0};
+static struct Vk_Pipeline_Def s_pipeline_defs[MAX_VK_PIPELINES];
+static VkPipeline s_pipelines[MAX_VK_PIPELINES];
 
 
 static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 {
 
-	struct Specialization_Data {
-		int32_t alpha_test_func;
-	} specialization_data;
-
-	if ((def->state_bits & GLS_ATEST_BITS) == 0)
-		specialization_data.alpha_test_func = 0;
-	else if (def->state_bits & GLS_ATEST_GT_0)
-		specialization_data.alpha_test_func = 1;
-	else if (def->state_bits & GLS_ATEST_LT_80)
-		specialization_data.alpha_test_func = 2;
-	else if (def->state_bits & GLS_ATEST_GE_80)
-		specialization_data.alpha_test_func = 3;
-	else
-		ri.Error(ERR_DROP, "create_pipeline: invalid alpha test state bits\n");
-
-	VkSpecializationMapEntry specialization_entries[1];
-	specialization_entries[0].constantID = 0;
-	specialization_entries[0].offset = offsetof(struct Specialization_Data, alpha_test_func);
-	specialization_entries[0].size = sizeof(int32_t);
-
-	VkSpecializationInfo specialization_info;
-	specialization_info.mapEntryCount = 1;
-	specialization_info.pMapEntries = specialization_entries;
-	specialization_info.dataSize = sizeof(struct Specialization_Data);
-	specialization_info.pData = &specialization_data;
-
 
     // Two stages: vs and fs
     VkPipelineShaderStageCreateInfo shaderStages[2];
 
-	VkShaderModule* vs_module, *fs_module;
-    if (def->shader_type == multi_texture_add)
-    {
-		vs_module = def->clipping_plane ?
-            &vk.multi_texture_clipping_plane_vs : &vk.multi_texture_vs;
-		fs_module = &vk.multi_texture_add_fs;
-	}
-    else if (def->shader_type == multi_texture_mul)
-    {
-		vs_module = def->clipping_plane ?
-            &vk.multi_texture_clipping_plane_vs : &vk.multi_texture_vs;
-		fs_module = &vk.multi_texture_mul_fs;
-	}
-    else //if (def->shader_type == single_texture)
-    {
-		vs_module = def->clipping_plane ?
-            &vk.single_texture_clipping_plane_vs :  &vk.single_texture_vs;
-		fs_module = &vk.single_texture_fs;
-	}
-
-
-    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shaderStages[0].module = *vs_module;
-    shaderStages[0].pName = "main";
-    shaderStages[0].pNext = NULL;
-    shaderStages[0].flags = 0;
-	shaderStages[0].pSpecializationInfo = NULL;
-
-    shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shaderStages[1].module = *fs_module;
-    shaderStages[1].pName = "main";
-    shaderStages[1].pNext = NULL;
-    shaderStages[1].flags = 0;
-	shaderStages[1].pSpecializationInfo =
-        (def->state_bits & GLS_ATEST_BITS) ? &specialization_info : NULL;
-
+    vk_createShaderStages(def->state_bits, def->shader_type, def->clipping_plane, shaderStages);
 
 	//
 	// Vertex input
@@ -473,30 +389,20 @@ static VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def)
 		}
 	}
 
-    unsigned int start = ri.Milliseconds();
 
 	VkPipeline pipeline = vk_create_pipeline(def);
 
-    unsigned int end = ri.Milliseconds();
-
-	s_pipelineCreateTime += (end - start);
 
 	s_pipeline_defs[s_numPipelines] = *def;
 	s_pipelines[s_numPipelines] = pipeline;
 	s_numPipelines++;
     if (s_numPipelines >= MAX_VK_PIPELINES)
     {
-		ri.Error(ERR_DROP, "vk_find_pipeline: MAX_VK_PIPELINES hit\n");
+		ri.Error(ERR_DROP, "vk_create_pipeline: MAX_VK_PIPELINES hit\n");
 	}
 	return pipeline;
 }
 
-void qTotalPipelinesCreateTime(void)
-{
-	// VULKAN
-	ri.Printf(PRINT_ALL, "Vulkan: pipelines create time %d msec\n", s_pipelineCreateTime);
-
-}
 
 
 void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
@@ -702,6 +608,4 @@ void vk_destroyALLPipeline(void)
         memset(&s_pipeline_defs[i], 0, sizeof(struct Vk_Pipeline_Def));
     }
     s_numPipelines = 0;
-
-    s_pipelineCreateTime = 0;
 }

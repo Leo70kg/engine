@@ -280,10 +280,9 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 
 
 
-const void	*RB_SetColor( const void *data ) {
-	const setColorCommand_t	*cmd;
-
-	cmd = (const setColorCommand_t *)data;
+const void* RB_SetColor( const void *data )
+{
+	const setColorCommand_t	*cmd = (const setColorCommand_t *)data;
 
 	backEnd.color2D[0] = cmd->color[0] * 255;
 	backEnd.color2D[1] = cmd->color[1] * 255;
@@ -307,18 +306,16 @@ const void *RB_StretchPic( const void *data )
 	    backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
 	}
 
-	shader_t* shader = cmd->shader;
-	if ( shader != tess.shader ) {
+
+	if ( cmd->shader != tess.shader ) {
 		if ( tess.numIndexes ) {
 			RB_EndSurface();
 		}
 		backEnd.currentEntity = &backEnd.entity2D;
-		RB_BeginSurface( shader, 0 );
+		RB_BeginSurface(cmd->shader, 0 );
 	}
 
 	RB_CHECKOVERFLOW( 4, 6 );
-
-
 
 
 	const unsigned int n0 = tess.numVertexes;
@@ -470,14 +467,9 @@ const void* RB_DrawBuffer( const void *data )
 
 
 
-/*
-=============
-RB_SwapBuffers
 
-=============
-*/
-const void	*RB_SwapBuffers( const void *data ) {
-	const swapBuffersCommand_t	*cmd;
+const void* RB_SwapBuffers( const void *data )
+{
 
 	// finish any 2D drawing if needed
 	if ( tess.numIndexes ) {
@@ -489,7 +481,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 		RB_ShowImages();
 	}
 
-	cmd = (const swapBuffersCommand_t *)data;
+	const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t *)data;
 
 
 	backEnd.projection2D = qfalse;
