@@ -410,7 +410,7 @@ R_MirrorPoint
 */
 void R_MirrorPoint (vec3_t in, orientation_t *surface, orientation_t *camera, vec3_t out)
 {
-    ri.Printf(PRINT_ALL, "R_MirrorPoint\n");
+    // ri.Printf(PRINT_ALL, "R_MirrorPoint\n");
 	int		i;
 	vec3_t	local;
 	vec3_t	transformed;
@@ -700,7 +700,7 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 
 	assert( tess.numVertexes < 128 );
 
-    ri.Printf(PRINT_ALL, "numVertexes: %d\n", tess.numVertexes);
+    //ri.Printf(PRINT_ALL, "numVertexes: %d\n", tess.numVertexes);
 
 	for ( i = 0; i < tess.numVertexes; i++ )
 	{

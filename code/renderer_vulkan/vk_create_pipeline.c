@@ -70,7 +70,13 @@ static struct Vk_Pipeline_Def s_pipeline_defs[MAX_VK_PIPELINES];
 static VkPipeline s_pipelines[MAX_VK_PIPELINES];
 
 
-static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
+void R_PipelineList_f(void)
+{
+    ri.Printf(PRINT_ALL, " Total pipeline created: %d\n", s_numPipelines);
+}
+
+
+static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pPipeLine)
 {
 
 
@@ -161,13 +167,18 @@ static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 
 	//
 	// Rasterization.
-	//
+	// The rasterizer takes the geometry that is shaped by the vertices
+    // from the vertex shader and turns it into fragments to be colored
+    // by the fragment shader. It also performs depth testing, face culling
+    // and the scissor test.
 	VkPipelineRasterizationStateCreateInfo rasterization_state;
 	rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	rasterization_state.pNext = NULL;
 	rasterization_state.flags = 0;
 	rasterization_state.depthClampEnable = VK_FALSE;
 	rasterization_state.rasterizerDiscardEnable = VK_FALSE;
+
+    // how fragments are generated for geometry.
 	rasterization_state.polygonMode = (def->state_bits & GLS_POLYMODE_LINE) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 
 	if (def->face_culling == CT_TWO_SIDED)
@@ -187,6 +198,8 @@ static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 	rasterization_state.depthBiasSlopeFactor = 0.0f; // dynamic depth bias state
 	rasterization_state.lineWidth = 1.0f;
 
+
+
 	VkPipelineMultisampleStateCreateInfo multisample_state;
 	multisample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisample_state.pNext = NULL;
@@ -198,6 +211,8 @@ static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 	multisample_state.alphaToCoverageEnable = VK_FALSE;
 	multisample_state.alphaToOneEnable = VK_FALSE;
 
+    // If you are using a depth and/or stencil buffer, then you also need to configure
+    // the depth and stencil tests.
 	VkPipelineDepthStencilStateCreateInfo depth_stencil_state;
 	depth_stencil_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depth_stencil_state.pNext = NULL;
@@ -243,14 +258,24 @@ static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 	depth_stencil_state.minDepthBounds = 0.0;
 	depth_stencil_state.maxDepthBounds = 0.0;
 
+
+    //After a fragment shader has returned a color, it needs to be combined
+    //with the color that is already in the framebuffer. This transformation
+    //is known as color blending and there are two ways to do it
+    //
+    // 1) Mix the old and new value to produce a final color.
+    // 2) combine the old and the new value using a bitwise operation.
+
+    // contains the configuraturation per attached framebuffer
 	VkPipelineColorBlendAttachmentState attachment_blend_state = {};
+
 	attachment_blend_state.blendEnable = (def->state_bits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)) ? VK_TRUE : VK_FALSE;
 
 	if (def->shadow_phase == shadow_edges_rendering)
 		attachment_blend_state.colorWriteMask = 0;
 	else
 		attachment_blend_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	
+
 	if (attachment_blend_state.blendEnable)
     {
 		switch (def->state_bits & GLS_SRCBLEND_BITS)
@@ -323,6 +348,7 @@ static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 		attachment_blend_state.alphaBlendOp = VK_BLEND_OP_ADD;
 	}
 
+    // Contains the global color blending settings
 	VkPipelineColorBlendStateCreateInfo blend_state;
 	blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	blend_state.pNext = NULL;
@@ -335,7 +361,12 @@ static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 	blend_state.blendConstants[1] = 0.0f;
 	blend_state.blendConstants[2] = 0.0f;
 	blend_state.blendConstants[3] = 0.0f;
-
+    
+    // A limited amount of the state that we've specified in the previous
+    // structs can actually be changed without recreating the pipeline.
+    // Examples are the size of the viewport, line width and blend constants
+    // If we want to do that, we have to fill in a VkPipelineDynamicStateCreateInfo
+    // structure like this.
 	VkPipelineDynamicStateCreateInfo dynamic_state;
 	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamic_state.pNext = NULL;
@@ -365,9 +396,7 @@ static VkPipeline vk_create_pipeline(const struct Vk_Pipeline_Def* def)
 	create_info.basePipelineHandle = VK_NULL_HANDLE;
 	create_info.basePipelineIndex = -1;
 
-	VkPipeline pipeline;
-	VK_CHECK(qvkCreateGraphicsPipelines(vk.device, VK_NULL_HANDLE, 1, &create_info, NULL, &pipeline));
-	return pipeline;
+	VK_CHECK(qvkCreateGraphicsPipelines(vk.device, VK_NULL_HANDLE, 1, &create_info, NULL, pPipeLine));
 }
 
 
@@ -390,7 +419,8 @@ static VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def)
 	}
 
 
-	VkPipeline pipeline = vk_create_pipeline(def);
+	VkPipeline pipeline;
+    vk_create_pipeline(def, &pipeline);
 
 
 	s_pipeline_defs[s_numPipelines] = *def;
@@ -407,6 +437,7 @@ static VkPipeline vk_find_pipeline(const struct Vk_Pipeline_Def* def)
 
 void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
 {
+
     struct Vk_Pipeline_Def def;
 
     def.line_primitives = 0;
@@ -428,22 +459,28 @@ void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
     def.mirror = 0;
     pStage->vk_pipeline = vk_find_pipeline(&def);
 
+
     def.clipping_plane = 1;
     def.mirror = 0;
     pStage->vk_portal_pipeline = vk_find_pipeline(&def);
 
+
     def.clipping_plane = 1;
     def.mirror = 1;
     pStage->vk_mirror_pipeline = vk_find_pipeline(&def);
+
+
 }
 
 
 
 void create_standard_pipelines(void)
 {
-
-    // skybox
+    
+    
+    ri.Printf(PRINT_ALL, " Create skybox pipeline \n");
     {
+
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
 
@@ -453,10 +490,11 @@ void create_standard_pipelines(void)
         def.polygon_offset = qfalse;
         def.clipping_plane = qfalse;
         def.mirror = qfalse;
-        vk.skybox_pipeline = vk_create_pipeline(&def);
+        
+        vk_create_pipeline(&def, &vk.skybox_pipeline);
     }
 
-    // Q3 stencil shadows
+    ri.Printf(PRINT_ALL, " Create Q3 stencil shadows pipeline \n");
     {
         {
             struct Vk_Pipeline_Def def;
@@ -481,7 +519,9 @@ void create_standard_pipelines(void)
                 for (j = 0; j < 2; j++)
                 {
                     def.mirror = mirror_flags[j];
-                    vk.shadow_volume_pipelines[i][j] = vk_create_pipeline(&def);
+                    
+                    
+                    vk_create_pipeline(&def, &vk.shadow_volume_pipelines[i][j]);
                 }
             }
         }
@@ -497,11 +537,13 @@ void create_standard_pipelines(void)
             def.clipping_plane = qfalse;
             def.mirror = qfalse;
             def.shadow_phase = fullscreen_quad_rendering;
-            vk.shadow_finish_pipeline = vk_create_pipeline(&def);
+            
+            vk_create_pipeline(&def, &vk.shadow_finish_pipeline);
         }
     }
 
-    // fog and dlights
+
+    ri.Printf(PRINT_ALL, " Create fog and dlights pipeline \n");
     {
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
@@ -537,61 +579,76 @@ void create_standard_pipelines(void)
                     def.polygon_offset = polygon_offset[k];
 
                     def.state_bits = fog_state;
-                    vk.fog_pipelines[i][j][k] = vk_create_pipeline(&def);
+                    vk_create_pipeline(&def, &vk.fog_pipelines[i][j][k]);
 
                     def.state_bits = dlight_state;
-                    vk.dlight_pipelines[i][j][k] = vk_create_pipeline(&def);
+                    vk_create_pipeline(&def, &vk.dlight_pipelines[i][j][k]);
                 }
             }
         }
     }
 
+
     // debug pipelines
+    ri.Printf(PRINT_ALL, " Create tris debug pipeline \n");
     {
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE;
-        vk.tris_debug_pipeline = vk_create_pipeline(&def);
+        vk_create_pipeline(&def, &vk.tris_debug_pipeline);
     }
+
+    
+    ri.Printf(PRINT_ALL, " Create tris mirror debug pipeline \n");
     {
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE;
         def.face_culling = CT_BACK_SIDED;
-        vk.tris_mirror_debug_pipeline = vk_create_pipeline(&def);
+        vk_create_pipeline(&def, &vk.tris_mirror_debug_pipeline);
     }
+
+    ri.Printf(PRINT_ALL, " Create normals debug pipeline \n");
     {
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_DEPTHMASK_TRUE;
         def.line_primitives = qtrue;
-        vk.normals_debug_pipeline = vk_create_pipeline(&def);
+        vk_create_pipeline(&def, &vk.normals_debug_pipeline);
     }
+
+
+    ri.Printf(PRINT_ALL, " Create surface debug pipeline \n");
     {
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE;
-        vk.surface_debug_pipeline_solid = vk_create_pipeline(&def);
+        vk_create_pipeline(&def, &vk.surface_debug_pipeline_solid);
     }
+
+    ri.Printf(PRINT_ALL, " Create surface debug outline pipeline \n");
     {
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE;
         def.line_primitives = qtrue;
-        vk.surface_debug_pipeline_outline = vk_create_pipeline(&def);
+        vk_create_pipeline(&def, &vk.surface_debug_pipeline_outline);
     }
+    
+    ri.Printf(PRINT_ALL, " Create images debug pipeline \n");
     {
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-        vk.images_debug_pipeline = vk_create_pipeline(&def);
+        vk_create_pipeline(&def, &vk.images_debug_pipeline);
     }
+
 }
 
 

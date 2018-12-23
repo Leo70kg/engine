@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "qvk.h"
 #include "vk_frame.h"
 #include "vk_screenshot.h"
-#include "vk_shade_geometry.h"
+#include "R_DEBUG.h"
 
 
 
@@ -104,7 +104,8 @@ void RB_BeginDrawingView (void)
 RB_RenderDrawSurfList
 ==================
 */
-void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
+{
 	shader_t		*shader, *oldShader;
 	int				fogNum, oldFogNum;
 	int				entityNum, oldEntityNum;

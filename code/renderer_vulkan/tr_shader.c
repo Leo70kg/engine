@@ -1923,9 +1923,7 @@ shader_t *FinishShader( void )
     int i = 0;
     for (i=0; i < stage; i++)
     {
-        //shaderStage_t *pStage = &stages[i];
         create_pipelines_for_each_stage(&stages[i], &shader); 
-
     }
 
 	return GeneratePermanentShader();

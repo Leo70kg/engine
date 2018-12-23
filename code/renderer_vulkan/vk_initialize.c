@@ -50,6 +50,13 @@ static void createDebugCallback( void )
 #endif
 
 
+
+// Before we can finish creating the pipeline, we need to tell vulkan
+// about the framebuffer attachment that will be used while rendering.
+// We need to specify how many color and depth buffers there will be,
+// how many samples to use for each of them and how their contents 
+// should be handled throughout the rendering operations.
+
 static VkRenderPass create_render_pass(VkDevice device, VkFormat color_format, VkFormat depth_format)
 {
 	VkAttachmentDescription attachments[2];
@@ -617,10 +624,9 @@ void vk_initialize(void)
 	//
 	// Renderpass.
 	//
-	{
-		VkFormat depth_format = get_depth_format(vk.physical_device);
-		vk.render_pass = create_render_pass(vk.device, vk.surface_format.format, depth_format);
-	}
+
+	vk.render_pass = create_render_pass(vk.device, vk.surface_format.format, get_depth_format(vk.physical_device));
+
 
 	//
 	// Framebuffers for each swapchain image.
@@ -688,7 +694,12 @@ void vk_initialize(void)
 
 	//
 	// Pipeline layout.
-	//
+	// You can use uniform values in shaders, which are globals similar to
+    // dynamic state variables that can be changes at the drawing time to
+    // alter the behavior of your shaders without having to recreate them.
+    // They are commonly used to create texture samplers in the fragment 
+    // shader. The uniform values need to be specified during pipeline
+    // creation by creating a VkPipelineLayout object.
 	{
 		VkPushConstantRange push_range;
 		push_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;

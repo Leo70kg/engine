@@ -148,6 +148,8 @@ void R_Init( void )
     ri.Cmd_AddCommand( "vkinfo", vulkanInfo_f );
     ri.Cmd_AddCommand( "minimize", VKimp_Minimize );
 
+    ri.Cmd_AddCommand( "pipelineList", R_PipelineList_f );
+
     R_InitScene();
 
 	InitRenderAPI();
@@ -184,6 +186,7 @@ void RE_Shutdown( qboolean destroyWindow )
     ri.Cmd_RemoveCommand("minimize");
 	ri.Cmd_RemoveCommand("vkinfo");
 
+    ri.Cmd_RemoveCommand("pipelineList");
 
 	if ( tr.registered )
     {

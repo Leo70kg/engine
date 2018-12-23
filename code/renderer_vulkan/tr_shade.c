@@ -104,10 +104,8 @@ DrawNormals
 Draws vertex normals for debugging
 ================
 */
-static void DrawNormals (shaderCommands_t *input) {
-	int		i;
-
-
+static void DrawNormals (shaderCommands_t *input)
+{
 	// VULKAN
 
     vec4_t xyz[SHADER_MAX_VERTEXES];
@@ -115,13 +113,16 @@ static void DrawNormals (shaderCommands_t *input) {
     memset(tess.svars.colors, tr.identityLightByte, SHADER_MAX_VERTEXES * sizeof(color4ub_t));
 
     int numVertexes = tess.numVertexes;
-    i = 0;
-    while (i < numVertexes) {
+    int i = 0;
+    while (i < numVertexes)
+    {
         int count = numVertexes - i;
         if (count >= SHADER_MAX_VERTEXES/2 - 1)
             count = SHADER_MAX_VERTEXES/2 - 1;
 
-        for (int k = 0; k < count; k++) {
+        int k;
+        for (k = 0; k < count; k++)
+        {
             VectorCopy(xyz[i + k], tess.xyz[2*k]);
             VectorMA(xyz[i + k], 2, input->normal[i + k], tess.xyz[2*k + 1]);
         }
@@ -131,7 +132,6 @@ static void DrawNormals (shaderCommands_t *input) {
 
         vk_bind_geometry();
         vk_shade_geometry(vk.normals_debug_pipeline, qfalse, force_zero, qfalse);
-
 
         i += count;
     }
@@ -683,21 +683,7 @@ void RB_StageIteratorGeneric( void )
             s_CurTmu = 0;
 		}
 
-		// VULKAN
 
-        VkPipeline vk_pipeline;
-        
-        if (backEnd.viewParms.isMirror)
-        {
-            vk_pipeline = tess.xstages[stage]->vk_mirror_pipeline;
-        }
-        else if (backEnd.viewParms.isPortal) {
-            vk_pipeline = tess.xstages[stage]->vk_portal_pipeline;
-        }
-        else
-        {
-            vk_pipeline = tess.xstages[stage]->vk_pipeline;
-        }
 
         
         enum Vk_Depth_Range depth_range = normal;
@@ -715,9 +701,21 @@ void RB_StageIteratorGeneric( void )
         if (r_lightmap->integer && multitexture)
             GL_Bind(tr.whiteImage); // replace diffuse texture with a white one thus effectively render only lightmap
 
-
-        vk_shade_geometry(vk_pipeline, multitexture, depth_range, qtrue);
         
+        if (backEnd.viewParms.isMirror)
+        {
+            vk_shade_geometry(tess.xstages[stage]->vk_mirror_pipeline, multitexture, depth_range, qtrue);
+        }
+        else if (backEnd.viewParms.isPortal)
+        {
+            vk_shade_geometry(tess.xstages[stage]->vk_portal_pipeline, multitexture, depth_range, qtrue);
+        }
+        else
+        {
+            vk_shade_geometry(tess.xstages[stage]->vk_pipeline, multitexture, depth_range, qtrue);
+        }
+
+                
 
 		// allow skipping out to show just lightmaps during development
 		if ( r_lightmap->integer && ( tess.xstages[stage]->bundle[0].isLightmap || tess.xstages[stage]->bundle[1].isLightmap ) )

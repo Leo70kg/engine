@@ -29,6 +29,5 @@ VkRect2D get_scissor_rect(void);
 
 void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed);
 void vk_bind_geometry(void);
-void RB_ShowImages(void);
 void vk_resetGeometryBuffer(void);
 #endif

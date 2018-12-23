@@ -1,15 +1,11 @@
 #include "qvk.h"
-#include "tr_local.h"
 #include "vk_clear_attachments.h"
-
 #include "vk_shade_geometry.h"
 #include "vk_instance.h"
-
 #include "mvp_matrix.h"
-#include "vk_image.h"
 #include "tr_globals.h"
 #include "tr_cvar.h"
-
+#include "vk_image.h"
 
 static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 {
@@ -207,17 +203,20 @@ void vk_bind_geometry(void)
 		vk.index_buffer_offset += indexes_size;
 	}
 
-	//
-	// Specify push constants.
+	// push constants are another way of passing dynamic values to shaders
+ 	// Specify push constants.
 	// 32 * 4 = 128 BYTES
 	float push_constants[16 + 12 + 4] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
-
+	unsigned int push_constants_size = 64;
+    
 	get_mvp_transform(push_constants, backEnd.projection2D);
-	int push_constants_size = 64;
-    int i = 0 ;
+
+
 
 	if (backEnd.viewParms.isPortal)
     {
+        unsigned int i = 0;
+        //ri.Printf(PRINT_ALL, "Portal\n");
 		// Eye space transform.
 		// NOTE: backEnd.or.modelMatrix incorporates s_flipMatrix, so it should be taken into account 
 		// when computing clipping plane too.
@@ -255,93 +254,3 @@ void vk_bind_geometry(void)
     // that is expected to outperform memory-backed resource updates.
 	qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, push_constants_size, push_constants);
 }
-
-
-/*
-===============
-RB_ShowImages
-
-Draw all the images to the screen, on top of whatever was there.
-This is used to test for texture thrashing.
-
-Also called by RE_EndRegistration
-===============
-*/
-
-void RB_ShowImages(void)
-{
-    int i = 0;
-	if ( !backEnd.projection2D )
-    {
-        backEnd.projection2D = qtrue;
-
-        // set 2D virtual screen size
-
-
-        // set time for 2D shaders
-        backEnd.refdef.time = ri.Milliseconds();
-        backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
-	}
-
-	float black[4] = {0, 0, 0, 1};
-
-	vk_clear_attachments(qfalse, qtrue, black);
-
-	for (i = 0 ; i < tr.numImages ; i++)
-    {
-		image_t* image = tr.images[i];
-
-		float w = glConfig.vidWidth / 20;
-		float h = glConfig.vidHeight / 15;
-		float x = i % 20 * w;
-		float y = i / 20 * h;
-
-		// show in proportional size in mode 2
-		if ( r_showImages->integer == 2 ) {
-			w *= image->uploadWidth / 512.0f;
-			h *= image->uploadHeight / 512.0f;
-		}
-
-		GL_Bind( image );
-
-		memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
-
-		tess.numIndexes = 6;
-		tess.numVertexes = 4;
-
-		tess.indexes[0] = 0;
-		tess.indexes[1] = 1;
-		tess.indexes[2] = 2;
-		tess.indexes[3] = 0;
-		tess.indexes[4] = 2;
-		tess.indexes[5] = 3;
-
-		tess.xyz[0][0] = x;
-		tess.xyz[0][1] = y;
-		tess.svars.texcoords[0][0][0] = 0;
-		tess.svars.texcoords[0][0][1] = 0;
-
-		tess.xyz[1][0] = x + w;
-		tess.xyz[1][1] = y;
-		tess.svars.texcoords[0][1][0] = 1;
-		tess.svars.texcoords[0][1][1] = 0;
-
-		tess.xyz[2][0] = x + w;
-		tess.xyz[2][1] = y + h;
-		tess.svars.texcoords[0][2][0] = 1;
-		tess.svars.texcoords[0][2][1] = 1;
-
-		tess.xyz[3][0] = x;
-		tess.xyz[3][1] = y + h;
-		tess.svars.texcoords[0][3][0] = 0;
-		tess.svars.texcoords[0][3][1] = 1;
-
-
-        vk_bind_geometry();
-        vk_shade_geometry(vk.images_debug_pipeline, qfalse, normal, qtrue);
-
-	}
-	tess.numIndexes = 0;
-	tess.numVertexes = 0;
-}
-
