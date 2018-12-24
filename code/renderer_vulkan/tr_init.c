@@ -209,7 +209,7 @@ void RE_Shutdown( qboolean destroyWindow )
     // contains vulkan resources/state, reinitialized on a map change.
 
 
-    vk_destroyALLPipeline();
+    vk_destroyShaderStagePipeline();
  
     qDestroyImage();
 

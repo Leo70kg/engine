@@ -387,7 +387,7 @@ static VkFormat get_depth_format(VkPhysicalDevice physical_device)
 void vk_shutdown(void)
 {
     ri.Printf( PRINT_ALL, "vk_shutdown()\n" );
-    unsigned int i = 0, j = 0, k = 0;
+    unsigned int i = 0;
 
 	qvkDestroyImage(vk.device, vk.depth_image, NULL);
 	qvkFreeMemory(vk.device, vk.depth_image_memory, NULL);
@@ -414,31 +414,9 @@ void vk_shutdown(void)
     
     vk_destroyShaderModules();
 
-	qvkDestroyPipeline(vk.device, vk.skybox_pipeline, NULL);
-	for (i = 0; i < 2; i++)
-		for (j = 0; j < 2; j++)
-        {
-			qvkDestroyPipeline(vk.device, vk.shadow_volume_pipelines[i][j], NULL);
-		}
-	
-    qvkDestroyPipeline(vk.device, vk.shadow_finish_pipeline, NULL);
-	
-    
-    for (i = 0; i < 2; i++)
-		for (j = 0; j < 3; j++)
-			for (k = 0; k < 2; k++)
-            {
-				qvkDestroyPipeline(vk.device, vk.fog_pipelines[i][j][k], NULL);
-				qvkDestroyPipeline(vk.device, vk.dlight_pipelines[i][j][k], NULL);
-			}
-
-	qvkDestroyPipeline(vk.device, vk.tris_debug_pipeline, NULL);
-	qvkDestroyPipeline(vk.device, vk.tris_mirror_debug_pipeline, NULL);
-	qvkDestroyPipeline(vk.device, vk.normals_debug_pipeline, NULL);
-	qvkDestroyPipeline(vk.device, vk.surface_debug_pipeline_solid, NULL);
-	qvkDestroyPipeline(vk.device, vk.surface_debug_pipeline_outline, NULL);
-	qvkDestroyPipeline(vk.device, vk.images_debug_pipeline, NULL);
-
+//
+    vk_destroyGlobalStagePipeline();
+//
 	qvkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);
 	qvkDestroyDevice(vk.device, NULL);
 	

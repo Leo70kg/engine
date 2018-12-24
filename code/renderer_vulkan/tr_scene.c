@@ -20,10 +20,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#include "tr_local.h"
 #include "tr_globals.h"
 #include "tr_cvar.h"
 #include "../renderercommon/ref_import.h"
+#include "../renderercommon/matrix_multiplication.h"
 
 // these are sort of arbitrary limits.
 // the limits apply to the sum of all scenes in a frame --
@@ -307,9 +307,7 @@ to handle mirrors,
 */
 void RE_RenderScene( const refdef_t *fd )
 {
-	viewParms_t		parms;
 	int				startTime;
-	qboolean customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
 	if ( !tr.registered ) {
 		return;
 	}
@@ -319,11 +317,13 @@ void RE_RenderScene( const refdef_t *fd )
 	}
 
 	startTime = ri.Milliseconds();
+#ifndef NDEBUG
+    qboolean customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
 
 	if (!tr.world && customscrn ) {
 		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
 	}
-
+#endif
 	memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
 
 	tr.refdef.x = fd->x;
@@ -334,9 +334,11 @@ void RE_RenderScene( const refdef_t *fd )
 	tr.refdef.fov_y = fd->fov_y;
 
 	VectorCopy( fd->vieworg, tr.refdef.vieworg );
-	VectorCopy( fd->viewaxis[0], tr.refdef.viewaxis[0] );
-	VectorCopy( fd->viewaxis[1], tr.refdef.viewaxis[1] );
-	VectorCopy( fd->viewaxis[2], tr.refdef.viewaxis[2] );
+
+    //VectorCopy( fd->viewaxis[0], tr.refdef.viewaxis[0] );
+	//VectorCopy( fd->viewaxis[1], tr.refdef.viewaxis[1] );
+	//VectorCopy( fd->viewaxis[2], tr.refdef.viewaxis[2] );
+    Mat3x3Copy(tr.refdef.viewaxis, fd->viewaxis);
 
 	tr.refdef.time = fd->time;
 	tr.refdef.rdflags = fd->rdflags;
@@ -390,10 +392,14 @@ void RE_RenderScene( const refdef_t *fd )
 	// The refdef takes 0-at-the-top y coordinates, so
 	// convert to GL's 0-at-the-bottom space
 	//
+    viewParms_t		parms;
 	memset( &parms, 0, sizeof( parms ) );
-	parms.viewportX = tr.refdef.x;
+
+    parms.viewportX = tr.refdef.x;
 	parms.viewportY = glConfig.vidHeight - ( tr.refdef.y + tr.refdef.height );
-	parms.viewportWidth = tr.refdef.width;
+    //parms.viewportY =  tr.refdef.y ;
+	
+    parms.viewportWidth = tr.refdef.width;
 	parms.viewportHeight = tr.refdef.height;
 	parms.isPortal = qfalse;
 
@@ -401,11 +407,14 @@ void RE_RenderScene( const refdef_t *fd )
 	parms.fovY = tr.refdef.fov_y;
 
 	VectorCopy( fd->vieworg, parms.or.origin );
-	VectorCopy( fd->viewaxis[0], parms.or.axis[0] );
-	VectorCopy( fd->viewaxis[1], parms.or.axis[1] );
-	VectorCopy( fd->viewaxis[2], parms.or.axis[2] );
-
+	//VectorCopy( fd->viewaxis[0], parms.or.axis[0] );
+	//VectorCopy( fd->viewaxis[1], parms.or.axis[1] );
+	//VectorCopy( fd->viewaxis[2], parms.or.axis[2] );
 	VectorCopy( fd->vieworg, parms.pvsOrigin );
+
+    Mat3x3Copy(parms.or.axis, fd->viewaxis);
+
+
 
 	R_RenderView( &parms );
 

@@ -1799,10 +1799,10 @@ shader_t *FinishShader( void )
 	//
 	// set appropriate stage information
 	//
-    int stage;
-	for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ )
+    int iStage;
+	for ( iStage = 0; iStage < MAX_SHADER_STAGES; iStage++ )
     {
-		shaderStage_t *pStage = &stages[stage];
+		shaderStage_t *pStage = &stages[iStage];
 
 		if ( !pStage->active ) {
 			break;
@@ -1889,17 +1889,17 @@ shader_t *FinishShader( void )
 	//
 	// if we are in r_vertexLight mode, never use a lightmap texture
 	//
-	if ( stage > 1 && ( r_vertexLight->integer && !r_uiFullScreen->integer ) ) {
+	if ( iStage > 1 && ( r_vertexLight->integer && !r_uiFullScreen->integer ) ) {
 		VertexLightingCollapse();
-		stage = 1;
+		iStage = 1;
 		hasLightmapStage = qfalse;
 	}
 
 	//
 	// look for multitexture potential
 	//
-	if ( stage > 1 && CollapseMultitexture() ) {
-		stage--;
+	if ( iStage > 1 && CollapseMultitexture() ) {
+		iStage--;
 	}
 
 	if ( shader.lightmapIndex >= 0 && !hasLightmapStage ) {
@@ -1911,17 +1911,17 @@ shader_t *FinishShader( void )
 	//
 	// compute number of passes
 	//
-	shader.numUnfoggedPasses = stage;
+	shader.numUnfoggedPasses = iStage;
 
 	// fogonly shaders don't have any normal passes
-	if ( stage == 0 ) {
+	if ( iStage == 0 ) {
 		shader.sort = SS_FOG;
 	}
 
 	
     // VULKAN: create pipelines for each shader stage
     int i = 0;
-    for (i=0; i < stage; i++)
+    for (i=0; i < iStage; i++)
     {
         create_pipelines_for_each_stage(&stages[i], &shader); 
     }

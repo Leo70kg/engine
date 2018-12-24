@@ -36,16 +36,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "R_DEBUG.h"
 
 
-const static float s_flipMatrix[16] QALIGN(16) = {
-	// convert from our coordinate system (looking down X)
-	// to OpenGL's coordinate system (looking down -Z)
-	0, 0, -1, 0,
-	-1, 0, 0, 0,
-	0, 1, 0, 0,
-	0, 0, 0, 1
-};
-
-
 
 // entities that will have procedurally generated surfaces will just
 // point at this for their sorting surface
@@ -295,6 +285,15 @@ Sets up the modelview matrix for a given viewParm
 */
 void R_RotateForViewer (void) 
 {
+    const static float s_flipMatrix[16] QALIGN(16) = {
+        // convert from our coordinate system (looking down X)
+        // to OpenGL's coordinate system (looking down -Z)
+        0, 0, -1, 0,
+        -1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 0, 1
+    };
+
 	float viewerMatrix[16] QALIGN(16);
 	vec3_t origin;
 
@@ -786,8 +785,6 @@ Returns qtrue if another view has been rendered
 qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
 {
 	vec4_t			clipDest[128];
-	viewParms_t		newParms;
-	viewParms_t		oldParms;
 	orientation_t	surface, camera;
 
 	// don't recursively mirror
@@ -806,10 +803,10 @@ qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
 	}
 
 	// save old viewParms so we can return to it after the mirror view
-	oldParms = tr.viewParms;
-
-	newParms = tr.viewParms;
-	newParms.isPortal = qtrue;
+	viewParms_t oldParms = tr.viewParms;
+	viewParms_t newParms = tr.viewParms;
+	
+    newParms.isPortal = qtrue;
 	if ( !R_GetPortalOrientations( drawSurf, entityNum, &surface, &camera, 
 		newParms.pvsOrigin, &newParms.isMirror ) ) {
 		return qfalse;		// bad portal, no portalentity

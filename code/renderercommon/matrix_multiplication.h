@@ -19,7 +19,7 @@ inline void Mat4Copy( const float in[64], float out[16] )
 
 void Mat3x3Identity( float pMat[3][3] );
 
-inline void Mat3x3Copy( float dst[3][3], float src[3][3] )
+inline void Mat3x3Copy( float dst[3][3], const float src[3][3] )
 {
     memcpy(dst, src, 36);
 }

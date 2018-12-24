@@ -296,7 +296,7 @@ typedef struct {
 
 	unsigned char	constantColor[4];			// for CGEN_CONST and AGEN_CONST
 
-	unsigned		stateBits;					// GLS_xxxx mask
+	unsigned int	stateBits;					// GLS_xxxx mask
 
 	acff_t			adjustColorsForFog;
 
@@ -396,7 +396,7 @@ typedef struct {
 	int			x, y, width, height;
 	float		fov_x, fov_y;
 	vec3_t		vieworg;
-	vec3_t		viewaxis[3];		// transformation matrix
+	float		viewaxis[3][3];		// transformation matrix
 
 	int			time;				// time in milliseconds for shader effects and other time dependent rendering issues
 	int			rdflags;			// RDF_NOWORLDMODEL, etc
