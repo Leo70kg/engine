@@ -574,13 +574,13 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 			// if a speed is specified
 			if ( e->e.frame ) {
 				// continuous rotate
-				d = (tr.refdef.time/1000.0f) * e->e.frame;
+				d = (tr.refdef.rd.time/1000.0f) * e->e.frame;
 				VectorCopy( camera->axis[1], transformed );
 				RotatePointAroundVector( camera->axis[1], camera->axis[0], transformed, d );
 				CrossProduct( camera->axis[0], camera->axis[1], camera->axis[2] );
 			} else {
 				// bobbing rotate, with skinNum being the rotation offset
-				d = sin( tr.refdef.time * 0.003f );
+				d = sin( tr.refdef.rd.time * 0.003f );
 				d = e->e.skinNum + d * 4;
 				VectorCopy( camera->axis[1], transformed );
 				RotatePointAroundVector( camera->axis[1], camera->axis[0], transformed, d );
@@ -842,7 +842,7 @@ int R_SpriteFogNum( trRefEntity_t *ent ) {
 	int				i, j;
 	fog_t			*fog;
 
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
+	if ( tr.refdef.rd.rdflags & RDF_NOWORLDMODEL ) {
 		return 0;
 	}
 

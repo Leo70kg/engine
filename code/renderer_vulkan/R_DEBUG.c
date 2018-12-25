@@ -143,11 +143,11 @@ void RB_ShowImages(void)
         backEnd.projection2D = qtrue;
 
         // set 2D virtual screen size
-
-
         // set time for 2D shaders
-        backEnd.refdef.time = ri.Milliseconds();
-        backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
+        
+        int t = ri.Milliseconds();
+        backEnd.refdef.rd.time = t;
+        backEnd.refdef.floatTime = t * 0.001f;
 	}
 
 	float black[4] = {0, 0, 0, 1};

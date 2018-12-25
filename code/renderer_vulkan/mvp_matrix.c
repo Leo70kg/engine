@@ -73,7 +73,7 @@ void R_SetupProjection( float pMatProj[16] )
 	// dynamically compute far clip plane distance
 	// if not rendering the world (icons, menus, etc), set a 2k far clip plane
 
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL )
+	if ( tr.refdef.rd.rdflags & RDF_NOWORLDMODEL )
     {
 		zFar = 2048.0f;
 	}

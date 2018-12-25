@@ -294,6 +294,7 @@ void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, flo
 	RE_AddDynamicLightToScene( org, intensity, r, g, b, qtrue );
 }
 
+
 /*
 @@@@@@@@@@@@@@@@@@@@@
 RE_RenderScene
@@ -307,7 +308,6 @@ to handle mirrors,
 */
 void RE_RenderScene( const refdef_t *fd )
 {
-	int				startTime;
 	if ( !tr.registered ) {
 		return;
 	}
@@ -316,16 +316,30 @@ void RE_RenderScene( const refdef_t *fd )
 		return;
 	}
 
-	startTime = ri.Milliseconds();
-#ifndef NDEBUG
-    qboolean customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
+	int startTime = ri.Milliseconds();
 
-	if (!tr.world && customscrn ) {
-		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
+	tr.refdef.AreamaskModified = qfalse;
+	
+    if ( ! (fd->rdflags & RDF_NOWORLDMODEL) )
+    {
+		int	i;
+        // check if the areamask data has changed, which will force 
+        // a reset of the visible leafs even if the view hasn't moved
+		// compare the area bits
+		for (i = 0 ; i < MAX_MAP_AREA_BYTES; i++)
+        {
+
+			if( tr.refdef.rd.areamask[i] ^ fd->areamask[i] )
+            {
+			    tr.refdef.AreamaskModified = qtrue;
+                //ri.Printf(PRINT_ALL, "%d:%d,%d\n", i, tr.refdef.rd.areamask[i], fd->areamask[i]);
+                break;
+            }
+		}
 	}
-#endif
-	memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
 
+    tr.refdef.rd = *fd;
+/*  
 	tr.refdef.x = fd->x;
 	tr.refdef.y = fd->y;
 	tr.refdef.width = fd->width;
@@ -343,30 +357,12 @@ void RE_RenderScene( const refdef_t *fd )
 	tr.refdef.time = fd->time;
 	tr.refdef.rdflags = fd->rdflags;
 
-	// copy the areamask data over and note if it has changed, which
-	// will force a reset of the visible leafs even if the view hasn't moved
-	tr.refdef.areamaskModified = qfalse;
-	if ( ! (tr.refdef.rdflags & RDF_NOWORLDMODEL) ) {
-		int		areaDiff;
-		int		i;
-
-		// compare the area bits
-		areaDiff = 0;
-		for (i = 0 ; i < MAX_MAP_AREA_BYTES/4 ; i++) {
-			areaDiff |= ((int *)tr.refdef.areamask)[i] ^ ((int *)fd->areamask)[i];
-			((int *)tr.refdef.areamask)[i] = ((int *)fd->areamask)[i];
-		}
-
-		if ( areaDiff ) {
-			// a door just opened or something
-			tr.refdef.areamaskModified = qtrue;
-		}
-	}
-
+    memcpy( tr.refdef.text, fd->text, sizeof( tr.refdef.text ) );
+*/
 
 	// derived info
 
-	tr.refdef.floatTime = tr.refdef.time * 0.001f;
+	tr.refdef.floatTime = tr.refdef.rd.time * 0.001f;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
 	tr.refdef.drawSurfs = backEndData->drawSurfs;
@@ -385,7 +381,8 @@ void RE_RenderScene( const refdef_t *fd )
 	if ( r_dynamiclight->integer == 0 || r_vertexLight->integer == 1 ) {
 		tr.refdef.num_dlights = 0;
 	}
-
+    
+    // ri.Printf(PRINT_ALL, "(%d, %d, %d, %d)\n", tr.refdef.x, tr.refdef.y, tr.refdef.width, tr.refdef.height);
 	// setup view parms for the initial view
 	//
 	// set up viewport
@@ -395,16 +392,16 @@ void RE_RenderScene( const refdef_t *fd )
     viewParms_t		parms;
 	memset( &parms, 0, sizeof( parms ) );
 
-    parms.viewportX = tr.refdef.x;
-	parms.viewportY = glConfig.vidHeight - ( tr.refdef.y + tr.refdef.height );
-    //parms.viewportY =  tr.refdef.y ;
-	
-    parms.viewportWidth = tr.refdef.width;
-	parms.viewportHeight = tr.refdef.height;
-	parms.isPortal = qfalse;
 
-	parms.fovX = tr.refdef.fov_x;
-	parms.fovY = tr.refdef.fov_y;
+    parms.viewportX = fd->x;
+//	parms.viewportY = glConfig.vidHeight - ( tr.refdef.y + tr.refdef.height );
+	parms.viewportY =  fd->y;
+
+    parms.viewportWidth = fd->width;
+	parms.viewportHeight = fd->height;
+
+	parms.fovX = fd->fov_x;
+	parms.fovY = fd->fov_y;
 
 	VectorCopy( fd->vieworg, parms.or.origin );
 	//VectorCopy( fd->viewaxis[0], parms.or.axis[0] );
@@ -413,6 +410,7 @@ void RE_RenderScene( const refdef_t *fd )
 	VectorCopy( fd->vieworg, parms.pvsOrigin );
 
     Mat3x3Copy(parms.or.axis, fd->viewaxis);
+	parms.isPortal = qfalse;
 
 
 

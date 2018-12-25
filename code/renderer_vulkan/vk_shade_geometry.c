@@ -21,7 +21,7 @@ static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 	else
 	{
 		viewport.x = backEnd.viewParms.viewportX;
-		viewport.y = glConfig.vidHeight - (backEnd.viewParms.viewportY + backEnd.viewParms.viewportHeight);
+		viewport.y = backEnd.viewParms.viewportY;
 		viewport.width = backEnd.viewParms.viewportWidth;
 		viewport.height = backEnd.viewParms.viewportHeight;
 	}
@@ -65,26 +65,13 @@ VkRect2D get_scissor_rect(void)
 	else
 	{
 		r.offset.x = backEnd.viewParms.viewportX;
-		r.offset.y = glConfig.vidHeight - (backEnd.viewParms.viewportY + backEnd.viewParms.viewportHeight);
-		r.extent.width = backEnd.viewParms.viewportWidth;
+		//r.offset.y = glConfig.vidHeight - (backEnd.viewParms.viewportY + backEnd.viewParms.viewportHeight);
+        r.offset.y = backEnd.viewParms.viewportY;
+        r.extent.width = backEnd.viewParms.viewportWidth;
 		r.extent.height = backEnd.viewParms.viewportHeight;
+  
+        //ri.Printf(PRINT_ALL, "(%d, %d, %d, %d)\n", r.offset.x, r.offset.y, r.extent.width, r.extent.height);
 
-
-        if (r.offset.x < 0)
-            r.offset.x = 0;
-        if (r.offset.y < 0)
-            r.offset.y = 0;
-
-
-        if (r.offset.x + r.extent.width > glConfig.vidWidth)
-            r.extent.width = glConfig.vidWidth - r.offset.x;
-        
-        /*
-        
-        if (r.offset.y + r.extent.height > glConfig.vidHeight)
-            r.extent.height = glConfig.vidHeight - r.offset.y;
-
-        */
     }
 
 	return r;

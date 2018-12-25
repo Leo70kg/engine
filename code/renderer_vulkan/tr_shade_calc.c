@@ -208,7 +208,7 @@ void RB_CalcBulgeVertexes( deformStage_t *ds ) {
 	float		*normal = ( float * ) tess.normal;
 	float		now;
 
-	now = backEnd.refdef.time * ds->bulgeSpeed * 0.001f;
+	now = backEnd.refdef.rd.time * ds->bulgeSpeed * 0.001f;
 
 	for ( i = 0; i < tess.numVertexes; i++, xyz += 4, st += 4, normal += 4 ) {
 		int		off;
@@ -577,7 +577,7 @@ void RB_DeformTessGeometry( void ) {
 		case DEFORM_TEXT5:
 		case DEFORM_TEXT6:
 		case DEFORM_TEXT7:
-			DeformText( backEnd.refdef.text[ds->deformation - DEFORM_TEXT0] );
+			DeformText( backEnd.refdef.rd.text[ds->deformation - DEFORM_TEXT0] );
 			break;
 		}
 	}

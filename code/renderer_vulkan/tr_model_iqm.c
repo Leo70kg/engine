@@ -796,7 +796,7 @@ int R_ComputeIQMFogNum( iqmData_t *data, trRefEntity_t *ent ) {
 	vec3_t			localOrigin;
 	vec_t			radius;
 
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
+	if ( tr.refdef.rd.rdflags & RDF_NOWORLDMODEL ) {
 		return 0;
 	}
 

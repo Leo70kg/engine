@@ -32,15 +32,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "R_DEBUG.h"
 
 
-
 #ifdef _DEBUG
 static float fast_sky_color[4] = { 0.8f, 0.7f, 0.4f, 1.0f };
 #else
 static float fast_sky_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 #endif
-
-
-
 
 
 
@@ -51,8 +47,9 @@ RB_Hyperspace
 A player has predicted a teleport, but hasn't arrived yet
 ================
 */
-static void RB_Hyperspace( void ) {
-	float c = ( backEnd.refdef.time & 255 ) / 255.0f;
+static void RB_Hyperspace( void )
+{
+	float c = ( backEnd.refdef.rd.time & 255 ) / 255.0f;
 
 	float color[4] = { c, c, c, 1 };
 
@@ -83,15 +80,14 @@ void RB_BeginDrawingView (void)
 	//
 
 	// ensures that depth writes are enabled for the depth clear
-    qboolean fast_sky = r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL );
+    qboolean fast_sky = r_fastsky->integer && !( backEnd.refdef.rd.rdflags & RDF_NOWORLDMODEL );
 
 	// VULKAN
 	vk_clear_attachments(get_depth_attachment(), fast_sky, fast_sky_color);
 
-	if ( ( backEnd.refdef.rdflags & RDF_HYPERSPACE ) )
+	if ( ( backEnd.refdef.rd.rdflags & RDF_HYPERSPACE ) )
 	{
 		RB_Hyperspace();
-		return;
 	}
 	else
 	{
@@ -161,7 +157,8 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 		//
 		// change the modelview matrix if needed
 		//
-		if ( entityNum != oldEntityNum ) {
+		if ( entityNum != oldEntityNum )
+        {
 			depthRange = qfalse;
 
 			if ( entityNum != ENTITYNUM_WORLD ) {
@@ -303,8 +300,10 @@ const void *RB_StretchPic( const void *data )
 
         // set 2D virtual screen size
         // set time for 2D shaders
-	    backEnd.refdef.time = ri.Milliseconds();
-	    backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
+	    int t = ri.Milliseconds();
+        
+        backEnd.refdef.rd.time = t;
+	    backEnd.refdef.floatTime = t * 0.001f;
 	}
 
 
@@ -454,10 +453,11 @@ const void* RB_DrawBuffer( const void *data )
 
         // set 2D virtual screen size
 
+	    int t = ri.Milliseconds();
+        
+        backEnd.refdef.rd.time = t;
+	    backEnd.refdef.floatTime = t * 0.001f;
 
-        // set time for 2D shaders
-        backEnd.refdef.time = ri.Milliseconds();
-        backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;	
         
         vk_clear_attachments(qfalse, qtrue, color);
 

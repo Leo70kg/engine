@@ -585,8 +585,8 @@ static void R_MarkLeaves (void) {
 	// hasn't changed, we don't need to mark everything again
 
 	// if r_showcluster was just turned on, remark everything 
-	if ( tr.viewCluster == cluster && !tr.refdef.areamaskModified 
-		&& !r_showcluster->modified ) {
+	if ( tr.viewCluster == cluster && !tr.refdef.AreamaskModified && !r_showcluster->modified )
+    {
 		return;
 	}
 
@@ -623,7 +623,7 @@ static void R_MarkLeaves (void) {
 		}
 
 		// check for door connection
-		if ( (tr.refdef.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
+		if ( (tr.refdef.rd.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
 			continue;		// not visible
 		}
 
@@ -649,7 +649,7 @@ void R_AddWorldSurfaces (void)
 		return;
 	}
 
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
+	if ( tr.refdef.rd.rdflags & RDF_NOWORLDMODEL ) {
 		return;
 	}
 
