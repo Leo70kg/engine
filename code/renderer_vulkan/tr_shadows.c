@@ -19,11 +19,11 @@ along with Foobar; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-#include "tr_local.h"
+#include "tr_globals.h"
 #include "mvp_matrix.h"
 #include "vk_shade_geometry.h"
 #include "vk_instance.h"
-#include "tr_globals.h"
+#include "vk_pipelines.h"
 #include "vk_image.h"
 #include "tr_cvar.h"
 
@@ -108,7 +108,7 @@ static void R_ExtrudeShadowEdges( void ) {
 
 
 // VULKAN
-static void R_Vk_Dx_RenderShadowEdges(VkPipeline vk_pipeline)
+static void vk_renderShadowEdges(VkPipeline vk_pipeline)
 {
 
 	int i = 0;
@@ -225,8 +225,8 @@ void RB_ShadowTessEnd( void ) {
 	// mirrors have the culling order reversed
     int isMir = backEnd.viewParms.isMirror;
 	// VULKAN
-	R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[0][isMir]);
-	R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[1][isMir]);
+	vk_renderShadowEdges(g_stdPipelines.shadow_volume_pipelines[0][isMir]);
+	vk_renderShadowEdges(g_stdPipelines.shadow_volume_pipelines[1][isMir]);
 
 }
 
@@ -286,7 +286,7 @@ void RB_ShadowFinish( void )
     reset_modelview_matrix();
 
     vk_bind_geometry();
-    vk_shade_geometry(vk.shadow_finish_pipeline, qfalse, normal, qtrue);
+    vk_shade_geometry(g_stdPipelines.shadow_finish_pipeline, qfalse, normal, qtrue);
 
     set_modelview_matrix(bak);
 

@@ -20,12 +20,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 // tr_sky.c
-#include "tr_local.h"
+#include "tr_globals.h"
 #include "mvp_matrix.h"
 #include "vk_shade_geometry.h"
 
 #include "vk_instance.h"
-#include "tr_globals.h"
+#include "vk_pipelines.h"
 #include "vk_image.h"
 #include "tr_cvar.h"
 #include "../renderercommon/matrix_multiplication.h"
@@ -436,9 +436,6 @@ static void DrawSkyBox( shader_t *shader )
 			}
 		}
 
-		// DrawSkySide( shader->sky.outerbox[sky_texorder[i]], sky_mins_subd, sky_maxs_subd );
-        GL_Bind( shader->sky.outerbox[sky_texorder[i]] );
-
 
         // VULKAN: draw skybox side
         // DX12
@@ -486,7 +483,7 @@ static void DrawSkyBox( shader_t *shader )
         memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
 
         vk_bind_geometry();
-        vk_shade_geometry(vk.skybox_pipeline, qfalse, r_showsky->integer ? force_zero : force_one, qtrue);
+        vk_shade_geometry(g_stdPipelines.skybox_pipeline, qfalse, r_showsky->integer ? force_zero : force_one, qtrue);
 
 	}
 
@@ -701,8 +698,7 @@ void RB_StageIteratorSky( void )
 
 	// r_showsky will let all the sky blocks be drawn in
 	// front of everything to allow developers to see how
-	// much sky is getting sucked in
-	// draw the outer skybox
+	// much sky is getting sucked in draw the outer skybox
 	if ( tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage )
     {
         float modelMatrix_original[16] QALIGN(16);

@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vk_initialize.h"
 #include "vk_screenshot.h"
 #include "vk_shade_geometry.h"
-#include "vk_create_pipeline.h"
+#include "vk_pipelines.h"
 #include "vk_image.h"
 #include "vk_clear_attachments.h"
 #include "mvp_matrix.h"

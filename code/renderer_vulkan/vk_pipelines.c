@@ -1,9 +1,8 @@
 #include "qvk.h"
 #include "tr_local.h"
 #include "vk_instance.h"
-#include "vk_create_pipeline.h"
 #include "vk_shaders.h"
-
+#include "vk_pipelines.h"
 
 // The graphics pipeline is the sequence of operations that take the vertices
 // and textures of your meshes all the way to the pixels in the render targets
@@ -38,7 +37,6 @@
 // map to the same pixel in the framebuffer. Fragments can simply overwrite
 // each other, add up or be mixed based opon transparency.
 //
-// 
 
 
 
@@ -61,6 +59,13 @@ struct Vk_Pipeline_Def {
     enum Vk_Shader_Type shader_type;
 	enum Vk_Shadow_Phase shadow_phase;
 };
+
+
+
+
+
+struct GlobalPipelineManager g_stdPipelines;
+
 
 
 #define MAX_VK_PIPELINES        1024
@@ -106,27 +111,6 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
     // Two stages: vs and fs
     VkPipelineShaderStageCreateInfo shaderStages[2];
 
-    switch(def->shader_type)
-    {
-        case multi_texture_add:
-        {
-        	shaderStages[0].module = def->clipping_plane ? vk.multi_texture_clipping_plane_vs : vk.multi_texture_vs;
-		    shaderStages[1].module = vk.multi_texture_add_fs;
-        }break;
-
-        case multi_texture_mul:
-        {
-        	shaderStages[0].module = def->clipping_plane ? vk.multi_texture_clipping_plane_vs : vk.multi_texture_vs;
-		    shaderStages[1].module = vk.multi_texture_mul_fs;
-        }break;
-        
-        case single_texture:
-        {
-        	shaderStages[0].module = def->clipping_plane ? vk.single_texture_clipping_plane_vs : vk.single_texture_vs;
-		    shaderStages[1].module = vk.single_texture_fs;
-        }break;
-    }
-
 
     shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -142,8 +126,18 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
     shaderStages[1].pName = "main";
     shaderStages[1].pNext = NULL;
     shaderStages[1].flags = 0;
+
+    // pSpecializationInfo allows you to specify values for shader constants,
+    // you can use a single shader module where its behavior can be configured
+    // at pipeline creation by specifying different values fot the constants
+    // used in it. This is more effient than configuring the shader using 
+    // variables at render time, because the compiler can do optimizations.
+
+
 	shaderStages[1].pSpecializationInfo =
         (def->state_bits & GLS_ATEST_BITS) ? &specialization_info : NULL;
+
+    vk_specifyShaderModule(def->shader_type, def->clipping_plane, &shaderStages[0].module, &shaderStages[1].module);
 
 
 	//
@@ -499,7 +493,6 @@ static VkPipeline vk_find_pipeline(struct Vk_Pipeline_Def* def)
 
 void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
 {
-
     struct Vk_Pipeline_Def def;
 
     def.line_primitives = 0;
@@ -530,8 +523,6 @@ void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
     def.clipping_plane = 1;
     def.mirror = 1;
     pStage->vk_mirror_pipeline = vk_find_pipeline(&def);
-
-
 }
 
 
@@ -553,7 +544,7 @@ void create_standard_pipelines(void)
         def.clipping_plane = VK_FALSE;
         def.mirror = VK_FALSE;
         
-        vk_create_pipeline(&def, &vk.skybox_pipeline);
+        vk_create_pipeline(&def, &g_stdPipelines.skybox_pipeline);
     }
 
     ri.Printf(PRINT_ALL, " Create Q3 stencil shadows pipeline \n");
@@ -582,8 +573,7 @@ void create_standard_pipelines(void)
                 {
                     def.mirror = mirror_flags[j];
                     
-                    
-                    vk_create_pipeline(&def, &vk.shadow_volume_pipelines[i][j]);
+                    vk_create_pipeline(&def, &g_stdPipelines.shadow_volume_pipelines[i][j]);
                 }
             }
         }
@@ -600,7 +590,7 @@ void create_standard_pipelines(void)
             def.mirror = VK_FALSE;
             def.shadow_phase = fullscreen_quad_rendering;
             
-            vk_create_pipeline(&def, &vk.shadow_finish_pipeline);
+            vk_create_pipeline(&def, &g_stdPipelines.shadow_finish_pipeline);
         }
     }
 
@@ -642,10 +632,10 @@ void create_standard_pipelines(void)
                     def.polygon_offset = polygon_offset[k];
 
                     def.state_bits = fog_state;
-                    vk_create_pipeline(&def, &vk.fog_pipelines[i][j][k]);
+                    vk_create_pipeline(&def, &g_stdPipelines.fog_pipelines[i][j][k]);
 
                     def.state_bits = dlight_state;
-                    vk_create_pipeline(&def, &vk.dlight_pipelines[i][j][k]);
+                    vk_create_pipeline(&def, &g_stdPipelines.dlight_pipelines[i][j][k]);
                 }
             }
         }
@@ -659,7 +649,7 @@ void create_standard_pipelines(void)
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE;
-        vk_create_pipeline(&def, &vk.tris_debug_pipeline);
+        vk_create_pipeline(&def, &g_stdPipelines.tris_debug_pipeline);
     }
 
     
@@ -670,7 +660,7 @@ void create_standard_pipelines(void)
 
         def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE;
         def.face_culling = CT_BACK_SIDED;
-        vk_create_pipeline(&def, &vk.tris_mirror_debug_pipeline);
+        vk_create_pipeline(&def, &g_stdPipelines.tris_mirror_debug_pipeline);
     }
 
     ri.Printf(PRINT_ALL, " Create normals debug pipeline \n");
@@ -680,7 +670,7 @@ void create_standard_pipelines(void)
 
         def.state_bits = GLS_DEPTHMASK_TRUE;
         def.line_primitives = VK_TRUE;
-        vk_create_pipeline(&def, &vk.normals_debug_pipeline);
+        vk_create_pipeline(&def, &g_stdPipelines.normals_debug_pipeline);
     }
 
 
@@ -690,7 +680,7 @@ void create_standard_pipelines(void)
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE;
-        vk_create_pipeline(&def, &vk.surface_debug_pipeline_solid);
+        vk_create_pipeline(&def, &g_stdPipelines.surface_debug_pipeline_solid);
     }
 
     ri.Printf(PRINT_ALL, " Create surface debug outline pipeline \n");
@@ -700,7 +690,7 @@ void create_standard_pipelines(void)
 
         def.state_bits = GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE;
         def.line_primitives = VK_TRUE;
-        vk_create_pipeline(&def, &vk.surface_debug_pipeline_outline);
+        vk_create_pipeline(&def, &g_stdPipelines.surface_debug_pipeline_outline);
     }
     
     ri.Printf(PRINT_ALL, " Create images debug pipeline \n");
@@ -709,7 +699,7 @@ void create_standard_pipelines(void)
         memset(&def, 0, sizeof(def));
 
         def.state_bits = GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-        vk_create_pipeline(&def, &vk.images_debug_pipeline);
+        vk_create_pipeline(&def, &g_stdPipelines.images_debug_pipeline);
     }
 
 }
@@ -733,28 +723,28 @@ void vk_destroyGlobalStagePipeline(void)
 {
     int i, j, k;
     // 
-    qvkDestroyPipeline(vk.device, vk.skybox_pipeline, NULL);
+    qvkDestroyPipeline(vk.device, g_stdPipelines.skybox_pipeline, NULL);
 	for (i = 0; i < 2; i++)
 		for (j = 0; j < 2; j++)
         {
-			qvkDestroyPipeline(vk.device, vk.shadow_volume_pipelines[i][j], NULL);
+			qvkDestroyPipeline(vk.device, g_stdPipelines.shadow_volume_pipelines[i][j], NULL);
 		}
 	
-    qvkDestroyPipeline(vk.device, vk.shadow_finish_pipeline, NULL);
+    qvkDestroyPipeline(vk.device, g_stdPipelines.shadow_finish_pipeline, NULL);
 	
     
     for (i = 0; i < 2; i++)
 		for (j = 0; j < 3; j++)
 			for (k = 0; k < 2; k++)
             {
-				qvkDestroyPipeline(vk.device, vk.fog_pipelines[i][j][k], NULL);
-				qvkDestroyPipeline(vk.device, vk.dlight_pipelines[i][j][k], NULL);
+				qvkDestroyPipeline(vk.device, g_stdPipelines.fog_pipelines[i][j][k], NULL);
+				qvkDestroyPipeline(vk.device, g_stdPipelines.dlight_pipelines[i][j][k], NULL);
 			}
 
-	qvkDestroyPipeline(vk.device, vk.tris_debug_pipeline, NULL);
-	qvkDestroyPipeline(vk.device, vk.tris_mirror_debug_pipeline, NULL);
-	qvkDestroyPipeline(vk.device, vk.normals_debug_pipeline, NULL);
-	qvkDestroyPipeline(vk.device, vk.surface_debug_pipeline_solid, NULL);
-	qvkDestroyPipeline(vk.device, vk.surface_debug_pipeline_outline, NULL);
-	qvkDestroyPipeline(vk.device, vk.images_debug_pipeline, NULL);
+	qvkDestroyPipeline(vk.device, g_stdPipelines.tris_debug_pipeline, NULL);
+	qvkDestroyPipeline(vk.device, g_stdPipelines.tris_mirror_debug_pipeline, NULL);
+	qvkDestroyPipeline(vk.device, g_stdPipelines.normals_debug_pipeline, NULL);
+	qvkDestroyPipeline(vk.device, g_stdPipelines.surface_debug_pipeline_solid, NULL);
+	qvkDestroyPipeline(vk.device, g_stdPipelines.surface_debug_pipeline_outline, NULL);
+	qvkDestroyPipeline(vk.device, g_stdPipelines.images_debug_pipeline, NULL);
 }

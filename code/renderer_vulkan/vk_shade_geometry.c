@@ -80,6 +80,7 @@ VkRect2D get_scissor_rect(void)
 
 void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed)
 {
+
 	// color
 	{
 		if ((vk.color_st_elements + tess.numVertexes) * sizeof(color4ub_t) > COLOR_SIZE)
@@ -117,12 +118,12 @@ void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth
 
 	// bind descriptor sets
 	// unsigned int set_count = multitexture ? 2 : 1;
-/*
-    vkCmdBindDescriptorSets causes the sets numbered [firstSet.. firstSet+descriptorSetCount-1] to use
-    the bindings stored in pDescriptorSets[0..descriptorSetCount-1] for subsequent rendering commands 
-    (either compute or graphics, according to the pipelineBindPoint).
-    Any bindings that were previously applied via these sets are no longer valid.
-*/
+
+//    vkCmdBindDescriptorSets causes the sets numbered [firstSet.. firstSet+descriptorSetCount-1] to use
+//    the bindings stored in pDescriptorSets[0..descriptorSetCount-1] for subsequent rendering commands 
+//    (either compute or graphics, according to the pipelineBindPoint).
+//    Any bindings that were previously applied via these sets are no longer valid.
+
 	qvkCmdBindDescriptorSets(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
         vk.pipeline_layout, 0, (multitexture ? 2 : 1), getCurDescriptorSetsPtr(), 0, NULL);
 
@@ -203,7 +204,7 @@ void vk_bind_geometry(void)
 	if (backEnd.viewParms.isPortal)
     {
         unsigned int i = 0;
-        //ri.Printf(PRINT_ALL, "Portal\n");
+        ri.Printf(PRINT_ALL, "Portal\n");
 		// Eye space transform.
 		// NOTE: backEnd.or.modelMatrix incorporates s_flipMatrix, so it should be taken into account 
 		// when computing clipping plane too.
@@ -214,17 +215,18 @@ void vk_bind_geometry(void)
 		}
 
 		// Clipping plane in eye coordinates.
+        /*
 		float world_plane[4];
 		world_plane[0] = backEnd.viewParms.portalPlane.normal[0];
 		world_plane[1] = backEnd.viewParms.portalPlane.normal[1];
 		world_plane[2] = backEnd.viewParms.portalPlane.normal[2];
 		world_plane[3] = backEnd.viewParms.portalPlane.dist;
-
+        */
 		float eye_plane[4];
-		eye_plane[0] = DotProduct (backEnd.viewParms.or.axis[0], world_plane);
-		eye_plane[1] = DotProduct (backEnd.viewParms.or.axis[1], world_plane);
-		eye_plane[2] = DotProduct (backEnd.viewParms.or.axis[2], world_plane);
-		eye_plane[3] = DotProduct (world_plane, backEnd.viewParms.or.origin) - world_plane[3];
+		eye_plane[0] = DotProduct (backEnd.viewParms.or.axis[0], backEnd.viewParms.portalPlane.normal);
+		eye_plane[1] = DotProduct (backEnd.viewParms.or.axis[1], backEnd.viewParms.portalPlane.normal);
+		eye_plane[2] = DotProduct (backEnd.viewParms.or.axis[2], backEnd.viewParms.portalPlane.normal);
+		eye_plane[3] = DotProduct (backEnd.viewParms.portalPlane.normal, backEnd.viewParms.or.origin) - backEnd.viewParms.portalPlane.dist;
 
 		// Apply s_flipMatrix to be in the same coordinate system as eye_xfrom.
 		push_constants[28] = -eye_plane[1];

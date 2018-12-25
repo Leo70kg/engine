@@ -47,8 +47,8 @@ enum Vk_Shader_Type {
 	multi_texture_add
 };
 
-void vk_createShaderModules(void);
+void vk_loadShaderModules(void);
+void vk_specifyShaderModule(const enum Vk_Shader_Type shader_type, VkBool32 isClippingPlane, VkShaderModule* vs, VkShaderModule* fs);
 void vk_destroyShaderModules(void);
-void vk_createShaderStages(const uint32_t state_bits, const enum Vk_Shader_Type shader_type, const VkBool32 clipping_plane, VkPipelineShaderStageCreateInfo* pShaderStages);
 
 #endif

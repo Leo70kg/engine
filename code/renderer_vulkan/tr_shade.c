@@ -21,14 +21,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // tr_shade.c
 
-#include "tr_local.h"
+#include "tr_globals.h"
 #include "vk_shade_geometry.h"
 #include "vk_instance.h"
 #include "vk_image.h"
-#include "tr_globals.h"
+#include "vk_pipelines.h"
 #include "tr_cvar.h"
 #include "../renderercommon/ref_import.h"
-
+#include "R_DEBUG.h"
 /*
 
   THIS ENTIRE FILE IS BACK END
@@ -77,66 +77,7 @@ static void R_BindAnimatedImage( textureBundle_t *bundle )
 	GL_Bind( bundle->image[ index ] );
 }
 
-/*
-================
-DrawTris
 
-Draws triangle outlines for debugging
-================
-*/
-static void DrawTris (shaderCommands_t *input)
-{
-	GL_Bind( tr.whiteImage );
-
-	// VULKAN
-
-    memset(tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
-    VkPipeline pipeline = backEnd.viewParms.isMirror ? vk.tris_mirror_debug_pipeline : vk.tris_debug_pipeline;
-    vk_shade_geometry(pipeline, qfalse, force_zero, qtrue);
-
-}
-
-
-/*
-================
-DrawNormals
-
-Draws vertex normals for debugging
-================
-*/
-static void DrawNormals (shaderCommands_t *input)
-{
-	// VULKAN
-
-    vec4_t xyz[SHADER_MAX_VERTEXES];
-    memcpy(xyz, tess.xyz, tess.numVertexes * sizeof(vec4_t));
-    memset(tess.svars.colors, tr.identityLightByte, SHADER_MAX_VERTEXES * sizeof(color4ub_t));
-
-    int numVertexes = tess.numVertexes;
-    int i = 0;
-    while (i < numVertexes)
-    {
-        int count = numVertexes - i;
-        if (count >= SHADER_MAX_VERTEXES/2 - 1)
-            count = SHADER_MAX_VERTEXES/2 - 1;
-
-        int k;
-        for (k = 0; k < count; k++)
-        {
-            VectorCopy(xyz[i + k], tess.xyz[2*k]);
-            VectorMA(xyz[i + k], 2, input->normal[i + k], tess.xyz[2*k + 1]);
-        }
-        tess.numVertexes = 2 * count;
-        tess.numIndexes = 0;
-
-
-        vk_bind_geometry();
-        vk_shade_geometry(vk.normals_debug_pipeline, qfalse, force_zero, qfalse);
-
-        i += count;
-    }
-
-}
 
 /*
 ==============
@@ -282,7 +223,7 @@ static void ProjectDlightTexture( void ) {
 
 		// VULKAN
 
-		VkPipeline pipeline = vk.dlight_pipelines[dl->additive > 0 ? 1 : 0][tess.shader->cullType][tess.shader->polygonOffset];
+		VkPipeline pipeline = g_stdPipelines.dlight_pipelines[dl->additive > 0 ? 1 : 0][tess.shader->cullType][tess.shader->polygonOffset];
 		vk_shade_geometry(pipeline, qfalse, normal, qtrue);
 
 	}
@@ -318,7 +259,7 @@ static void RB_FogPass( void ) {
 	// VULKAN
 
     assert(tess.shader->fogPass > 0);
-    VkPipeline pipeline = vk.fog_pipelines[tess.shader->fogPass - 1][tess.shader->cullType][tess.shader->polygonOffset];
+    VkPipeline pipeline = g_stdPipelines.fog_pipelines[tess.shader->fogPass - 1][tess.shader->cullType][tess.shader->polygonOffset];
     vk_shade_geometry(pipeline, qfalse, normal, qtrue);
 
 

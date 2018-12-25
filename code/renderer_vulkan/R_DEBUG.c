@@ -4,6 +4,7 @@
 #include "mvp_matrix.h"
 #include "vk_instance.h"
 #include "vk_image.h"
+#include "vk_pipelines.h"
 #include "vk_clear_attachments.h"
 #include "tr_cvar.h"
 
@@ -87,7 +88,7 @@ void R_DebugPolygon( int color, int numPoints, float *points )
 
 
     vk_bind_geometry();
-    vk_shade_geometry(vk.surface_debug_pipeline_solid, qfalse, normal, qtrue);
+    vk_shade_geometry(g_stdPipelines.surface_debug_pipeline_solid, qfalse, normal, qtrue);
 
 
 	// Outline.
@@ -103,7 +104,7 @@ void R_DebugPolygon( int color, int numPoints, float *points )
 
 
     vk_bind_geometry();
-    vk_shade_geometry(vk.surface_debug_pipeline_outline, qfalse, force_zero, qfalse);
+    vk_shade_geometry(g_stdPipelines.surface_debug_pipeline_outline, qfalse, force_zero, qfalse);
 	
     tess.numVertexes = 0;
 }
@@ -205,9 +206,70 @@ void RB_ShowImages(void)
 
 
         vk_bind_geometry();
-        vk_shade_geometry(vk.images_debug_pipeline, qfalse, normal, qtrue);
+        vk_shade_geometry(g_stdPipelines.images_debug_pipeline, qfalse, normal, qtrue);
 
 	}
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
+}
+
+/*
+================
+DrawTris
+
+Draws triangle outlines for debugging
+================
+*/
+void DrawTris (shaderCommands_t *input)
+{
+	GL_Bind( tr.whiteImage );
+
+	// VULKAN
+
+    memset(tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
+    VkPipeline pipeline = backEnd.viewParms.isMirror ? g_stdPipelines.tris_mirror_debug_pipeline : g_stdPipelines.tris_debug_pipeline;
+    vk_shade_geometry(pipeline, qfalse, force_zero, qtrue);
+
+}
+
+
+/*
+================
+DrawNormals
+
+Draws vertex normals for debugging
+================
+*/
+void DrawNormals (shaderCommands_t *input)
+{
+	// VULKAN
+
+    vec4_t xyz[SHADER_MAX_VERTEXES];
+    memcpy(xyz, tess.xyz, tess.numVertexes * sizeof(vec4_t));
+    memset(tess.svars.colors, tr.identityLightByte, SHADER_MAX_VERTEXES * sizeof(color4ub_t));
+
+    int numVertexes = tess.numVertexes;
+    int i = 0;
+    while (i < numVertexes)
+    {
+        int count = numVertexes - i;
+        if (count >= SHADER_MAX_VERTEXES/2 - 1)
+            count = SHADER_MAX_VERTEXES/2 - 1;
+
+        int k;
+        for (k = 0; k < count; k++)
+        {
+            VectorCopy(xyz[i + k], tess.xyz[2*k]);
+            VectorMA(xyz[i + k], 2, input->normal[i + k], tess.xyz[2*k + 1]);
+        }
+        tess.numVertexes = 2 * count;
+        tess.numIndexes = 0;
+
+
+        vk_bind_geometry();
+        vk_shade_geometry(g_stdPipelines.normals_debug_pipeline, qfalse, force_zero, qfalse);
+
+        i += count;
+    }
+
 }

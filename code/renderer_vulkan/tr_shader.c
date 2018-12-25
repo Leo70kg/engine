@@ -19,13 +19,14 @@ along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-#include "tr_local.h"
-#include "vk_image.h"
-#include "vk_create_pipeline.h"
 #include "tr_globals.h"
-#include "tr_cvar.h"
-#include "../renderercommon/ref_import.h"
+#include "vk_image.h"
+#include "vk_pipelines.h"
 #include "vk_shaders.h"
+#include "tr_cvar.h"
+
+
+#include "../renderercommon/ref_import.h"
 
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 

@@ -7,7 +7,7 @@
 
 #include "vk_instance.h"
 #include "vk_shade_geometry.h"
-#include "vk_create_pipeline.h"
+#include "vk_pipelines.h"
 #include "vk_frame.h"
 #include "vk_shaders.h"
 
@@ -749,7 +749,7 @@ void vk_initialize(void)
 	//
 	// Shader modules.
 	//
-	vk_createShaderModules();
+	vk_loadShaderModules();
 
 	//
 	// Standard pipelines.
