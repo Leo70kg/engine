@@ -42,9 +42,9 @@
 
 // used with cg_shadows == 2
 enum Vk_Shadow_Phase {
-    shadows_disabled,
-	shadow_edges_rendering,
-	fullscreen_quad_rendering
+    SHADOWS_RENDERING_DISABLED,
+	SHADOWS_RENDERING_EDGES,
+    SHADOWS_RENDERING_FULLSCREEN_QUAD
 };
 
 
@@ -59,7 +59,6 @@ struct Vk_Pipeline_Def {
     enum Vk_Shader_Type shader_type;
 	enum Vk_Shadow_Phase shadow_phase;
 };
-
 
 
 
@@ -193,9 +192,9 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertex_input_state.pNext = NULL;
 	vertex_input_state.flags = 0;
-	vertex_input_state.vertexBindingDescriptionCount = (def->shader_type == single_texture) ? 3 : 4;
+	vertex_input_state.vertexBindingDescriptionCount = (def->shader_type == ST_SINGLE_TEXTURE) ? 3 : 4;
 	vertex_input_state.pVertexBindingDescriptions = bindings;
-	vertex_input_state.vertexAttributeDescriptionCount = (def->shader_type == single_texture) ? 3 : 4;
+	vertex_input_state.vertexAttributeDescriptionCount = (def->shader_type == ST_SINGLE_TEXTURE) ? 3 : 4;
 	vertex_input_state.pVertexAttributeDescriptions = attribs;
 
 	//
@@ -274,9 +273,9 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 	depth_stencil_state.depthWriteEnable = (def->state_bits & GLS_DEPTHMASK_TRUE) ? VK_TRUE : VK_FALSE;
 	depth_stencil_state.depthCompareOp = (def->state_bits & GLS_DEPTHFUNC_EQUAL) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL;
 	depth_stencil_state.depthBoundsTestEnable = VK_FALSE;
-	depth_stencil_state.stencilTestEnable = (def->shadow_phase != shadows_disabled) ? VK_TRUE : VK_FALSE;
+	depth_stencil_state.stencilTestEnable = (def->shadow_phase != SHADOWS_RENDERING_DISABLED) ? VK_TRUE : VK_FALSE;
 
-	if (def->shadow_phase == shadow_edges_rendering)
+	if (def->shadow_phase == SHADOWS_RENDERING_EDGES)
     {
 		depth_stencil_state.front.failOp = VK_STENCIL_OP_KEEP;
 		depth_stencil_state.front.passOp = (def->face_culling == CT_FRONT_SIDED) ? VK_STENCIL_OP_INCREMENT_AND_CLAMP : VK_STENCIL_OP_DECREMENT_AND_CLAMP;
@@ -289,7 +288,7 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 		depth_stencil_state.back = depth_stencil_state.front;
 
     }
-    else if (def->shadow_phase == fullscreen_quad_rendering)
+    else if (def->shadow_phase == SHADOWS_RENDERING_FULLSCREEN_QUAD)
     {
 		depth_stencil_state.front.failOp = VK_STENCIL_OP_KEEP;
 		depth_stencil_state.front.passOp = VK_STENCIL_OP_KEEP;
@@ -324,7 +323,7 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 	VkPipelineColorBlendAttachmentState attachment_blend_state = {};
 	attachment_blend_state.blendEnable = (def->state_bits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)) ? VK_TRUE : VK_FALSE;
 
-	if (def->shadow_phase == shadow_edges_rendering)
+	if (def->shadow_phase == SHADOWS_RENDERING_EDGES)
 		attachment_blend_state.colorWriteMask = 0;
 	else
 		attachment_blend_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -502,11 +501,11 @@ void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
     def.state_bits = pStage->stateBits;
 
     if (pStage->bundle[1].image[0] == NULL)
-        def.shader_type = single_texture;
+        def.shader_type = ST_SINGLE_TEXTURE;
     else if (pShader->multitextureEnv == GL_MODULATE)
-        def.shader_type = multi_texture_mul;
+        def.shader_type = ST_MULTI_TEXURE_MUL;
     else if (pShader->multitextureEnv == GL_ADD)
-        def.shader_type = multi_texture_add;
+        def.shader_type = ST_MULTI_TEXURE_ADD;
     else
         ri.Error(ERR_FATAL, "Vulkan: could not create pipelines for q3 shader '%s'\n", pShader->name);
 
@@ -537,7 +536,7 @@ void create_standard_pipelines(void)
         struct Vk_Pipeline_Def def;
         memset(&def, 0, sizeof(def));
 
-        def.shader_type = single_texture;
+        def.shader_type = ST_SINGLE_TEXTURE;
         def.state_bits = 0;
         def.face_culling = CT_FRONT_SIDED;
         def.polygon_offset = VK_FALSE;
@@ -554,14 +553,14 @@ void create_standard_pipelines(void)
             memset(&def, 0, sizeof(def));
 
 
-            def.polygon_offset = 0;
+            def.polygon_offset = VK_FALSE;
             def.state_bits = 0;
-            def.shader_type = single_texture;
-            def.clipping_plane = 0;
-            def.shadow_phase = shadow_edges_rendering;
+            def.shader_type = ST_SINGLE_TEXTURE;
+            def.clipping_plane = VK_FALSE;
+            def.shadow_phase = SHADOWS_RENDERING_EDGES;
 
             cullType_t cull_types[2] = {CT_FRONT_SIDED, CT_BACK_SIDED};
-            qboolean mirror_flags[2] = {0, 1};
+            VkBool32 mirror_flags[2] = {VK_TRUE, VK_FALSE};
 
             int i = 0; 
             int j = 0;
@@ -585,10 +584,10 @@ void create_standard_pipelines(void)
             def.face_culling = CT_FRONT_SIDED;
             def.polygon_offset = VK_FALSE;
             def.state_bits = GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-            def.shader_type = single_texture;
+            def.shader_type = ST_SINGLE_TEXTURE;
             def.clipping_plane = VK_FALSE;
             def.mirror = VK_FALSE;
-            def.shadow_phase = fullscreen_quad_rendering;
+            def.shadow_phase = SHADOWS_RENDERING_FULLSCREEN_QUAD;
             
             vk_create_pipeline(&def, &g_stdPipelines.shadow_finish_pipeline);
         }
@@ -601,7 +600,7 @@ void create_standard_pipelines(void)
         memset(&def, 0, sizeof(def));
 
 
-        def.shader_type = single_texture;
+        def.shader_type = ST_SINGLE_TEXTURE;
         def.clipping_plane = VK_FALSE;
         def.mirror = VK_FALSE;
 

@@ -2431,5 +2431,5 @@ size_t RE_SaveJPGToBuffer(byte *buffer, size_t bufSize, int quality,
 void RE_TakeVideoFrame( int width, int height,
 		byte *captureBuffer, byte *encodeBuffer, qboolean motionJpeg );
 
-
+void Mat4Ortho( float left, float right, float bottom, float top, float znear, float zfar, float out[16] );
 #endif //TR_LOCAL_H

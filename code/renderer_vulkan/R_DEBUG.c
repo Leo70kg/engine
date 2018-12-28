@@ -151,9 +151,8 @@ void RB_ShowImages(void)
         backEnd.refdef.floatTime = t * 0.001f;
 	}
 
-	float black[4] = {0, 0, 0, 1};
-
-	vk_clear_attachments(qfalse, qtrue, black);
+	const float black[4] = {0, 0, 0, 1};
+	vk_clearColorAttachments(black);
 
 	for (i = 0 ; i < tr.numImages ; i++)
     {

@@ -124,19 +124,19 @@ void vk_specifyShaderModule(const enum Vk_Shader_Type shader_type, VkBool32 isCl
     // In this case we'll stick to the standard main.
     switch(shader_type)
     {
-        case multi_texture_add:
+        case ST_MULTI_TEXURE_ADD:
         {
             *vs = isClippingPlane ? s_gShaderModules.multi_texture_clipping_plane_vs : s_gShaderModules.multi_texture_vs;
             *fs = s_gShaderModules.multi_texture_add_fs;
         }break;
 
-        case multi_texture_mul:
+        case ST_MULTI_TEXURE_MUL:
         {
             *vs = isClippingPlane ? s_gShaderModules.multi_texture_clipping_plane_vs : s_gShaderModules.multi_texture_vs;
             *fs = s_gShaderModules.multi_texture_mul_fs;
         }break;
 
-        case single_texture:
+        case ST_SINGLE_TEXTURE:
         default:
         {
             *vs = isClippingPlane ? s_gShaderModules.single_texture_clipping_plane_vs : s_gShaderModules.single_texture_vs;

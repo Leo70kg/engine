@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 
     int n = 0, netTimeMS = 0;
     
-    int runCount = 100000;
+    int runCount = 10000000;
 
     //float x[4] QALIGN(16) = {1.0f, -1.0f, 2.0f, 3.0f}; 
 
@@ -94,7 +94,6 @@ int main(int argc, char *argv[])
 
 
     {
-
         gettimeofday(&tv_begin, NULL);
 
         for(n = 0; n < runCount; n++ )
@@ -112,12 +111,10 @@ int main(int argc, char *argv[])
         netTimeMS = (tv_end.tv_sec - tv_begin.tv_sec) * 1000 + (tv_end.tv_usec - tv_begin.tv_usec)/1000;
         print4f("out1", out1);
         printf("TransformModelToClip_SSE: %d\n", netTimeMS);
-
     }
 
 
     {
-
         gettimeofday(&tv_begin, NULL);
 
         for(n = 0; n < runCount; n++ )
@@ -136,7 +133,6 @@ int main(int argc, char *argv[])
         netTimeMS = (tv_end.tv_sec - tv_begin.tv_sec) * 1000 + (tv_end.tv_usec - tv_begin.tv_usec)/1000;
         print4f("dst", dst);
         printf("TransformModelToClip_SSE2: %d\n", netTimeMS);
-
     }
 
 

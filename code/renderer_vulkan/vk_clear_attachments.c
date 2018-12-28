@@ -24,6 +24,84 @@ VkBool32 get_depth_attachment(void)
     return s_depth_attachment_dirty;
 }
 
+
+void vk_clearDepthStencilAttachments(void)
+{
+    if(s_depth_attachment_dirty)
+    {
+        VkClearAttachment attachments;
+        uint32_t attachment_count = 1;
+
+        attachments.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        attachments.clearValue.depthStencil.depth = 1.0f;
+
+        if (r_shadows->integer == 2) {
+            attachments.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            attachments.clearValue.depthStencil.stencil = 0;
+        }
+
+
+
+        VkClearRect clear_rect;
+        clear_rect.rect = get_scissor_rect();
+        clear_rect.baseArrayLayer = 0;
+        clear_rect.layerCount = 1;
+        uint32_t rect_count = 1;
+
+        // Split viewport rectangle into two non-overlapping rectangles.
+        // It's a HACK to prevent Vulkan validation layer's performance warning:
+        //		"vkCmdClearAttachments() issued on command buffer object XXX prior to any Draw Cmds.
+        //		 It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw."
+        // 
+        // NOTE: we don't use LOAD_OP_CLEAR for color attachment when we begin renderpass
+        // since at that point we don't know whether we need color buffer clear (usually we don't).
+
+        qvkCmdClearAttachments(vk.command_buffer, attachment_count, &attachments, rect_count, &clear_rect);
+    }
+}
+
+
+
+void vk_clearColorAttachments(const float* color)
+{
+
+
+	VkClearAttachment attachments;
+	uint32_t attachment_count = 1;
+
+    attachments.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    attachments.colorAttachment = 0;
+    attachments.clearValue.color.float32[0] = color[0];
+    attachments.clearValue.color.float32[1] = color[1];
+    attachments.clearValue.color.float32[2] = color[2];
+    attachments.clearValue.color.float32[3] = color[3];
+
+
+	VkClearRect clear_rect[2];
+	clear_rect[0].rect = get_scissor_rect();
+	clear_rect[0].baseArrayLayer = 0;
+	clear_rect[0].layerCount = 1;
+	int rect_count = 1;
+
+	// Split viewport rectangle into two non-overlapping rectangles.
+	// It's a HACK to prevent Vulkan validation layer's performance warning:
+	//		"vkCmdClearAttachments() issued on command buffer object XXX prior to any Draw Cmds.
+	//		 It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw."
+	// 
+	// NOTE: we don't use LOAD_OP_CLEAR for color attachment when we begin renderpass
+	// since at that point we don't know whether we need color buffer clear (usually we don't).
+
+    uint32_t h = clear_rect[0].rect.extent.height / 2;
+    clear_rect[0].rect.extent.height = h;
+    clear_rect[1] = clear_rect[0];
+    clear_rect[1].rect.offset.y = h;
+    rect_count = 2;
+
+
+	qvkCmdClearAttachments(vk.command_buffer, attachment_count, &attachments, rect_count, clear_rect);
+}
+
+
 void vk_clear_attachments(VkBool32 clear_depth_stencil, VkBool32 clear_color, float* color)
 {
 
@@ -68,7 +146,7 @@ void vk_clear_attachments(VkBool32 clear_depth_stencil, VkBool32 clear_color, fl
 	//		 It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw."
 	// 
 	// NOTE: we don't use LOAD_OP_CLEAR for color attachment when we begin renderpass
-	// since at that point we don't know whether we need collor buffer clear (usually we don't).
+	// since at that point we don't know whether we need color buffer clear (usually we don't).
 	if (clear_color) {
 		uint32_t h = clear_rect[0].rect.extent.height / 2;
 		clear_rect[0].rect.extent.height = h;

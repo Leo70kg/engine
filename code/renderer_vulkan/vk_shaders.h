@@ -42,9 +42,9 @@
 
 
 enum Vk_Shader_Type {
-	single_texture,
-	multi_texture_mul,
-	multi_texture_add
+    ST_SINGLE_TEXTURE,
+	ST_MULTI_TEXURE_MUL,
+	ST_MULTI_TEXURE_ADD
 };
 
 void vk_loadShaderModules(void);

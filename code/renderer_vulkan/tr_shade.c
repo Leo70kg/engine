@@ -88,7 +88,8 @@ because a surface may be forced to perform a RB_End due
 to overflow.
 ==============
 */
-void RB_BeginSurface( shader_t *shader, int fogNum ) {
+void RB_BeginSurface( shader_t *shader, int fogNum )
+{
 
 	shader_t *state = (shader->remappedShader) ? shader->remappedShader : shader;
 
@@ -104,8 +105,6 @@ void RB_BeginSurface( shader_t *shader, int fogNum ) {
 	if (tess.shader->clampTime && tess.shaderTime >= tess.shader->clampTime) {
 		tess.shaderTime = tess.shader->clampTime;
 	}
-
-
 }
 
 

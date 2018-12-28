@@ -1,6 +1,6 @@
 #include "qvk.h"
 #include "tr_local.h"
-#include "vk_clear_attachments.h"
+
 #include "vk_frame.h"
 #include "vk_instance.h"
 #include "tr_cvar.h"
@@ -287,11 +287,7 @@ void vk_begin_frame(void)
 
 	qvkCmdBeginRenderPass(vk.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    set_depth_attachment(VK_FALSE);
-	
-    vk.xyz_elements = 0;
-	vk.color_st_elements = 0;
-	vk.index_buffer_offset = 0;
+
 }
 
 

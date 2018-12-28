@@ -158,17 +158,6 @@ void Mat3x3Identity( float pMat[3][3] )
 }
 
 
-void Mat4Ortho( float left, float right, float bottom, float top, float znear, float zfar, float out[16] )
-{
-    float x = 1.0f/ (right - left);
-    float y = 1.0f/ (top - bottom);
-    float z = 1.0f/ (zfar - znear);
-
-	out[0] = 2.0f * x;  out[4] = 0.0f;      out[ 8] = 0.0f;     out[12] = -(right + left) * x;
-	out[1] = 0.0f;      out[5] = 2.0f * y;  out[ 9] = 0.0f;     out[13] = -(top + bottom) * y;
-	out[2] = 0.0f;      out[6] = 0.0f;      out[10] = 2.0f * z; out[14] = -(zfar + znear) * z;
-	out[3] = 0.0f;      out[7] = 0.0f;      out[11] = 0.0f;     out[15] = 1.0f;
-}
 
 
 
@@ -259,7 +248,7 @@ void TransformModelToClip_SSE2( const float x[3], const float pMatModel[16], con
 
 
 
-void TransformModelToClip( const float src[3], const float * pMatModel, const float *pMatProj, float eye[4], float dst[4])
+void TransformModelToClip( const float src[3], const float* pMatModel, const float* pMatProj, float eye[4], float dst[4])
 {
 	int i;
 

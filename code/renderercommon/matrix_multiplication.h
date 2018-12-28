@@ -7,7 +7,7 @@ void Mat4Identity( float out[4] );
 void MatrixMultiply4x4_SSE(const float A[16], const float B[16], float out[16]);
 void Mat4x1Transform_SSE( const float A[16], const float x[4], float out[4] );
 void Mat4Transform( const float in1[16], const float in2[4], float out[4] );
-void Mat4Ortho( float left, float right, float bottom, float top, float znear, float zfar, float out[16] );
+
 
 
 void Mat4Translation( float vec[3], float out[4] );

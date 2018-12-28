@@ -5,9 +5,202 @@ by Brian Hook, id Software Presentation at GDC 1999
 
 ## Introduction
 
-Note: this is an ASCII dump of the http://www.gdconf.com/1999/library/5301.ppt powerpoint file,
 This will give you bare bone scratchpad notes as one might have taken
 during the session, with bits and pieces missing or out of order.
+
+Renderer is split into two parts - the front end and the back end.
+
+### Front end
+
+The front end provides an interface to the renderer and allows the game
+to submit entities to be drawn. The entities are added to a list and 
+will be consumed at a later point in time by the back end.
+
+Unlike modern renderers, the scene is not persisted between frames. 
+The scene must be built up every frame by the game. This negatively 
+impacts performance somewhat as the renderer can no longer make use of 
+temporal coherence between frames - a property of a game where by the 
+majority of entities will not move, or will not move every much between 
+frames, allowing for some optimizations.
+
+
+From the game:
+
+* R\_ClearScene: Removes all objects from the current scene
+* R\_AddAdditiveLightToScene, R_AddLightToScene: Adds a light to the scene
+* R\_AddPolyToScene: Add polygons to scene (usually used to add particles for particle effects)
+* R\_AddDecalToScene: Adds a decal to the scene
+* R\_RenderScene: Renders the scene. Drawable surfaces are queued to be drawn. This is where the majority of the work is done for pushing work to the backend via the command queue.
+
+
+Along-side scene rendering, the front end also allows the game to 
+render textured rectangles easily for UI elements and text:
+* R\_DrawStretchPic: Draw textured rectangle
+* R\_DrawRotatePic: Draw rotated textured rectangle, with centre of rotation at the corner
+* R\_DrawRotatePic2: Draw rotated textured rectangle, with centre of rotation at the origin
+* R\_Font\_DrawString: Draw text with specific font
+
+Each of these calls will add a single command into the command queue
+which is consumed by the backend.
+
+
+### Rough stack trace for R_RenderScene
+```
+RE_BeginScene
+    Setup tr.refdef
+    R_AddDecals
+if shadows for point lights
+    R_RenderDlightCubemaps
+        for each cube face
+            R_RenderView
+if player shadows
+    R_RenderPshadowMaps
+        for each shadowing entity
+            R_AddEntitySurface
+        R_SortAndSubmitDrawSurfs
+if sun shadows
+    R_RenderSunShadowMaps  // first shadow cascade
+        R_RotateForViewer
+        R_SetupProjectionOrtho
+        R_AddWorldSurfaces
+        R_AddPolygonSurfaces
+        R_AddEntitySurfaces
+        R_SortAndSubmitDrawSurfs
+    R_RenderSunShadowMaps  // second shadow cascade
+    R_RenderSunShadowMaps  // third shadow cascade
+R_RenderView
+    R_RotateForViewer  // sets up model/view matrices
+    R_SetupProjection  // sets up projection matrix
+        R_SetupFrustum  // computes the camera frustum
+    R_GenerateDrawSurfs
+        R_AddWorldSurfaces  // add all visible map surfaces
+        R_AddPolygonSurfaces  // adds all particle effects
+        R_SetFarClip
+        R_SetupProjectionZ  // calculate far Z based on currently added objects
+        R_AddEntitySurfaces
+            for each entity
+                R_AddEntitySurface
+    R_SortAndSubmitDrawSurfs
+        R_RadixSort // sort surfaces to reduce draws later on
+        for each mirror
+            R_MirrorViewBySurface
+                R_RenderView
+        R_AddDrawSurfCmd  // submits a single 'draw' command into the command queue
+    R_DebugGraphics
+R_AddPostProcessCmd
+RE_EndScene
+```
+
+## Back end
+The backend executes commands only from the command queue. This command queue is filled by the front end, and can be any one of the following commands. Each command is handled by a separate function in `tr_backend.c`.
+                 
+| Render command name | Handler function | Description |
+| --- | --- | --- |
+| `RC_END_OF_LIST` | Handled inline - calls `RB_EndSurface` if necessary | Marks the end of the command queue |
+| `RC_SET_COLOR` | `RB_SetColor` | Sets the active color |
+| `RC_STRETCH_PIC` | `RB_StretchPic` | Draws a textured quad |
+| `RC_ROTATE_PIC` | `RB_RotatePic` | Draws a rotated textured quad, with its center of rotation at the corner |
+| `RC_ROTATE_PIC2` | `RB_RotatePic2` | Draws a rotated textured quad, with its center of rotation at the origin |
+| `RC_DRAW_SURFS` | `RB_DrawSurfs` | Draws surfaces |
+| `RC_DRAW_BUFFER` | `RB_DrawBuffer` | Sets the active draw buffer |
+| `RC_SWAP_BUFFERS` | `RB_SwapBuffers` | Presents the back buffer to the screen |
+| `RC_SCREENSHOT` | `RB_TakeScreenshotCmd` | Takes a screenshot |
+| `RC_VIDEOFRAME` | `RB_TakeVideoFrameCmd` | Records a video frame |
+| `RC_COLORMASK` | `RB_ColorMask` | Sets the active color mask |
+| `RC_CLEARDEPTH` | `RB_ClearDepth` | Clears the depth buffer |
+| `RC_CAPSHADOWMAP` | `RB_CaptureShadowMap` | Captures the depth buffer for shadow mapping |
+| `RC_POSTPROCESS` | `RB_PostProcess` | Perform post processing |
+| `RC_BEGIN_TIMED_BLOCK` | `RB_BeginTimedBlock` | Begin timed block |
+| `RC_END_TIMED_BLOCK` | `RB_BeginTimedBlock` | End timed block |
+
+The backend starts processing the command queue in two circumstances:
+
+1. The game engine wishes to render the next frame. `RE_BeginFrame` is called, which will call `R_IsuePendingRenderCommands`.
+2. The renderer needs to flush the command queue. This can happen just before a GPU resource is changed or uploaded (e.g. a texture, or memory buffer), so that the synchronization is made explicit (not 100% true, but we'll stick with this), or if the command queue is full. `R_IssuePendingRenderCommands` is called directly.
+
+## Rendering surfaces
+To draw anything, the following generally has to happen:
+
+1. Call `RB_BeginSurface` to start a new surface, and reset the `tess` object.
+2. Set render matrices either by calling `RB_SetGL2D` for orthographic rendering, or setting up the matrices manually.
+3. Upload any data to the GPU if necessary. This includes vertex, index and uniform data.
+4. Call `RB_EndSurface` to finalise the surface, which causes it to be drawn or added to the current render pass.
+
+This is a very simplified view - where these steps are changed are described below for 2D and 3D objects.
+
+Originally, in the vanilla renderer, in order to reduce the number of draw calls the surface is left "open" until the state for the surface changes (e.g. if the Q3 shader has changed). When the surface state does change, `RB_EndSurface` is called, and `RB_BeginSurface` is called to start the new surface.
+
+For example, surface A is using shader 1, surface B is using shader 1, and surface C is using shader 2. The call sequence would be:
+
+1. Call `RB_BeginSurface` for surface A, using shader 1
+2. Add surface A vertex and index data to `tess`.
+3. Add surface B vertex and index data to `tess`.
+4. Call `RB_EndSurface` for surfaces A and B, using shader 1
+5. Call `RB_BeginSurface` for surface C, using shader 2
+6. Add surface C vertex and index data to `tess`.
+7. Call `RB_EndSurface` for surface C using shader 2.
+
+Although there are three surfaces, only two draws were issued. This works well for dynamic vertex data, which is re-uploaded every frame, as was the case in the vanilla renderer, and also in rend2 for 2D objects.
+
+### Rendering 2D surfaces
+2D objects are drawn using `RB_StretchPic`, `RB_RotatePic` and `RB_RotatePic2`.
+
+### Rendering 3D surfaces
+For 3D objects, which are drawn through `RB_DrawSurfs`, it gets a bit more difficult. The majority of model surfaces are loaded into GPU buffers when the model itself is loaded. This means that for each surface we must issue a single draw, regardless of whether the previous surface used the same vertex data.
+
+*Note: a potential optimisation here is to issue an instanced draw for consecutive models which are the same.*
+
+#### Rough stack trace of `RB_DrawSurfs`
+```
+RB_BeginDrawingView
+    if no target FBO
+        FBO_Bind  // binds 'default' FBO
+    else
+        FBO_Bind  // bind target FBO
+        if rendering to cube map face
+            Update FBO color attachment to use correct cube map face texture
+
+    Setup viewport and scissor
+    Clear colour and depth if necessary
+
+if rendering world models and (rendering depth prepass or shadow maps)
+    Disable color writes
+    Set flag indicating depth-only render
+    RB_RenderDrawSurfList
+    Clear flag indicating depth-only render
+    Enable color writes
+
+    if using MSAA
+        FBO_FastBlit  // resolve depth buffer
+
+    if SSAO enabled
+        FBO_BlitFromTexture  // copy depth buffer into separate texture
+
+    if sun shadows enabled
+        FBO_Bind  // bind fbo storing shadow term
+        Setup uniforms for rendering shadows
+        RB_InstantQuad2  // draw fullscreen quad with shader to render shadows
+
+    if SSAO enabled
+        FBO_Bind  // bind quarter-res fbo for SSAO
+        Copy depth buffer to quarter-res FBO
+        Downscale and Gaussian blur
+        
+    FBO_Bind  // reset FBO binding
+
+if not rendering shadows
+    RB_RenderDrawSurfList
+    if draw sun
+        RB_DrawSun
+
+    if draw sun rays
+        Draw sun rays
+
+if rendering to cube map face
+    Generate mip maps for cube map face
+```
+
+
 
 ## Portability and OS Support
    Win9x
@@ -261,4 +454,6 @@ actually materials
    * level design that maximizes the given the triangle budget
    * lighting design that is effective and dramatic
    * game design that leverages the technology effectively
+
+
 

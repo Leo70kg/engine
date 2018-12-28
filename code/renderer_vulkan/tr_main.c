@@ -295,9 +295,9 @@ void R_RotateForViewer (void)
     };
 
 	float viewerMatrix[16] QALIGN(16);
-	vec3_t origin;
+	float o0, o1, o2;
 
-    tr.or.origin[0] = tr.or.origin[1] = tr.or.origin[2];
+    tr.or.origin[0] = tr.or.origin[1] = tr.or.origin[2]=0;
 //	tr.or.axis[0][0] = 1;
 //	tr.or.axis[1][1] = 1;
 //	tr.or.axis[2][2] = 1;
@@ -308,29 +308,30 @@ void R_RotateForViewer (void)
 	// VectorCopy( tr.viewParms.or.origin, tr.or.viewOrigin );
 	// VectorCopy( tr.viewParms.or.origin, origin );
 
-    tr.or.viewOrigin[0] = origin[0] = tr.viewParms.or.origin[0];
-    tr.or.viewOrigin[1] = origin[1] = tr.viewParms.or.origin[1];
-    tr.or.viewOrigin[2] = origin[2] = tr.viewParms.or.origin[2];
+    tr.or.viewOrigin[0] = o0 = tr.viewParms.or.origin[0];
+    tr.or.viewOrigin[1] = o1 = tr.viewParms.or.origin[1];
+    tr.or.viewOrigin[2] = o2 = tr.viewParms.or.origin[2];
 
 
 	viewerMatrix[0] = tr.viewParms.or.axis[0][0];
-	viewerMatrix[4] = tr.viewParms.or.axis[0][1];
-	viewerMatrix[8] = tr.viewParms.or.axis[0][2];
-	viewerMatrix[12] = -origin[0] * viewerMatrix[0] + -origin[1] * viewerMatrix[4] + -origin[2] * viewerMatrix[8];
-
 	viewerMatrix[1] = tr.viewParms.or.axis[1][0];
-	viewerMatrix[5] = tr.viewParms.or.axis[1][1];
-	viewerMatrix[9] = tr.viewParms.or.axis[1][2];
-	viewerMatrix[13] = -origin[0] * viewerMatrix[1] + -origin[1] * viewerMatrix[5] + -origin[2] * viewerMatrix[9];
-
 	viewerMatrix[2] = tr.viewParms.or.axis[2][0];
-	viewerMatrix[6] = tr.viewParms.or.axis[2][1];
-	viewerMatrix[10] = tr.viewParms.or.axis[2][2];
-	viewerMatrix[14] = -origin[0] * viewerMatrix[2] + -origin[1] * viewerMatrix[6] + -origin[2] * viewerMatrix[10];
-
 	viewerMatrix[3] = 0;
+
+	viewerMatrix[4] = tr.viewParms.or.axis[0][1];
+	viewerMatrix[5] = tr.viewParms.or.axis[1][1];
+	viewerMatrix[6] = tr.viewParms.or.axis[2][1];
 	viewerMatrix[7] = 0;
+
+	viewerMatrix[8] = tr.viewParms.or.axis[0][2];
+	viewerMatrix[9] = tr.viewParms.or.axis[1][2];
+	viewerMatrix[10] = tr.viewParms.or.axis[2][2];
 	viewerMatrix[11] = 0;
+
+
+	viewerMatrix[12] = - o0 * viewerMatrix[0] - o1 * viewerMatrix[4] - o2 * viewerMatrix[8];
+	viewerMatrix[13] = - o0 * viewerMatrix[1] - o1 * viewerMatrix[5] - o2 * viewerMatrix[9];
+	viewerMatrix[14] = - o0 * viewerMatrix[2] - o1 * viewerMatrix[6] - o2 * viewerMatrix[10];
 	viewerMatrix[15] = 1;
 
 	// convert from our coordinate system (looking down X)
@@ -427,7 +428,7 @@ void R_MirrorPoint (vec3_t in, orientation_t *surface, orientation_t *camera, ve
 }
 
 
-void R_MirrorVector (vec3_t in, orientation_t *surface, orientation_t *camera, vec3_t out)
+static void R_MirrorVector (vec3_t in, orientation_t *surface, orientation_t *camera, vec3_t out)
 {
 	int		i;
 
@@ -782,7 +783,7 @@ R_MirrorViewBySurface
 Returns qtrue if another view has been rendered
 ========================
 */
-qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
+static qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
 {
 	vec4_t			clipDest[128];
 	orientation_t	surface, camera;
@@ -1283,7 +1284,7 @@ void R_RenderView (viewParms_t *parms)
 
 	// set viewParms.world
 	R_RotateForViewer ();
-
+    // Setup that culling frustum planes for the current view
 	R_SetupFrustum ();
 
 	R_AddWorldSurfaces ();

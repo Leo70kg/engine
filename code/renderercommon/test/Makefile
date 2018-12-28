@@ -2,7 +2,7 @@ COMPILE = gcc -Wall
 
 
 INCLUDE_DIR = ..
-CFLAGS = -O2 -ffast-math -msse2 -funroll-loops   -I $(INCLUDE_DIR)
+CFLAGS = -O2 -ffast-math -msse2 -funroll-loops -I $(INCLUDE_DIR)
 # -fomit-frame-pointer 
 
 ALL: clean test_matrix_multiplication test_matrix_transform test_Mat4Copy test_transform_model_to_clip
@@ -22,7 +22,7 @@ test_transform_model_to_clip:
 
 
 clean:
-	rm -f *.o test_matrix_multiplication test_Mat4Copy test_transform_model_to_clip 
+	rm -f *.o test_matrix_multiplication test_Mat4Copy test_transform_model_to_clip test_matrix_transform 
 #main:main.o
 #	$(COMPILE) -o $(TARGETS) main.o
 #.c.o:

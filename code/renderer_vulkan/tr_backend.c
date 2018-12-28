@@ -19,34 +19,25 @@ along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-#include "tr_local.h"
+
 #include "tr_globals.h"
 #include "tr_cvar.h"
-#include "vk_clear_attachments.h"
-
 
 #include "mvp_matrix.h"
 #include "qvk.h"
+#include "vk_clear_attachments.h"
 #include "vk_frame.h"
 #include "vk_screenshot.h"
+#include "vk_shade_geometry.h"
 #include "R_DEBUG.h"
-
-
-#ifdef _DEBUG
-static float fast_sky_color[4] = { 0.8f, 0.7f, 0.4f, 1.0f };
-#else
-static float fast_sky_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-#endif
+#include "R_DEBUG.h"
 
 
 
 /*
-================
-RB_Hyperspace
 
 A player has predicted a teleport, but hasn't arrived yet
-================
-*/
+
 static void RB_Hyperspace( void )
 {
 	float c = ( backEnd.refdef.rd.time & 255 ) / 255.0f;
@@ -54,11 +45,11 @@ static void RB_Hyperspace( void )
 	float color[4] = { c, c, c, 1 };
 
 	// VULKAN
-	vk_clear_attachments(qfalse, qtrue, color);
+	vk_clearColorAttachments(color);
 
 	backEnd.isHyperspace = qtrue;
 }
-
+*/
 
 
 /*
@@ -80,14 +71,33 @@ void RB_BeginDrawingView (void)
 	//
 
 	// ensures that depth writes are enabled for the depth clear
-    qboolean fast_sky = r_fastsky->integer && !( backEnd.refdef.rd.rdflags & RDF_NOWORLDMODEL );
-
+    if(r_fastsky->integer && !( backEnd.refdef.rd.rdflags & RDF_NOWORLDMODEL ))
+    {
+        #ifndef NDEBUG
+        static const float fast_sky_color[4] = { 0.8f, 0.7f, 0.4f, 1.0f };
+        #else
+        static const float fast_sky_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        #endif
+        vk_clearColorAttachments(fast_sky_color);
+    }
 	// VULKAN
-	vk_clear_attachments(get_depth_attachment(), fast_sky, fast_sky_color);
+	//vk_clear_attachments(get_depth_attachment(), fast_sky, fast_sky_color);
+
+    vk_clearDepthStencilAttachments();
 
 	if ( ( backEnd.refdef.rd.rdflags & RDF_HYPERSPACE ) )
 	{
-		RB_Hyperspace();
+		//RB_Hyperspace();
+        //A player has predicted a teleport, but hasn't arrived yet
+        
+        float c = ( backEnd.refdef.rd.time & 255 ) / 255.0f;
+
+        float color[4] = { c, c, c, 1 };
+
+        // VULKAN
+	    vk_clearColorAttachments(color);
+
+	    backEnd.isHyperspace = qtrue;
 	}
 	else
 	{
@@ -295,7 +305,9 @@ const void *RB_StretchPic( const void *data )
 {
 	const stretchPicCommand_t* cmd = (const stretchPicCommand_t *)data;
 
-	if ( !backEnd.projection2D ){
+	if ( qfalse == backEnd.projection2D )
+    {
+
 		backEnd.projection2D = qtrue;
 
         // set 2D virtual screen size
@@ -440,6 +452,10 @@ const void* RB_DrawBuffer( const void *data )
 	// VULKAN
 	vk_begin_frame();
 
+    set_depth_attachment(VK_FALSE);
+	
+    vk_resetGeometryBuffer();
+
 	// clear screen for debugging
 	if ( r_clear->integer )
     {
@@ -449,17 +465,16 @@ const void* RB_DrawBuffer( const void *data )
 		// VULKAN
 
 		// to ensure we have viewport that occupies entire window
-        backEnd.projection2D = qtrue;
+
 
         // set 2D virtual screen size
 
 	    int t = ri.Milliseconds();
-        
+        backEnd.projection2D = qtrue; 
         backEnd.refdef.rd.time = t;
 	    backEnd.refdef.floatTime = t * 0.001f;
 
-        
-        vk_clear_attachments(qfalse, qtrue, color);
+        vk_clearColorAttachments(color);
 
 	}
 

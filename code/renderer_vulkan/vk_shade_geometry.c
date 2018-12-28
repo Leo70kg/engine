@@ -191,20 +191,21 @@ void vk_bind_geometry(void)
 		vk.index_buffer_offset += indexes_size;
 	}
 
-	// push constants are another way of passing dynamic values to shaders
- 	// Specify push constants.
-	// 32 * 4 = 128 BYTES
-	float push_constants[16 + 12 + 4] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
-	unsigned int push_constants_size = 64;
-    
-	get_mvp_transform(push_constants, backEnd.projection2D);
+
 
 
 
 	if (backEnd.viewParms.isPortal)
     {
         unsigned int i = 0;
-        ri.Printf(PRINT_ALL, "Portal\n");
+
+        // mvp transform + eye transform + clipping plane in eye space
+        float push_constants[32] QALIGN(16);
+        // 32 * 4 = 128 BYTES
+	    const unsigned int push_constants_size = 128;
+    
+	    get_mvp_transform(push_constants, backEnd.projection2D);
+        ri.Printf( PRINT_ALL, "backEnd.projection2D = %d\n", backEnd.projection2D);
 		// Eye space transform.
 		// NOTE: backEnd.or.modelMatrix incorporates s_flipMatrix, so it should be taken into account 
 		// when computing clipping plane too.
@@ -234,12 +235,29 @@ void vk_bind_geometry(void)
 		push_constants[30] = -eye_plane[0];
 		push_constants[31] =  eye_plane[3];
 
-		push_constants_size += 64;
-	}
 
-    // As described above in section Pipeline Layouts, the pipeline layout defines shader push constants
-    // which are updated via Vulkan commands rather than via writes to memory or copy commands.
-    // Push constants represent a high speed path to modify constant data in pipelines
-    // that is expected to outperform memory-backed resource updates.
-	qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, push_constants_size, push_constants);
+
+        // As described above in section Pipeline Layouts, the pipeline layout defines shader push constants
+        // which are updated via Vulkan commands rather than via writes to memory or copy commands.
+        // Push constants represent a high speed path to modify constant data in pipelines
+        // that is expected to outperform memory-backed resource updates.
+	    qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, push_constants_size, push_constants);
+
+	}
+    else
+    {
+      	// push constants are another way of passing dynamic values to shaders
+ 	    // Specify push constants.
+	    float push_constants[16] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
+	    const unsigned int push_constants_size = 64;
+    
+	    get_mvp_transform(push_constants, backEnd.projection2D);
+
+        // As described above in section Pipeline Layouts, the pipeline layout defines shader push constants
+        // which are updated via Vulkan commands rather than via writes to memory or copy commands.
+        // Push constants represent a high speed path to modify constant data in pipelines
+        // that is expected to outperform memory-backed resource updates.
+	    qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, push_constants_size, push_constants);
+    }
+
 }
