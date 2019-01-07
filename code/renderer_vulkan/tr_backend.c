@@ -23,13 +23,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_globals.h"
 #include "tr_cvar.h"
 
-#include "mvp_matrix.h"
 #include "qvk.h"
 #include "vk_clear_attachments.h"
 #include "vk_frame.h"
 #include "vk_screenshot.h"
 #include "vk_shade_geometry.h"
-#include "R_DEBUG.h"
 #include "R_DEBUG.h"
 
 
@@ -81,8 +79,6 @@ void RB_BeginDrawingView (void)
         vk_clearColorAttachments(fast_sky_color);
     }
 	// VULKAN
-	//vk_clear_attachments(get_depth_attachment(), fast_sky, fast_sky_color);
-
     vk_clearDepthStencilAttachments();
 
 	if ( ( backEnd.refdef.rd.rdflags & RDF_HYPERSPACE ) )
@@ -116,7 +112,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 	int				fogNum, oldFogNum;
 	int				entityNum, oldEntityNum;
 	int				dlighted, oldDlighted;
-	qboolean		depthRange, oldDepthRange;
 	int				i;
 	drawSurf_t		*drawSurf;
 	int				oldSort;
@@ -133,14 +128,13 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 	backEnd.currentEntity = &tr.worldEntity;
 	oldShader = NULL;
 	oldFogNum = -1;
-	oldDepthRange = qfalse;
 	oldDlighted = qfalse;
 	oldSort = -1;
-	depthRange = qfalse;
 
 	backEnd.pc.c_surfaces += numDrawSurfs;
 
-	for (i = 0, drawSurf = drawSurfs ; i < numDrawSurfs ; i++, drawSurf++) {
+	for (i = 0, drawSurf = drawSurfs ; i < numDrawSurfs ; i++, drawSurf++)
+    {
 		if ( (int)drawSurf->sort == oldSort ) {
 			// fast path, same as previous sort
 			rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
@@ -169,7 +163,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 		//
 		if ( entityNum != oldEntityNum )
         {
-			depthRange = qfalse;
 
 			if ( entityNum != ENTITYNUM_WORLD ) {
 				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
@@ -188,7 +181,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 
 				if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
 					// hack the depth range to prevent view model from poking into walls
-					depthRange = qtrue;
 				}
 			} else {
 				backEnd.currentEntity = &tr.worldEntity;
@@ -203,13 +195,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 
 			// VULKAN
             set_modelview_matrix(backEnd.or.modelMatrix);
-			//
-			// change depthrange if needed
-			//
-			if ( oldDepthRange != depthRange ) {
-				oldDepthRange = depthRange;
-			}
-
 			oldEntityNum = entityNum;
 		}
 
@@ -448,35 +433,12 @@ const void* RB_DrawBuffer( const void *data )
 {
 	const drawBufferCommand_t* cmd = (const drawBufferCommand_t *)data;
 
-
 	// VULKAN
 	vk_begin_frame();
 
     set_depth_attachment(VK_FALSE);
 	
     vk_resetGeometryBuffer();
-
-	// clear screen for debugging
-	if ( r_clear->integer )
-    {
-		float color[4] = {1, 0, 0.5, 1};
-
-
-		// VULKAN
-
-		// to ensure we have viewport that occupies entire window
-
-
-        // set 2D virtual screen size
-
-	    int t = ri.Milliseconds();
-        backEnd.projection2D = qtrue; 
-        backEnd.refdef.rd.time = t;
-	    backEnd.refdef.floatTime = t * 0.001f;
-
-        vk_clearColorAttachments(color);
-
-	}
 
 	return (const void *)(cmd + 1);
 }

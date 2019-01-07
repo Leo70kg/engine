@@ -84,7 +84,9 @@ void MatrixMultiply4x4(const float A[16], const float B[16], float out[16])
 }
 
 /*
- * out must be 16 byte aliagned,
+ * NOTE; out = B * A in math
+ * a, b and c are specified in column-major order
+ * out must be 16 byte aliagned
  */
 
 void MatrixMultiply4x4_SSE(const float A[16], const float B[16], float out[16])

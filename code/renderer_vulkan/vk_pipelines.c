@@ -69,11 +69,130 @@ struct GlobalPipelineManager g_stdPipelines;
 
 #define MAX_VK_PIPELINES        1024
 static struct Vk_Pipeline_Def s_pipeline_defs[MAX_VK_PIPELINES];
-static int s_numPipelines = 0;
+static uint32_t s_numPipelines = 0;
 
 void R_PipelineList_f(void)
 {
     ri.Printf(PRINT_ALL, " Total pipeline created: %d\n", s_numPipelines);
+}
+
+// 
+// uniform values in the shaders need to be specified during pipeline creation
+// transformation matrix to the vertex shader, or to create texture samplers
+// in the fragment shader.
+
+void vk_createPipelineLayout(void)
+{
+    ri.Printf(PRINT_ALL, " Create: vk.descriptor_pool, vk.set_layout, vk.pipeline_layout\n");
+ 
+    // Like command buffers, descriptor sets are allocated from a pool. 
+    // So we must first create the Descriptor pool.
+	{
+		VkDescriptorPoolSize pool_size;
+		pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		pool_size.descriptorCount = MAX_DRAWIMAGES;
+
+		VkDescriptorPoolCreateInfo desc;
+		desc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		desc.pNext = NULL;
+		desc.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // used by the cinematic images
+		desc.maxSets = MAX_DRAWIMAGES;
+		desc.poolSizeCount = 1;
+        // pPoolSizes is a pointer to an array of VkDescriptorPoolSize structures,
+        // each containing a descriptor type and number of descriptors of 
+        // that type to be allocated in the pool.
+		desc.pPoolSizes = &pool_size;
+
+		VK_CHECK(qvkCreateDescriptorPool(vk.device, &desc, NULL, &vk.descriptor_pool));
+	}
+
+
+	//
+	// Descriptor set layout.
+
+	{
+		VkDescriptorSetLayoutBinding descriptor_binding;
+        // is the binding number of this entry and corresponds to 
+        // a resource of the same binding number in the shader stages
+		descriptor_binding.binding = 0;
+        // descriptorType is a VkDescriptorType specifying which type of
+        // resource descriptors are used for this binding.
+		descriptor_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        // 1 is the number of descriptors contained in the binding,
+        // accessed in a shader as an array
+		descriptor_binding.descriptorCount = 1;
+        // stageFlags member is a bitmask of VkShaderStageFlagBits specifying 
+        // which pipeline shader stages can access a resource for this binding
+		descriptor_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        // pImmutableSamplers affects initialization of samplers. If descriptorType
+        // specifies a VK_DESCRIPTOR_TYPE_SAMPLER or 
+        // VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER type descriptor, then 
+        // pImmutableSamplers can be used to initialize a set of immutable samplers.
+        // Immutable samplers are permanently bound into the set layout;
+        // later binding a sampler into an immutable sampler slot in a descriptor
+        // set is not allowed. If pImmutableSamplers is not NULL, then it is
+        // considered to be a pointer to an array of sampler handles that
+        // will be consumed by the set layout and used for the corresponding binding.
+        // If pImmutableSamplers is NULL, then the sampler slots are dynamic 
+        // and sampler handles must be bound into descriptor sets using this layout.
+        // If descriptorType is not one of these descriptor types, 
+        // then pImmutableSamplers is ignored.
+		descriptor_binding.pImmutableSamplers = NULL;
+
+		VkDescriptorSetLayoutCreateInfo desc;
+		desc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		desc.pNext = NULL;
+		desc.flags = 0;
+		desc.bindingCount = 1;
+		desc.pBindings = &descriptor_binding;
+        
+        // To create descriptor set layout objects
+		VK_CHECK(qvkCreateDescriptorSetLayout(vk.device, &desc, NULL, &vk.set_layout));
+	}
+
+
+    VkPushConstantRange push_range;
+    push_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_range.offset = 0;
+    push_range.size = 128; // 16 mvp floats + 16
+
+    VkDescriptorSetLayout set_layouts[2] = {vk.set_layout, vk.set_layout};
+
+    VkPipelineLayoutCreateInfo desc;
+    desc.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    desc.pNext = NULL;
+    desc.flags = 0;
+
+    // setLayoutCount: the number of descriptor sets included in the pipeline layout.
+    // pSetLayouts: a pointer to an array of VkDescriptorSetLayout objects.
+    desc.setLayoutCount = 2;
+    desc.pSetLayouts = set_layouts;
+
+    // pushConstantRangeCount is the number of push constant ranges 
+    // included in the pipeline layout.
+    //
+    // pPushConstantRanges is a pointer to an array of VkPushConstantRange
+    // structures defining a set of push constant ranges for use in 
+    // a single pipeline layout.
+    // 
+    // In addition to descriptor set layouts, a pipeline layout also 
+    // describes how many push constants can be accessed by each stage
+    // of the pipeline.
+
+    desc.pushConstantRangeCount = 1;
+    desc.pPushConstantRanges = &push_range;
+
+    // Access to descriptor sets from a pipeline is accomplished through
+    // a pipeline layout. Zero or more descriptor set layouts and zero or
+    // more push constant ranges are combined to form a pipeline layout 
+    // object which describes the complete set of resources that can be
+    // accessed by a pipeline. The pipeline layout represents a sequence
+    // of descriptor sets with each having a specific layout. 
+    // This sequence of layouts is used to determine the interface between
+    // shader stages and shader resources. 
+    //
+    // Each pipeline is created using a pipeline layout.
+    VK_CHECK(qvkCreatePipelineLayout(vk.device, &desc, NULL, &vk.pipeline_layout));
 }
 
 
@@ -109,7 +228,6 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 
     // Two stages: vs and fs
     VkPipelineShaderStageCreateInfo shaderStages[2];
-
 
     shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -233,14 +351,20 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 	rasterization_state.rasterizerDiscardEnable = VK_FALSE;
 	rasterization_state.polygonMode = (def->state_bits & GLS_POLYMODE_LINE) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 
-	if (def->face_culling == CT_TWO_SIDED)
-		rasterization_state.cullMode = VK_CULL_MODE_NONE;
-	else if (def->face_culling == CT_FRONT_SIDED)
-		rasterization_state.cullMode = (def->mirror ? VK_CULL_MODE_FRONT_BIT : VK_CULL_MODE_BACK_BIT);
-	else if (def->face_culling == CT_BACK_SIDED)
-		rasterization_state.cullMode = (def->mirror ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_FRONT_BIT);
-	else
-		ri.Error(ERR_DROP, "create_pipeline: invalid face culling mode\n");
+    switch ( def->face_culling )
+    {
+        case CT_TWO_SIDED:
+            rasterization_state.cullMode = VK_CULL_MODE_NONE;
+            break;
+        case CT_FRONT_SIDED:
+            rasterization_state.cullMode = 
+                (def->mirror ? VK_CULL_MODE_FRONT_BIT : VK_CULL_MODE_BACK_BIT);
+            break;
+        case CT_BACK_SIDED:
+            rasterization_state.cullMode = 
+                (def->mirror ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_FRONT_BIT);
+            break;
+    }
 
     
     // how fragments are generated for geometry.
@@ -299,7 +423,6 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 		depth_stencil_state.front.reference = 0;
 
 		depth_stencil_state.back = depth_stencil_state.front;
-
 	}
     else
     {
@@ -431,25 +554,89 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 
 	VkGraphicsPipelineCreateInfo create_info;
 	create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    // pNext is NULL or a pointer to an extension-specific structure.
 	create_info.pNext = NULL;
+    // flags is a bitmask of VkPipelineCreateFlagBits
+    // specifying how the pipeline will be generated.
 	create_info.flags = 0;
+    // stageCount is the number of entries in the pStages array.
 	create_info.stageCount = 2;
+    // pStages is an array of size stageCount structures of type
+    // VkPipelineShaderStageCreateInfo describing the set of the 
+    // shader stages to be included in the graphics pipeline.
 	create_info.pStages = shaderStages;
+    // pVertexInputState is a pointer to an instance of the
+    // VkPipelineVertexInputStateCreateInfo structure.
 	create_info.pVertexInputState = &vertex_input_state;
+    // pInputAssemblyState is a pointer to an instance of the 
+    // VkPipelineInputAssemblyStateCreateInfo structure which
+    // determines input assembly behavior, as described in Drawing Commands.
 	create_info.pInputAssemblyState = &input_assembly_state;
+    // pTessellationState is a pointer to an instance of the 
+    // VkPipelineTessellationStateCreateInfo structure, and is ignored 
+    // if the pipeline does not include a tessellation control shader 
+    // stage and tessellation evaluation shader stage
 	create_info.pTessellationState = NULL;
+    // pViewportState is a pointer to an instance of the
+    // VkPipelineViewportStateCreateInfo structure, and 
+    // is ignored if the pipeline has rasterization disabled.
 	create_info.pViewportState = &viewport_state;
+    // pRasterizationState is a pointer to an instance of the
+    // VkPipelineRasterizationStateCreateInfo structure.
 	create_info.pRasterizationState = &rasterization_state;
+    // pMultisampleState is a pointer to an instance of the 
+    // VkPipelineMultisampleStateCreateInfo, and is ignored
+    // if the pipeline has rasterization disabled.
 	create_info.pMultisampleState = &multisample_state;
+
+    // pDepthStencilState is a pointer to an instance of the
+    // VkPipelineDepthStencilStateCreateInfe structure, and is ignored
+    // if the pipeline has rasterization disabled or 
+    // if the subpass of the render pass the pipeline is created
+    // against does not use a depth/stencil attachment.
 	create_info.pDepthStencilState = &depth_stencil_state;
+
+    // pColorBlendState is a pointer to an instance of the 
+    // VkPipelineColorBlendStateCreateInfo structure, and is ignored 
+    // if the pipeline has rasterization disabled or if the subpass of
+    // the render pass the pipeline is created against does not use 
+    // any color attachments.
 	create_info.pColorBlendState = &blend_state;
+
+    // pDynamicState is a pointer to VkPipelineDynamicStateCreateInfo and
+    // is used to indicate which properties of the pipeline state object 
+    // are dynamic and can be changed independently of the pipeline state.
+    // This can be NULL, which means no state in the pipeline is considered dynamic.
 	create_info.pDynamicState = &dynamic_state;
+    // layout is the description of binding locations used 
+    // by both the pipeline and descriptor sets used with the pipeline.
 	create_info.layout = vk.pipeline_layout;
+    // renderPass is a handle to a render pass object describing the environment
+    // in which the pipeline will be used; the pipeline must only be used with
+    // an instance of any render pass compatible with the one provided. 
+    // See Render Pass Compatibility for more information.
 	create_info.renderPass = vk.render_pass;
+
+    // A pipeline derivative is a child pipeline created from a parent pipeline,
+    // where the child and parent are expected to have much commonality. 
+    // The goal of derivative pipelines is that they be cheaper to create 
+    // using the parent as a starting point, and that it be more efficient
+    // on either host or device to switch/bind between children of the same
+    // parent.
+    // subpass is the index of the subpass in the render pass 
+    // where this pipeline will be used.
 	create_info.subpass = 0;
+    // basePipelineHandle is a pipeline to derive from.
 	create_info.basePipelineHandle = VK_NULL_HANDLE;
 	create_info.basePipelineIndex = -1;
 
+    // Graphics pipelines consist of multiple shader stages, 
+    // multiple fixed-function pipeline stages, and a pipeline layout.
+    // To create graphics pipelines
+    // VK_NULL_HANDLE indicating that pipeline caching is disabled; 
+    // TODO: provide the handle of a valid pipeline cache object, 
+    // 1 is the length of the pCreateInfos and pPipelines arrays.
+    //
 	VK_CHECK(qvkCreateGraphicsPipelines(vk.device, VK_NULL_HANDLE, 1, &create_info, NULL, pPipeLine));
 }
 
@@ -528,8 +715,7 @@ void create_pipelines_for_each_stage(shaderStage_t *pStage, shader_t* pShader)
 
 void create_standard_pipelines(void)
 {
-    
-    
+      
     ri.Printf(PRINT_ALL, " Create skybox pipeline \n");
     {
 
@@ -700,7 +886,6 @@ void create_standard_pipelines(void)
         def.state_bits = GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
         vk_create_pipeline(&def, &g_stdPipelines.images_debug_pipeline);
     }
-
 }
 
 
@@ -721,6 +906,10 @@ void vk_destroyShaderStagePipeline(void)
 void vk_destroyGlobalStagePipeline(void)
 {
     int i, j, k;
+
+	qvkDestroyDescriptorSetLayout(vk.device, vk.set_layout, NULL); 
+    qvkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL);
+   	qvkDestroyDescriptorPool(vk.device, vk.descriptor_pool, NULL);    
     // 
     qvkDestroyPipeline(vk.device, g_stdPipelines.skybox_pipeline, NULL);
 	for (i = 0; i < 2; i++)

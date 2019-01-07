@@ -3533,7 +3533,7 @@ default shader if the real one can't be found.
 shader_t *R_FindShaderByName( const char *name )
 {
 	char		strippedName[MAX_QPATH];
-	shader_t	*sh;
+	shader_t* sh;
 
 	if ( (name==NULL) || (name[0] == 0) ) {
 		return tr.defaultShader;

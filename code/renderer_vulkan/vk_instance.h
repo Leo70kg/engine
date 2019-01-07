@@ -36,21 +36,11 @@ struct Vk_Instance {
 
 	VkDescriptorPool descriptor_pool;
 	VkDescriptorSetLayout set_layout;
+
+
+    // Pipeline layout: the uniform and push values referenced by 
+    // the shader that can be updated at draw time
 	VkPipelineLayout pipeline_layout;
-
-	VkBuffer vertex_buffer;
-	unsigned char* vertex_buffer_ptr ; // pointer to mapped vertex buffer
-	int xyz_elements;
-	int color_st_elements;
-
-	VkBuffer index_buffer;
-	unsigned char* index_buffer_ptr; // pointer to mapped index buffer
-	VkDeviceSize index_buffer_offset;
-
-	// host visible memory that holds both vertex and index data
-	VkDeviceMemory geometry_buffer_memory;
-
-
 };
 
 

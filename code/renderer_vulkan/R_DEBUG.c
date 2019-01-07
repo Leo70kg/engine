@@ -1,7 +1,6 @@
 #include "tr_globals.h"
 #include "../renderercommon/ref_import.h"
 #include "vk_shade_geometry.h"
-#include "mvp_matrix.h"
 #include "vk_instance.h"
 #include "vk_image.h"
 #include "vk_pipelines.h"

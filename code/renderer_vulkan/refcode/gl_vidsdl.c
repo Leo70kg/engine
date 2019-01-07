@@ -3255,6 +3255,8 @@ void SCR_ScreenShot_f (void)
 	if (err != VK_SUCCESS)
 		Sys_Error("vkDeviceWaitIdle failed");
 
+
+
 	void * buffer_ptr;
 	vkMapMemory(vulkan_globals.device, memory, 0, glwidth * glheight * 4, 0, &buffer_ptr);
 

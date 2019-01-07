@@ -1571,7 +1571,6 @@ Q3MYDEVOBJ = \
 Q3VKOBJ = \
   $(B)/renderer_vulkan/R_DEBUG.o \
   $(B)/renderer_vulkan/matrix_multiplication.o \
-  $(B)/renderer_vulkan/mvp_matrix.o \
   $(B)/renderer_vulkan/tr_globals.o \
   $(B)/renderer_vulkan/tr_cvar.o \
   $(B)/renderer_vulkan/tr_animation.o \
@@ -1616,7 +1615,7 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/vk_instance.o \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
   $(B)/renderer_vulkan/vk_image.o \
-  $(B)/renderer_vulkan/vk_image_sampler.o \
+  $(B)/renderer_vulkan/vk_image_sampler2.o \
   $(B)/renderer_vulkan/vk_pipelines.o \
   $(B)/renderer_vulkan/vk_frame.o \
   $(B)/renderer_vulkan/vk_screenshot.o \
@@ -1632,9 +1631,9 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/single_texture_frag.o \
   $(B)/renderer_vulkan/single_texture_vert.o \
   \
-  $(B)/renderer_vulkan/fun_log.o
-
-#  $(B)/renderer_vulkan/tr_image_png.o \
+  $(B)/renderer_vulkan/fun_log.o \
+  \
+  $(B)/renderer_vulkan/tr_image_png.o \
   $(B)/renderer_vulkan/tr_image_jpg.o \
   $(B)/renderer_vulkan/tr_image_bmp.o \
   $(B)/renderer_vulkan/tr_image_tga.o \

@@ -48,7 +48,6 @@ cvar_t	*r_picmip;
 cvar_t	*r_showtris;
 cvar_t	*r_showsky;
 cvar_t	*r_shownormals;
-cvar_t	*r_clear;
 cvar_t	*r_offsetFactor;
 cvar_t	*r_offsetUnits;
 cvar_t	*r_gamma;
@@ -102,7 +101,7 @@ void R_Register( void )
 	//
 	r_fullbright = ri.Cvar_Get ("r_fullbright", "0", CVAR_LATCH|CVAR_CHEAT );
 	r_mapOverBrightBits = ri.Cvar_Get ("r_mapOverBrightBits", "1", CVAR_LATCH );
-	r_intensity = ri.Cvar_Get ("r_intensity", "1.2", CVAR_LATCH | CVAR_ARCHIVE );
+	r_intensity = ri.Cvar_Get ("r_intensity", "1.5", CVAR_LATCH | CVAR_ARCHIVE );
 	r_singleShader = ri.Cvar_Get ("r_singleShader", "0", CVAR_CHEAT | CVAR_LATCH );
 
 	//
@@ -156,7 +155,6 @@ void R_Register( void )
 	r_showtris = ri.Cvar_Get ("r_showtris", "0", CVAR_CHEAT);
 	r_showsky = ri.Cvar_Get ("r_showsky", "0", CVAR_CHEAT);
 	r_shownormals = ri.Cvar_Get ("r_shownormals", "0", CVAR_CHEAT);
-	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_TEMP);
 	r_offsetFactor = ri.Cvar_Get( "r_offsetfactor", "-1", CVAR_CHEAT );
 	r_offsetUnits = ri.Cvar_Get( "r_offsetunits", "-2", CVAR_CHEAT );
 	r_lockpvs = ri.Cvar_Get ("r_lockpvs", "0", CVAR_CHEAT);

@@ -1,10 +1,10 @@
 #include "qvk.h"
 #include "tr_local.h"
-
-#include "vk_frame.h"
-#include "vk_instance.h"
 #include "tr_cvar.h"
 
+#include "vk_instance.h"
+#include "vk_shade_geometry.h"
+#include "vk_frame.h"
 //  Synchronization of access to resources is primarily the responsibility
 //  of the application in Vulkan. The order of execution of commands with
 //  respect to the host and other commands on the device has few implicit
@@ -123,14 +123,67 @@ VkResult vkCreateFence( VkDevice device, const VkFenceCreateInfo* pCreateInfo,
 }
 
 
+
 void vk_destroy_sync_primitives(void)
 {
-	qvkDestroySemaphore(vk.device, image_acquired, NULL);
+    ri.Printf(PRINT_ALL, " Destroy image_acquired rendering_finished rendering_finished_fence\n");
+
+    qvkDestroySemaphore(vk.device, image_acquired, NULL);
 	qvkDestroySemaphore(vk.device, rendering_finished, NULL);
 
     // To destroy a fence, 
     // rendering_finished_fence is the handle of the fence to destroy.
 	qvkDestroyFence(vk.device, rendering_finished_fence, NULL);
+}
+
+
+void vk_createFrameBuffers(void)
+{
+    // Framebuffers for each swapchain image.
+	// The attachments specified during render pass creation are bound
+    // by wrapping them into a VkFramebuffer object. A framebuffer object
+    // references all of the VkImageView objects that represent the attachments
+    // The image that we have to use as attachment depends on which image
+    // the the swap chain returns when we retrieve one for presentation
+    // this means that we have to create a framebuffer for all of the images
+    // in the swap chain and use the one that corresponds to the retrieved
+    // image at draw time.
+
+    ri.Printf(PRINT_ALL, " Create vk.framebuffers \n");
+
+
+    VkImageView attachments[2] = {VK_NULL_HANDLE, vk.depth_image_view};
+
+    VkFramebufferCreateInfo desc;
+    desc.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    desc.pNext = NULL;
+    desc.flags = 0;
+    desc.renderPass = vk.render_pass;
+    desc.attachmentCount = 2;
+    desc.pAttachments = attachments;
+    desc.width = glConfig.vidWidth;
+    desc.height = glConfig.vidHeight;
+    desc.layers = 1;
+    uint32_t i;
+    for (i = 0; i < vk.swapchain_image_count; i++)
+    {
+        attachments[0] = vk.swapchain_image_views[i]; // set color attachment
+        VK_CHECK(qvkCreateFramebuffer(vk.device, &desc, NULL, &vk.framebuffers[i]));
+    }
+}
+
+void vk_destroyFrameBuffers(void)
+{
+    ri.Printf(PRINT_ALL, " Destroy vk.framebuffers vk.swapchain_image_views vk.swapchain\n");
+
+    uint32_t i;
+	for (i = 0; i < vk.swapchain_image_count; i++)
+		qvkDestroyFramebuffer(vk.device, vk.framebuffers[i], NULL);
+
+    for (i = 0; i < vk.swapchain_image_count; i++)
+		qvkDestroyImageView(vk.device, vk.swapchain_image_views[i], NULL);
+
+    qvkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);
 }
 
 
@@ -201,7 +254,7 @@ void vk_begin_frame(void)
 	barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.buffer = vk.index_buffer;
+	barrier.buffer = vk_getIndexBuffer();
 	barrier.offset = 0;
 	barrier.size = VK_WHOLE_SIZE;
 
@@ -286,7 +339,6 @@ void vk_begin_frame(void)
 	render_pass_begin_info.pClearValues = clear_values;
 
 	qvkCmdBeginRenderPass(vk.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-
 
 }
 
@@ -406,3 +458,234 @@ to this layout before calling vkQueuePresentKHR, and must be transitioned
 away from this layout after calling vkAcquireNextImageKHR.
 
 */
+
+
+// vulkan does not have the concept of a "default framebuffer",
+// hence it requires an infrastruture that will own the buffers
+// we will render to before we visualize them on the screen.
+// This infrastructure is known as the swap chain and must be
+// created explicity in vulkan. The swap chain is essentially
+// a queue of images that are waiting to be presented to the
+// screen.
+//
+// The general purpose of the swap chain is to synchronize the
+// presentation of images with the refresh rate of the screen.
+
+// 1) Basic surface capabilities (min/max number of images in the
+//    swap chain, min/max number of images in the swap chain).
+
+// 2) Surcface formats(pixel format, color space)
+
+// 3) Available presentation modes
+
+void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkSurfaceFormatKHR surface_format)
+{
+    //To query the basic capabilities of a surface, needed in order to create a swapchain
+
+	VkSurfaceCapabilitiesKHR surface_caps;
+	VK_CHECK(qvkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_caps));
+
+    // The swap extent id the resolution of the swap chain images
+    // and its almost always exactly equal yo the resolution of 
+    // the window that we're drawing to.
+	VkExtent2D image_extent = surface_caps.currentExtent;
+	if ( (image_extent.width == 0xffffffff) && (image_extent.height == 0xffffffff))
+    {
+		image_extent.width = MIN(surface_caps.maxImageExtent.width, MAX(surface_caps.minImageExtent.width, 640u));
+		image_extent.height = MIN(surface_caps.maxImageExtent.height, MAX(surface_caps.minImageExtent.height, 480u));
+	}
+
+    //ri.Printf(PRINT_ALL, " image_extent.width: %d, image_extent.height: %d",
+    //            image_extent.width, image_extent.height);
+
+	// VK_IMAGE_USAGE_TRANSFER_DST_BIT is required by image clear operations.
+	if ((surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0)
+		ri.Error(ERR_FATAL, "create_swapchain: VK_IMAGE_USAGE_TRANSFER_DST_BIT is not supported by the swapchain");
+
+	// VK_IMAGE_USAGE_TRANSFER_SRC_BIT is required in order to take screenshots.
+	if ((surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) == 0)
+		ri.Error(ERR_FATAL, "create_swapchain: VK_IMAGE_USAGE_TRANSFER_SRC_BIT is not supported by the swapchain");
+
+
+    // The presentation is arguably the most impottant setting for the swap chain
+    // because it represents the actual conditions for showing images to the screen
+    // There four possible modes available in Vulkan:
+    
+    // 1) VK_PRESENT_MODE_IMMEDIATE_KHR: Images submitted by your application
+    //    are transferred to the screen right away, which may result in tearing.
+    //
+    // 2) VK_PRESENT_MODE_FIFO_KHR: The swap chain is a queue where the display
+    //    takes an image from the front of the queue when the display is refreshed
+    //    and the program inserts rendered images at the back of the queue. If the
+    //    queue is full then the program has to wait. This is most similar to 
+    //    vertical sync as found in modern games
+    //
+    // 3) VK_PRESENT_MODE_FIFO_RELAXED_KHR: variation of 2)
+    //
+    // 4) VK_PRESENT_MODE_MAILBOX_KHR: another variation of 2), the image already
+    //    queued are simply replaced with the newer ones. This mode can be used
+    //    to avoid tearing significantly less latency issues than standard vertical
+    //    sync that uses double buffering.
+    //
+    // we have to look for the best mode available.
+	// determine present mode and swapchain image count
+    VkPresentModeKHR present_mode;
+
+    // The number of images in the swap chain, essentially the queue length
+    // The implementation specifies the minimum amount of images to functions
+    // properly
+    uint32_t image_count;
+
+    {
+        ri.Printf(PRINT_ALL, "\n-------- Determine present mode --------\n");
+        
+        uint32_t nPM, i;
+        qvkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &nPM, NULL);
+
+        VkPresentModeKHR *pPresentModes = 
+            (VkPresentModeKHR *) malloc( nPM * sizeof(VkPresentModeKHR) );
+
+        qvkGetPhysicalDeviceSurfacePresentModesKHR(
+                physical_device, surface, &nPM, pPresentModes);
+
+
+        ri.Printf(PRINT_ALL, "Minimaal mumber ImageCount required: %d, Total %d present mode supported: \n",surface_caps.minImageCount, nPM);
+
+        VkBool32 mailbox_supported = 0;
+        VkBool32 immediate_supported = 0;
+
+        for ( i = 0; i < nPM; i++)
+        {
+            switch(pPresentModes[i])
+            {
+                case VK_PRESENT_MODE_IMMEDIATE_KHR:
+                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_IMMEDIATE_KHR \n");
+                    immediate_supported = VK_TRUE;
+                    break;
+                case VK_PRESENT_MODE_MAILBOX_KHR:
+                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_MAILBOX_KHR \n");
+                    mailbox_supported = VK_TRUE;
+                    break;
+                case VK_PRESENT_MODE_FIFO_KHR:
+                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_FIFO_KHR \n");
+                    break;
+                case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_FIFO_RELAXED_KHR \n");
+                    break;
+                default:
+                    ri.Printf(PRINT_ALL, " This device do not support presentation %d\n", pPresentModes[i]);
+                    break;
+            }
+         }
+
+        free(pPresentModes);
+
+
+        if (mailbox_supported)
+        {
+            present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+            image_count = MAX(3u, surface_caps.minImageCount);
+            
+            ri.Printf(PRINT_ALL, "\n We choose VK_PRESENT_MODE_MAILBOX_KHR mode, minImageCount: %d. \n", image_count);
+        }
+        else if(immediate_supported)
+        {
+            present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+            image_count = MAX(2u, surface_caps.minImageCount);
+
+            ri.Printf(PRINT_ALL, "\n We choose VK_PRESENT_MODE_IMMEDIATE_KHR mode, minImageCount: %d. \n", image_count);
+        }
+        else
+        {
+            // VK_PRESENT_MODE_FIFO_KHR mode is guaranteed to be available.
+            present_mode = VK_PRESENT_MODE_FIFO_KHR;
+            image_count = MAX(2u, surface_caps.minImageCount);
+        }
+
+        if (surface_caps.maxImageCount > 0) {
+            image_count = MIN(image_count, surface_caps.maxImageCount) + 1;
+        }
+
+        ri.Printf(PRINT_ALL, "\n-------- ----------------------- --------\n");
+    }
+
+
+	// create swap chain
+    {
+        ri.Printf(PRINT_ALL, "\n-------- Create vk.swapchain --------\n");
+
+        VkSwapchainCreateInfoKHR desc;
+        desc.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        desc.pNext = NULL;
+        desc.flags = 0;
+        desc.surface = surface;
+        desc.minImageCount = image_count;
+        desc.imageFormat = surface_format.format;
+        desc.imageColorSpace = surface_format.colorSpace;
+        desc.imageExtent = image_extent;
+        desc.imageArrayLayers = 1;
+        
+        // render images to a separate image first to perform operations like post-processing
+        desc.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        
+        // An image is owned by one queue family at a time and ownership
+        // must be explicitly transfered before using it in an another
+        // queue family. This option offers the best performance.
+        desc.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        desc.queueFamilyIndexCount = 0;
+        desc.pQueueFamilyIndices = NULL;
+        
+        // we can specify that a certain transform should be applied to
+        // images in the swap chain if it is support, like a 90 degree
+        // clockwise rotation  or horizontal flip, To specify that you
+        // do not want any transformation, simply dprcify the current
+        // transformation
+        desc.preTransform = surface_caps.currentTransform;
+
+        // The compositeAlpha field specifies if the alpha channel
+        // should be used for blending with other windows int the
+        // windows system. 
+        desc.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        desc.presentMode = present_mode;
+        
+        // we don't care about the color of pixels that are obscured.
+        desc.clipped = VK_TRUE;
+
+        // With Vulkan it's possible that your swap chain becomes invalid or unoptimized
+        // while your application is running, for example because the window was resized.
+        // In that case the swap chain actually needs to be recreated from scratch and a
+        // reference to the old one must be specified in this field.
+        desc.oldSwapchain = VK_NULL_HANDLE;
+
+        VK_CHECK(qvkCreateSwapchainKHR(device, &desc, NULL, &vk.swapchain));
+    }
+
+    //
+    {
+        VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, NULL));
+        vk.swapchain_image_count = MIN(vk.swapchain_image_count, MAX_SWAPCHAIN_IMAGES);
+        VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, vk.swapchain_images_array));
+
+        uint32_t i;
+        for (i = 0; i < vk.swapchain_image_count; i++)
+        {
+            VkImageViewCreateInfo desc;
+            desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            desc.pNext = NULL;
+            desc.flags = 0;
+            desc.image = vk.swapchain_images_array[i];
+            desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            desc.format = vk.surface_format.format;
+            desc.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            desc.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            desc.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            desc.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            desc.subresourceRange.baseMipLevel = 0;
+            desc.subresourceRange.levelCount = 1;
+            desc.subresourceRange.baseArrayLayer = 0;
+            desc.subresourceRange.layerCount = 1;
+            VK_CHECK(qvkCreateImageView(device, &desc, NULL, &vk.swapchain_image_views[i]));
+        }
+    }
+}

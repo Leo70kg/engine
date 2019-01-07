@@ -51,17 +51,24 @@ static void createDebugCallback( void )
 
 
 
+
+
+static void vk_createRenderPass(VkDevice device, VkFormat color_format, VkFormat depth_format, VkRenderPass* pRepass)
+{
+
 // Before we can finish creating the pipeline, we need to tell vulkan
 // about the framebuffer attachment that will be used while rendering.
 // We need to specify how many color and depth buffers there will be,
 // how many samples to use for each of them and how their contents 
 // should be handled throughout the rendering operations.
 
-static VkRenderPass create_render_pass(VkDevice device, VkFormat color_format, VkFormat depth_format)
-{
 	VkAttachmentDescription attachments[2];
 	attachments[0].flags = 0;
+
+//  The format of the color attachment should match the format of the
+//  swap chain images. 
 	attachments[0].format = color_format;
+//  have something with the multisampling
 	attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
 	attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -73,15 +80,30 @@ static VkRenderPass create_render_pass(VkDevice device, VkFormat color_format, V
 	attachments[1].flags = 0;
 	attachments[1].format = depth_format;
 	attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+
+//  Attachments can also be cleared at the beginning of a render pass
+//  instance by setting loadOp/stencilLoadOp of VkAttachmentDescription
+//  to VK_ATTACHMENT_LOAD_OP_CLEAR, as described for vkCreateRenderPass.
+//  loadOp and stencilLoadOp, specifying how the contents of the attachment
+//  are treated before rendering and after rendering.
 	attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+//  specifies that the contents within the render area will be cleared to
+//  a uniform value, which is specified when a render pass instance is begun    
 	attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+    // Textueres and framebuffers in Vulkan are represented by VkImage
+    // objects with a certain pixel format. however the layout of the
+    // pixels in memory can change based on what you're trying to do
+    // with an image.
 	VkAttachmentReference color_attachment_ref;
 	color_attachment_ref.attachment = 0;
+
+    // Images used as color attachment
 	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentReference depth_attachment_ref;
@@ -104,250 +126,19 @@ static VkRenderPass create_render_pass(VkDevice device, VkFormat color_format, V
 	desc.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	desc.pNext = NULL;
 	desc.flags = 0;
-	desc.attachmentCount = sizeof(attachments) / sizeof(attachments[0]);
+	desc.attachmentCount = 2;
 	desc.pAttachments = attachments;
 	desc.subpassCount = 1;
 	desc.pSubpasses = &subpass;
 	desc.dependencyCount = 0;
 	desc.pDependencies = NULL;
 
-	VkRenderPass render_pass;
-	VK_CHECK(qvkCreateRenderPass(device, &desc, NULL, &render_pass));
-	return render_pass;
+
+	VK_CHECK(qvkCreateRenderPass(device, &desc, NULL, pRepass));
 }
 
 
-// vulkan does not have the concept of a "default framebuffer",
-// hence it requires an infrastruture that will own the buffers
-// we will render to before we visualize them on the screen.
-// This infrastructure is known as the swap chain and must be
-// created explicity in vulkan. The swap chain is essentially
-// a queue of images that are waiting to be presented to the
-// screen.
-//
-// The general purpose of the swap chain is to synchronize the
-// presentation of images with the refresh rate of the screen.
 
-// 1) Basic surface capabilities (min/max number of images in the
-//    swap chain, min/max number of images in the swap chain).
-
-// 2) Surcface formats(pixel format, color space)
-
-// 3) Available presentation modes
-static void vk_createSwapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkSurfaceFormatKHR surface_format)
-{
-
-    //ri.Printf(PRINT_ALL, "\n-------- CreateSwapchain --------\n");
-
-    //To query the basic capabilities of a surface, needed in order to create a swapchain
-
-	VkSurfaceCapabilitiesKHR surface_caps;
-	VK_CHECK(qvkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_caps));
-
-    // The swap extent id the resolution of the swap chain images
-    // and its almost always exactly equal yo the resolution of 
-    // the window that we're drawing to.
-	VkExtent2D image_extent = surface_caps.currentExtent;
-	if ( (image_extent.width == 0xffffffff) && (image_extent.height == 0xffffffff))
-    {
-		image_extent.width = MIN(surface_caps.maxImageExtent.width, MAX(surface_caps.minImageExtent.width, 640u));
-		image_extent.height = MIN(surface_caps.maxImageExtent.height, MAX(surface_caps.minImageExtent.height, 480u));
-	}
-
-    //ri.Printf(PRINT_ALL, " image_extent.width: %d, image_extent.height: %d",
-    //            image_extent.width, image_extent.height);
-
-	// VK_IMAGE_USAGE_TRANSFER_DST_BIT is required by image clear operations.
-	if ((surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0)
-		ri.Error(ERR_FATAL, "create_swapchain: VK_IMAGE_USAGE_TRANSFER_DST_BIT is not supported by the swapchain");
-
-	// VK_IMAGE_USAGE_TRANSFER_SRC_BIT is required in order to take screenshots.
-	if ((surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) == 0)
-		ri.Error(ERR_FATAL, "create_swapchain: VK_IMAGE_USAGE_TRANSFER_SRC_BIT is not supported by the swapchain");
-
-
-    // The presentation is arguably the most impottant setting for the swap chain
-    // because it represents the actual conditions for showing images to the screen
-    // There four possible modes available in Vulkan:
-    
-    // 1) VK_PRESENT_MODE_IMMEDIATE_KHR: Images submitted by your application
-    //    are transferred to the screen right away, which may result in tearing.
-    //
-    // 2) VK_PRESENT_MODE_FIFO_KHR: The swap chain is a queue where the display
-    //    takes an image from the front of the queue when the display is refreshed
-    //    and the program inserts rendered images at the back of the queue. If the
-    //    queue is full then the program has to wait. This is most similar to 
-    //    vertical sync as found in modern games
-    //
-    // 3) VK_PRESENT_MODE_FIFO_RELAXED_KHR: variation of 2)
-    //
-    // 4) VK_PRESENT_MODE_MAILBOX_KHR: another variation of 2), the image already
-    //    queued are simply replaced with the newer ones. This mode can be used
-    //    to avoid tearing significantly less latency issues than standard vertical
-    //    sync that uses double buffering.
-    //
-    // we have to look for the best mode available.
-	// determine present mode and swapchain image count
-    VkPresentModeKHR present_mode;
-
-    // The number of images in the swap chain, essentially the queue length
-    // The implementation specifies the minimum amount of images to functions
-    // properly
-    uint32_t image_count;
-
-    {
-        ri.Printf(PRINT_ALL, "\n-------- Determine present mode --------\n");
-        
-        uint32_t nPM, i;
-        qvkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &nPM, NULL);
-
-        VkPresentModeKHR *pPresentModes = 
-            (VkPresentModeKHR *) malloc( nPM * sizeof(VkPresentModeKHR) );
-
-        qvkGetPhysicalDeviceSurfacePresentModesKHR(
-                physical_device, surface, &nPM, pPresentModes);
-
-
-        ri.Printf(PRINT_ALL, "Minimaal mumber ImageCount required: %d, Total %d present mode supported: \n",surface_caps.minImageCount, nPM);
-
-        VkBool32 mailbox_supported = 0;
-        VkBool32 immediate_supported = 0;
-
-        for ( i = 0; i < nPM; i++)
-        {
-            switch(pPresentModes[i])
-            {
-                case VK_PRESENT_MODE_IMMEDIATE_KHR:
-                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_IMMEDIATE_KHR \n");
-                    immediate_supported = VK_TRUE;
-                    break;
-                case VK_PRESENT_MODE_MAILBOX_KHR:
-                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_MAILBOX_KHR \n");
-                    mailbox_supported = VK_TRUE;
-                    break;
-                case VK_PRESENT_MODE_FIFO_KHR:
-                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_FIFO_KHR \n");
-                    break;
-                case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
-                    ri.Printf(PRINT_ALL, " VK_PRESENT_MODE_FIFO_RELAXED_KHR \n");
-                    break;
-                default:
-                    ri.Printf(PRINT_ALL, " This device do not support presentation %d\n", pPresentModes[i]);
-                    break;
-            }
-         }
-
-        free(pPresentModes);
-
-
-        if (mailbox_supported)
-        {
-            present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
-            image_count = MAX(3u, surface_caps.minImageCount);
-            
-            ri.Printf(PRINT_ALL, "\n We choose VK_PRESENT_MODE_MAILBOX_KHR mode, minImageCount: %d. \n", image_count);
-        }
-        else if(immediate_supported)
-        {
-            present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-            image_count = MAX(2u, surface_caps.minImageCount);
-
-            ri.Printf(PRINT_ALL, "\n We choose VK_PRESENT_MODE_IMMEDIATE_KHR mode, minImageCount: %d. \n", image_count);
-        }
-        else
-        {
-            // VK_PRESENT_MODE_FIFO_KHR mode is guaranteed to be available.
-            present_mode = VK_PRESENT_MODE_FIFO_KHR;
-            image_count = MAX(2u, surface_caps.minImageCount);
-        }
-
-        if (surface_caps.maxImageCount > 0) {
-            image_count = MIN(image_count, surface_caps.maxImageCount) + 1;
-        }
-
-        ri.Printf(PRINT_ALL, "\n-------- ----------------------- --------\n");
-    }
-
-
-	// create swap chain
-    {
-        VkSwapchainCreateInfoKHR desc;
-        desc.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        desc.pNext = NULL;
-        desc.flags = 0;
-        desc.surface = surface;
-        desc.minImageCount = image_count;
-        desc.imageFormat = surface_format.format;
-        desc.imageColorSpace = surface_format.colorSpace;
-        desc.imageExtent = image_extent;
-        desc.imageArrayLayers = 1;
-        
-        // render images to a separate image first to perform operations like post-processing
-        desc.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-        
-        // An image is owned by one queue family at a time and ownership
-        // must be explicitly transfered before using it in an another
-        // queue family. This option offers the best performance.
-        desc.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        desc.queueFamilyIndexCount = 0;
-        desc.pQueueFamilyIndices = NULL;
-        
-        // we can specify that a certain transform should be applied to
-        // images in the swap chain if it is support, like a 90 degree
-        // clockwise rotation  or horizontal flip, To specify that you
-        // do not want any transformation, simply dprcify the current
-        // transformation
-        desc.preTransform = surface_caps.currentTransform;
-
-        // The compositeAlpha field specifies if the alpha channel
-        // should be used for blending with other windows int the
-        // windows system. 
-        desc.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        desc.presentMode = present_mode;
-        
-        // we don't care about the color of pixels that are obscured.
-        desc.clipped = VK_TRUE;
-
-
-        // With Vulkan it's possible that your swap chain becomes invalid or unoptimized
-        // while your application is running, for example because the window was resized.
-        // In that case the swap chain actually needs to be recreated from scratch and a
-        // reference to the old one must be specified in this field.
-        desc.oldSwapchain = VK_NULL_HANDLE;
-
-
-        VK_CHECK(qvkCreateSwapchainKHR(device, &desc, NULL, &vk.swapchain));
-    }
-
-    //
-    {
-        VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, NULL));
-        vk.swapchain_image_count = MIN(vk.swapchain_image_count, MAX_SWAPCHAIN_IMAGES);
-        VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, vk.swapchain_images_array));
-
-        uint32_t i;
-        for (i = 0; i < vk.swapchain_image_count; i++)
-        {
-            VkImageViewCreateInfo desc;
-            desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            desc.pNext = NULL;
-            desc.flags = 0;
-            desc.image = vk.swapchain_images_array[i];
-            desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            desc.format = vk.surface_format.format;
-            desc.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            desc.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            desc.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            desc.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            desc.subresourceRange.baseMipLevel = 0;
-            desc.subresourceRange.levelCount = 1;
-            desc.subresourceRange.baseArrayLayer = 0;
-            desc.subresourceRange.layerCount = 1;
-            VK_CHECK(qvkCreateImageView(device, &desc, NULL, &vk.swapchain_image_views[i]));
-        }
-    }
-}
 
 
 static VkFormat get_depth_format(VkPhysicalDevice physical_device)
@@ -387,28 +178,19 @@ static VkFormat get_depth_format(VkPhysicalDevice physical_device)
 void vk_shutdown(void)
 {
     ri.Printf( PRINT_ALL, "vk_shutdown()\n" );
-    unsigned int i = 0;
 
 	qvkDestroyImage(vk.device, vk.depth_image, NULL);
 	qvkFreeMemory(vk.device, vk.depth_image_memory, NULL);
 	qvkDestroyImageView(vk.device, vk.depth_image_view, NULL);
 
-	for (i = 0; i < vk.swapchain_image_count; i++)
-		qvkDestroyFramebuffer(vk.device, vk.framebuffers[i], NULL);
+    // we should delete the framebuffers before the image views
+    // and the render pass that they are based on.
+    vk_destroyFrameBuffers();
 
 	qvkDestroyRenderPass(vk.device, vk.render_pass, NULL);
-
 	qvkDestroyCommandPool(vk.device, vk.command_pool, NULL);
 
-	for (i = 0; i < vk.swapchain_image_count; i++)
-		qvkDestroyImageView(vk.device, vk.swapchain_image_views[i], NULL);
-
-	qvkDestroyDescriptorPool(vk.device, vk.descriptor_pool, NULL);
-	qvkDestroyDescriptorSetLayout(vk.device, vk.set_layout, NULL);
-	qvkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL);
-	qvkDestroyBuffer(vk.device, vk.vertex_buffer, NULL);
-	qvkDestroyBuffer(vk.device, vk.index_buffer, NULL);
-	qvkFreeMemory(vk.device, vk.geometry_buffer_memory, NULL);
+    vk_destroy_shading_data();
 
     vk_destroy_sync_primitives();
     
@@ -417,7 +199,6 @@ void vk_shutdown(void)
 //
     vk_destroyGlobalStagePipeline();
 //
-	qvkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);
 	qvkDestroyDevice(vk.device, NULL);
 	
     // make sure that the surface is destroyed before the instance
@@ -438,9 +219,6 @@ void vk_shutdown(void)
 
 void vk_initialize(void)
 {
-    uint32_t i = 0;
-
-
 #ifndef NDEBUG
 	// Create debug callback.
     createDebugCallback();
@@ -448,7 +226,7 @@ void vk_initialize(void)
 	//
 	// Swapchain.
 
-	vk_createSwapchain(vk.physical_device, vk.device, vk.surface, vk.surface_format);
+	vk_createSwapChain(vk.physical_device, vk.device, vk.surface, vk.surface_format);
 
 	//
 	// Sync primitives.
@@ -570,16 +348,14 @@ void vk_initialize(void)
 	    begin_info.pInheritanceInfo = NULL;
 
     	VK_CHECK(qvkBeginCommandBuffer(pCB, &begin_info));
-	    // recorder(command_buffer);
-        {
-            VkCommandBuffer command_buffer = pCB;
-            record_image_layout_transition(command_buffer, vk.depth_image, 
+  
+        record_image_layout_transition(pCB, vk.depth_image, 
                 image_aspect_flags, 0, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | 
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, 
                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	
-        } 
+
         VK_CHECK(qvkEndCommandBuffer(pCB));
 
 	    VkSubmitInfo submit_info;
@@ -601,76 +377,88 @@ void vk_initialize(void)
 
 	//
 	// Renderpass.
-	//
+	// A render pass represents a collection of attachments, subpasses,
+    // and dependencies between the subpasses, and describes how the 
+    // attachments are used over the course of the subpasses. The use
+    // of a render pass in a command buffer is a render pass instance.
+    //
+    // An attachment description describes the properties of an attachment
+    // including its format, sample count, and how its contents are treated
+    // at the beginning and end of each render pass instance.
+    //
+    // A subpass represents a phase of rendering that reads and writes
+    // a subset of the attachments in a render pass. Rendering commands
+    // are recorded into a particular subpass of a render pass instance.
+    //
+    // A subpass description describes the subset of attachments that 
+    // is involved in the execution of a subpass. Each subpass can read
+    // from some attachments as input attachments, write to some as
+    // color attachments or depth/stencil attachments, and perform
+    // multisample resolve operations to resolve attachments. A subpass
+    // description can also include a set of preserve attachments, 
+    // which are attachments that are not read or written by the subpass
+    // but whose contents must be preserved throughout the subpass.
+    //
+    // A subpass uses an attachment if the attachment is a color, 
+    // depth/stencil, resolve, or input attachment for that subpass
+    // (as determined by the pColorAttachments, pDepthStencilAttachment,
+    // pResolveAttachments, and pInputAttachments members of 
+    // VkSubpassDescription, respectively). A subpass does not use an
+    // attachment if that attachment is preserved by the subpass.
+    // The first use of an attachment is in the lowest numbered subpass
+    // that uses that attachment. Similarly, the last use of an attachment
+    // is in the highest numbered subpass that uses that attachment.
+    //
+    // The subpasses in a render pass all render to the same dimensions, 
+    // and fragments for pixel (x,y,layer) in one subpass can only read
+    // attachment contents written by previous subpasses at that same
+    // (x,y,layer) location.
+    //
+    // By describing a complete set of subpasses in advance, render passes
+    // provide the implementation an opportunity to optimize the storage 
+    // and transfer of attachment data between subpasses. In practice, 
+    // this means that subpasses with a simple framebuffer-space dependency
+    // may be merged into a single tiled rendering pass, keeping the
+    // attachment data on-chip for the duration of a render pass instance. 
+    // However, it is also quite common for a render pass to only contain
+    // a single subpass.
+    //
+    // Subpass dependencies describe execution and memory dependencies 
+    // between subpasses. A subpass dependency chain is a sequence of
+    // subpass dependencies in a render pass, where the source subpass
+    // of each subpass dependency (after the first) equals the destination
+    // subpass of the previous dependency.
+    //
+    // Execution of subpasses may overlap or execute out of order with
+    // regards to other subpasses, unless otherwise enforced by an 
+    // execution dependency. Each subpass only respects submission order
+    // for commands recorded in the same subpass, and the vkCmdBeginRenderPass
+    // and vkCmdEndRenderPass commands that delimit the render pass - 
+    // commands within other subpasses are not included. This affects 
+    // most other implicit ordering guarantees.
+    //
+    // A render pass describes the structure of subpasses and attachments
+    // independent of any specific image views for the attachments. 
+    // The specific image views that will be used for the attachments,
+    // and their dimensions, are specified in VkFramebuffer objects. 
+    // Framebuffers are created with respect to a specific render pass
+    // that the framebuffer is compatible with (see Render Pass Compatibility).
+    // Collectively, a render pass and a framebuffer define the complete
+    // render target state for one or more subpasses as well as the 
+    // algorithmic dependencies between the subpasses.
+    //
+    // The various pipeline stages of the drawing commands for a given
+    // subpass may execute concurrently and/or out of order, both within 
+    // and across drawing commands, whilst still respecting pipeline order.
+    // However for a given (x,y,layer,sample) sample location, certain
+    // per-sample operations are performed in rasterization order.
+    
+	vk_createRenderPass(vk.device, vk.surface_format.format, get_depth_format(vk.physical_device), &vk.render_pass);
 
-	vk.render_pass = create_render_pass(vk.device, vk.surface_format.format, get_depth_format(vk.physical_device));
+
+    vk_createFrameBuffers();
 
 
-	//
-	// Framebuffers for each swapchain image.
-	//
-	{
-		VkImageView attachments[2] = {VK_NULL_HANDLE, vk.depth_image_view};
-
-		VkFramebufferCreateInfo desc;
-		desc.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		desc.pNext = NULL;
-		desc.flags = 0;
-		desc.renderPass = vk.render_pass;
-		desc.attachmentCount = 2;
-		desc.pAttachments = attachments;
-		desc.width = glConfig.vidWidth;
-		desc.height = glConfig.vidHeight;
-		desc.layers = 1;
-
-		for (i = 0; i < vk.swapchain_image_count; i++)
-		{
-			attachments[0] = vk.swapchain_image_views[i]; // set color attachment
-			VK_CHECK(qvkCreateFramebuffer(vk.device, &desc, NULL, &vk.framebuffers[i]));
-		}
-	}
-
-	//
-	// Descriptor pool.
-	//
-	{
-		VkDescriptorPoolSize pool_size;
-		pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		pool_size.descriptorCount = MAX_DRAWIMAGES;
-
-		VkDescriptorPoolCreateInfo desc;
-		desc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		desc.pNext = NULL;
-		desc.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // used by the cinematic images
-		desc.maxSets = MAX_DRAWIMAGES;
-		desc.poolSizeCount = 1;
-		desc.pPoolSizes = &pool_size;
-
-		VK_CHECK(qvkCreateDescriptorPool(vk.device, &desc, NULL, &vk.descriptor_pool));
-	}
-
-	//
-	// Descriptor set layout.
-	//
-	{
-		VkDescriptorSetLayoutBinding descriptor_binding;
-		descriptor_binding.binding = 0;
-		descriptor_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptor_binding.descriptorCount = 1;
-		descriptor_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		descriptor_binding.pImmutableSamplers = NULL;
-
-		VkDescriptorSetLayoutCreateInfo desc;
-		desc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		desc.pNext = NULL;
-		desc.flags = 0;
-		desc.bindingCount = 1;
-		desc.pBindings = &descriptor_binding;
-
-		VK_CHECK(qvkCreateDescriptorSetLayout(vk.device, &desc, NULL, &vk.set_layout));
-	}
-
-	//
 	// Pipeline layout.
 	// You can use uniform values in shaders, which are globals similar to
     // dynamic state variables that can be changes at the drawing time to
@@ -678,74 +466,11 @@ void vk_initialize(void)
     // They are commonly used to create texture samplers in the fragment 
     // shader. The uniform values need to be specified during pipeline
     // creation by creating a VkPipelineLayout object.
-	{
-		VkPushConstantRange push_range;
-		push_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		push_range.offset = 0;
-		push_range.size = 128; // 32 floats
-
-		VkDescriptorSetLayout set_layouts[2] = {vk.set_layout, vk.set_layout};
-
-		VkPipelineLayoutCreateInfo desc;
-		desc.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		desc.pNext = NULL;
-		desc.flags = 0;
-		desc.setLayoutCount = 2;
-		desc.pSetLayouts = set_layouts;
-		desc.pushConstantRangeCount = 1;
-		desc.pPushConstantRanges = &push_range;
-
-		VK_CHECK(qvkCreatePipelineLayout(vk.device, &desc, NULL, &vk.pipeline_layout));
-	}
+    
+    vk_createPipelineLayout();
 
 	//
-	// Geometry buffers.
-	//
-	{
-		VkBufferCreateInfo desc;
-		desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		desc.pNext = NULL;
-		desc.flags = 0;
-		desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		desc.queueFamilyIndexCount = 0;
-		desc.pQueueFamilyIndices = NULL;
-
-		desc.size = VERTEX_BUFFER_SIZE;
-		desc.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-		VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &vk.vertex_buffer));
-
-		desc.size = INDEX_BUFFER_SIZE;
-		desc.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-		VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &vk.index_buffer));
-
-		VkMemoryRequirements vb_memory_requirements;
-		qvkGetBufferMemoryRequirements(vk.device, vk.vertex_buffer, &vb_memory_requirements);
-
-		VkMemoryRequirements ib_memory_requirements;
-		qvkGetBufferMemoryRequirements(vk.device, vk.index_buffer, &ib_memory_requirements);
-
-		VkDeviceSize mask = ~(ib_memory_requirements.alignment - 1);
-		VkDeviceSize index_buffer_offset = (vb_memory_requirements.size + ib_memory_requirements.alignment - 1) & mask;
-
-		uint32_t memory_type_bits = vb_memory_requirements.memoryTypeBits & ib_memory_requirements.memoryTypeBits;
-		uint32_t memory_type = find_memory_type(vk.physical_device, memory_type_bits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		VkMemoryAllocateInfo alloc_info;
-		alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		alloc_info.pNext = NULL;
-		alloc_info.allocationSize = index_buffer_offset + ib_memory_requirements.size;
-		alloc_info.memoryTypeIndex = memory_type;
-		VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &vk.geometry_buffer_memory));
-
-		qvkBindBufferMemory(vk.device, vk.vertex_buffer, vk.geometry_buffer_memory, 0);
-		qvkBindBufferMemory(vk.device, vk.index_buffer, vk.geometry_buffer_memory, index_buffer_offset);
-
-		void* data;
-		VK_CHECK(qvkMapMemory(vk.device, vk.geometry_buffer_memory, 0, VK_WHOLE_SIZE, 0, &data));
-		vk.vertex_buffer_ptr = (unsigned char*)data;
-		vk.index_buffer_ptr = (unsigned char*)data + index_buffer_offset;
-	}
-
+	vk_createGeometryBuffers();
 	//
 	// Shader modules.
 	//
@@ -830,7 +555,7 @@ void vulkanInfo_f( void )
         ri.Printf(PRINT_ALL, "---------- -------------------------------- ---------- \n");
     }
 
-    ri.Printf(PRINT_ALL, "Vk instance extensions: \n%s\n",
+    ri.Printf(PRINT_ALL, "Vk instance extensions: \n%s\n\n",
             glConfig.extensions_string);
 
 

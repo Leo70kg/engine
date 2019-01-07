@@ -71,8 +71,8 @@ VkSampler vk_find_sampler( VkBool32 isMipmap, VkBool32 isRepeatTexture )
 	int i;
     for (i = 0; i < s_NumSamplers; i++)
     {
-		if (( s_SamplerDefs[i].repeat_texture == isRepeatTexture ) && 
-            ( s_SamplerDefs[i].mipmap == isMipmap ))
+		if( ( s_SamplerDefs[i].repeat_texture == isRepeatTexture ) && 
+            ( s_SamplerDefs[i].mipmap == isMipmap ) )
         {
 			return s_SamplerDefs[i].ImgSampler;
 		}

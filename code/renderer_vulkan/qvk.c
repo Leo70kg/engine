@@ -104,6 +104,7 @@ PFN_vkGetDeviceQueue							qvkGetDeviceQueue;
 PFN_vkGetImageMemoryRequirements				qvkGetImageMemoryRequirements;
 PFN_vkGetImageSubresourceLayout					qvkGetImageSubresourceLayout;
 PFN_vkMapMemory									qvkMapMemory;
+PFN_vkUnmapMemory                               qvkUnmapMemory;
 PFN_vkQueueSubmit								qvkQueueSubmit;
 PFN_vkQueueWaitIdle								qvkQueueWaitIdle;
 PFN_vkResetDescriptorPool						qvkResetDescriptorPool;
@@ -446,6 +447,7 @@ static void loadDeviceFunctions(void)
 	INIT_DEVICE_FUNCTION(vkGetImageMemoryRequirements)
 	INIT_DEVICE_FUNCTION(vkGetImageSubresourceLayout)
 	INIT_DEVICE_FUNCTION(vkMapMemory)
+	INIT_DEVICE_FUNCTION(vkUnmapMemory)
 	INIT_DEVICE_FUNCTION(vkQueueSubmit)
 	INIT_DEVICE_FUNCTION(vkQueueWaitIdle)
 	INIT_DEVICE_FUNCTION(vkResetDescriptorPool)
@@ -617,6 +619,7 @@ void vk_clearProcAddress(void)
 	qvkGetImageMemoryRequirements				= NULL;
 	qvkGetImageSubresourceLayout				= NULL;
 	qvkMapMemory								= NULL;
+    qvkUnmapMemory                              = NULL;
 	qvkQueueSubmit								= NULL;
 	qvkQueueWaitIdle							= NULL;
 	qvkResetDescriptorPool						= NULL;

@@ -408,7 +408,7 @@ static int GLSL_LoadGPUShaderText(const char *name, const char *fallback, GLenum
  
 	if (fallback)
     {
-		ri.Printf(PRINT_ALL, "...loading built-in '%s'\n", filename);
+		//ri.Printf(PRINT_ALL, "...loading built-in '%s'\n", filename);
 		shaderText = fallback;
 		size = strlen(shaderText);
 	}
@@ -542,8 +542,8 @@ static int GLSL_InitGPUShader(shaderProgram_t * program, const char *name,
 	int attribs, qboolean fragmentShader, const GLchar *extra, qboolean addHeader,
 	const char *fallback_vp, const char *fallback_fp)
 {
-	char vpCode[32000];
-	char fpCode[32000];
+	char vpCode[16000];
+	char fpCode[16000];
 	char *postHeader;
 	int size;
 	int result;
@@ -552,7 +552,7 @@ static int GLSL_InitGPUShader(shaderProgram_t * program, const char *name,
 	if (addHeader)
 	{
 		GLSL_GetShaderHeader(GL_VERTEX_SHADER, extra, vpCode, size);
-		ri.Printf( PRINT_WARNING, "%ld\n", strlen(vpCode));
+		//ri.Printf( PRINT_WARNING, "%ld\n", strlen(vpCode));
 		postHeader = &vpCode[strlen(vpCode)];
 		size -= strlen(vpCode);
 	}

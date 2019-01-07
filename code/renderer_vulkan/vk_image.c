@@ -55,6 +55,24 @@ static VkDeviceSize s_StagingBufferSize = 0;
 ////////////////////////////////////////
 
 
+
+// Descriptors and Descriptor Sets
+// A descriptor is a special opaque shader variable that shaders use
+// to access buffer and image resources in an indirect fashion.
+// It can be thought of as a "pointer" to a resource. 
+// The Vulkan API allows these variables to be changed between 
+// draw operations so that the shaders can access different resources
+// for each draw.
+
+// A descriptor set is called a "set" because it can refer to an array
+// of homogenous resources that can be described with the same layout binding.
+// one possible way to use multiple descriptors is to construct a 
+// descriptor set with two descriptors, with each descriptor referencing
+// a separate texture. Both textures are therefore available during a draw.
+// A command in a command buffer could then select the texture to use by
+// specifying the index of the desired texture.
+// To describe a descriptor set, you use a descriptor set layout.
+
 // Descriptor sets corresponding to bound texture images.
 static VkDescriptorSet s_CurrentDescriptorSets[2] = {0};
 
@@ -118,6 +136,15 @@ static void vk_update_descriptor_set(
 	descriptor_write.pTexelBufferView = NULL;
 
 	qvkUpdateDescriptorSets(vk.device, 1, &descriptor_write, 0, NULL);
+
+    // The above steps essentially copy the VkDescriptorBufferInfo
+    // to the descriptor, which is likely in the device memory.
+    //
+    // This buffer info includes the handle to the uniform buffer
+    // as well as the offset and size of the data that is accessed
+    // in the uniform buffer. In this case, the uniform buffer 
+    // contains only the MVP transform, so the offset is 0 and 
+    // the size is the size of the MVP.
 }
 
 
@@ -202,7 +229,7 @@ static void allocate_and_bind_image_memory(VkImage image)
 }
 
 
-static void vk_create_image(int width, int height, int mip_levels, VkBool32 repeat_texture, struct Vk_Image* pImg)
+static void vk_create_image(uint32_t width, uint32_t height, uint32_t mipLevels, VkBool32 repeat_texture, struct Vk_Image* pImg)
 {
 	// create image
 	{
@@ -215,7 +242,7 @@ static void vk_create_image(int width, int height, int mip_levels, VkBool32 repe
 		desc.extent.width = width;
 		desc.extent.height = height;
 		desc.extent.depth = 1;
-		desc.mipLevels = mip_levels;
+		desc.mipLevels = mipLevels;
 		desc.arrayLayers = 1;
 		desc.samples = VK_SAMPLE_COUNT_1_BIT;
 		desc.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -258,6 +285,10 @@ static void vk_create_image(int width, int height, int mip_levels, VkBool32 repe
 	}
 
 	// create associated descriptor set
+    // Allocate a descriptor set from the pool. 
+    // Note that we have to provide the descriptor set layout that 
+    // we defined in the pipeline_layout sample. 
+    // This layout describes how the descriptor set is to be allocated.
 	{
 		VkDescriptorSetAllocateInfo desc;
 		desc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -267,7 +298,7 @@ static void vk_create_image(int width, int height, int mip_levels, VkBool32 repe
 		desc.pSetLayouts = &vk.set_layout;
 		VK_CHECK(qvkAllocateDescriptorSets(vk.device, &desc, &pImg->descriptor_set));
 
-		vk_update_descriptor_set(pImg->descriptor_set, pImg->view, mip_levels > 1, repeat_texture);
+		vk_update_descriptor_set(pImg->descriptor_set, pImg->view, mipLevels > 1, repeat_texture);
 		s_CurrentDescriptorSets[s_CurTmu] = pImg->descriptor_set;
 	}
 }
@@ -291,7 +322,7 @@ unsigned int find_memory_type(VkPhysicalDevice physical_device, unsigned int mem
 }
 
 
-static void ensure_staging_buffer_allocation(VkDeviceSize size, const unsigned char* pPix)
+static void ensure_staging_buffer_allocation(VkDeviceSize size)
 {
     if(s_StagingBufferSize < size)
     {
@@ -310,31 +341,45 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size, const unsigned c
         }
 
 
-        VkBufferCreateInfo buffer_desc;
-        buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_desc.pNext = NULL;
-        buffer_desc.flags = 0;
-        buffer_desc.size = size;
-        buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        buffer_desc.queueFamilyIndexCount = 0;
-        buffer_desc.pQueueFamilyIndices = NULL;
-        VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &s_StagingBuffer));
-
+        {
+            // Vulkan supports two primary resource types: buffers and images. 
+            // Resources are views of memory with associated formatting and 
+            // dimensionality. Buffers are essentially unformatted arrays of
+            // bytes whereas images contain format information, can be 
+            // multidimensional and may have associated metadata.
+            VkBufferCreateInfo buffer_desc;
+            buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            buffer_desc.pNext = NULL;
+            buffer_desc.flags = 0;
+            buffer_desc.size = size;
+            
+            // Source buffers must have been created with the 
+            // VK_BUFFER_USAGE_TRANSFER_SRC_BIT usage bit enabled and
+            // destination buffers must have been created with the
+            // VK_BUFFER_USAGE_TRANSFER_DST_BIT usage bit enabled.
+            buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            buffer_desc.queueFamilyIndexCount = 0;
+            buffer_desc.pQueueFamilyIndices = NULL;
+            VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &s_StagingBuffer));
+        }
         // To determine the memory requirements for a buffer resource
 
-        VkMemoryRequirements memory_requirements;
-        qvkGetBufferMemoryRequirements(vk.device, s_StagingBuffer, &memory_requirements);
+        {
+            VkMemoryRequirements memory_requirements;
+            qvkGetBufferMemoryRequirements(vk.device, s_StagingBuffer, &memory_requirements);
 
-        uint32_t memory_type = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            uint32_t memory_type = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-        VkMemoryAllocateInfo alloc_info;
-        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        alloc_info.pNext = NULL;
-        alloc_info.allocationSize = memory_requirements.size;
-        alloc_info.memoryTypeIndex = memory_type;
-        VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &s_MemStgBuf));
+            VkMemoryAllocateInfo alloc_info;
+            alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            alloc_info.pNext = NULL;
+            alloc_info.allocationSize = memory_requirements.size;
+            alloc_info.memoryTypeIndex = memory_type;
+            VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &s_MemStgBuf));
+        }
+        
         VK_CHECK(qvkBindBufferMemory(vk.device, s_StagingBuffer, s_MemStgBuf, 0));
 
         void* data;
@@ -342,21 +387,18 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size, const unsigned c
 
         s_pStgBuf = (unsigned char *)data;
     }
-
-    memcpy(s_pStgBuf, pPix, size);
 }
 
 
-static void vk_upload_image_data(VkImage image, int width, int height, 
-        VkBool32 mipmap, const unsigned char* pixels, int bytes_per_pixel)
+static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height, const unsigned char* pPixels)
 {
 
 	VkBufferImageCopy regions[16];
-	unsigned int num_regions = 0;
+	uint32_t num_regions = 0;
 
-	unsigned int buffer_size = 0;
+	uint32_t buffer_size = 0;
 
-	while (1)
+    while (1)
     {
 		VkBufferImageCopy region;
 		region.bufferOffset = buffer_size;
@@ -377,9 +419,9 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 		regions[num_regions] = region;
 		num_regions++;
 
-		buffer_size += width * height * bytes_per_pixel;
+		buffer_size += width * height * 4;
 
-		if (!mipmap || (width == 1 && height == 1))
+		if ((width == 1) && (height == 1))
 			break;
 
 		width >>= 1;
@@ -391,31 +433,159 @@ static void vk_upload_image_data(VkImage image, int width, int height,
             height = 1;
 	}
 
-	ensure_staging_buffer_allocation(buffer_size, pixels);
+
+	ensure_staging_buffer_allocation(buffer_size);
+    memcpy(s_pStgBuf, pPixels, buffer_size);
 
 
-	VkCommandBufferAllocateInfo alloc_info;
-	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	alloc_info.pNext = NULL;
-	alloc_info.commandPool = vk.command_pool;
-	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	alloc_info.commandBufferCount = 1;
-
-	VkCommandBuffer command_buffer;
-	VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
-
-	VkCommandBufferBeginInfo begin_info;
-	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	begin_info.pNext = NULL;
-	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	begin_info.pInheritanceInfo = NULL;
+    VkCommandBuffer cmd_buf;
+    {
+        VkCommandBufferAllocateInfo alloc_info;
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.pNext = NULL;
+        alloc_info.commandPool = vk.command_pool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandBufferCount = 1;
+        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &cmd_buf));
+    }
 
 
-	VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
-	
-    //// recorder(command_buffer);
-    //// recorder = [&image, &num_regions, &regions](VkCommandBuffer command_buffer)
+    {
+        VkCommandBufferBeginInfo begin_info;
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.pNext = NULL;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        begin_info.pInheritanceInfo = NULL;
+        VK_CHECK(qvkBeginCommandBuffer(cmd_buf, &begin_info));
+    }
 
+
+	VkBufferMemoryBarrier barrier;
+	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	barrier.pNext = NULL;
+	barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.buffer = s_StagingBuffer;
+	barrier.offset = 0;
+	barrier.size = VK_WHOLE_SIZE;
+    
+	qvkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 1, &barrier, 0, NULL);
+
+
+
+    record_image_layout_transition(cmd_buf, image, VK_IMAGE_ASPECT_COLOR_BIT,
+            0, VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    // An application can copy buffer and image data using several methods
+    // depending on the type of data transfer. Data can be copied between
+    // buffer objects with vkCmdCopyBuffer and a portion of an image can 
+    // be copied to another image with vkCmdCopyImage. Image data can also
+    // be copied to and from buffer memory using vkCmdCopyImageToBuffer 
+    // and vkCmdCopyBufferToImage. Image data can be blitted (with or 
+    // without scaling and filtering) with vkCmdBlitImage. Multisampled 
+    // images can be resolved to a non-multisampled image with vkCmdResolveImage.
+    //
+    // The following valid usage rules apply to all copy commands:
+    // Copy commands must be recorded outside of a render pass instance.
+    // 
+    // The set of all bytes bound to all the source regions must not overlap
+    // the set of all bytes bound to the destination regions.
+    //
+    // The set of all bytes bound to each destination region must not overlap
+    // the set of all bytes bound to another destination region.
+    //
+    // Copy regions must be non-empty.
+    // 
+    // Regions must not extend outside the bounds of the buffer or image level,
+    // except that regions of compressed images can extend as far as the 
+    // dimension of the image level rounded up to a complete compressed texel block.
+    
+    // To copy data from a buffer object to an image object
+    
+    // command_buffer is the command buffer into which the command will be recorded.
+    // s_StagingBuffer is the source buffer.
+    // image is the destination image.
+    // dstImageLayout is the layout of the destination image subresources.
+    // num_regions is the number of regions to copy.
+    // pRegions is a pointer to an array of VkBufferImageCopy structures
+    // specifying the regions to copy.
+    qvkCmdCopyBufferToImage(cmd_buf, s_StagingBuffer, image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, num_regions, regions);
+
+    record_image_layout_transition(cmd_buf, image,
+            VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    ////////
+    
+    VK_CHECK(qvkEndCommandBuffer(cmd_buf));
+
+	VkSubmitInfo submit_info;
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.pNext = NULL;
+	submit_info.waitSemaphoreCount = 0;
+	submit_info.pWaitSemaphores = NULL;
+	submit_info.pWaitDstStageMask = NULL;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &cmd_buf;
+	submit_info.signalSemaphoreCount = 0;
+	submit_info.pSignalSemaphores = NULL;
+
+	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));	
+    VK_CHECK(qvkQueueWaitIdle(vk.queue));
+    
+	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmd_buf);
+}
+
+
+static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height, const unsigned char* pPixels)
+{
+
+    VkBufferImageCopy region;
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset.x = 0;
+    region.imageOffset.y = 0;
+    region.imageOffset.z = 0;
+
+    region.imageExtent.width = width;
+    region.imageExtent.height = height;
+    region.imageExtent.depth = 1;
+
+
+    const uint32_t buffer_size = width * height * 4;
+
+	ensure_staging_buffer_allocation(buffer_size);
+    memcpy(s_pStgBuf, pPixels, buffer_size);
+
+    VkCommandBuffer command_buffer;
+    {
+        VkCommandBufferAllocateInfo alloc_info;
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.pNext = NULL;
+        alloc_info.commandPool = vk.command_pool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandBufferCount = 1;
+        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
+    }
+
+    {
+        VkCommandBufferBeginInfo begin_info;
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.pNext = NULL;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        begin_info.pInheritanceInfo = NULL;
+        VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
+    }
 
 	VkBufferMemoryBarrier barrier;
 	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -436,8 +606,40 @@ static void vk_upload_image_data(VkImage image, int width, int height,
             0, VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    qvkCmdCopyBufferToImage(command_buffer, s_StagingBuffer, image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, num_regions, regions);
+    // An application can copy buffer and image data using several methods
+    // depending on the type of data transfer. Data can be copied between
+    // buffer objects with vkCmdCopyBuffer and a portion of an image can 
+    // be copied to another image with vkCmdCopyImage. Image data can also
+    // be copied to and from buffer memory using vkCmdCopyImageToBuffer 
+    // and vkCmdCopyBufferToImage. Image data can be blitted (with or 
+    // without scaling and filtering) with vkCmdBlitImage. Multisampled 
+    // images can be resolved to a non-multisampled image with vkCmdResolveImage.
+    //
+    // The following valid usage rules apply to all copy commands:
+    // Copy commands must be recorded outside of a render pass instance.
+    // 
+    // The set of all bytes bound to all the source regions must not overlap
+    // the set of all bytes bound to the destination regions.
+    //
+    // The set of all bytes bound to each destination region must not overlap
+    // the set of all bytes bound to another destination region.
+    //
+    // Copy regions must be non-empty.
+    // 
+    // Regions must not extend outside the bounds of the buffer or image level,
+    // except that regions of compressed images can extend as far as the 
+    // dimension of the image level rounded up to a complete compressed texel block.
+    
+    // To copy data from a buffer object to an image object
+    
+    // command_buffer is the command buffer into which the command will be recorded.
+    // s_StagingBuffer is the source buffer.
+    // image is the destination image.
+    // dstImageLayout is the layout of the destination image subresources.
+    // num_regions is the number of regions to copy.
+    // pRegions is a pointer to an array of VkBufferImageCopy structures
+    // specifying the regions to copy.
+    qvkCmdCopyBufferToImage(command_buffer, s_StagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
     record_image_layout_transition(command_buffer, image,
             VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -461,12 +663,12 @@ static void vk_upload_image_data(VkImage image, int width, int height,
 
 	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));	
     VK_CHECK(qvkQueueWaitIdle(vk.queue));
+    
 	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
 }
 
 
-
-void qDestroyImage(void)
+void vk_destroyImageRes(void)
 {
     vk_free_sampler();
 
@@ -489,6 +691,7 @@ void qDestroyImage(void)
 
         if(pImage->descriptor_set != VK_NULL_HANDLE)
         {    
+            //To free allocated descriptor sets
             qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
             pImage->descriptor_set = VK_NULL_HANDLE;
         }
@@ -533,7 +736,7 @@ static int generateHashValue( const char *fname )
 }
 
 void record_image_layout_transition( 
-        VkCommandBuffer command_buffer,
+        VkCommandBuffer cmdBuf,
         VkImage image,
         VkImageAspectFlags image_aspect_flags,
         VkAccessFlags src_access_flags,
@@ -558,7 +761,15 @@ void record_image_layout_transition(
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-	qvkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+// vkCmdPipelineBarrier is a synchronization command that 
+// inserts a dependency between commands submitted to the
+// same queue, or between commands in the same subpass.
+// When vkCmdPipelineBarrier is submitted to a queue, 
+// it defines a memory dependency between commands that
+// were submitted before it, and those submitted after it.
+    
+    // cmdBuf is the command buffer into which the command is recorded.
+	qvkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,	0, NULL, 0, NULL, 1, &barrier);
 }
 
@@ -567,7 +778,7 @@ void record_image_layout_transition(
 This is the only way any image_t are created
 ================
 */
-image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int height,
+image_t *R_CreateImage( const char *name, unsigned char* pic, uint32_t width, uint32_t height,
 						VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode )
 {
 	if (strlen(name) >= MAX_QPATH ) {
@@ -578,7 +789,9 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 		ri.Error( ERR_DROP, "CreateImage: MAX_DRAWIMAGES hit\n");
 	}
 
-	// Create image_t object.
+    ri.Printf( PRINT_ALL, "R_CreateImage: %s\n", name);
+    
+    // Create image_t object.
 	image_t* pImage = tr.images[tr.numImages] = (image_t*) ri.Hunk_Alloc( sizeof( image_t ), h_low );
     pImage->index = tr.numImages;
 	pImage->texnum = 1024 + tr.numImages;
@@ -608,15 +821,15 @@ image_t *R_CreateImage( const char *name, unsigned char* pic, int width, int hei
 
     generate_image_upload_data(name, &upload_data, pic, width, height, mipmap, allowPicmip);
 
-
-
-	int bytes_per_pixel = 4;
-    
-      
     vk_create_image(upload_data.base_level_width, upload_data.base_level_height, upload_data.mip_levels, glWrapClampMode == GL_REPEAT, &s_vkImages[pImage->index]);
-	
-    vk_upload_image_data(s_vkImages[pImage->index].handle, upload_data.base_level_width, 
-        upload_data.base_level_height, upload_data.mip_levels > 1, upload_data.buffer, bytes_per_pixel);
+
+    if(upload_data.mip_levels > 1)
+        vk_upload_image_data(s_vkImages[pImage->index].handle, upload_data.base_level_width, 
+        upload_data.base_level_height, upload_data.buffer);
+    else
+    {
+        vk_uploadSingleImage(s_vkImages[pImage->index].handle, upload_data.base_level_width, upload_data.base_level_height, upload_data.buffer);
+    }
 
 
 	if (s_CurTmu) {
@@ -693,9 +906,11 @@ image_t* R_FindImageFile(const char *name, VkBool32 mipmap, VkBool32 allowPicmip
 	//
 	// load the pic from disk
     //
-    R_LoadImage2( name, &pic, &width, &height );
+    R_LoadImage( name, &pic, &width, &height );
 	if (pic == NULL)
 	{
+        ri.Printf( PRINT_WARNING,
+            "R_FindImageFile: Fail loading %s the from disk\n", name);
         return NULL;
     }
 
@@ -725,14 +940,14 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
         qvkDestroyImageView(vk.device, pImage->view, NULL);
         qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
         vk_create_image(cols, rows, 1, 0, pImage);
-        vk_upload_image_data(pImage->handle, cols, rows, 0, data, 4);
+        vk_uploadSingleImage(pImage->handle, cols, rows, data);
     }
     else if (dirty)
     {
         // otherwise, just subimage upload it so that
         // drivers can tell we are going to be changing
         // it and don't try and do a texture compression       
-        vk_upload_image_data(s_vkImages[tr.scratchImage[client]->index].handle, cols, rows, 0, data, 4);
+        vk_uploadSingleImage(s_vkImages[tr.scratchImage[client]->index].handle, cols, rows, data);
     }
 
 }

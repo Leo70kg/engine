@@ -10,5 +10,4 @@ void vk_clearColorAttachments(const float* color);
 void vk_clearDepthStencilAttachments(void);
 void set_depth_attachment(VkBool32 s);
 
-VkBool32 get_depth_attachment(void);
 #endif

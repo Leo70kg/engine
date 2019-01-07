@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // tr_sky.c
 #include "tr_globals.h"
-#include "mvp_matrix.h"
 #include "vk_shade_geometry.h"
 
 #include "vk_instance.h"
@@ -438,7 +437,6 @@ static void DrawSkyBox( shader_t *shader )
 
 
         // VULKAN: draw skybox side
-        // DX12
 
         GL_Bind(shader->sky.outerbox[sky_texorder[i]]);
 

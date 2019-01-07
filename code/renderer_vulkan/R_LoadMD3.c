@@ -120,8 +120,14 @@ qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name )
         for ( j = 0 ; j < surf->numShaders ; j++, shader++ ) {
             shader_t	*sh;
 
+    if(NULL != strstr(shader->name, "rocketThrust"))
+    {
+        ri.Printf(PRINT_WARNING, "R_LoadMD3: %s\n", shader->name);
+    }
+
             sh = R_FindShader( shader->name, LIGHTMAP_NONE, qtrue );
-			if ( sh->defaultShader ) {
+			
+            if ( sh->defaultShader ) {
 				shader->shaderIndex = 0;
 			} else {
 				shader->shaderIndex = sh->index;
@@ -161,6 +167,8 @@ qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name )
     
 	return qtrue;
 }
+
+
 
 qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 {

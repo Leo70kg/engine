@@ -180,7 +180,7 @@ gprof openarena.x86_64 gmon.out > report.txt
 * have small issues with \minimize when use vulkan renderer.
 * E_AddRefEntityToScene passed a refEntity which has an origin with a NaN component
 * Unpure client detected. Invalid .PK3 files referenced!
-
+* Shader rocketThrust has a stage with no image
 ## TODO
 * merge rendergl1, rendereroa, renderer_mydev to one
 * r_gamma

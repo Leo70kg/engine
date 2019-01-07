@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "tr_globals.h"
 #include "tr_cvar.h"
-#include "mvp_matrix.h"
+#include "vk_shade_geometry.h"
 #include "../renderercommon/ref_import.h"
 
 /*

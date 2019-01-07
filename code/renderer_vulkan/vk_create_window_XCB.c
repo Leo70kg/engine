@@ -491,9 +491,9 @@ void vk_getInstanceProcAddrImpl(void)
 }
 
 
-void VKimp_Shutdown(void)
+void vk_destroyWindow(void)
 {
-	ri.Printf(PRINT_ALL, "Shutting down Vulkan subsystem\n");
+	ri.Printf(PRINT_ALL, " Destroy Window Subsystem.\n");
 
     // To close a connection, it suffices to use:
     // void xcb_disconnect (xcb_connection_t *c);
@@ -734,31 +734,6 @@ void VKimp_CreateInstance(void)
     CreateInstanceImpl(enabled_extension_count, extension_names_supported);
 }
 
-
-void VKimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] )
-{
-	unsigned short int table[3][256];
-	int i, j;
-
-	for (i = 0; i < 256; i++)
-	{
-		table[0][i] = ( red[i] << 8 ) | red[i];
-		table[1][i] = ( green[i] << 8 ) | green[i];
-		table[2][i] = ( blue[i]  << 8 ) | blue[i];
-	}
-
-
-	// enforce constantly increasing
-	for (j = 0; j < 3; j++)
-	{
-		for (i = 1; i < 256; i++)
-		{
-			if (table[j][i] < table[j][i-1])
-				table[j][i] = table[j][i-1];
-		}
-	}
-
-}
 
 
 /*

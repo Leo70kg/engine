@@ -12,13 +12,13 @@ void R_SetColorMappings( void );
 struct Image_Upload_Data
 {
 	unsigned char* buffer;
-	int buffer_size;
-	int mip_levels;
-	int base_level_width;
-	int base_level_height;
+	uint32_t buffer_size;
+	uint32_t mip_levels;
+	uint32_t base_level_width;
+	uint32_t base_level_height;
 };
 
 void generate_image_upload_data(const char *name, struct Image_Upload_Data* upload_data, 
-        unsigned char* data, const unsigned int width, const unsigned int height, VkBool32 mipmap, VkBool32 picmip);
+        unsigned char* data, const uint32_t width, const uint32_t height, VkBool32 mipmap, VkBool32 picmip);
 
 #endif

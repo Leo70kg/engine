@@ -72,7 +72,8 @@ static void vk_read_pixels(unsigned char* buffer)
 	desc.queueFamilyIndexCount = 0;
 	desc.pQueueFamilyIndices = NULL;
 	desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	VkImage image;
+
+    VkImage image;
 	VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &image));
 
 	VkMemoryRequirements memory_requirements;
@@ -83,7 +84,8 @@ static void vk_read_pixels(unsigned char* buffer)
 	alloc_info.allocationSize = memory_requirements.size;
 	alloc_info.memoryTypeIndex = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	VkDeviceMemory memory;
+	
+    VkDeviceMemory memory;
 	VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
 	VK_CHECK(qvkBindImageMemory(vk.device, image, memory, 0));
 
@@ -97,8 +99,8 @@ static void vk_read_pixels(unsigned char* buffer)
         alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         alloc_info.commandBufferCount = 1;
 
-        VkCommandBuffer command_buffer;
-        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
+        VkCommandBuffer cmdBuf;
+        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &cmdBuf));
 
         VkCommandBufferBeginInfo begin_info;
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -106,21 +108,19 @@ static void vk_read_pixels(unsigned char* buffer)
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         begin_info.pInheritanceInfo = NULL;
 
-        VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
+        VK_CHECK(qvkBeginCommandBuffer(cmdBuf, &begin_info));
 
-        //recorder(command_buffer);
-        record_image_layout_transition(command_buffer, 
+        record_image_layout_transition(cmdBuf, 
                 vk.swapchain_images_array[vk.swapchain_image_index], 
                 VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_MEMORY_READ_BIT, 
                 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_TRANSFER_READ_BIT, 
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-        record_image_layout_transition(command_buffer, 
+        record_image_layout_transition(cmdBuf, 
                 image, VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL);
 
-
-        VK_CHECK(qvkEndCommandBuffer(command_buffer));
+        VK_CHECK(qvkEndCommandBuffer(cmdBuf));
 
         VkSubmitInfo submit_info;
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -129,13 +129,13 @@ static void vk_read_pixels(unsigned char* buffer)
         submit_info.pWaitSemaphores = NULL;
         submit_info.pWaitDstStageMask = NULL;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.pCommandBuffers = &cmdBuf;
         submit_info.signalSemaphoreCount = 0;
         submit_info.pSignalSemaphores = NULL;
 
         VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
         VK_CHECK(qvkQueueWaitIdle(vk.queue));
-        qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
+        qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmdBuf);
     }
 
 
@@ -226,7 +226,6 @@ static void vk_read_pixels(unsigned char* buffer)
     else
     {
 
-        VkQueue queue = vk.queue;
 
 	    VkCommandBufferAllocateInfo alloc_info;
     	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -280,8 +279,8 @@ static void vk_read_pixels(unsigned char* buffer)
     	submit_info.signalSemaphoreCount = 0;
     	submit_info.pSignalSemaphores = NULL;
 
-    	VK_CHECK(qvkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
-        VK_CHECK(qvkQueueWaitIdle(queue));
+    	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
+        VK_CHECK(qvkQueueWaitIdle(vk.queue));
     	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
 	}
 
@@ -296,14 +295,18 @@ static void vk_read_pixels(unsigned char* buffer)
 	qvkGetImageSubresourceLayout(vk.device, image, &subresource, &layout);
 
 
-    // To retrieve a host virtual address pointer to
-    // a region of a mappable memory objec
-	unsigned char* data;
-	VK_CHECK(qvkMapMemory(vk.device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&data));
+    // Memory objects created with vkAllocateMemory are not directly host accessible.
+    // Memory objects created with the memory property 
+    // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT are considered mappable. 
+    // Memory objects must be mappable in order to be successfully 
+    // mapped on the host. 
+    // To retrieve a host virtual address pointer to 
+    // a region of a mappable memory object
+    unsigned char* data;
+    VK_CHECK(qvkMapMemory(vk.device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&data));
 	data += layout.offset;
 
-	unsigned char* buffer_ptr = buffer + 
-    glConfig.vidWidth * (glConfig.vidHeight - 1) * 4;
+	unsigned char* buffer_ptr = buffer + glConfig.vidWidth * (glConfig.vidHeight - 1) * 4;
 	
     int j = 0;
     for (j = 0; j < glConfig.vidHeight; j++)
@@ -338,9 +341,10 @@ static void vk_read_pixels(unsigned char* buffer)
 			}
 		}
 	}
-
-	qvkDestroyImage(vk.device, image, NULL);
+	qvkUnmapMemory(vk.device, memory);
 	qvkFreeMemory(vk.device, memory, NULL);
+
+    qvkDestroyImage(vk.device, image, NULL);
 }
 
 

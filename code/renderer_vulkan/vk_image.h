@@ -7,12 +7,12 @@ void record_image_layout_transition(VkCommandBuffer command_buffer, VkImage imag
 	VkAccessFlags src_access_flags, VkImageLayout old_layout, VkAccessFlags dst_access_flags, VkImageLayout new_layout);
 
 
-void qDestroyImage(void);
+void vk_destroyImageRes(void);
 
 image_t* R_FindImageFile(const char *name, VkBool32 mipmap,	VkBool32 allowPicmip, int glWrapClampMode);
-image_t *R_CreateImage( const char *name, unsigned char *pic, int width, int height,
-						VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode );
 
+image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, uint32_t height,
+						VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode );
 
 
 void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );

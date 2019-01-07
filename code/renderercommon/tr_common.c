@@ -47,7 +47,7 @@ void stripExtension(const char *in, char *out, int destsize)
     const char *slash = strrchr(in, '/');
 
 
-	if ((dot != NULL) && ( (slash < dot) || (slash == NULL) ) )
+	if ((dot != NULL) && ( (slash == NULL) || (slash < dot) ) )
     {
         int len = dot-in+1;
         if(len <= destsize)

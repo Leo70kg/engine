@@ -3542,7 +3542,7 @@ static void ScanAndLoadShaderFiles( void )
 			}
 		}
         
-		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
+		//ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
 		long summand = ri.R_ReadFile(filename, &buffers[i]);
 		
 		if ( !buffers[i] )

@@ -15,12 +15,13 @@ IMPLEMENTATION SPECIFIC FUNCTIONS
 #include "vulkan/vulkan.h"
 
 void vk_createWindow(void);
+void vk_destroyWindow(void);
+
 void vk_getInstanceProcAddrImpl(void);
 
-void VKimp_Shutdown(void);
 void VKimp_CreateSurface(void);
 void VKimp_CreateInstance(void);
-void VKimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] );
+
 void VKimp_Minimize( void );
 
 

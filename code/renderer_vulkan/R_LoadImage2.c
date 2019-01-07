@@ -52,7 +52,7 @@ void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height
 	const int len = (int)strlen(name);
 	if (len<5)
     {
-        ri.Printf( PRINT_WARNING, "try to loading %s ? \n", name );
+        ri.Printf( PRINT_WARNING, "R_LoadImage2: try to loading %s ? \n", name );
 		return;
 	}
 

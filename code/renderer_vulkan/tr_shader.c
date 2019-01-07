@@ -1780,7 +1780,7 @@ Returns a freshly allocated shader with all the needed info
 from the current global working shader
 =========================
 */
-shader_t *FinishShader( void )
+shader_t* FinishShader( void )
 {
 	qboolean hasLightmapStage = qfalse;
 	//
@@ -2130,10 +2130,12 @@ shader_t* GeneratePermanentShader( void )
 
 void R_CreateDefaultShadingCmds(const char* name, image_t* image)
 {
+    
+    ri.Printf( PRINT_ALL, "R_CreateDefaultShade: shader %s, image: %s\n", name, image->imgName );
 
 	if ( NULL == image )
 	{
-		ri.Printf( PRINT_WARNING, "Couldn't find image for shader %s\n", name );
+		ri.Printf( PRINT_WARNING, "R_CreateDefaultShadingCmds: Couldn't find image for shader %s\n", name );
 		shader.defaultShader = qtrue;
 	}
     else

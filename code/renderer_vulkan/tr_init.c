@@ -32,7 +32,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vk_pipelines.h"
 #include "vk_image.h"
 #include "vk_clear_attachments.h"
-#include "mvp_matrix.h"
 #include "R_LerpTag.h"
 #include "R_ModelBounds.h"
 #include "tr_model.h"
@@ -62,7 +61,6 @@ static void InitRenderAPI( void )
     // print info
 	vulkanInfo_f();
 
-//	VK_TextureMode();
 }
 
 
@@ -195,7 +193,6 @@ void RE_Shutdown( qboolean destroyWindow )
         memset( tr.images, 0, sizeof( tr.images ) );
 
 	    tr.numImages = 0;
-
 	}
 
 
@@ -211,19 +208,16 @@ void RE_Shutdown( qboolean destroyWindow )
 
     vk_destroyShaderStagePipeline();
  
-    qDestroyImage();
+    vk_destroyImageRes();
 
     set_depth_attachment(VK_FALSE);
 
-    reset_modelview_matrix();
-    
-    
     vk_resetGeometryBuffer();
     
     if (destroyWindow)
     {
         vk_shutdown();
-        VKimp_Shutdown();
+        vk_destroyWindow();
     }
 
 	tr.registered = qfalse;

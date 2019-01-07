@@ -32,7 +32,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/matrix_multiplication.h"
 #include "../renderercommon/ref_import.h"
 
-#include "mvp_matrix.h"
 #include "R_DEBUG.h"
 
 
@@ -205,9 +204,6 @@ Called by both the front end and the back end
 */
 void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, orientationr_t *or )
 {
-	float	glMatrix[16] QALIGN(16);
-	vec3_t	delta;
-	float	axisLength;
 
 	if ( ent->e.reType != RT_MODEL ) {
 		*or = viewParms->world;
@@ -221,24 +217,22 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 	//VectorCopy( ent->e.axis[2], or->axis[2] );
     memcpy(or->axis, ent->e.axis, 36);
 
+	float	glMatrix[16] QALIGN(16);
 
 	glMatrix[0] = or->axis[0][0];
 	glMatrix[1] = or->axis[0][1];
 	glMatrix[2] = or->axis[0][2];
 	glMatrix[3] = 0;
 
-
     glMatrix[4] = or->axis[1][0];
 	glMatrix[5] = or->axis[1][1];
 	glMatrix[6] = or->axis[1][2];
 	glMatrix[7] = 0;
-	
     
     glMatrix[8] = or->axis[2][0];
 	glMatrix[9] = or->axis[2][1];
 	glMatrix[10] = or->axis[2][2];
 	glMatrix[11] = 0;
-
 
 	glMatrix[12] = or->origin[0];
 	glMatrix[13] = or->origin[1];
@@ -249,9 +243,12 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 
 	// calculate the viewer origin in the model's space
 	// needed for fog, specular, and environment mapping
+    vec3_t	delta;
+
 	VectorSubtract( viewParms->or.origin, or->origin, delta );
 
 	// compensate for scale in the axes if necessary
+    float	axisLength = 1.0f;
 	if ( ent->e.nonNormalizedAxes ) {
 		axisLength = VectorLength( ent->e.axis[0] );
 		if ( !axisLength ) {
@@ -259,8 +256,6 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 		} else {
 			axisLength = 1.0f / axisLength;
 		}
-	} else {
-		axisLength = 1.0f;
 	}
 
 	or->viewOrigin[0] = DotProduct( delta, or->axis[0] ) * axisLength;

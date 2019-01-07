@@ -118,31 +118,60 @@ void vk_loadShaderModules(void)
 
 void vk_specifyShaderModule(const enum Vk_Shader_Type shader_type, VkBool32 isClippingPlane, VkShaderModule* vs, VkShaderModule* fs)
 {
-    // Specify the shader module containing the shader code, and the function to invoke.
-    // This means that it's possible to combine multiple fragment shaders into a single
-    // shader module and use differententry  points to differnentiate between their behaviors
+    // Specify the shader module containing the shader code, and the function
+    // to invoke. This means that it's possible to combine multiple fragment
+    // shaders into a single shader module and use different entry points 
+    // to differnentiate between their behaviors
     // In this case we'll stick to the standard main.
-    switch(shader_type)
+
+    if(isClippingPlane)
     {
-        case ST_MULTI_TEXURE_ADD:
+        switch(shader_type)
         {
-            *vs = isClippingPlane ? s_gShaderModules.multi_texture_clipping_plane_vs : s_gShaderModules.multi_texture_vs;
-            *fs = s_gShaderModules.multi_texture_add_fs;
-        }break;
+            case ST_MULTI_TEXURE_ADD:
+            {
+                *vs = s_gShaderModules.multi_texture_clipping_plane_vs;
+                *fs = s_gShaderModules.multi_texture_add_fs;
+            }break;
 
-        case ST_MULTI_TEXURE_MUL:
-        {
-            *vs = isClippingPlane ? s_gShaderModules.multi_texture_clipping_plane_vs : s_gShaderModules.multi_texture_vs;
-            *fs = s_gShaderModules.multi_texture_mul_fs;
-        }break;
+            case ST_MULTI_TEXURE_MUL:
+            {
+                *vs = s_gShaderModules.multi_texture_clipping_plane_vs;
+                *fs = s_gShaderModules.multi_texture_mul_fs;
+            }break;
 
-        case ST_SINGLE_TEXTURE:
-        default:
-        {
-            *vs = isClippingPlane ? s_gShaderModules.single_texture_clipping_plane_vs : s_gShaderModules.single_texture_vs;
-            *fs = s_gShaderModules.single_texture_fs;
-        }break;
+            case ST_SINGLE_TEXTURE:
+            {
+                *vs = s_gShaderModules.single_texture_clipping_plane_vs;
+                *fs = s_gShaderModules.single_texture_fs;
+            }break;
+        }
     }
+    else
+    {
+        switch(shader_type)
+        {
+            case ST_MULTI_TEXURE_ADD:
+            {
+                *vs = s_gShaderModules.multi_texture_vs;
+                *fs = s_gShaderModules.multi_texture_add_fs;
+            }break;
+
+            case ST_MULTI_TEXURE_MUL:
+            {
+                *vs = s_gShaderModules.multi_texture_vs;
+                *fs = s_gShaderModules.multi_texture_mul_fs;
+            }break;
+
+            case ST_SINGLE_TEXTURE:
+            {
+                *vs = s_gShaderModules.single_texture_vs;
+                *fs = s_gShaderModules.single_texture_fs;
+            }break;
+        }
+
+    }
+
 }
 
 

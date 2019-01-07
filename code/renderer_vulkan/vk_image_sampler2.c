@@ -1,7 +1,8 @@
-#include "ref_import.h"
+#include "VKimpl.h"
 #include "qvk.h"
 #include "vk_image_sampler.h"
-
+#include "vk_instance.h"
+#include "../renderercommon/ref_import.h"
 
 typedef struct {
 	char *name;
