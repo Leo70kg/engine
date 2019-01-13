@@ -1626,8 +1626,8 @@ void	RB_CalcAlphaFromOneMinusEntity( unsigned char *dstColors );
 void	RB_CalcStretchTexCoords( const waveForm_t *wf, float *texCoords );
 void	RB_CalcLightscaleTexCoords( float *texCoords );
 void	RB_CalcAtlasTexCoords( const atlas_t *at, float *st );
-void	RB_CalcColorFromEntity( unsigned char *dstColors );
-void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
+void	RB_CalcColorFromEntity( unsigned char (*dstColors)[4] );
+void	RB_CalcColorFromOneMinusEntity( unsigned char (*dstColors)[4] );
 void	RB_CalcFlatAmbient( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcFlatDirect( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcNormal( unsigned char *colors ); // leilei - normal hack

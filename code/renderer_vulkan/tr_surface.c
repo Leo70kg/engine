@@ -68,66 +68,95 @@ void RB_CheckOverflow( int verts, int indexes )
 
 void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, float s1, float t1, float s2, float t2 )
 {
-	vec3_t normal;
-	int	ndx;
 
 	RB_CHECKOVERFLOW( 4, 6 );
 
-	ndx = tess.numVertexes;
+	const uint32_t ndx0 = tess.numVertexes;
+    const uint32_t ndx1 = ndx0 + 1;
+    const uint32_t ndx2 = ndx0 + 2;
+    const uint32_t ndx3 = ndx0 + 3;
+
 
 	// triangle indexes for a simple quad
-	tess.indexes[ tess.numIndexes ] = ndx;
-	tess.indexes[ tess.numIndexes + 1 ] = ndx + 1;
-	tess.indexes[ tess.numIndexes + 2 ] = ndx + 3;
+	tess.indexes[ tess.numIndexes ] = ndx0;
+	tess.indexes[ tess.numIndexes + 1 ] = ndx1;
+	tess.indexes[ tess.numIndexes + 2 ] = ndx3;
 
-	tess.indexes[ tess.numIndexes + 3 ] = ndx + 3;
-	tess.indexes[ tess.numIndexes + 4 ] = ndx + 1;
-	tess.indexes[ tess.numIndexes + 5 ] = ndx + 2;
+	tess.indexes[ tess.numIndexes + 3 ] = ndx3;
+	tess.indexes[ tess.numIndexes + 4 ] = ndx1;
+	tess.indexes[ tess.numIndexes + 5 ] = ndx2;
 
-	tess.xyz[ndx][0] = origin[0] + left[0] + up[0];
-	tess.xyz[ndx][1] = origin[1] + left[1] + up[1];
-	tess.xyz[ndx][2] = origin[2] + left[2] + up[2];
+	tess.xyz[ndx0][0] = origin[0] + left[0] + up[0];
+	tess.xyz[ndx0][1] = origin[1] + left[1] + up[1];
+	tess.xyz[ndx0][2] = origin[2] + left[2] + up[2];
 
-	tess.xyz[ndx+1][0] = origin[0] - left[0] + up[0];
-	tess.xyz[ndx+1][1] = origin[1] - left[1] + up[1];
-	tess.xyz[ndx+1][2] = origin[2] - left[2] + up[2];
+	tess.xyz[ndx1][0] = origin[0] - left[0] + up[0];
+	tess.xyz[ndx1][1] = origin[1] - left[1] + up[1];
+	tess.xyz[ndx1][2] = origin[2] - left[2] + up[2];
 
-	tess.xyz[ndx+2][0] = origin[0] - left[0] - up[0];
-	tess.xyz[ndx+2][1] = origin[1] - left[1] - up[1];
-	tess.xyz[ndx+2][2] = origin[2] - left[2] - up[2];
+	tess.xyz[ndx2][0] = origin[0] - left[0] - up[0];
+	tess.xyz[ndx2][1] = origin[1] - left[1] - up[1];
+	tess.xyz[ndx2][2] = origin[2] - left[2] - up[2];
 
-	tess.xyz[ndx+3][0] = origin[0] + left[0] - up[0];
-	tess.xyz[ndx+3][1] = origin[1] + left[1] - up[1];
-	tess.xyz[ndx+3][2] = origin[2] + left[2] - up[2];
+	tess.xyz[ndx3][0] = origin[0] + left[0] - up[0];
+	tess.xyz[ndx3][1] = origin[1] + left[1] - up[1];
+	tess.xyz[ndx3][2] = origin[2] + left[2] - up[2];
 
 
 	// constant normal all the way around
-	VectorSubtract( vec3_origin, backEnd.viewParms.or.axis[0], normal );
 
-	tess.normal[ndx][0] = tess.normal[ndx+1][0] = tess.normal[ndx+2][0] = tess.normal[ndx+3][0] = normal[0];
-	tess.normal[ndx][1] = tess.normal[ndx+1][1] = tess.normal[ndx+2][1] = tess.normal[ndx+3][1] = normal[1];
-	tess.normal[ndx][2] = tess.normal[ndx+1][2] = tess.normal[ndx+2][2] = tess.normal[ndx+3][2] = normal[2];
+    vec3_t normal;
+	VectorSubtract( vec3_origin, backEnd.viewParms.or.axis[0], normal );
+	tess.normal[ndx0][0] = tess.normal[ndx1][0] = tess.normal[ndx2][0] = tess.normal[ndx3][0] = normal[0];
+	tess.normal[ndx0][1] = tess.normal[ndx1][1] = tess.normal[ndx2][1] = tess.normal[ndx3][1] = normal[1];
+	tess.normal[ndx0][2] = tess.normal[ndx1][2] = tess.normal[ndx2][2] = tess.normal[ndx3][2] = normal[2];
 	
 	// standard square texture coordinates
-	tess.texCoords[ndx][0][0] = tess.texCoords[ndx][1][0] = s1;
-	tess.texCoords[ndx][0][1] = tess.texCoords[ndx][1][1] = t1;
+	tess.texCoords[ndx0][0][0] = tess.texCoords[ndx0][1][0] = s1;
+	tess.texCoords[ndx0][0][1] = tess.texCoords[ndx0][1][1] = t1;
 
-	tess.texCoords[ndx+1][0][0] = tess.texCoords[ndx+1][1][0] = s2;
-	tess.texCoords[ndx+1][0][1] = tess.texCoords[ndx+1][1][1] = t1;
+	tess.texCoords[ndx1][0][0] = tess.texCoords[ndx1][1][0] = s2;
+	tess.texCoords[ndx1][0][1] = tess.texCoords[ndx1][1][1] = t1;
 
-	tess.texCoords[ndx+2][0][0] = tess.texCoords[ndx+2][1][0] = s2;
-	tess.texCoords[ndx+2][0][1] = tess.texCoords[ndx+2][1][1] = t2;
+	tess.texCoords[ndx2][0][0] = tess.texCoords[ndx2][1][0] = s2;
+	tess.texCoords[ndx2][0][1] = tess.texCoords[ndx2][1][1] = t2;
 
-	tess.texCoords[ndx+3][0][0] = tess.texCoords[ndx+3][1][0] = s1;
-	tess.texCoords[ndx+3][0][1] = tess.texCoords[ndx+3][1][1] = t2;
+	tess.texCoords[ndx3][0][0] = tess.texCoords[ndx3][1][0] = s1;
+	tess.texCoords[ndx3][0][1] = tess.texCoords[ndx3][1][1] = t2;
 
 	// constant color all the way around
 	// should this be identity and let the shader specify from entity?
-	* ( unsigned int * ) &tess.vertexColors[ndx] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+1] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+2] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+3] = 
-		* ( unsigned int * )color;
+	// * ( unsigned int * ) &tess.vertexColors[ndx0] = 
+	// * ( unsigned int * ) &tess.vertexColors[ndx1] = 
+	// * ( unsigned int * ) &tess.vertexColors[ndx2] = 
+	// * ( unsigned int * ) &tess.vertexColors[ndx3] = 
+	//	* ( unsigned int * )color;
+
+    /*
+    tess.vertexColors[ndx0][0] = color[0];
+	tess.vertexColors[ndx0][1] = color[1];
+	tess.vertexColors[ndx0][2] = color[2];
+	tess.vertexColors[ndx0][3] = color[3];
+
+    tess.vertexColors[ndx1][0] = color[0];
+	tess.vertexColors[ndx1][1] = color[1];
+	tess.vertexColors[ndx1][2] = color[2];
+	tess.vertexColors[ndx1][3] = color[3];
+    
+    tess.vertexColors[ndx2][0] = color[0];
+	tess.vertexColors[ndx2][1] = color[1];
+	tess.vertexColors[ndx2][2] = color[2];
+	tess.vertexColors[ndx2][3] = color[3];
+    
+    tess.vertexColors[ndx3][0] = color[0];
+	tess.vertexColors[ndx3][1] = color[1];
+	tess.vertexColors[ndx3][2] = color[2];
+	tess.vertexColors[ndx3][3] = color[3];
+    */
+    memcpy(tess.vertexColors[ndx0], color, 4);
+    memcpy(tess.vertexColors[ndx1], color, 4);
+    memcpy(tess.vertexColors[ndx2], color, 4);
+    memcpy(tess.vertexColors[ndx3], color, 4);
 
 
 	tess.numVertexes += 4;
@@ -178,17 +207,18 @@ RB_SurfacePolychain
 */
 void RB_SurfacePolychain( srfPoly_t *p ) {
 	int		i;
-	int		numv;
 
 	RB_CHECKOVERFLOW( p->numVerts, 3*(p->numVerts - 2) );
 
 	// fan triangles into the tess array
-	numv = tess.numVertexes;
-	for ( i = 0; i < p->numVerts; i++ ) {
+	uint32_t numv = tess.numVertexes;
+	for ( i = 0; i < p->numVerts; i++ )
+    {
 		VectorCopy( p->verts[i].xyz, tess.xyz[numv] );
 		tess.texCoords[numv][0][0] = p->verts[i].st[0];
 		tess.texCoords[numv][0][1] = p->verts[i].st[1];
-		*(int *)&tess.vertexColors[numv] = *(int *)p->verts[ i ].modulate;
+		// *(int *)&tess.vertexColors[numv] = *(int *)p->verts[ i ].modulate;
+        memcpy(tess.vertexColors[numv], p->verts[ i ].modulate, 4);
 
 		numv++;
 	}
@@ -254,8 +284,9 @@ void RB_SurfaceTriangles( srfTriangles_t *srf ) {
 
 		texCoords[2] = dv->lightmap[0];
 		texCoords[3] = dv->lightmap[1];
-
-		*(int *)color = *(int *)dv->color;
+        
+        // *(int *)color = *(int *)dv->color;
+        memcpy(color, dv->color, 4);
 	}
 
 	for ( i = 0 ; i < srf->numVerts ; i++ ) {
@@ -760,7 +791,8 @@ void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
 		tess.texCoords[ndx][0][1] = v[4];
 		tess.texCoords[ndx][1][0] = v[5];
 		tess.texCoords[ndx][1][1] = v[6];
-		* ( unsigned int * ) &tess.vertexColors[ndx] = * ( unsigned int * ) &v[7];
+		//* ( unsigned int * ) &tess.vertexColors[ndx] = * ( unsigned int * ) &v[7];
+        memcpy(tess.vertexColors[ndx], &v[7], 4);
 		tess.vertexDlightBits[ndx] = dlightBits;
 	}
 
@@ -909,8 +941,9 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 					normal[1] = dv->normal[1];
 					normal[2] = dv->normal[2];
 				}
-				* ( unsigned int * ) color = * ( unsigned int * ) dv->color;
-				*vDlightBits++ = dlightBits;
+				//* ( unsigned int * ) color = * ( unsigned int * ) dv->color;
+				memcpy(color, dv->color, 4);
+                *vDlightBits++ = dlightBits;
 				xyz += 4;
 				normal += 4;
 				texCoords += 4;

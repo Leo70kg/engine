@@ -1393,8 +1393,8 @@ void	RB_CalcWaveColor( const waveForm_t *wf, unsigned char (*dstColors)[4] );
 void	RB_CalcAlphaFromEntity( unsigned char *dstColors );
 void	RB_CalcAlphaFromOneMinusEntity( unsigned char *dstColors );
 void	RB_CalcStretchTexCoords( const waveForm_t *wf, float *texCoords );
-void	RB_CalcColorFromEntity( unsigned char *dstColors );
-void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
+void	RB_CalcColorFromEntity( unsigned char (*dstColors)[4] );
+void	RB_CalcColorFromOneMinusEntity( unsigned char (*dstColors)[4] );
 void	RB_CalcSpecularAlpha( unsigned char *alphas );
 void	RB_CalcDiffuseColor( unsigned char (*colors)[4] );
 

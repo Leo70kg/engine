@@ -350,13 +350,13 @@ static void ComputeColors( shaderStage_t *pStage )
 			}
 		}break;
 		case CGEN_WAVEFORM:
-			RB_CalcWaveColor( &pStage->rgbWave, ( unsigned char * ) tess.svars.colors );
+			RB_CalcWaveColor( &pStage->rgbWave, tess.svars.colors );
 			break;
 		case CGEN_ENTITY:
-			RB_CalcColorFromEntity( ( unsigned char * ) tess.svars.colors );
+			RB_CalcColorFromEntity( tess.svars.colors );
 			break;
 		case CGEN_ONE_MINUS_ENTITY:
-			RB_CalcColorFromOneMinusEntity( ( unsigned char * ) tess.svars.colors );
+			RB_CalcColorFromOneMinusEntity( tess.svars.colors );
 			break;
 	}
 

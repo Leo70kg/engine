@@ -592,47 +592,50 @@ COLORS
 */
 
 
-/*
-** RB_CalcColorFromEntity
-*/
-void RB_CalcColorFromEntity( unsigned char *dstColors )
+void RB_CalcColorFromEntity( unsigned char (*dstColors)[4] )
 {
-	int	i;
-	int *pColors = ( int * ) dstColors;
-	int c;
-
-	if ( !backEnd.currentEntity )
-		return;
-
-	c = * ( int * ) backEnd.currentEntity->e.shaderRGBA;
-
-	for ( i = 0; i < tess.numVertexes; i++, pColors++ )
+	if ( backEnd.currentEntity )
 	{
-		*pColors = c;
-	}
+		uint32_t i;
+		uint32_t nVerts = tess.numVertexes; 
+		
+        unsigned char srColor[4];
+
+        memcpy(srColor, backEnd.currentEntity->e.shaderRGBA, 4);
+        for ( i = 0; i < nVerts; i++)
+		{
+			// dstColors[i][0]=backEnd.currentEntity->e.shaderRGBA[0];
+			// dstColors[i][1]=backEnd.currentEntity->e.shaderRGBA[1];
+			// dstColors[i][2]=backEnd.currentEntity->e.shaderRGBA[2];
+			// dstColors[i][3]=backEnd.currentEntity->e.shaderRGBA[3];
+            memcpy(dstColors[i], srColor, 4);
+		}
+	}	
 }
+
 
 /*
 ** RB_CalcColorFromOneMinusEntity
 */
-void RB_CalcColorFromOneMinusEntity( unsigned char *dstColors )
+void RB_CalcColorFromOneMinusEntity( unsigned char (*dstColors)[4] )
 {
-	int	i;
-	int *pColors = ( int * ) dstColors;
-	unsigned char invModulate[4];
-
-	if ( !backEnd.currentEntity )
-		return;
-
-	invModulate[0] = 255 - backEnd.currentEntity->e.shaderRGBA[0];
-	invModulate[1] = 255 - backEnd.currentEntity->e.shaderRGBA[1];
-	invModulate[2] = 255 - backEnd.currentEntity->e.shaderRGBA[2];
-	invModulate[3] = 255 - backEnd.currentEntity->e.shaderRGBA[3];	// this trashes alpha, but the AGEN block fixes it
-
-	for ( i = 0; i < tess.numVertexes; i++, pColors++ )
+	if ( backEnd.currentEntity )
 	{
-		*pColors = * ( int * ) invModulate;
-	}
+    	unsigned char invModulate[4];
+
+        invModulate[0] = 255 - backEnd.currentEntity->e.shaderRGBA[0];
+        invModulate[1] = 255 - backEnd.currentEntity->e.shaderRGBA[1];
+        invModulate[2] = 255 - backEnd.currentEntity->e.shaderRGBA[2];
+        invModulate[3] = 255 - backEnd.currentEntity->e.shaderRGBA[3];
+        // this trashes alpha, but the AGEN block fixes it
+        
+        uint32_t nVerts = tess.numVertexes; 
+        uint32_t i;       
+        for ( i = 0; i < nVerts; i++ )
+        {
+            memcpy(dstColors[i], invModulate, 4);
+        }
+    }
 }
 
 /*
@@ -673,17 +676,16 @@ void RB_CalcAlphaFromOneMinusEntity( unsigned char *dstColors )
 
 /*
 ** RB_CalcWaveColor
-*/
 void RB_CalcWaveColor( const waveForm_t *wf, unsigned char *dstColors )
 {
 	int i;
 
 	float glow;
 	int *colors = ( int * ) dstColors;
-	byte	color[4];
+	uint8_t	color[4];
 
 
-  if ( wf->func == GF_NOISE ) {
+    if ( wf->func == GF_NOISE ) {
 		glow = wf->base + R_NoiseGet4f( 0, 0, 0, ( tess.shaderTime + wf->phase ) * wf->frequency ) * wf->amplitude;
 	} else {
 		glow = EvalWaveForm( wf ) * tr.identityLight;
@@ -701,10 +703,40 @@ void RB_CalcWaveColor( const waveForm_t *wf, unsigned char *dstColors )
 	color[3] = 255;
 	v = *(int *)color;
 	
-	for ( i = 0; i < tess.numVertexes; i++, colors++ ) {
+	for ( i = 0; i < tess.numVertexes; i++, colors++ )
+    {
 		*colors = v;
 	}
 }
+*/
+
+void RB_CalcWaveColor( const waveForm_t* wf, unsigned char (*dstColors)[4] )
+{
+	float glow;
+
+    if ( wf->func == GF_NOISE )
+		glow = wf->base + R_NoiseGet4f( 0, 0, 0, ( tess.shaderTime + wf->phase ) * wf->frequency ) * wf->amplitude;
+	else
+		glow = EvalWaveForm( wf ) * tr.identityLight;
+
+	if( glow < 0 )
+		glow = 0;
+	else if( glow > 1 )
+		glow = 1;
+
+
+    uint8_t color = glow * 255;
+
+    uint32_t i;  
+	for(i = 0; i < tess.numVertexes; i++)
+    {
+		dstColors[i][0] = color;
+    	dstColors[i][1] = color;
+        dstColors[i][2] = color;
+		dstColors[i][3] = 255;
+    }
+}
+
 
 /*
 ** RB_CalcWaveAlpha

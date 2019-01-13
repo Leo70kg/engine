@@ -687,29 +687,25 @@ COLORS
 */
 
 
-/*
-** RB_CalcColorFromEntity
-*/
-void RB_CalcColorFromEntity( unsigned char *dstColors )
+void RB_CalcColorFromEntity( unsigned char (*dstColors)[4] )
 {
 	if ( backEnd.currentEntity )
 	{
-		int	i;
-		int nVerts = tess.numVertexes; 
+		uint32_t i;
+		uint32_t nVerts = tess.numVertexes; 
 		for ( i = 0; i < nVerts; i++)
 		{
-			dstColors[0]=backEnd.currentEntity->e.shaderRGBA[0];
-			dstColors[1]=backEnd.currentEntity->e.shaderRGBA[1];
-			dstColors[2]=backEnd.currentEntity->e.shaderRGBA[2];
-			dstColors[3]=backEnd.currentEntity->e.shaderRGBA[3];
+			dstColors[i][0]=backEnd.currentEntity->e.shaderRGBA[0];
+			dstColors[i][1]=backEnd.currentEntity->e.shaderRGBA[1];
+			dstColors[i][2]=backEnd.currentEntity->e.shaderRGBA[2];
+			dstColors[i][3]=backEnd.currentEntity->e.shaderRGBA[3];
 		}
 	}	
 }
 
-/*
-** RB_CalcColorFromOneMinusEntity
-*/
-void RB_CalcColorFromOneMinusEntity( unsigned char *dstColors )
+
+
+void RB_CalcColorFromOneMinusEntity( unsigned char (*dstColors)[4] )
 {
 	if ( backEnd.currentEntity )
 	{
@@ -719,13 +715,13 @@ void RB_CalcColorFromOneMinusEntity( unsigned char *dstColors )
 		invModulate[2] = 255 - backEnd.currentEntity->e.shaderRGBA[2];
 		invModulate[3] = 255 - backEnd.currentEntity->e.shaderRGBA[3];	// this trashes alpha, but the AGEN block fixes it
 
-		int i;
-		for ( i = 0; i < tess.numVertexes; i++, dstColors+=4 )
+		uint32_t i;
+		for ( i = 0; i < tess.numVertexes; i++ )
 		{
-			dstColors[0] = invModulate[0];
-			dstColors[1] = invModulate[1];
-			dstColors[2] = invModulate[2];
-			dstColors[3] = invModulate[3];
+			dstColors[i][0] = invModulate[0];
+			dstColors[i][1] = invModulate[1];
+			dstColors[i][2] = invModulate[2];
+			dstColors[i][3] = invModulate[3];
 		}
 	}
 }
