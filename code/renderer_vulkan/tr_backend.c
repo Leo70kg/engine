@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_globals.h"
 #include "tr_cvar.h"
 
-#include "qvk.h"
+#include "vk_instance.h"
 #include "vk_clear_attachments.h"
 #include "vk_frame.h"
 #include "vk_screenshot.h"
@@ -31,23 +31,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "R_DEBUG.h"
 
 
-
-/*
-
-A player has predicted a teleport, but hasn't arrived yet
-
-static void RB_Hyperspace( void )
-{
-	float c = ( backEnd.refdef.rd.time & 255 ) / 255.0f;
-
-	float color[4] = { c, c, c, 1 };
-
-	// VULKAN
-	vk_clearColorAttachments(color);
-
-	backEnd.isHyperspace = qtrue;
-}
-*/
 
 
 /*
@@ -78,19 +61,19 @@ void RB_BeginDrawingView (void)
         #endif
         vk_clearColorAttachments(fast_sky_color);
     }
+    
+
 	// VULKAN
     vk_clearDepthStencilAttachments();
 
 	if ( ( backEnd.refdef.rd.rdflags & RDF_HYPERSPACE ) )
 	{
 		//RB_Hyperspace();
-        //A player has predicted a teleport, but hasn't arrived yet
-        
-        float c = ( backEnd.refdef.rd.time & 255 ) / 255.0f;
+        // A player has predicted a teleport, but hasn't arrived yet
+        const float c = ( backEnd.refdef.rd.time & 255 ) / 255.0f;
+        const float color[4] = { c, c, c, 1 };
 
-        float color[4] = { c, c, c, 1 };
-
-        // VULKAN
+        // so short, do we really need this?
 	    vk_clearColorAttachments(color);
 
 	    backEnd.isHyperspace = qtrue;

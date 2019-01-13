@@ -1,6 +1,3 @@
-#include "qvk.h"
-
-
 #include "vk_instance.h"
 #include "vk_shaders.h"
 

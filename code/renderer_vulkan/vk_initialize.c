@@ -1,10 +1,7 @@
-#include "qvk.h"
 #include "tr_local.h"
 
 #include "vk_initialize.h"
-
 #include "vk_image.h"
-
 #include "vk_instance.h"
 #include "vk_shade_geometry.h"
 #include "vk_pipelines.h"

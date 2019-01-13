@@ -46,10 +46,11 @@ static const vidmode_t r_vidModes[] =
 	{ "Mode 23: 1920x1080 (1080p)",	1920,	1080,	1 },
 	{ "Mode 24: 1920x1200",		1920,	1200,	1 },
 	{ "Mode 25: 1920x1440",		1920,	1440,	1 },
-	{ "Mode 26: 2560x1600",		2560,	1600,	1 },
-	{ "Mode 27: 3840x2160 (4K)",	3840,	2160,	1 }
+    { "Mode 26: 2560x1080",		2560,	1080,	1 },
+    { "Mode 27: 2560x1600",		2560,	1600,	1 },
+	{ "Mode 28: 3840x2160 (4K)",	3840,	2160,	1 }
 };
-static const int s_numVidModes = 28;
+static const int s_numVidModes = 29;
 
 
 void R_DisplayResolutionList_f( void )
@@ -97,5 +98,4 @@ void R_InitDisplayResolution( void )
     r_customwidth = ri.Cvar_Get( "r_customwidth", "960", CVAR_ARCHIVE | CVAR_LATCH );
     r_customheight = ri.Cvar_Get( "r_customheight", "540", CVAR_ARCHIVE | CVAR_LATCH );
     r_customaspect = ri.Cvar_Get( "r_customaspect", "1.78", CVAR_ARCHIVE | CVAR_LATCH );
-
 }

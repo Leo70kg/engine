@@ -1,4 +1,3 @@
-#include "qvk.h"
 #include "vk_clear_attachments.h"
 #include "vk_shade_geometry.h"
 #include "vk_instance.h"

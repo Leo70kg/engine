@@ -1,4 +1,3 @@
-#include "qvk.h"
 #include "tr_local.h"
 #include "vk_image_sampler.h"
 #include "R_ImageProcess.h"

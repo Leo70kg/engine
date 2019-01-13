@@ -1611,7 +1611,6 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_world.o \
   $(B)/renderer_vulkan/tr_common.o \
   $(B)/renderer_vulkan/tr_displayResolution.o \
-  $(B)/renderer_vulkan/qvk.o \
   $(B)/renderer_vulkan/vk_instance.o \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
   $(B)/renderer_vulkan/vk_image.o \

@@ -1,7 +1,5 @@
-#include "qvk.h"
 #include "tr_local.h"
 #include "tr_cvar.h"
-
 #include "vk_instance.h"
 #include "vk_shade_geometry.h"
 #include "vk_frame.h"

@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_globals.h"
 #include "tr_displayResolution.h"
 
-#include "VKimpl.h"
+#include "vk_instance.h"
 #include "vk_initialize.h"
 #include "vk_screenshot.h"
 #include "vk_shade_geometry.h"

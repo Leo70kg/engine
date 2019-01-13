@@ -25,7 +25,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // because it can actually influence the physical device selection
 
 #include "sdl_icon.h"
-#include "qvk.h"
 #include "VKimpl.h"
 #include "vk_instance.h"
 #include "tr_displayResolution.h"

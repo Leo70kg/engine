@@ -50,8 +50,9 @@ void vk_clearDepthStencilAttachments(void)
 void vk_clearColorAttachments(const float* color)
 {
 
+    // ri.Printf(PRINT_ALL, "vk_clearColorAttachments\n");
 
-	VkClearAttachment attachments;
+    VkClearAttachment attachments;
 	uint32_t attachment_count = 1;
 
     attachments.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -61,13 +62,14 @@ void vk_clearColorAttachments(const float* color)
     attachments.clearValue.color.float32[2] = color[2];
     attachments.clearValue.color.float32[3] = color[3];
 
-
+/* 
 	VkClearRect clear_rect[2];
 	clear_rect[0].rect = get_scissor_rect();
 	clear_rect[0].baseArrayLayer = 0;
 	clear_rect[0].layerCount = 1;
-	int rect_count = 1;
+	uint32_t rect_count = 1;
 
+  
 	// Split viewport rectangle into two non-overlapping rectangles.
 	// It's a HACK to prevent Vulkan validation layer's performance warning:
 	//		"vkCmdClearAttachments() issued on command buffer object XXX prior to any Draw Cmds.
@@ -81,12 +83,20 @@ void vk_clearColorAttachments(const float* color)
     clear_rect[1] = clear_rect[0];
     clear_rect[1].rect.offset.y = h;
     rect_count = 2;
+*/
+
+    VkClearRect clear_rect;
+	clear_rect.rect = get_scissor_rect();
+	clear_rect.baseArrayLayer = 0;
+	clear_rect.layerCount = 1;
+    uint32_t rect_count = 1;
+
+	qvkCmdClearAttachments(vk.command_buffer, attachment_count, &attachments, rect_count, &clear_rect);
 
 
-	qvkCmdClearAttachments(vk.command_buffer, attachment_count, &attachments, rect_count, clear_rect);
 }
 
-
+/*
 void vk_clear_attachments(VkBool32 clear_depth_stencil, VkBool32 clear_color, float* color)
 {
 
@@ -142,3 +152,4 @@ void vk_clear_attachments(VkBool32 clear_depth_stencil, VkBool32 clear_color, fl
 
 	qvkCmdClearAttachments(vk.command_buffer, attachment_count, attachments, rect_count, clear_rect);
 }
+*/

@@ -8,7 +8,6 @@
 #include <vulkan/vulkan_xcb.h>
 
 #include "tr_local.h"
-#include "qvk.h"
 #include "vk_instance.h"
 #include "tr_displayResolution.h"
 

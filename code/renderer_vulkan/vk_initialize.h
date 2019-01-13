@@ -2,7 +2,6 @@
 #define VK_INITIALLIZE_H_
 
 
-
 // Initializes VK_Instance structure.
 // After calling this function we get fully functional vulkan subsystem.
 void vk_initialize(void);
@@ -11,4 +10,5 @@ void vk_initialize(void);
 void vk_shutdown(void);
 
 void vulkanInfo_f( void ); 
+
 #endif

@@ -687,6 +687,7 @@ void RB_EndSurface( void )
 	if (tess.numIndexes == 0) {
 		return;
 	}
+    
 	if (tess.shader->isSky && r_fastsky->integer) {
 		return;
 	}
