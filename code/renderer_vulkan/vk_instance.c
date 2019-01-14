@@ -328,6 +328,8 @@ static void vk_checkSwapchainKHR(void)
 
 static void vk_createLogicalDevice(void)
 {
+    ri.Printf( PRINT_ALL, " vk_createLogicalDevice(): vk.device \n" );
+
     static const char* device_extensions[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
@@ -353,9 +355,6 @@ static void vk_createLogicalDevice(void)
 	if (features.fillModeNonSolid == VK_FALSE)
 	    ri.Error(ERR_FATAL,
             "vk_create_device: fillModeNonSolid feature is not supported");
-    // memset(&features, 0, sizeof(features));
-    // features.shaderClipDistance = VK_TRUE;
-    // features.fillModeNonSolid = VK_TRUE;
 
 
     VkDeviceCreateInfo device_desc;
@@ -466,6 +465,7 @@ static void loadDeviceFunctions(void)
 
 void vk_getProcAddress(void)
 {
+    ri.Printf( PRINT_ALL, " vk_getProcAddress() \n" );
 
     vk_getInstanceProcAddrImpl();
 
@@ -529,7 +529,7 @@ void vk_getProcAddress(void)
 void vk_clearProcAddress(void)
 {
 
-    ri.Printf( PRINT_ALL, "VK_ClearProcAddress()\n" );
+    ri.Printf( PRINT_ALL, " vk_clearProcAddress() \n" );
 
 	qvkCreateInstance                           = NULL;
 	qvkEnumerateInstanceExtensionProperties		= NULL;

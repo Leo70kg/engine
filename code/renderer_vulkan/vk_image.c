@@ -566,7 +566,7 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
 	ensure_staging_buffer_allocation(buffer_size);
     memcpy(s_pStgBuf, pPixels, buffer_size);
 
-    VkCommandBuffer command_buffer;
+    VkCommandBuffer cmd_buf;
     {
         VkCommandBufferAllocateInfo alloc_info;
         alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -574,7 +574,7 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
         alloc_info.commandPool = vk.command_pool;
         alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         alloc_info.commandBufferCount = 1;
-        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
+        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &cmd_buf));
     }
 
     {
@@ -583,7 +583,7 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
         begin_info.pNext = NULL;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         begin_info.pInheritanceInfo = NULL;
-        VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
+        VK_CHECK(qvkBeginCommandBuffer(cmd_buf, &begin_info));
     }
 
 	VkBufferMemoryBarrier barrier;
@@ -597,11 +597,10 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
 	barrier.offset = 0;
 	barrier.size = VK_WHOLE_SIZE;
     
-	qvkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 1, &barrier, 0, NULL);
+	qvkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 1, &barrier, 0, NULL);
 
 
-
-    record_image_layout_transition(command_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+    record_image_layout_transition(cmd_buf, image, VK_IMAGE_ASPECT_COLOR_BIT,
             0, VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -638,16 +637,16 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
     // num_regions is the number of regions to copy.
     // pRegions is a pointer to an array of VkBufferImageCopy structures
     // specifying the regions to copy.
-    qvkCmdCopyBufferToImage(command_buffer, s_StagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    qvkCmdCopyBufferToImage(cmd_buf, s_StagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-    record_image_layout_transition(command_buffer, image,
+    record_image_layout_transition(cmd_buf, image,
             VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     ////////
     
-    VK_CHECK(qvkEndCommandBuffer(command_buffer));
+    VK_CHECK(qvkEndCommandBuffer(cmd_buf));
 
 	VkSubmitInfo submit_info;
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -656,14 +655,14 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
 	submit_info.pWaitSemaphores = NULL;
 	submit_info.pWaitDstStageMask = NULL;
 	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &command_buffer;
+	submit_info.pCommandBuffers = &cmd_buf;
 	submit_info.signalSemaphoreCount = 0;
 	submit_info.pSignalSemaphores = NULL;
 
 	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));	
     VK_CHECK(qvkQueueWaitIdle(vk.queue));
     
-	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
+	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmd_buf);
 }
 
 
