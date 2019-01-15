@@ -5,7 +5,7 @@
 // and is designed to be work with both Vulkan and OpenCL.
 //
 // The graphics pipeline is the sequence of the operations that take the
-// vertices and textures of your meshes all way to the pixels in the the
+// vertices and textures of your meshes all way to the pixels in the
 // render targets.
 
 
@@ -111,9 +111,8 @@ void vk_loadShaderModules(void)
 
 
 
-
-
-void vk_specifyShaderModule(const enum Vk_Shader_Type shader_type, VkBool32 isClippingPlane, VkShaderModule* vs, VkShaderModule* fs)
+void vk_specifyShaderModule(const enum Vk_Shader_Type shader_type, const VkBool32 isClippingPlane,
+                            VkShaderModule* vs, VkShaderModule* fs)
 {
     // Specify the shader module containing the shader code, and the function
     // to invoke. This means that it's possible to combine multiple fragment

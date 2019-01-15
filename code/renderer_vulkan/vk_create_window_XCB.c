@@ -486,7 +486,8 @@ void vk_getInstanceProcAddrImpl(void)
     {
         ri.Error(ERR_FATAL, "Failed to find entrypoint vkGetInstanceProcAddr\n"); 
     }
-
+    
+    ri.Printf(PRINT_ALL,  " Get instance proc address. (using XCB)\n");
 }
 
 
@@ -537,7 +538,7 @@ void vk_destroyWindow(void)
 }
 
 
-void VKimp_CreateSurface(void)
+void vk_createSurfaceImpl(void)
 {
 
 // Create a WSI surface for the window:
@@ -586,6 +587,7 @@ void VKimp_CreateSurface(void)
 #endif
 }
 
+/*
 static void CreateInstanceImpl(unsigned int numExt, const char* extNames[])
 {
 	VkApplicationInfo appInfo;
@@ -629,7 +631,7 @@ static void CreateInstanceImpl(unsigned int numExt, const char* extNames[])
         ri.Error(ERR_FATAL, "%d, returned by qvkCreateInstance.\n", e);
     }
 }
-
+*/
 
 /*  
 
@@ -662,6 +664,7 @@ calls.
 
 void VKimp_CreateInstance(void)
 {
+    ri.Printf( PRINT_ALL, " VKimp_CreateInstance() \n" );
 	// check extensions availability
 	unsigned int instance_extension_count = 0;
     VkBool32 surfaceExtFound = 0;

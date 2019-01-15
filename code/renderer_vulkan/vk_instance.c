@@ -4,7 +4,7 @@
 #include "VKimpl.h"
 #include "vk_instance.h"
 
-
+#include "tr_globals.h"
 
 struct Vk_Instance vk;
 
@@ -117,10 +117,141 @@ PFN_vkQueuePresentKHR							qvkQueuePresentKHR;
 
 
 
+static void vk_createInstance(void)
+{
+    // There is no global state in Vulkan and all per-application state
+    // is stored in a VkInstance object. Creating a VkInstance object 
+    // initializes the Vulkan library and allows the application to pass
+    // information about itself to the implementation.
+    ri.Printf(PRINT_ALL, " Creating instance: vk.instance\n");
+	
+    // The version of Vulkan that is supported by an instance may be 
+    // different than the version of Vulkan supported by a device or
+    // physical device. Because Vulkan 1.0 implementations may fail
+    // with VK_ERROR_INCOMPATIBLE_DRIVER, applications should determine
+    // the version of Vulkan available before calling vkCreateInstance.
+    // If the vkGetInstanceProcAddr returns NULL for vkEnumerateInstanceVersion,
+    // it is a Vulkan 1.0 implementation. Otherwise, the application can
+    // call vkEnumerateInstanceVersion to determine the version of Vulkan.
+
+    VkApplicationInfo appInfo;
+	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pNext = NULL;
+	appInfo.pApplicationName = "OpenArena";
+	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.pEngineName = "VulkanArena";
+	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    // apiVersion must be the highest version of Vulkan that the
+    // application is designed to use, encoded as described in the
+    // API Version Numbers and Semantics section. The patch version
+    // number specified in apiVersion is ignored when creating an 
+    // instance object. Only the major and minor versions of the 
+    // instance must match those requested in apiVersion.
+	appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+
+
+	VkInstanceCreateInfo instanceCreateInfo;
+	
+    instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    // pNext is NULL or a pointer to an extension-specific structure.
+	instanceCreateInfo.pNext = NULL;
+    // flags is reserved for future use.
+    instanceCreateInfo.flags = 0;
+    // pApplicationInfo is NULL or a pointer to an instance of
+    // VkApplicationInfo. If not NULL, this information helps 
+    // implementations recognize behavior inherent to classes
+    // of applications.
+    instanceCreateInfo.pApplicationInfo = &appInfo;
+
+    
+	// check extensions availability
+    //
+    // Extensions may define new Vulkan commands, structures, and enumerants.
+    // For compilation purposes, the interfaces defined by registered extensions,
+    // including new structures and enumerants as well as function pointer types
+    // for new commands, are defined in the Khronos-supplied vulkan_core.h 
+    // together with the core API. However, commands defined by extensions may
+    // not be available for static linking - in which case function pointers to
+    // these commands should be queried at runtime as described in Command Function Pointers.
+    // Extensions may be provided by layers as well as by a Vulkan implementation.
+    //
+    // check extensions availability
+	uint32_t nInsExt = 0;
+    // To retrieve a list of supported extensions before creating an instance
+	VK_CHECK( qvkEnumerateInstanceExtensionProperties( NULL, &nInsExt, NULL) );
+
+    assert(nInsExt > 0);
+
+    ri.Printf(PRINT_ALL, "--- Total %d instance extensions. --- \n", nInsExt);
+
+    VkExtensionProperties *pInsExt = (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * nInsExt);
+    const char** ppInstanceExt = malloc( sizeof(char *) * (nInsExt) );
+
+    VK_CHECK(qvkEnumerateInstanceExtensionProperties( NULL, &nInsExt, pInsExt));
+
+    uint32_t i = 0;
+
+    for (i = 0; i < nInsExt; i++)
+    {    
+        static unsigned int indicator;
+
+        ri.Printf(PRINT_ALL, "%s\n", pInsExt[i].extensionName );
+        unsigned int len = strlen(pInsExt[i].extensionName);
+        memcpy(glConfig.extensions_string + indicator, pInsExt[i].extensionName, len);
+        indicator += len;
+        glConfig.extensions_string[indicator++] = ' ';
+
+        ppInstanceExt[i] = pInsExt[i].extensionName;
+    }
+    
+    instanceCreateInfo.enabledExtensionCount = nInsExt;
+	instanceCreateInfo.ppEnabledExtensionNames = ppInstanceExt;
+
+#ifndef NDEBUG
+    ri.Printf(PRINT_ALL, "Using VK_LAYER_LUNARG_standard_validation\n");
+
+    const char* const validation_layer_name = "VK_LAYER_LUNARG_standard_validation";    
+    instanceCreateInfo.enabledLayerCount = 1;
+	instanceCreateInfo.ppEnabledLayerNames = &validation_layer_name;
+#else
+    instanceCreateInfo.enabledLayerCount = 0;
+	instanceCreateInfo.ppEnabledLayerNames = NULL;
+#endif
+
+
+    VkResult e = qvkCreateInstance(&instanceCreateInfo, NULL, &vk.instance);
+    if(e == VK_SUCCESS)
+    {
+        ri.Printf(PRINT_ALL, "--- Vulkan create instance success! ---\n\n");
+    }
+    else if (e == VK_ERROR_INCOMPATIBLE_DRIVER)
+	{
+		// The requested version of Vulkan is not supported by the driver 
+		// or is otherwise incompatible for implementation-specific reasons.
+        ri.Error(ERR_FATAL, 
+            "The requested version of Vulkan is not supported by the driver.\n" );
+    }
+    else if (e == VK_ERROR_EXTENSION_NOT_PRESENT)
+    {
+        ri.Error(ERR_FATAL, "Cannot find a specified extension library.\n");
+    }
+    else 
+    {
+        ri.Error(ERR_FATAL, "%d, returned by qvkCreateInstance.\n", e);
+    }
+    
+    free(pInsExt);
+
+    free(ppInstanceExt);
+}
+
+
+
 static void vk_loadGlobalFunctions(void)
 {
-    ri.Printf(PRINT_ALL, "...Load vulkan instance functions...\n");
+    ri.Printf(PRINT_ALL, " Loading vulkan instance functions \n");
 
+    vk_getInstanceProcAddrImpl();
 
     #define INIT_INSTANCE_FUNCTION(func)                                \
     q##func = (PFN_ ## func)qvkGetInstanceProcAddr(vk.instance, #func); \
@@ -131,10 +262,11 @@ static void vk_loadGlobalFunctions(void)
 	INIT_INSTANCE_FUNCTION(vkCreateInstance)
 	INIT_INSTANCE_FUNCTION(vkEnumerateInstanceExtensionProperties)
 
-	//
+    //
 	// Get instance level functions.
 	//
-	VKimp_CreateInstance();
+	vk_createInstance();
+
 
 	INIT_INSTANCE_FUNCTION(vkCreateDevice)
 	INIT_INSTANCE_FUNCTION(vkDestroyInstance)
@@ -162,7 +294,7 @@ static void vk_loadGlobalFunctions(void)
 
     #undef INIT_INSTANCE_FUNCTION
 
-    ri.Printf(PRINT_ALL, "...INIT INSTANCE FUNCTION DONE...\n\n");
+    ri.Printf(PRINT_ALL, " Init global functions done. \n");
 }
 
 ////////////////////////////////
@@ -170,16 +302,19 @@ static void vk_loadGlobalFunctions(void)
 
 static void vk_selectPhysicalDevice(void)
 {
+    // After initializing the Vulkan library through a VkInstance
+    // we need to look for and select a graphics card in the system
+    // that supports the features we need. In fact we can select any
+    // number of graphics cards and use them simultaneously.
 	uint32_t gpu_count = 0;
 
-    // Initial call to query gpu_count
-    // then second call for gpu info.
+    // Initial call to query gpu_count, then second call for gpu info.
 	qvkEnumeratePhysicalDevices(vk.instance, &gpu_count, NULL);
 
 	if (gpu_count <= 0)
 		ri.Error(ERR_FATAL, "Vulkan: no physical device found");
 
-    VkPhysicalDevice *pPhyDev = (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * gpu_count);
+    VkPhysicalDevice *pPhyDev = (VkPhysicalDevice *) malloc (sizeof(VkPhysicalDevice) * gpu_count);
     
     // TODO: multi graphic cards selection support
     VK_CHECK(qvkEnumeratePhysicalDevices(vk.instance, &gpu_count, pPhyDev));
@@ -187,6 +322,8 @@ static void vk_selectPhysicalDevice(void)
     vk.physical_device = pPhyDev[0];
 	
     free(pPhyDev);
+
+    ri.Printf(PRINT_ALL, " Total %d graphics card, the first one is choosed. \n", gpu_count);
 }
 
 
@@ -195,26 +332,26 @@ static void vk_selectSurfaceFormat(void)
 {
     uint32_t nSurfmt;
     
-    ri.Printf(PRINT_ALL, "\n-------- SelectSurfaceFormat --------\n");
+    ri.Printf(PRINT_ALL, "\n -------- vk_selectSurfaceFormat() -------- \n");
 
 
-    // Get the list of VkFormat's that are supported
-    // To query the supported swapchain format-color space pairs for a surface
-    // surface is the surface that will be associated with the swapchain.
-    // surface must be a valid VkSurfaceKHR handle
+    // Get the numbers of VkFormat's that are supported
+    // "vk.surface" is the surface that will be associated with the swapchain.
+    // "vk.surface" must be a valid VkSurfaceKHR handle
     VK_CHECK(qvkGetPhysicalDeviceSurfaceFormatsKHR(vk.physical_device, vk.surface, &nSurfmt, NULL));
     assert(nSurfmt > 0);
 
     VkSurfaceFormatKHR *pSurfFmts = 
-        (VkSurfaceFormatKHR *) malloc( nSurfmt * sizeof(VkSurfaceFormatKHR) );
+        (VkSurfaceFormatKHR *) malloc ( nSurfmt * sizeof(VkSurfaceFormatKHR) );
 
+    // To query the supported swapchain format-color space pairs for a surface
     VK_CHECK(qvkGetPhysicalDeviceSurfaceFormatsKHR(vk.physical_device, vk.surface, &nSurfmt, pSurfFmts));
 
-    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
-    // the surface has no preferred format.  Otherwise, at least one
-    // supported format will be returned.
+    // If the format list includes just one entry of VK_FORMAT_UNDEFINED, the surface
+    // has no preferred format. Otherwise, at least one supported format will be returned.
     if ((nSurfmt == 1) && (pSurfFmts[0].format == VK_FORMAT_UNDEFINED))
-    { // special case that means we can choose any format
+    {
+        // special case that means we can choose any format
         vk.surface_format.format = VK_FORMAT_B8G8R8A8_UNORM;
         vk.surface_format.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
         ri.Printf(PRINT_ALL, "VK_FORMAT_R8G8B8A8_UNORM\n");
@@ -250,36 +387,49 @@ static void vk_selectSurfaceFormat(void)
 
 static void vk_selectQueueFamilyForPresentation(void)
 {
+    // Almosty every operation in Vulkan, anything from drawing textures,
+    // requires commands to be submitted to a queue. There are different
+    // types of queues that originate from differnet queue families and
+    // each family of queues allows only a subset of commands. 
+    // For example, there could be a queue family allows processing of 
+    // compute commands or one that only allows memory thansfer related
+    // commands. We need to check which queue families are supported by
+    // the device and which one of these supports the commands that we use.
+
 
     uint32_t nSurfmt;
-    uint32_t i;
-    ri.Printf(PRINT_ALL, " SelectQueueFamilyForPresentation \n");
     qvkGetPhysicalDeviceQueueFamilyProperties(vk.physical_device, &nSurfmt, NULL);
     
-    assert(nSurfmt >= 1);
+    assert(nSurfmt > 0);
 
-    VkQueueFamilyProperties* pQueueFamilies = (VkQueueFamilyProperties *) malloc(
+    VkQueueFamilyProperties* pQueueFamilies = (VkQueueFamilyProperties *) malloc (
             nSurfmt * sizeof(VkQueueFamilyProperties) );
 
-    //To query properties of queues available on a physical device
+    // To query properties of queues available on a physical device
     qvkGetPhysicalDeviceQueueFamilyProperties(vk.physical_device, &nSurfmt, pQueueFamilies);
 
-    // select queue family with presentation and graphics support
+    // Select queue family with presentation and graphics support
     // Iterate over each queue to learn whether it supports presenting:
     vk.queue_family_index = -1;
+    
+    uint32_t i;
     for (i = 0; i < nSurfmt; i++)
     {
-        VkBool32 presentation_supported;
-        // to look for a queue family that has the capability of presenting
+        // To look for a queue family that has the capability of presenting
         // to our window surface
-        // To determine whether a queue family of a physical device supports 
-        // presentation to a given surface,
+        
+        VkBool32 presentation_supported = VK_FALSE;
         VK_CHECK(qvkGetPhysicalDeviceSurfaceSupportKHR(
                     vk.physical_device, i, vk.surface, &presentation_supported));
 
         if (presentation_supported && 
-                (pQueueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+                (pQueueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+        {
             vk.queue_family_index = i;
+            
+            ri.Printf(PRINT_ALL, " Queue family for presentation selected: %d\n",
+                    vk.queue_family_index);
+
             break;
         }
     }
@@ -292,16 +442,27 @@ static void vk_selectQueueFamilyForPresentation(void)
 
 
 
-static void vk_checkSwapchainKHR(void)
+static void vk_createLogicalDevice(void)
 {
-	// create VkDevice
-    // Look for device extensions
 
+    static const char* device_extensions[1] = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
+    //  Not all graphics cards are capble of presenting images directly
+    //  to a screen for various reasons, for example because they are 
+    //  designed for servers and don't have any display outputs. 
+    //  Secondly, since image presentation is heavily tied into the 
+    //  window system and the surfaces associated with windows, it is
+    //  not actually part of the vulkan core. You have to enable the
+    //  VK_KHR_swapchain device extension after querying for its support.
     uint32_t nDevExts = 0;
     VkBool32 swapchainExtFound = 0;
 
-    // To query the extensions available to a given physical device
-    VK_CHECK( qvkEnumerateDeviceExtensionProperties( vk.physical_device, NULL, &nDevExts, NULL) );
+    // To query the numbers of extensions available to a given physical device
+    ri.Printf( PRINT_ALL, " Check for VK_KHR_swapchain extension. \n" );
+
+    qvkEnumerateDeviceExtensionProperties( vk.physical_device, NULL, &nDevExts, NULL);
 
     VkExtensionProperties* pDeviceExt = 
         (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * nDevExts);
@@ -311,28 +472,19 @@ static void vk_checkSwapchainKHR(void)
 
 
     uint32_t j;
-    for (j=0; j<nDevExts; j++)
+    for (j = 0; j < nDevExts; j++)
     {
-        if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, pDeviceExt[j].extensionName))
+        if (!strcmp(device_extensions[0], pDeviceExt[j].extensionName))
         {
-            swapchainExtFound = 1;
+            swapchainExtFound = VK_TRUE;
             break;
         }
     }
-    if (!swapchainExtFound)
+    if (VK_FALSE == swapchainExtFound)
         ri.Error(ERR_FATAL, "VK_KHR_SWAPCHAIN_EXTENSION_NAME is not available");
 
     free(pDeviceExt);
-}
 
-
-static void vk_createLogicalDevice(void)
-{
-    ri.Printf( PRINT_ALL, " vk_createLogicalDevice(): vk.device \n" );
-
-    static const char* device_extensions[] = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
 
     const float priority = 1.0;
     VkDeviceQueueCreateInfo queue_desc;
@@ -344,9 +496,10 @@ static void vk_createLogicalDevice(void)
     queue_desc.pQueuePriorities = &priority;
 
 
-    // Query fine-grained feature support for this device.
-    // If app has specific feature requirements it should check supported
-    // features based on this query
+    // Query fine-grained feature support for this device. If APP 
+    // has specific feature requirements it should check supported
+    // features based on this query.
+
 	VkPhysicalDeviceFeatures features;
 	qvkGetPhysicalDeviceFeatures(vk.physical_device, &features);
 	if (features.shaderClipDistance == VK_FALSE)
@@ -365,16 +518,26 @@ static void vk_createLogicalDevice(void)
     device_desc.pQueueCreateInfos = &queue_desc;
     device_desc.enabledLayerCount = 0;
     device_desc.ppEnabledLayerNames = NULL;
-    device_desc.enabledExtensionCount = sizeof(device_extensions)/sizeof(device_extensions[0]);
+    device_desc.enabledExtensionCount = 1;
     device_desc.ppEnabledExtensionNames = device_extensions;
     device_desc.pEnabledFeatures = &features;
     
+
+    // After selecting a physical device to use we need to set up a
+    // logical device to interface with it. The logical device 
+    // creation process id similar to the instance creation process
+    // and describes the features we want to use. we also need to 
+    // specify which queues to create now that we've queried which
+    // queue families are available. You can create multiple logical
+    // devices from the same physical device if you have varying requirements.
+    ri.Printf( PRINT_ALL, " Create logical device: vk.device \n" );
+
     VK_CHECK(qvkCreateDevice(vk.physical_device, &device_desc, NULL, &vk.device));
 
 }
 
 
-static void loadDeviceFunctions(void)
+static void vk_loadDeviceFunctions(void)
 {
     #define INIT_DEVICE_FUNCTION(func)                              \
     q##func = (PFN_ ## func)qvkGetDeviceProcAddr(vk.device, #func); \
@@ -465,62 +628,25 @@ static void loadDeviceFunctions(void)
 
 void vk_getProcAddress(void)
 {
-    ri.Printf( PRINT_ALL, " vk_getProcAddress() \n" );
-
-    vk_getInstanceProcAddrImpl();
 
     vk_loadGlobalFunctions();
 
     // The window surface needs to be created right after the instance creation,
     // because it can actually influence the physical device selection.
-	VKimp_CreateSurface(); 
-
-    // After initializing the Vulkan library through a VkInstance
-    // we need to look for and select a graphics card in the system
-    // that supports the features we need. In fact we can select any
-    // number of graphics cards and use them simultaneously.
+	vk_createSurfaceImpl(); 
    
     // select physical device
     vk_selectPhysicalDevice();
 
     vk_selectSurfaceFormat(); 
 
-// Almosty every operation in Vulkan, anything from drawing textures,
-// requires commands to be submitted to a queue. There are different
-// types of queues that originate from differnet queue families and
-// each family of queues allows only a subset of commands. For example,
-// there could be a queue family allows processing of compute commands
-// or one that only allows memory thansfer related commands. We need
-// to check which queue families are supported by the device and which
-// one of these supports the commands that we use.
-
-
     vk_selectQueueFamilyForPresentation();
-
-// not all graphics cards are capble of presenting images directly to a screen
-// for various reasons, for example because they are designed for servers and
-// don't have any display outputs. Secondly, since image presentation is heavily
-// tied into the window system and the surfaces associated with windows, it is
-// not actually part of the vulkan core. You have to enable the VK_KHR_swapchain
-// device extension after querying for its support.
-
-    vk_checkSwapchainKHR();
-
-
-// After selecting a physical device to use we need to set up a logical device
-// to interface with it. The logical device creation process id similar to the
-// instance creation process and describes the features we want to use. we also
-// need to specify which queues to create now that we've queried which queue 
-// families are available. You can create multiple logical devices from the
-// same physical device if you have varying requirements.
-
 
     vk_createLogicalDevice();
 
     // Get device level functions.
-    loadDeviceFunctions();
+    vk_loadDeviceFunctions();
 
-   
     // a call to retrieve queue handle
 	qvkGetDeviceQueue(vk.device, vk.queue_family_index, 0, &vk.queue);
 }

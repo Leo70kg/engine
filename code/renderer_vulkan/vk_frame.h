@@ -12,4 +12,5 @@ void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSur
 
 void vk_create_sync_primitives(void);
 void vk_destroy_sync_primitives(void);
+
 #endif

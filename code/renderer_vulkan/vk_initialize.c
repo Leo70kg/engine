@@ -185,7 +185,9 @@ void vk_shutdown(void)
     vk_destroyFrameBuffers();
 
 	qvkDestroyRenderPass(vk.device, vk.render_pass, NULL);
-	qvkDestroyCommandPool(vk.device, vk.command_pool, NULL);
+	
+    //
+    qvkDestroyCommandPool(vk.device, vk.command_pool, NULL);
 
     vk_destroy_shading_data();
 
@@ -213,6 +215,19 @@ void vk_shutdown(void)
 }
 
 
+void vk_create_command_pool(void)
+{
+    ri.Printf( PRINT_ALL, "create command pool: vk.command_pool. \n" );
+    
+    VkCommandPoolCreateInfo desc;
+    desc.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    desc.pNext = NULL;
+    desc.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    desc.queueFamilyIndex = vk.queue_family_index;
+
+    VK_CHECK(qvkCreateCommandPool(vk.device, &desc, NULL, &vk.command_pool));
+}
+
 
 void vk_initialize(void)
 {
@@ -220,9 +235,7 @@ void vk_initialize(void)
 	// Create debug callback.
     createDebugCallback();
 #endif
-	//
 	// Swapchain.
-
 	vk_createSwapChain(vk.physical_device, vk.device, vk.surface, vk.surface_format);
 
 	//
@@ -230,18 +243,12 @@ void vk_initialize(void)
 	//
     vk_create_sync_primitives();
 
+	// we have to create a command pool before we can create command buffers
+    // command pools manage the memory that is used to store the buffers and
+    // command buffers are allocated from them.
+	
+    vk_create_command_pool();
 	//
-	// Command pool.
-	//
-	{
-		VkCommandPoolCreateInfo desc;
-		desc.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		desc.pNext = NULL;
-		desc.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		desc.queueFamilyIndex = vk.queue_family_index;
-
-		VK_CHECK(qvkCreateCommandPool(vk.device, &desc, NULL, &vk.command_pool));
-	}
 
 	//
 	// Command buffer.

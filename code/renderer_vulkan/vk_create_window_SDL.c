@@ -311,87 +311,6 @@ void checkInstanceExt(void)
 
 
 
-
-void VKimp_CreateInstance(void)
-{
-    ri.Printf(PRINT_ALL, "...VKimp_CreateInstance...\n");
-	
-    VkApplicationInfo appInfo;
-	memset(&appInfo, 0, sizeof(appInfo));
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = "OpenArena";
-	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = "OpenArena";
-	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 0);
-
-	VkInstanceCreateInfo instanceCreateInfo;
-	memset(&instanceCreateInfo, 0, sizeof(instanceCreateInfo));
-	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	instanceCreateInfo.pApplicationInfo = &appInfo;
-
-    ////////////////
-
-	// check extensions availability
-	unsigned int instance_extension_count = 0;
-    const char** instance_extensions = NULL;
-
-    if(!SDL_Vulkan_GetInstanceExtensions(SDL_window, &instance_extension_count, NULL))
-	    ri.Error(ERR_FATAL, "Vulkan: SDL_Vulkan_GetInstanceExtensions\n");
-
-    if (instance_extension_count > 0)
-    {
-        instance_extensions = malloc(
-                sizeof(const char *) * (instance_extension_count+1) );
-        SDL_Vulkan_GetInstanceExtensions(SDL_window, &instance_extension_count, instance_extensions);
-        
-
-        instance_extensions[instance_extension_count] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
-    }
-
-    instanceCreateInfo.enabledExtensionCount = instance_extension_count;
-	instanceCreateInfo.ppEnabledExtensionNames = instance_extensions;
-
-
-#ifndef NDEBUG
-	const char* const validation_layer_name = "VK_LAYER_LUNARG_standard_validation";
-	ri.Printf(PRINT_ALL, "Using VK_LAYER_LUNARG_standard_validation\n");
-    instanceCreateInfo.enabledExtensionCount = instance_extension_count+1;
-
-	instanceCreateInfo.enabledLayerCount = 1;
-	instanceCreateInfo.ppEnabledLayerNames = &validation_layer_name;
-#endif
-
-
-    checkInstanceExt();
-
-
-    VkResult e = qvkCreateInstance(&instanceCreateInfo, NULL, &vk.instance);
-    if(!e)
-    {
-        ri.Printf(PRINT_ALL, "---Vulkan create instance success---\n\n");
-    }
-    else if (e == VK_ERROR_INCOMPATIBLE_DRIVER)
-	{
-		// The requested version of Vulkan is not supported by the driver 
-		// or is otherwise incompatible for implementation-specific reasons.
-        ri.Error(ERR_FATAL, 
-            "The requested version of Vulkan is not supported by the driver.\n" );
-    }
-    else if (e == VK_ERROR_EXTENSION_NOT_PRESENT)
-    {
-        ri.Error(ERR_FATAL, "Cannot find a specified extension library.\n");
-    }
-    else 
-    {
-        ri.Error(ERR_FATAL, "%d, returned by qvkCreateInstance.\n", e);
-    }
-
-    free(instance_extensions);
-}
-
-
-
 /*
  * This routine is responsible for initializing the OS specific portions of Vulkan
  */
@@ -480,6 +399,7 @@ success:
 
 void vk_getInstanceProcAddrImpl(void)
 {
+
 	SDL_Vulkan_LoadLibrary(NULL);    
     // Create the window 
 
@@ -488,6 +408,8 @@ void vk_getInstanceProcAddrImpl(void)
     {
         ri.Error(ERR_FATAL, "Failed to find entrypoint vkGetInstanceProcAddr\n"); 
     }
+    
+    ri.Printf(PRINT_ALL,  " Get instance proc address. (using SDL2)\n");
 }
 
 
@@ -507,9 +429,9 @@ void vk_destroyWindow( void )
 }
 
 
-void VKimp_CreateSurface(void)
+void vk_createSurfaceImpl(void)
 {
-    ri.Printf(PRINT_ALL, "...CreateSurface...\n");
+    ri.Printf(PRINT_ALL, " Create Surface: vk.surface.\n");
 
     if(!SDL_Vulkan_CreateSurface(SDL_window, vk.instance, &vk.surface))
     {

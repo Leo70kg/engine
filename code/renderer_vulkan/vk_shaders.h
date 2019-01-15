@@ -40,7 +40,6 @@
 
 
 
-
 enum Vk_Shader_Type {
     ST_SINGLE_TEXTURE,
 	ST_MULTI_TEXURE_MUL,
@@ -48,7 +47,7 @@ enum Vk_Shader_Type {
 };
 
 void vk_loadShaderModules(void);
-void vk_specifyShaderModule(const enum Vk_Shader_Type shader_type, VkBool32 isClippingPlane, VkShaderModule* vs, VkShaderModule* fs);
+void vk_specifyShaderModule(const enum Vk_Shader_Type shader_type, const VkBool32 isClippingPlane, VkShaderModule* vs, VkShaderModule* fs);
 void vk_destroyShaderModules(void);
 
 #endif

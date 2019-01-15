@@ -94,29 +94,24 @@ void vk_create_sync_primitives(void)
     VK_CHECK(qvkCreateSemaphore(vk.device, &desc, NULL, &image_acquired));
     VK_CHECK(qvkCreateSemaphore(vk.device, &desc, NULL, &rendering_finished));
 
-/*
-
-VkResult vkCreateFence( VkDevice device, const VkFenceCreateInfo* pCreateInfo,
-        const VkAllocationCallbacks* pAllocator, VkFence* pFence);
-    
-    device is the logical device that creates the fence.
-  
-    pCreateInfo is a pointer to an instance of the VkFenceCreateInfo structure
-    which contains information about how the fence is to be created.
-
-    pAllocator controls host memory allocation as described in the
-    Memory Allocation chapter.
-
-    pFence points to a handle in which the resulting fence object is returned.
-
-    VK_FENCE_CREATE_SIGNALED_BIT specifies that the fence object is created
-    in the signaled state. Otherwise, it is created in the unsignaled state.
-*/
 
     VkFenceCreateInfo fence_desc;
     fence_desc.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_desc.pNext = NULL;
+    
+    // VK_FENCE_CREATE_SIGNALED_BIT specifies that the fence object
+    // is created in the signaled state. Otherwise, it is created 
+    // in the unsignaled state.
     fence_desc.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    // vk.device is the logical device that creates the fence.
+    // fence_desc is an instance of the VkFenceCreateInfo structure
+    // pAllocator controls host memory allocation as described
+    // in the Memory Allocation chapter. which contains information
+    // about how the fence is to be created.
+    // "rendering_finished_fence" is a handle in which the resulting
+    // fence object is returned.
+
     VK_CHECK(qvkCreateFence(vk.device, &fence_desc, NULL, &rendering_finished_fence));
 }
 
@@ -130,7 +125,6 @@ void vk_destroy_sync_primitives(void)
 	qvkDestroySemaphore(vk.device, rendering_finished, NULL);
 
     // To destroy a fence, 
-    // rendering_finished_fence is the handle of the fence to destroy.
 	qvkDestroyFence(vk.device, rendering_finished_fence, NULL);
 }
 
@@ -187,48 +181,48 @@ void vk_destroyFrameBuffers(void)
 
 void vk_begin_frame(void)
 {
-/*  
-   An application can acquire use of a presentable image with 
-   vkAcquireNextImageKHR. After acquiring a presentable image 
-   and before modifying it, the application must use a 
-   synchronization primitive to ensure that the presentation 
-   engine has finished reading from the image. The application can
-   then transition the image¡¯s layout, queue rendering commands to
-   it, etc. Finally, the application presents the image with 
-   vkQueuePresentKHR, which releases the acquisition of the image.
-*/
+  
+    //  An application can acquire use of a presentable image with 
+    //  vkAcquireNextImageKHR. After acquiring a presentable image 
+    //  and before modifying it, the application must use a 
+    //  synchronization primitive to ensure that the presentation 
+    //  engine has finished reading from the image. 
+    //  The application can then transition the image's layout, 
+    //  queue rendering commands to it, etc. Finally, 
+    //  the application presents the image with vkQueuePresentKHR, 
+    //  which releases the acquisition of the image.
+
 
 	VK_CHECK(qvkAcquireNextImageKHR(vk.device, vk.swapchain, UINT64_MAX,
         image_acquired, VK_NULL_HANDLE, &vk.swapchain_image_index));
-/*
-    user could call method vkWaitForFences to wait for completion. 
-    A fence is a very heavyweight synchronization primitive as it requires 
-    the GPU to flush all caches at least, and potentially some additional 
-    synchronization. Due to those costs, fences should be used sparingly. 
-    In particular, try to group per-frame resources and track them together
-*/
 
-/*
-    To wait for one or more fences to enter the signaled state on the host,
-    call qvkWaitForFences.
 
-    If the condition is satisfied when vkWaitForFences is called, 
-    then vkWaitForFences returns immediately. If the condition is
-    not satisfied at the time vkWaitForFences is called, then
-    vkWaitForFences will block and wait up to timeout nanoseconds
-    for the condition to become satisfied.
-*/
+    //  User could call method vkWaitForFences to wait for completion. 
+    //  A fence is a very heavyweight synchronization primitive as it
+    //  requires the GPU to flush all caches at least, and potentially
+    //  some additional synchronization. Due to those costs, fences
+    //  should be used sparingly. In particular, try to group per-frame
+    //  resources and track them together. To wait for one or more 
+    //  fences to enter the signaled state on the host,
+    //  call qvkWaitForFences.
+
+    //  If the condition is satisfied when vkWaitForFences is called, 
+    //  then vkWaitForFences returns immediately. If the condition is
+    //  not satisfied at the time vkWaitForFences is called, then
+    //  vkWaitForFences will block and wait up to timeout nanoseconds
+    //  for the condition to become satisfied.
+
 	VK_CHECK(qvkWaitForFences(vk.device, 1, &rendering_finished_fence, VK_FALSE, 1e9));
    
-    // To set the state of fences to unsignaled from the host
-    // 1 is the number of fences to reset.
-    //rendering_finished_fence is a pointer to an array of fence handles to reset.
+    //  To set the state of fences to unsignaled from the host
+    //  "1" is the number of fences to reset. 
+    //  "rendering_finished_fence" is the fence handle to reset.
 	VK_CHECK(qvkResetFences(vk.device, 1, &rendering_finished_fence));
 
-    // commandBuffer must not be in the recording or pending state.
-    // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT specifies that
-    // each recording of the command buffer will only be submitted once,
-    // and the command buffer will be reset and recorded again between each submission.
+    //  commandBuffer must not be in the recording or pending state.
+    //  VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT specifies that
+    //  each recording of the command buffer will only be submitted once,
+    //  and the command buffer will be reset and recorded again between each submission.
     
 	VkCommandBufferBeginInfo begin_info;
 	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -360,48 +354,49 @@ void vk_end_frame(void)
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores = &rendering_finished;
 
-//  To submit command buffers to a queue
-//  queue is the queue that the command buffers will be submitted to.
-//  1 is the number of elements in the pSubmits array.
-//  pSubmits is a pointer to an array of VkSubmitInfo structures,
-//  each specifying a command buffer submission batch.
-//
-//  rendering_finished_fence is an optional handle to a fence to be signaled 
-//  once all submitted command buffers have completed execution. 
-//  If fence is not VK_NULL_HANDLE, it defines a fence signal operation.
-//
-//  Submission can be a high overhead operation, and applications should 
-//  attempt to batch work together into as few calls to vkQueueSubmit as possible.
-//
-//  vkQueueSubmit is a queue submission command, with each batch defined
-//  by an element of pSubmits as an instance of the VkSubmitInfo structure.
-//  Batches begin execution in the order they appear in pSubmits, but may
-//  complete out of order.
-//
-//  Fence and semaphore operations submitted with vkQueueSubmit 
-//  have additional ordering constraints compared to other 
-//  submission commands, with dependencies involving previous and
-//  subsequent queue operations. 
-//
-//  The order that batches appear in pSubmits is used to determine
-//  submission order, and thus all the implicit ordering guarantees
-//  that respect it. Other than these implicit ordering guarantees
-//  and any explicit synchronization primitives, these batches may
-//  overlap or otherwise execute out of order. If any command buffer
-//  submitted to this queue is in the executable state, it is moved
-//  to the pending state. Once execution of all submissions of a 
-//  command buffer complete, it moves from the pending state,
-//  back to the executable state.
-//
-//  If a command buffer was recorded with the 
-//  VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT flag,
-//  it instead moves back to the invalid state.
-    
+
+    //  queue is the queue that the command buffers will be submitted to.
+    //  1 is the number of elements in the pSubmits array.
+    //  pSubmits is a pointer to an array of VkSubmitInfo structures,
+    //  each specifying a command buffer submission batch.
+    //
+    //  rendering_finished_fence is an optional handle to a fence to be signaled 
+    //  once all submitted command buffers have completed execution. 
+    //  If fence is not VK_NULL_HANDLE, it defines a fence signal operation.
+    //
+    //  Submission can be a high overhead operation, and applications should 
+    //  attempt to batch work together into as few calls to vkQueueSubmit as possible.
+    //
+    //  vkQueueSubmit is a queue submission command, with each batch defined
+    //  by an element of pSubmits as an instance of the VkSubmitInfo structure.
+    //  Batches begin execution in the order they appear in pSubmits, but may
+    //  complete out of order.
+    //
+    //  Fence and semaphore operations submitted with vkQueueSubmit 
+    //  have additional ordering constraints compared to other 
+    //  submission commands, with dependencies involving previous and
+    //  subsequent queue operations. 
+    //
+    //  The order that batches appear in pSubmits is used to determine
+    //  submission order, and thus all the implicit ordering guarantees
+    //  that respect it. Other than these implicit ordering guarantees
+    //  and any explicit synchronization primitives, these batches may
+    //  overlap or otherwise execute out of order. If any command buffer
+    //  submitted to this queue is in the executable state, it is moved
+    //  to the pending state. Once execution of all submissions of a 
+    //  command buffer complete, it moves from the pending state,
+    //  back to the executable state.
+    //
+    //  If a command buffer was recorded with the 
+    //  VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT flag,
+    //  it instead moves back to the invalid state.
+       
+    //  To submit command buffers to a queue 
     VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, rendering_finished_fence));
 
 
-//  After queueing all rendering commands and transitioning the image
-//  to the correct layout, to queue an image for presentation
+    // After queueing all rendering commands and transitioning the
+    // image to the correct layout, to queue an image for presentation
 
 
     VkPresentInfoKHR present_info;
@@ -419,9 +414,8 @@ void vk_end_frame(void)
     // for which presentation is supported from queue as
     // determined using a call to vkGetPhysicalDeviceSurfaceSupportKHR
 
-
     // queue is a queue that is capable of presentation to the target 
-    // surface¡¯s platform on the same device as the image¡¯s swapchain.
+    // surface's platform on the same device as the image's swapchain.
     // pPresentInfo is a pointer to an instance of the VkPresentInfoKHR
     // structure specifying the parameters of the presentation.
 
