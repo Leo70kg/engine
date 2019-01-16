@@ -87,6 +87,8 @@ extern cvar_t	*r_maxpolyverts;
 extern cvar_t* r_fullscreen;
 extern cvar_t* r_displayRefresh;
 
+extern cvar_t* r_allowResize; // make window resizable
+
 void R_Register( void );
 
 

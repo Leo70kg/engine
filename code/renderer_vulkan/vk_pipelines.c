@@ -70,15 +70,18 @@ struct GlobalPipelineManager g_stdPipelines;
 static struct Vk_Pipeline_Def s_pipeline_defs[MAX_VK_PIPELINES];
 static uint32_t s_numPipelines = 0;
 
+
 void R_PipelineList_f(void)
 {
     ri.Printf(PRINT_ALL, " Total pipeline created: %d\n", s_numPipelines);
 }
 
-// 
+
+
 // uniform values in the shaders need to be specified during pipeline creation
 // transformation matrix to the vertex shader, or to create texture samplers
 // in the fragment shader.
+
 
 void vk_createPipelineLayout(void)
 {
@@ -248,7 +251,6 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
     // at pipeline creation by specifying different values fot the constants
     // used in it. This is more effient than configuring the shader using 
     // variables at render time, because the compiler can do optimizations.
-
 
 	shaderStages[1].pSpecializationInfo =
         (def->state_bits & GLS_ATEST_BITS) ? &specialization_info : NULL;

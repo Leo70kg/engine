@@ -117,6 +117,44 @@ PFN_vkQueuePresentKHR							qvkQueuePresentKHR;
 
 
 
+#ifndef NDEBUG
+
+
+VKAPI_ATTR VkBool32 VKAPI_CALL vk_DebugCallback(
+        VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT object_type,
+        uint64_t object, size_t location, int32_t message_code, 
+        const char* layer_prefix, const char* message, void* user_data )
+{
+#ifdef _WIN32
+	OutputDebugString(message);
+	OutputDebugString("\n");
+	DebugBreak();
+#else
+    ri.Printf(PRINT_WARNING, "%s\n", message);
+
+#endif
+	return VK_FALSE;
+}
+
+
+static void vk_createDebugCallback( PFN_vkDebugReportCallbackEXT qvkDebugCB)
+{
+    ri.Printf( PRINT_ALL, " vk_createDebugCallback() \n" ); 
+    
+    VkDebugReportCallbackCreateInfoEXT desc;
+    desc.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    desc.pNext = NULL;
+    desc.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT |
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+        VK_DEBUG_REPORT_ERROR_BIT_EXT;
+    desc.pfnCallback = qvkDebugCB;
+    desc.pUserData = NULL;
+
+    VK_CHECK(qvkCreateDebugReportCallbackEXT(vk.instance, &desc, NULL, &vk.h_debugCB));
+}
+#endif
+
+
 static void vk_createInstance(void)
 {
     // There is no global state in Vulkan and all per-application state
@@ -191,10 +229,10 @@ static void vk_createInstance(void)
 
     uint32_t i = 0;
 
+    uint32_t indicator = 0;
+
     for (i = 0; i < nInsExt; i++)
     {    
-        static unsigned int indicator;
-
         ri.Printf(PRINT_ALL, "%s\n", pInsExt[i].extensionName );
         unsigned int len = strlen(pInsExt[i].extensionName);
         memcpy(glConfig.extensions_string + indicator, pInsExt[i].extensionName, len);
@@ -349,7 +387,7 @@ static void vk_selectSurfaceFormat(void)
 
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED, the surface
     // has no preferred format. Otherwise, at least one supported format will be returned.
-    if ((nSurfmt == 1) && (pSurfFmts[0].format == VK_FORMAT_UNDEFINED))
+    if ( (nSurfmt == 1) && (pSurfFmts[0].format == VK_FORMAT_UNDEFINED) )
     {
         // special case that means we can choose any format
         vk.surface_format.format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -379,9 +417,23 @@ static void vk_selectSurfaceFormat(void)
             vk.surface_format = pSurfFmts[0];
     }
 
-    ri.Printf(PRINT_ALL, "-------- ------------------- --------\n");
-
     free(pSurfFmts);
+
+
+    // To query the basic capabilities of a surface, needed in order to create a swapchain
+	VK_CHECK(qvkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk.physical_device, vk.surface, &vk.surface_caps));
+
+    // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required by image clear operations.
+	if ((vk.surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0)
+		ri.Error(ERR_FATAL, "VK_IMAGE_USAGE_TRANSFER_DST_BIT is not supported by you GPU.\n");
+
+	// VK_IMAGE_USAGE_TRANSFER_SRC_BIT is required in order to take screenshots.
+	if ((vk.surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) == 0)
+		ri.Error(ERR_FATAL, "VK_IMAGE_USAGE_TRANSFER_SRC_BIT is not supported by you GPU.\n");
+
+
+    ri.Printf(PRINT_ALL, " -------- --------------------------- --------\n");
+
 }
 
 
@@ -531,7 +583,6 @@ static void vk_createLogicalDevice(void)
     // queue families are available. You can create multiple logical
     // devices from the same physical device if you have varying requirements.
     ri.Printf( PRINT_ALL, " Create logical device: vk.device \n" );
-
     VK_CHECK(qvkCreateDevice(vk.physical_device, &device_desc, NULL, &vk.device));
 
 }
@@ -539,6 +590,8 @@ static void vk_createLogicalDevice(void)
 
 static void vk_loadDeviceFunctions(void)
 {
+    ri.Printf( PRINT_ALL, " Loading device level function. \n" );
+
     #define INIT_DEVICE_FUNCTION(func)                              \
     q##func = (PFN_ ## func)qvkGetDeviceProcAddr(vk.device, #func); \
     if (q##func == NULL) {                                          \
@@ -624,15 +677,19 @@ static void vk_loadDeviceFunctions(void)
     #undef INIT_DEVICE_FUNCTION
 }
 
-//// 
+
 
 void vk_getProcAddress(void)
 {
-
     vk_loadGlobalFunctions();
 
+#ifndef NDEBUG
+	// Create debug callback.
+    vk_createDebugCallback(vk_DebugCallback);
+#endif
+
     // The window surface needs to be created right after the instance creation,
-    // because it can actually influence the physical device selection.
+    // because it can actually influence the presentation mode selection.
 	vk_createSurfaceImpl(); 
    
     // select physical device
@@ -654,8 +711,33 @@ void vk_getProcAddress(void)
 
 void vk_clearProcAddress(void)
 {
+    ri.Printf( PRINT_ALL, " Destroy command pool: vk.command_pool. \n" );
 
-    ri.Printf( PRINT_ALL, " vk_clearProcAddress() \n" );
+    qvkDestroyCommandPool(vk.device, vk.command_pool, NULL);
+
+    ri.Printf( PRINT_ALL, " Destroy logical device: vk.device. \n" );
+
+	qvkDestroyDevice(vk.device, NULL);
+
+    ri.Printf( PRINT_ALL, " Destroy surface: vk.surface. \n" );
+	
+    // make sure that the surface is destroyed before the instance
+    qvkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
+
+#ifndef NDEBUG
+    ri.Printf( PRINT_ALL, " Destroy callback function: vk.h_debugCB. \n" );
+
+	qvkDestroyDebugReportCallbackEXT(vk.instance, vk.h_debugCB, NULL);
+#endif
+
+    ri.Printf( PRINT_ALL, " Destroy instance: vk.instance. \n" );
+	qvkDestroyInstance(vk.instance, NULL);
+
+    ri.Printf( PRINT_ALL, " clear vk struct: vk \n" );
+	memset(&vk, 0, sizeof(vk));
+
+
+    ri.Printf( PRINT_ALL, " clear all proc address \n" );
 
 	qvkCreateInstance                           = NULL;
 	qvkEnumerateInstanceExtensionProperties		= NULL;

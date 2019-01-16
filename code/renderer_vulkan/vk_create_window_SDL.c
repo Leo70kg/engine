@@ -44,13 +44,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 
-static SDL_Window *SDL_window = NULL;
-
-static cvar_t* r_allowResize; // make window resizable
+static SDL_Window* window_sdl = NULL;
 
 
-// not used cvar, keep it for backward compatibility
-static cvar_t* r_sdlDriver;
+// TODO: multi display support
 static cvar_t* r_displayIndex;
 
 
@@ -63,9 +60,9 @@ static void VKimp_DetectAvailableModes(void)
 	SDL_DisplayMode windowMode;
     
 	// If a window exists, note its display index
-	if( SDL_window != NULL )
+	if( window_sdl != NULL )
 	{
-		r_displayIndex->integer = SDL_GetWindowDisplayIndex( SDL_window );
+		r_displayIndex->integer = SDL_GetWindowDisplayIndex( window_sdl );
 		if( r_displayIndex->integer < 0 )
 		{
 			ri.Printf(PRINT_ALL, "SDL_GetWindowDisplayIndex() failed: %s\n", SDL_GetError() );
@@ -75,7 +72,7 @@ static void VKimp_DetectAvailableModes(void)
 
 	int numSDLModes = SDL_GetNumDisplayModes( r_displayIndex->integer );
 
-	if( SDL_GetWindowDisplayMode( SDL_window, &windowMode ) < 0 || numSDLModes <= 0 )
+	if( SDL_GetWindowDisplayMode( window_sdl, &windowMode ) < 0 || numSDLModes <= 0 )
 	{
 		ri.Printf(PRINT_ALL, "Couldn't get window display mode, no resolutions detected: %s\n", SDL_GetError() );
 		return;
@@ -223,12 +220,12 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 	}
 
 
-	if( SDL_window != NULL )
+	if( window_sdl != NULL )
 	{
-		SDL_GetWindowPosition( SDL_window, &x, &y );
+		SDL_GetWindowPosition( window_sdl, &x, &y );
 		ri.Printf(PRINT_ALL,  "Existing window at %dx%d before being destroyed\n", x, y );
-		SDL_DestroyWindow( SDL_window );
-		SDL_window = NULL;
+		SDL_DestroyWindow( window_sdl );
+		window_sdl = NULL;
 	}
 
 
@@ -245,24 +242,20 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 	}
 
 
-	SDL_window = SDL_CreateWindow( CLIENT_WINDOW_TITLE, x, y,
+	window_sdl = SDL_CreateWindow( CLIENT_WINDOW_TITLE, x, y,
 						glConfig.vidWidth, glConfig.vidHeight, flags );
-	if( SDL_window == NULL )
+	if( window_sdl == NULL )
 		ri.Error(ERR_FATAL,"SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
     else{
         ri.Printf(PRINT_ALL, "SDL_CreateWindow successed.\n");
     }
 #ifdef USE_ICON
-	SDL_SetWindowIcon( SDL_window, icon );
-#endif
+	SDL_SetWindowIcon( window_sdl, icon );
 
-
-
-#ifdef USE_ICON
     SDL_FreeSurface( icon );
 #endif
 
-	if( SDL_window )
+	if( window_sdl )
     {
         VKimp_DetectAvailableModes();
         return 0;
@@ -277,50 +270,13 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 
 
 
-void checkInstanceExt(void)
-{
-	// check extensions availability
-	unsigned int nInsExt = 0;
-    
-	VK_CHECK( qvkEnumerateInstanceExtensionProperties( NULL, &nInsExt, NULL) );
-
-    if (nInsExt > 0)
-    {
-		ri.Printf(PRINT_ALL, "total %d instance extensions.\n", nInsExt);
-
-        VkExtensionProperties *pInsExt = (VkExtensionProperties *)
-            malloc(sizeof(VkExtensionProperties) * nInsExt);
-
-        VK_CHECK(qvkEnumerateInstanceExtensionProperties( NULL, &nInsExt, pInsExt));
-            
-        unsigned int i = 0;
-
-		unsigned int indicator = 0;
-        for (i = 0; i < nInsExt; i++)
-        {
-            //ri.Printf(PRINT_ALL, "%s\n", pInsExt[i].extensionName );
-            unsigned int len = strlen(pInsExt[i].extensionName);
-            memcpy(glConfig.extensions_string + indicator, pInsExt[i].extensionName, len);
-			indicator += len;
-			glConfig.extensions_string[indicator++] = ' ';
-        }
-            
-        free(pInsExt);
-    }
-}
-
-
-
 /*
  * This routine is responsible for initializing the OS specific portions of Vulkan
  */
 void vk_createWindow(void)
 {
-	ri.Printf(PRINT_ALL, "...Initializing Vulkan subsystem...\n");
+	ri.Printf(PRINT_ALL, "...Creating window (using SDL2)...\n");
 
-	r_allowResize = ri.Cvar_Get( "r_allowResize", "0", CVAR_ARCHIVE | CVAR_LATCH );
-
-	r_sdlDriver = ri.Cvar_Get( "r_sdlDriver", "", CVAR_ROM );
 
 	r_displayIndex = ri.Cvar_Get( "r_displayIndex", "0", CVAR_ARCHIVE | CVAR_LATCH );
 
@@ -393,7 +349,7 @@ success:
         glConfig.vidWidth, glConfig.vidHeight, glConfig.refresh_rate);
     
 	// This depends on SDL_INIT_VIDEO, hence having it here
-	ri.IN_Init(SDL_window, 0);
+	ri.IN_Init(window_sdl, 0);
 }
 
 
@@ -421,8 +377,8 @@ void vk_destroyWindow( void )
 	
     memset(&glConfig, 0, sizeof(glConfig));
 
-    SDL_DestroyWindow( SDL_window );
-    SDL_window = NULL;
+    SDL_DestroyWindow( window_sdl );
+    window_sdl = NULL;
 
 	ri.IN_Shutdown();
 	SDL_QuitSubSystem( SDL_INIT_VIDEO );
@@ -433,7 +389,7 @@ void vk_createSurfaceImpl(void)
 {
     ri.Printf(PRINT_ALL, " Create Surface: vk.surface.\n");
 
-    if(!SDL_Vulkan_CreateSurface(SDL_window, vk.instance, &vk.surface))
+    if(!SDL_Vulkan_CreateSurface(window_sdl, vk.instance, &vk.surface))
     {
         vk.surface = VK_NULL_HANDLE;
         ri.Error(ERR_FATAL, "SDL_Vulkan_CreateSurface(): %s\n", SDL_GetError());
@@ -457,18 +413,17 @@ void VKimp_Minimize( void )
         r_fullscreen->integer = 1;
     }
 
-	SDL_MinimizeWindow( SDL_window );
+	SDL_MinimizeWindow( window_sdl );
 }
 
 /*
 	if( r_fullscreen->modified )
 	{
-		int         fullscreen;
 		qboolean    needToToggle;
 		qboolean    sdlToggled = qfalse;
 
 		// Find out the current state
-		fullscreen = !!( SDL_GetWindowFlags( SDL_window ) & SDL_WINDOW_FULLSCREEN );
+		int fullscreen = !!( SDL_GetWindowFlags( window_sdl ) & SDL_WINDOW_FULLSCREEN );
 
 		if( r_fullscreen->integer && ri.Cvar_VariableIntegerValue( "in_nograb" ) )
 		{
@@ -482,7 +437,7 @@ void VKimp_Minimize( void )
 
 		if( needToToggle )
 		{
-			sdlToggled = SDL_SetWindowFullscreen( SDL_window, r_fullscreen->integer ) >= 0;
+			sdlToggled = SDL_SetWindowFullscreen( window_sdl, r_fullscreen->integer ) >= 0;
 
 			// SDL_WM_ToggleFullScreen didn't work, so do it the slow way
 			if( !sdlToggled )

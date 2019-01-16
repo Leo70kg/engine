@@ -47,12 +47,6 @@ static void InitRenderAPI( void )
 	
 	if ( glConfig.vidWidth == 0 )
 	{
-        // VULKAN
-		// initialize OS specific portions of the renderer	
-        vk_createWindow();
-        
-        vk_getProcAddress(); 
-        // This function is responsible for initializing a valid Vulkan subsystem.
 
 		vk_initialize();
 

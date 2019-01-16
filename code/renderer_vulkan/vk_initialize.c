@@ -9,45 +9,6 @@
 #include "vk_shaders.h"
 
 
-#ifndef NDEBUG
-
-static VkDebugReportCallbackEXT debug_callback;
-
-
-VKAPI_ATTR VkBool32 VKAPI_CALL fpDebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT object_type, uint64_t object, size_t location,
-	int32_t message_code, const char* layer_prefix, const char* message, void* user_data)
-{
-	
-#ifdef _WIN32
-	OutputDebugString(message);
-	OutputDebugString("\n");
-	DebugBreak();
-#else
-    ri.Printf(PRINT_WARNING, "%s\n", message);
-
-#endif
-	return VK_FALSE;
-}
-
-
-static void createDebugCallback( void )
-{
-    
-    VkDebugReportCallbackCreateInfoEXT desc;
-    desc.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-    desc.pNext = NULL;
-    desc.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT |
-        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-        VK_DEBUG_REPORT_ERROR_BIT_EXT;
-    desc.pfnCallback = &fpDebugCallback;
-    desc.pUserData = NULL;
-
-    VK_CHECK(qvkCreateDebugReportCallbackEXT(vk.instance, &desc, NULL, &debug_callback));
-}
-#endif
-
-
-
 
 
 static void vk_createRenderPass(VkDevice device, VkFormat color_format, VkFormat depth_format, VkRenderPass* pRepass)
@@ -154,7 +115,7 @@ static VkFormat get_depth_format(VkPhysicalDevice physical_device)
 		//glConfig.stencilBits = 0;
 	}
 
-    int i;
+    uint32_t i;
 	for (i = 0; i < 2; i++)
     {
 		VkFormatProperties props;
@@ -187,7 +148,6 @@ void vk_shutdown(void)
 	qvkDestroyRenderPass(vk.device, vk.render_pass, NULL);
 	
     //
-    qvkDestroyCommandPool(vk.device, vk.command_pool, NULL);
 
     vk_destroy_shading_data();
 
@@ -198,45 +158,45 @@ void vk_shutdown(void)
 //
     vk_destroyGlobalStagePipeline();
 //
-	qvkDestroyDevice(vk.device, NULL);
-	
-    // make sure that the surface is destroyed before the instance
-    qvkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
 
-#ifndef NDEBUG
-	qvkDestroyDebugReportCallbackEXT(vk.instance, debug_callback, NULL);
-#endif
-
-	qvkDestroyInstance(vk.instance, NULL);
-
-	memset(&vk, 0, sizeof(vk));
 
 	vk_clearProcAddress();
 }
 
 
-void vk_create_command_pool(void)
-{
-    ri.Printf( PRINT_ALL, "create command pool: vk.command_pool. \n" );
-    
+static void vk_create_command_pool(VkCommandPool* pPool)
+{    
     VkCommandPoolCreateInfo desc;
     desc.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     desc.pNext = NULL;
     desc.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     desc.queueFamilyIndex = vk.queue_family_index;
 
-    VK_CHECK(qvkCreateCommandPool(vk.device, &desc, NULL, &vk.command_pool));
+    VK_CHECK(qvkCreateCommandPool(vk.device, &desc, NULL, pPool));
 }
 
+static void vk_create_command_buffer(VkCommandPool cmd_pool, VkCommandBuffer* pBuf)
+{
+    VkCommandBufferAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.commandPool = cmd_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+    VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, pBuf));
+}
 
 void vk_initialize(void)
 {
-#ifndef NDEBUG
-	// Create debug callback.
-    createDebugCallback();
-#endif
-	// Swapchain.
-	vk_createSwapChain(vk.physical_device, vk.device, vk.surface, vk.surface_format);
+    // This function is responsible for initializing a valid Vulkan subsystem.
+
+    vk_createWindow();
+        
+    vk_getProcAddress(); 
+ 
+
+	// Swapchain. vk.physical_device required to be init. 
+	vk_createSwapChain(vk.device, vk.surface, vk.surface_format);
 
 	//
 	// Sync primitives.
@@ -246,22 +206,12 @@ void vk_initialize(void)
 	// we have to create a command pool before we can create command buffers
     // command pools manage the memory that is used to store the buffers and
     // command buffers are allocated from them.
-	
-    vk_create_command_pool();
-	//
 
+    vk_create_command_pool(&vk.command_pool);
 	//
 	// Command buffer.
 	//
-	{
-		VkCommandBufferAllocateInfo alloc_info;
-		alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		alloc_info.pNext = NULL;
-		alloc_info.commandPool = vk.command_pool;
-		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		alloc_info.commandBufferCount = 1;
-		VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &vk.command_buffer));
-	}
+    vk_create_command_buffer(vk.command_pool, &vk.command_buffer);
 
 	//
 	// Depth attachment image.
@@ -459,9 +409,7 @@ void vk_initialize(void)
     
 	vk_createRenderPass(vk.device, vk.surface_format.format, get_depth_format(vk.physical_device), &vk.render_pass);
 
-
-    vk_createFrameBuffers();
-
+    vk_createFrameBuffers(vk.render_pass);
 
 	// Pipeline layout.
 	// You can use uniform values in shaders, which are globals similar to

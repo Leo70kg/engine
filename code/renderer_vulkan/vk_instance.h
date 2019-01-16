@@ -142,7 +142,8 @@ struct Vk_Instance {
 	VkPhysicalDevice physical_device;
 	VkSurfaceKHR surface;
 	VkSurfaceFormatKHR surface_format;
-
+    VkSurfaceCapabilitiesKHR surface_caps;
+    
 	uint32_t queue_family_index;
 	VkDevice device;
 	VkQueue queue;
@@ -171,6 +172,10 @@ struct Vk_Instance {
     // Pipeline layout: the uniform and push values referenced by 
     // the shader that can be updated at draw time
 	VkPipelineLayout pipeline_layout;
+    
+#ifndef NDEBUG
+    VkDebugReportCallbackEXT h_debugCB;
+#endif
 };
 
 

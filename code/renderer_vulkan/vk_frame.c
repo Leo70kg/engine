@@ -129,7 +129,32 @@ void vk_destroy_sync_primitives(void)
 }
 
 
-void vk_createFrameBuffers(void)
+
+//  NOTE: Render Pass Compatibility
+//  Framebuffers and graphics pipelines are created based on
+//  a specific render pass object. They must only be used with
+//  that render pass object, or one compatible with it.
+//
+//  Two attachment references are compatible if they have matching
+//  format and sample count, or are both VK_ATTACHMENT_UNUSED
+//  or the pointer that would contain the reference is NULL.
+//
+//  Two arrays of attachment references are compatible if all
+//  corresponding pairs of attachments are compatible. If the arrays
+//  are of different lengths, attachment references not present in
+//  the smaller array are treated as VK_ATTACHMENT_UNUSED.
+//
+//  Two render passes are compatible if their corresponding color,
+//  input, resolve, and depth/stencil attachment references are 
+//  compatible and if they are otherwise identical except for:
+//  1) Initial and final image layout in attachment descriptions
+//  2) Load and store operations in attachment descriptions
+//  3) Image layout in attachment references
+//
+//  A framebuffer is compatible with a render pass if it was created
+//  using the same render pass or a compatible render pass.
+
+void vk_createFrameBuffers(VkRenderPass rPass) 
 {
     // Framebuffers for each swapchain image.
 	// The attachments specified during render pass creation are bound
@@ -143,26 +168,62 @@ void vk_createFrameBuffers(void)
 
     ri.Printf(PRINT_ALL, " Create vk.framebuffers \n");
 
+    // Render passes operate in conjunction with framebuffers. 
+    // Framebuffers represent a collection of specific memory
+    // attachments that a render pass instance uses.
 
-    VkImageView attachments[2] = {VK_NULL_HANDLE, vk.depth_image_view};
 
-    VkFramebufferCreateInfo desc;
-    desc.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    desc.pNext = NULL;
-    desc.flags = 0;
-    desc.renderPass = vk.render_pass;
-    desc.attachmentCount = 2;
-    desc.pAttachments = attachments;
-    desc.width = glConfig.vidWidth;
-    desc.height = glConfig.vidHeight;
-    desc.layers = 1;
     uint32_t i;
     for (i = 0; i < vk.swapchain_image_count; i++)
     {
-        attachments[0] = vk.swapchain_image_views[i]; // set color attachment
+        // set color and depth attachment
+        VkImageView attachments[2] = {
+            vk.swapchain_image_views[i], vk.depth_image_view };
+        
+        VkFramebufferCreateInfo desc;
+        desc.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        desc.pNext = NULL;
+        desc.flags = 0;
+
+        // renderPass is a render pass that defines what render
+        // passes the framebuffer will be compatible with. See 
+        // Render Pass Compatibility for details.
+        desc.renderPass = rPass;
+        desc.attachmentCount = 2;
+        // pAttachments is an array of VkImageView handles, each 
+        // of which will be used as the corresponding attachment
+        // in a render pass instance.
+        desc.pAttachments = attachments;
+        desc.width = glConfig.vidWidth;
+        desc.height = glConfig.vidHeight;
+        desc.layers = 1;
+
         VK_CHECK(qvkCreateFramebuffer(vk.device, &desc, NULL, &vk.framebuffers[i]));
+
+        // Applications must ensure that all accesses to memory that backs
+        // image subresources used as attachments in a given renderpass instance 
+        // either happen-before the load operations for those attachments,
+        // or happen-after the store operations for those attachments.
+        //
+        // For depth/stencil attachments, each aspect can be used separately
+        // as attachments and non-attachments as long as the non-attachment 
+        // accesses are also via an image subresource in either the
+        // VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL layout
+        // or the VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL
+        // layout, and the attachment resource uses whichever of those two 
+        // layouts the image accesses do not. Use of non-attachment aspects
+        // in this case is only well defined if the attachment is used in the
+        // subpass where the non-attachment access is being made, or the layout
+        // of the image subresource is constant throughout the entire render
+        // pass instance, including the initialLayout and finalLayout.
+        //
+        // These restrictions mean that the render pass has full knowledge of
+        // all uses of all of the attachments, so that the implementation is
+        // able to make correct decisions about when and how to perform layout
+        // transitions, when to overlap execution of subpasses, etc.
     }
 }
+
 
 void vk_destroyFrameBuffers(void)
 {
@@ -170,11 +231,10 @@ void vk_destroyFrameBuffers(void)
 
     uint32_t i;
 	for (i = 0; i < vk.swapchain_image_count; i++)
+    {
 		qvkDestroyFramebuffer(vk.device, vk.framebuffers[i], NULL);
-
-    for (i = 0; i < vk.swapchain_image_count; i++)
 		qvkDestroyImageView(vk.device, vk.swapchain_image_views[i], NULL);
-
+    }
     qvkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);
 }
 
@@ -316,21 +376,21 @@ void vk_begin_frame(void)
 	clear_values[1].depthStencil.depth = 1.0;
 	clear_values[1].depthStencil.stencil = 0;
 
-	VkRenderPassBeginInfo render_pass_begin_info;
-	render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	render_pass_begin_info.pNext = NULL;
-	render_pass_begin_info.renderPass = vk.render_pass;
-	render_pass_begin_info.framebuffer = vk.framebuffers[vk.swapchain_image_index];
-	render_pass_begin_info.renderArea.offset.x = 0;
-    render_pass_begin_info.renderArea.offset.y = 0;
+	VkRenderPassBeginInfo renderPass_beginInfo;
+	renderPass_beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPass_beginInfo.pNext = NULL;
+	renderPass_beginInfo.renderPass = vk.render_pass;
+	renderPass_beginInfo.framebuffer = vk.framebuffers[vk.swapchain_image_index];
+	renderPass_beginInfo.renderArea.offset.x = 0;
+    renderPass_beginInfo.renderArea.offset.y = 0;
 
-	render_pass_begin_info.renderArea.extent.width = glConfig.vidWidth;
-    render_pass_begin_info.renderArea.extent.height = glConfig.vidHeight;
+	renderPass_beginInfo.renderArea.extent.width = glConfig.vidWidth;
+    renderPass_beginInfo.renderArea.extent.height = glConfig.vidHeight;
 
-    render_pass_begin_info.clearValueCount = 2;
-	render_pass_begin_info.pClearValues = clear_values;
+    renderPass_beginInfo.clearValueCount = 2;
+	renderPass_beginInfo.pClearValues = clear_values;
 
-	qvkCmdBeginRenderPass(vk.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+	qvkCmdBeginRenderPass(vk.command_buffer, &renderPass_beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 }
 
@@ -437,67 +497,36 @@ void vk_end_frame(void)
     }
 }
 
+
 /*
 
-A surface has changed in such a way that it is no longer compatible with
-the swapchain, and further presentation requests using the swapchain will
-fail. Applications must query the new surface properties and recreate 
-their swapchain if they wish to continue presenting to the surface.
+A surface has changed in such a way that it is no longer compatible with the swapchain,
+and further presentation requests using the swapchain will fail. Applications must 
+query the new surface properties and recreate their swapchain if they wish to continue
+presenting to the surface.
 
-VK_IMAGE_LAYOUT_PRESENT_SRC_KHR must only be used for presenting a 
-presentable image for display. A swapchain¡¯s image must be transitioned
-to this layout before calling vkQueuePresentKHR, and must be transitioned
-away from this layout after calling vkAcquireNextImageKHR.
+VK_IMAGE_LAYOUT_PRESENT_SRC_KHR must only be used for presenting a presentable image
+for display. A swapchain's image must be transitioned to this layout before calling
+vkQueuePresentKHR, and must be transitioned away from this layout after calling
+vkAcquireNextImageKHR.
 
 */
 
 
-// vulkan does not have the concept of a "default framebuffer",
-// hence it requires an infrastruture that will own the buffers
-// we will render to before we visualize them on the screen.
-// This infrastructure is known as the swap chain and must be
-// created explicity in vulkan. The swap chain is essentially
-// a queue of images that are waiting to be presented to the
-// screen.
-//
-// The general purpose of the swap chain is to synchronize the
-// presentation of images with the refresh rate of the screen.
+// vulkan does not have the concept of a "default framebuffer", hence it requires an
+// infrastruture that will own the buffers we will render to before we visualize them
+// on the screen. This infrastructure is known as the swap chain and must be created
+// explicity in vulkan. The swap chain is essentially a queue of images that are 
+// waiting to be presented to the screen. The general purpose of the swap chain is to
+// synchronize the presentation of images with the refresh rate of the screen.
 
-// 1) Basic surface capabilities (min/max number of images in the
-//    swap chain, min/max number of images in the swap chain).
-
+// 1) Basic surface capabilities (min/max number of images in the swap chain,
+//    min/max number of images in the swap chain).
 // 2) Surcface formats(pixel format, color space)
-
 // 3) Available presentation modes
 
-void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkSurfaceFormatKHR surface_format)
+void vk_createSwapChain(VkDevice device, VkSurfaceKHR surface, VkSurfaceFormatKHR surface_format)
 {
-    //To query the basic capabilities of a surface, needed in order to create a swapchain
-
-	VkSurfaceCapabilitiesKHR surface_caps;
-	VK_CHECK(qvkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_caps));
-
-    // The swap extent id the resolution of the swap chain images
-    // and its almost always exactly equal yo the resolution of 
-    // the window that we're drawing to.
-	VkExtent2D image_extent = surface_caps.currentExtent;
-	if ( (image_extent.width == 0xffffffff) && (image_extent.height == 0xffffffff))
-    {
-		image_extent.width = MIN(surface_caps.maxImageExtent.width, MAX(surface_caps.minImageExtent.width, 640u));
-		image_extent.height = MIN(surface_caps.maxImageExtent.height, MAX(surface_caps.minImageExtent.height, 480u));
-	}
-
-    //ri.Printf(PRINT_ALL, " image_extent.width: %d, image_extent.height: %d",
-    //            image_extent.width, image_extent.height);
-
-	// VK_IMAGE_USAGE_TRANSFER_DST_BIT is required by image clear operations.
-	if ((surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0)
-		ri.Error(ERR_FATAL, "create_swapchain: VK_IMAGE_USAGE_TRANSFER_DST_BIT is not supported by the swapchain");
-
-	// VK_IMAGE_USAGE_TRANSFER_SRC_BIT is required in order to take screenshots.
-	if ((surface_caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) == 0)
-		ri.Error(ERR_FATAL, "create_swapchain: VK_IMAGE_USAGE_TRANSFER_SRC_BIT is not supported by the swapchain");
-
 
     // The presentation is arguably the most impottant setting for the swap chain
     // because it represents the actual conditions for showing images to the screen
@@ -524,27 +553,24 @@ void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSur
     VkPresentModeKHR present_mode;
 
     // The number of images in the swap chain, essentially the queue length
-    // The implementation specifies the minimum amount of images to functions
-    // properly
+    // The implementation specifies the minimum amount of images to functions properly
     uint32_t image_count;
 
     {
         ri.Printf(PRINT_ALL, "\n-------- Determine present mode --------\n");
         
         uint32_t nPM, i;
-        qvkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &nPM, NULL);
+        qvkGetPhysicalDeviceSurfacePresentModesKHR(vk.physical_device, surface, &nPM, NULL);
 
-        VkPresentModeKHR *pPresentModes = 
-            (VkPresentModeKHR *) malloc( nPM * sizeof(VkPresentModeKHR) );
+        VkPresentModeKHR *pPresentModes = (VkPresentModeKHR *) malloc( nPM * sizeof(VkPresentModeKHR) );
 
-        qvkGetPhysicalDeviceSurfacePresentModesKHR(
-                physical_device, surface, &nPM, pPresentModes);
+        qvkGetPhysicalDeviceSurfacePresentModesKHR(vk.physical_device, surface, &nPM, pPresentModes);
 
+        ri.Printf(PRINT_ALL, "Minimaal mumber ImageCount required: %d, Total %d present mode supported: \n",
+                vk.surface_caps.minImageCount, nPM);
 
-        ri.Printf(PRINT_ALL, "Minimaal mumber ImageCount required: %d, Total %d present mode supported: \n",surface_caps.minImageCount, nPM);
-
-        VkBool32 mailbox_supported = 0;
-        VkBool32 immediate_supported = 0;
+        VkBool32 mailbox_supported = VK_FALSE;
+        VkBool32 immediate_supported = VK_FALSE;
 
         for ( i = 0; i < nPM; i++)
         {
@@ -568,7 +594,7 @@ void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSur
                     ri.Printf(PRINT_ALL, " This device do not support presentation %d\n", pPresentModes[i]);
                     break;
             }
-         }
+        }
 
         free(pPresentModes);
 
@@ -576,14 +602,14 @@ void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSur
         if (mailbox_supported)
         {
             present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
-            image_count = MAX(3u, surface_caps.minImageCount);
+            image_count = MAX(3u, vk.surface_caps.minImageCount);
             
             ri.Printf(PRINT_ALL, "\n We choose VK_PRESENT_MODE_MAILBOX_KHR mode, minImageCount: %d. \n", image_count);
         }
         else if(immediate_supported)
         {
             present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-            image_count = MAX(2u, surface_caps.minImageCount);
+            image_count = MAX(2u, vk.surface_caps.minImageCount);
 
             ri.Printf(PRINT_ALL, "\n We choose VK_PRESENT_MODE_IMMEDIATE_KHR mode, minImageCount: %d. \n", image_count);
         }
@@ -591,11 +617,11 @@ void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSur
         {
             // VK_PRESENT_MODE_FIFO_KHR mode is guaranteed to be available.
             present_mode = VK_PRESENT_MODE_FIFO_KHR;
-            image_count = MAX(2u, surface_caps.minImageCount);
+            image_count = MAX(2u, vk.surface_caps.minImageCount);
         }
 
-        if (surface_caps.maxImageCount > 0) {
-            image_count = MIN(image_count, surface_caps.maxImageCount) + 1;
+        if (vk.surface_caps.maxImageCount > 0) {
+            image_count = MIN(image_count, vk.surface_caps.maxImageCount) + 1;
         }
 
         ri.Printf(PRINT_ALL, "\n-------- ----------------------- --------\n");
@@ -605,6 +631,22 @@ void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSur
 	// create swap chain
     {
         ri.Printf(PRINT_ALL, "\n-------- Create vk.swapchain --------\n");
+
+        // The swap extent is the resolution of the swap chain images and its almost 
+        // always exactly equal to the resolution of the window that we're drawing to.
+        VkExtent2D image_extent = vk.surface_caps.currentExtent;
+        if ( (image_extent.width == 0xffffffff) && (image_extent.height == 0xffffffff))
+        {
+            image_extent.width = MIN( vk.surface_caps.maxImageExtent.width, 
+                    MAX(vk.surface_caps.minImageExtent.width, 640u) );
+            image_extent.height = MIN(vk.surface_caps.maxImageExtent.height, 
+                    MAX(vk.surface_caps.minImageExtent.height, 480u) );
+        }
+
+        ri.Printf(PRINT_ALL, " Surface capabilities, image_extent.width: %d, image_extent.height: %d",
+                image_extent.width, image_extent.height);
+
+
 
         VkSwapchainCreateInfoKHR desc;
         desc.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -632,7 +674,7 @@ void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSur
         // clockwise rotation  or horizontal flip, To specify that you
         // do not want any transformation, simply dprcify the current
         // transformation
-        desc.preTransform = surface_caps.currentTransform;
+        desc.preTransform = vk.surface_caps.currentTransform;
 
         // The compositeAlpha field specifies if the alpha channel
         // should be used for blending with other windows int the
@@ -654,8 +696,11 @@ void vk_createSwapChain(VkPhysicalDevice physical_device, VkDevice device, VkSur
 
     //
     {
+        //To obtain the array of presentable images associated with a swapchain
         VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, NULL));
-        vk.swapchain_image_count = MIN(vk.swapchain_image_count, MAX_SWAPCHAIN_IMAGES);
+        if( vk.swapchain_image_count > MAX_SWAPCHAIN_IMAGES )
+            vk.swapchain_image_count = MAX_SWAPCHAIN_IMAGES;
+
         VK_CHECK(qvkGetSwapchainImagesKHR(device, vk.swapchain, &vk.swapchain_image_count, vk.swapchain_images_array));
 
         uint32_t i;

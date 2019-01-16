@@ -78,7 +78,7 @@ cvar_t	*r_saveFontData;
 cvar_t	*r_maxpolys;
 cvar_t	*r_maxpolyverts;
 
-
+cvar_t* r_allowResize; // make window resizable
 
 void R_Register( void ) 
 {
@@ -167,5 +167,7 @@ void R_Register( void )
     r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
     r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "60", CVAR_LATCH );
     ri.Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );
+
+    r_allowResize = ri.Cvar_Get( "r_allowResize", "0", CVAR_ARCHIVE | CVAR_LATCH );
 }
 
