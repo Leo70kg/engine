@@ -70,7 +70,7 @@ void R_GetModeInfo(unsigned int *width, unsigned int *height, float *windowAspec
 {
 	const vidmode_t	*vm;
 
-    if ( mode < -1 || mode >= s_numVidModes) {
+    if ( mode < -2 || mode >= s_numVidModes) {
          mode = 3;
 	}
 

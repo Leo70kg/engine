@@ -1,75 +1,46 @@
 #include "VKimpl.h"
 
-#define VK_USE_PLATFORM_XCB_KHR
 
-#include <vulkan/vk_sdk_platform.h>
 #include <xcb/xcb.h>
-#include <xcb/xcb_atom.h>
-#include <vulkan/vulkan_xcb.h>
+//#include <xcb/xcb_atom.h>
+#include "vulkan/vulkan_xcb.h"
 
 #include "tr_local.h"
 #include "vk_instance.h"
 #include "tr_displayResolution.h"
-
-
+#include "tr_cvar.h"
 #include "../qcommon/sys_loadlib.h"
 
 // Allow a maximum of two outstanding presentation operations.
 #define FRAME_LAG 2
 
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-#define APP_NAME_STR_LEN 80
-    static HINSTANCE vk_library_handle; // HINSTANCE for the Vulkan library
-    HINSTANCE connection;         // hInstance - Windows Instance
-    char name[APP_NAME_STR_LEN];  // Name to put on the window/icon
-    HWND window;                  // hWnd - window handle
-    POINT minsize;                // minimum window size
-    static PFN_vkCreateWin32SurfaceKHR qvkCreateWin32SurfaceKHR;
+static void* vk_library_handle; // instance of Vulkan library
 
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    static void* vk_library_handle; // instance of Vulkan library
-    
-    static xcb_connection_t *connection;
-    
-    // In the X Window System, a window is characterized by an Id.
-    // So, in XCB, typedef uint32_t xcb_window_t
-    typedef uint32_t xcb_window_t;
-    typedef uint32_t xcb_gcontext_t;
+static xcb_connection_t *connection;
 
-    static xcb_window_t window;
-    static xcb_screen_t *screen;
-    
-    static PFN_vkCreateXcbSurfaceKHR qvkCreateXcbSurfaceKHR;
+// In the X Window System, a window is characterized by an Id.
+// So, in XCB, typedef uint32_t xcb_window_t
+typedef uint32_t xcb_window_t;
+typedef uint32_t xcb_gcontext_t;
+
+static xcb_window_t window;
+static xcb_screen_t *screen;
+
+static PFN_vkCreateXcbSurfaceKHR qvkCreateXcbSurfaceKHR;
 
 
-    static unsigned int GetDesktopWidth(void)
-    {
-        // hardcode now;
-        return screen->width_in_pixels;
-    }
+static unsigned int GetDesktopWidth(void)
+{
+    // hardcode now;
+    return screen->width_in_pixels;
+}
 
-    static unsigned int GetDesktopHeight(void)
-    {
-        // hardcode now;
-        return screen->height_in_pixels;
-    }
-
-
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    struct wl_display *display;
-    struct wl_registry *registry;
-    struct wl_compositor *compositor;
-    struct wl_surface *window;
-    struct wl_shell *shell;
-    struct wl_shell_surface *shell_surface;
-    struct wl_seat *seat;
-    struct wl_pointer *pointer;
-    struct wl_keyboard *keyboard;
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-    void *window;
-#endif
-
+static unsigned int GetDesktopHeight(void)
+{
+    // hardcode now;
+    return screen->height_in_pixels;
+}
 
 
 static void vk_resize( void )
@@ -132,138 +103,13 @@ static void vk_resize( void )
 
 
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-
-
-static HWND create_main_window(int width, int height, qboolean fullscreen)
+void vk_createWindow(void)
 {
-	//
-	// register the window class if necessary
-	//
-	if (!s_main_window_class_registered)
-	{
-        cvar_t* cv = ri.Cvar_Get( "win_wndproc", "", 0 );
-        WNDPROC	wndproc;
-        sscanf(cv->string, "%p", (void **)&wndproc);
-
-		WNDCLASS wc;
-
-		memset( &wc, 0, sizeof( wc ) );
-
-        wc.style         = 0;
-		wc.lpfnWndProc   = wndproc;
-		wc.cbClsExtra    = 0;
-		wc.cbWndExtra    = 0;
-		wc.hInstance     = g_wv.hInstance;
-		wc.hIcon         = LoadIcon( g_wv.hInstance, MAKEINTRESOURCE(IDI_ICON1));
-		wc.hCursor       = LoadCursor (NULL,IDC_ARROW);
-		wc.hbrBackground = (HBRUSH) (void *)COLOR_GRAYTEXT;
-		wc.lpszMenuName  = 0;
-		wc.lpszClassName = MAIN_WINDOW_CLASS_NAME;
-
-		if ( !RegisterClass( &wc ) )
-		{
-			ri.Error( ERR_FATAL, "create_main_window: could not register window class" );
-		}
-		s_main_window_class_registered = true;
-		ri.Printf( PRINT_ALL, "...registered window class\n" );
-	}
-
-	//
-	// compute width and height
-	//
-    RECT r;
-	r.left = 0;
-	r.top = 0;
-	r.right  = width;
-	r.bottom = height;
-
-    int	stylebits;
-	if ( fullscreen )
-	{
-		stylebits = WS_POPUP|WS_VISIBLE|WS_SYSMENU;
-	}
-	else
-	{
-		stylebits = WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_VISIBLE | WS_SYSMENU;
-		AdjustWindowRect (&r, stylebits, FALSE);
-	}
-
-	int w = r.right - r.left;
-	int h = r.bottom - r.top;
-
-    int x, y;
-
-	if ( fullscreen  )
-	{
-		x = 0;
-		y = 0;
-	}
-	else
-	{
-		cvar_t* vid_xpos = ri.Cvar_Get ("vid_xpos", "", 0);
-		cvar_t* vid_ypos = ri.Cvar_Get ("vid_ypos", "", 0);
-		x = vid_xpos->integer;
-		y = vid_ypos->integer;
-
-		// adjust window coordinates if necessary 
-		// so that the window is completely on screen
-		if ( x < 0 )
-			x = 0;
-		if ( y < 0 )
-			y = 0;
-
-        int desktop_width = GetDesktopWidth();
-        int desktop_height = GetDesktopHeight();
-
-		if (w < desktop_width && h < desktop_height)
-		{
-			if ( x + w > desktop_width )
-				x = ( desktop_width - w );
-			if ( y + h > desktop_height )
-				y = ( desktop_height - h );
-		}
-	}
-
-	char window_name[1024];
-	if (r_twinMode->integer == 0) {
-		strcpy(window_name, MAIN_WINDOW_CLASS_NAME);
-	} else {
-		const char* api_name = "Vulkan";
-		sprintf(window_name, "%s [%s]", MAIN_WINDOW_CLASS_NAME, api_name);
-	}
-
-	HWND hwnd = CreateWindowEx(
-			0, 
-			MAIN_WINDOW_CLASS_NAME,
-			window_name,
-			stylebits,
-			x, y, w, h,
-			NULL,
-			NULL,
-			g_wv.hInstance,
-			NULL);
-
-	if (!hwnd)
-	{
-		ri.Error (ERR_FATAL, "create_main_window() - Couldn't create window");
-	}
-
-	ShowWindow(hwnd, SW_SHOW);
-	UpdateWindow(hwnd);
-	ri.Printf(PRINT_ALL, "...created window@%d,%d (%dx%d)\n", x, y, w, h);
-    return hwnd;
-}
-
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+    if(window)
+        xcb_destroy_window(connection, window);
 
 
-static void CreateWindow(int width, int height, qboolean fullscreen)
-{
-
-    const xcb_setup_t *setup;
-    xcb_screen_iterator_t iter;
-    int screenNum;
+    ri.Printf(PRINT_ALL, "... Setting XCB connection ...\n");
 
     const char *display_envar = getenv("DISPLAY");
     if (display_envar == NULL || display_envar[0] == '\0')
@@ -278,6 +124,7 @@ static void CreateWindow(int width, int height, qboolean fullscreen)
     // int* screenp );  // returns the screen number of the connection;
                         // can provide NULL if you don't care.
 
+    int screenNum;
 
     connection = xcb_connect(NULL, &screenNum);
     if (xcb_connection_has_error(connection) > 0)
@@ -286,12 +133,38 @@ static void CreateWindow(int width, int height, qboolean fullscreen)
             "Cannot find a compatible Vulkan installable client driver (ICD)");
     }
 
-    setup = xcb_get_setup(connection);
-    iter = xcb_setup_roots_iterator(setup);
+    const xcb_setup_t * setup = xcb_get_setup(connection);
+    xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
     while (screenNum-- > 0)
         xcb_screen_next(&iter);
 
     screen = iter.data;
+
+
+    R_InitDisplayResolution();
+	ri.Printf(PRINT_ALL, "...vk_createWindow...\n");
+
+    // developing now
+    r_mode->integer = 3;
+/*
+	// Create window.
+    if ( (r_mode->integer == -2) || (r_fullscreen->integer == 1))
+    {
+		ri.Printf( PRINT_ALL, "...setting fullscreen mode:");
+		glConfig.vidWidth = GetDesktopWidth();
+		glConfig.vidHeight = GetDesktopHeight();
+		glConfig.windowAspect = glConfig.vidWidth/glConfig.vidHeight;
+        glConfig.isFullscreen = 1;
+	}
+    else
+*/    
+    {
+		ri.Printf( PRINT_ALL, "...setting mode %d:", r_mode->integer );
+		R_GetModeInfo(&glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect, r_mode->integer);
+        glConfig.isFullscreen = 0;
+	}
+
+    ri.Printf( PRINT_ALL, " %d %d %s\n", glConfig.vidWidth, glConfig.vidHeight, glConfig.isFullscreen ? "FS" : "W");
 
 
     uint32_t value_mask, value_list[32];
@@ -328,17 +201,17 @@ static void CreateWindow(int width, int height, qboolean fullscreen)
 */
 
     xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root,
-            0, 0, width, height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
+            0, 0, glConfig.vidWidth, glConfig.vidHeight, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
             screen->root_visual, value_mask, value_list);
 
-    static const char* pVkTitle = "Vulkan Arena";
+    static const char* pVkTitle = "VulkanArena";
     /* Set the title of the window */
     xcb_change_property (connection, XCB_PROP_MODE_REPLACE, window,
         XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8, strlen (pVkTitle), pVkTitle);
 
     /* set the title of the window icon */
 
-    static const char * pIconTitle = "Open Arena (iconified)";
+    static const char * pIconTitle = "OpenArena (iconified)";
     
     xcb_change_property (connection, XCB_PROP_MODE_REPLACE,
         window, XCB_ATOM_WM_ICON_NAME, XCB_ATOM_STRING,
@@ -390,7 +263,7 @@ static void CreateWindow(int width, int height, qboolean fullscreen)
     mask |= XCB_CONFIG_WINDOW_WIDTH;
     mask |= XCB_CONFIG_WINDOW_HEIGHT;
 
-    const uint32_t coords[4] = {0, 0, width, height};
+    const uint32_t coords[4] = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
     xcb_configure_window(connection, window, mask, coords);
 
 
@@ -405,58 +278,7 @@ static void CreateWindow(int width, int height, qboolean fullscreen)
 
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	ri.IN_Init(connection, window);
-}
 
-#endif
-
-
-
-void vk_createWindow(void)
-{
-
-	ri.Printf(PRINT_ALL, "...vk_createWindow...\n");
-
-	// Create window.
-	//VKimp_SetMode(r_mode->integer, 0);
-	int mode = r_mode->integer;
-    qboolean fullscreen = 0;
-
-    if (fullscreen)
-    {
-		ri.Printf( PRINT_ALL, "...setting fullscreen mode:");
-		glConfig.vidWidth = GetDesktopWidth();
-		glConfig.vidHeight = GetDesktopHeight();
-		glConfig.windowAspect = 1.0f;
-	}
-    else
-    {
-		ri.Printf( PRINT_ALL, "...setting mode %d:", mode );
-		R_GetModeInfo(&glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect, mode);
-
-		// Ensure that window size does not exceed desktop size.
-		// CreateWindow Win32 API does not allow to create windows larger than desktop.
-		//int desktop_width = GetDesktopWidth();
-		//int desktop_height = GetDesktopHeight();
-
-		//if (glConfig.vidWidth > desktop_width || glConfig.vidHeight > desktop_height)
-        {
-			int default_mode = 5;
-			ri.Printf(PRINT_WARNING, "\nMode %d specifies width that is larger than desktop width: using default mode %d\n", mode, default_mode);
-			
-			ri.Printf( PRINT_ALL, "...setting mode %d:", default_mode );
-			
-            R_GetModeInfo(&glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect, default_mode);
-        }
-	}
-	glConfig.isFullscreen = fullscreen;
-	ri.Printf( PRINT_ALL, " %d %d %s\n", glConfig.vidWidth, glConfig.vidHeight, fullscreen ? "FS" : "W");
-
-
-	CreateWindow(glConfig.vidWidth, glConfig.vidHeight, (qboolean)r_fullscreen->integer);
-//		g_wv.hWnd = g_wv.window;
-//		SetForegroundWindow(g_wv.hWnd);
-//		SetFocus(g_wv.hWnd);
-//		WG_CheckHardwareGamma();
  
 }
 
@@ -496,11 +318,9 @@ void vk_destroyWindow(void)
     // To close a connection, it suffices to use:
     // void xcb_disconnect (xcb_connection_t *c);
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-    qvkCreateWin32SurfaceKHR					= NULL;
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    qvkCreateXcbSurfaceKHR                      = NULL;
-#endif    
+
+    qvkCreateXcbSurfaceKHR = NULL;
+  
     
     //xcb_disconnect(connection);
 
@@ -539,25 +359,6 @@ void vk_destroyWindow(void)
 void vk_createSurfaceImpl(void)
 {
 
-// Create a WSI surface for the window:
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-
-    qvkCreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)qvkGetInstanceProcAddr(vk.instance, "vkCreateWin32SurfaceKHR");
-    if (qvkCreateWin32SurfaceKHR == NULL)
-    {
-        ri.Error(ERR_FATAL, "Failed to find entrypoint %s", "vkCreateWin32SurfaceKHR");
-    }
-
-    VkWin32SurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.hinstance = 0;
-    createInfo.hwnd = window;
-
-    qvkCreateWin32SurfaceKHR(vk.instance, &createInfo, NULL, &vk.surface);
-
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
     qvkCreateXcbSurfaceKHR = (PFN_vkCreateXcbSurfaceKHR)qvkGetInstanceProcAddr(vk.instance, "vkCreateXcbSurfaceKHR");
     if( qvkCreateXcbSurfaceKHR == NULL)
     {
@@ -572,17 +373,7 @@ void vk_createSurfaceImpl(void)
     createInfo.window = window;
 
     qvkCreateXcbSurfaceKHR(vk.instance, &createInfo, NULL, &vk.surface);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    VkWaylandSurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.display = display;
-    createInfo.surface = window;
 
-    qvkCreateWaylandSurfaceKHR(vk.instance, &createInfo, NULL, &vk.surface);
-
-#endif
 }
 
 /*
@@ -658,7 +449,7 @@ available in one call but not in another. The extensions supported by a layer ma
 between two calls, e.g. if the layer implementation is replaced by a different version between those
 calls.
 
-*/
+
 
 void VKimp_CreateInstance(void)
 {
@@ -671,17 +462,15 @@ void VKimp_CreateInstance(void)
     const char* extension_names_supported[64] = {0};
     unsigned int enabled_extension_count = 0;
 
-	VkResult result = qvkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
-    if(result < 0)
-	    ri.Error(ERR_FATAL, "Vulkan: error code %d returned by %s", result, "vkEnumerateInstanceExtensionProperties");
+	VK_CHECK(qvkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL));
+
 
     if (instance_extension_count > 0)
     {
         VkExtensionProperties *instance_extensions = 
             (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * instance_extension_count);
-        VkResult err = qvkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions);
-        if(err < 0)
-	        ri.Error(ERR_FATAL, "Vulkan: error code %d returned by %s", err, "vkEnumerateInstanceExtensionProperties");
+        
+        VK_CHECK(qvkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions));
             
         unsigned int i = 0;
 
@@ -693,25 +482,12 @@ void VKimp_CreateInstance(void)
                 extension_names_supported[enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
             }
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-            if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName))
-            {
-                platformSurfaceExtFound = 1;
-                extension_names_supported[enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName))
             {
                 platformSurfaceExtFound = 1;
                 extension_names_supported[enabled_extension_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName))
-            {
-                platformSurfaceExtFound = 1;
-                extension_names_supported[enabled_extension_count++] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
-            }
-#endif
+
 
 #ifndef NDEBUG
             if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName))
@@ -733,7 +509,7 @@ void VKimp_CreateInstance(void)
 
     CreateInstanceImpl(enabled_extension_count, extension_names_supported);
 }
-
+*/
 
 
 /*
@@ -741,15 +517,14 @@ void VKimp_CreateInstance(void)
 Minimize the game so that user is back at the desktop
 ===============
 */
-void VKimp_Minimize( void )
+void minimizeWindowImpl( void )
 {
-    if(r_fullscreen->integer == 1)
-    {
-        r_fullscreen->integer = 0;
-        ri.Cmd_ExecuteText (EXEC_NOW, "vid_restart\n");
-        r_fullscreen->integer = 1;
-    }
+    // Hide the window
+    xcb_unmap_window(connection, window);
 
+    // Make sure the unmap window command is sent
+    xcb_flush(connection);
+    //ri.Printf("Not Impled!");
 }
 
 // doc

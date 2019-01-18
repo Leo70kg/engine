@@ -119,7 +119,7 @@ void R_Init( void )
 	ri.Cmd_AddCommand( "skinlist", R_SkinList_f );
 
     ri.Cmd_AddCommand( "vkinfo", vulkanInfo_f );
-    ri.Cmd_AddCommand( "minimize", VKimp_Minimize );
+    ri.Cmd_AddCommand( "minimize", minimizeWindowImpl );
 
     ri.Cmd_AddCommand( "pipelineList", R_PipelineList_f );
 

@@ -347,12 +347,13 @@ endif
   CLIENT_LIBS=$(SDL_LIBS)
 
 #  XCB_CFLAGS = $(shell PKG_CONFIG --silence-errors --cflags xcb)
-  XCB_LIBS = $(shell pkg-config --libs xcb)
+#  XCB_LIBS = $(shell pkg-config --libs xcb)
 
 ifeq ($(BUILD_WITH_SDL), 1)
   RENDERER_LIBS = $(SDL_LIBS)
 else
-  RENDERER_LIBS = -lGL $(XCB_LIBS)
+  RENDERER_LIBS = -lGL
+# $(XCB_LIBS)
 endif
 
   CLIENT_CFLAGS += $(CURL_CFLAGS)
@@ -1640,10 +1641,10 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/R_LoadImage.o \
 
 
-ifeq ($(BUILD_WITH_SDL), 1)
-  Q3VKOBJ += $(B)/renderer_vulkan/vk_create_window_SDL.o
-else
+ifeq ($(BUILD_WITH_XCB), 1)
   Q3VKOBJ += $(B)/renderer_vulkan/vk_create_window_XCB.o
+else
+  Q3VKOBJ += $(B)/renderer_vulkan/vk_create_window_SDL.o
 endif
 
 
@@ -2006,6 +2007,7 @@ $(B)/renderer_vulkan_$(SHLIBNAME): $(Q3VKOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CFLAGS) $(SHLIBLDFLAGS) -o $@ $(Q3VKOBJ) $(JPGOBJ) \
 		$(THREAD_LIBS) $(RENDERER_LIBS) $(SDL_LIBS) $(LIBS)
+# $(XCB_LIBS)
 
 ##############################################################
 
@@ -2038,7 +2040,7 @@ $(B)/$(CLIENTBIN)_mydev$(FULLBINEXT): $(Q3OBJ)  $(Q3MYDEVOBJ) $(JPGOBJ)
 $(B)/$(CLIENTBIN)_vulkan$(FULLBINEXT): $(Q3OBJ) $(Q3VKOBJ) $(JPGOBJ)
 	$(echo_cmd) "LD $@"
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
-		-o $@ $(Q3OBJ) $(Q3VKOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS) 
+		-o $@ $(Q3OBJ) $(Q3VKOBJ) $(JPGOBJ) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)  
 
 ##############################################################
 

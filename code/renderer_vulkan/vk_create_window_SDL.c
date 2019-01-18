@@ -404,15 +404,8 @@ void vk_createSurfaceImpl(void)
 Minimize the game so that user is back at the desktop
 ===============
 */
-void VKimp_Minimize( void )
+void minimizeWindowImpl( void )
 {
-    if(r_fullscreen->integer == 1)
-    {
-        r_fullscreen->integer = 0;
-        ri.Cmd_ExecuteText (EXEC_NOW, "vid_restart\n");
-        r_fullscreen->integer = 1;
-    }
-
 	SDL_MinimizeWindow( window_sdl );
 }
 
