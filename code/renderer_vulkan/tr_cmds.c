@@ -72,12 +72,6 @@ void R_PerformanceCounters( void )
 
 
 
-/*
-====================
-R_IssueRenderCommands
-====================
-*/
-
 void R_IssueRenderCommands( qboolean runPerformanceCounters )
 {
 	renderCommandList_t* cmdList = &backEndData->commands;

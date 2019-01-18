@@ -40,24 +40,6 @@ refimport_t	ri;
 
 
 
-
-static void InitRenderAPI( void )
-{
-	
-	if ( glConfig.vidWidth == 0 )
-	{
-
-		vk_initialize();
-
-	}
-	
-    // print info
-	vulkanInfo_f();
-
-}
-
-
-
 /*
 =============
 RE_EndRegistration
@@ -143,7 +125,12 @@ void R_Init( void )
 
     R_InitScene();
 
-	InitRenderAPI();
+    // VULKAN
+	if ( glConfig.vidWidth == 0 )
+	{
+		vk_initialize();
+	}
+	
 
 	R_InitImages();
 

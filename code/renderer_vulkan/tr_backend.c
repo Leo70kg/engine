@@ -31,8 +31,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "R_DEBUG.h"
 
 
-
-
 /*
 =================
 RB_BeginDrawingView
@@ -201,15 +199,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 }
 
 
-/*
-============================================================================
-
-RENDER BACK END THREAD FUNCTIONS
-
-============================================================================
-*/
-
-
 
 /*
 =============
@@ -235,10 +224,15 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	}
 
 	// make sure rows and cols are powers of 2
-	for ( i = 0 ; ( 1 << i ) < cols ; i++ ) {
+	for ( i = 0 ; ( 1 << i ) < cols ; i++ )
+    {
+        ;
 	}
-	for ( j = 0 ; ( 1 << j ) < rows ; j++ ) {
+	for ( j = 0 ; ( 1 << j ) < rows ; j++ )
+    {
+        ;
 	}
+    
 	if ( ( 1 << i ) != cols || ( 1 << j ) != rows) {
 		ri.Error (ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
 	}
@@ -255,15 +249,16 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 }
 
 
+float sf_Color2D[4];
 
 const void* RB_SetColor( const void *data )
 {
 	const setColorCommand_t	*cmd = (const setColorCommand_t *)data;
 
-	backEnd.color2D[0] = cmd->color[0] * 255;
-	backEnd.color2D[1] = cmd->color[1] * 255;
-	backEnd.color2D[2] = cmd->color[2] * 255;
-	backEnd.color2D[3] = cmd->color[3] * 255;
+	sf_Color2D[0] = cmd->color[0];
+	sf_Color2D[1] = cmd->color[1];
+	sf_Color2D[2] = cmd->color[2];
+	sf_Color2D[3] = cmd->color[3];
 
 	return (const void *)(cmd + 1);
 }
@@ -287,7 +282,8 @@ const void *RB_StretchPic( const void *data )
 	}
 
 
-	if ( cmd->shader != tess.shader ) {
+	if ( cmd->shader != tess.shader )
+    {
 		if ( tess.numIndexes ) {
 			RB_EndSurface();
 		}
@@ -304,7 +300,7 @@ const void *RB_StretchPic( const void *data )
 	const unsigned int n3 = n0 + 3;
 
 	{
-		unsigned int numIndexes = tess.numIndexes;
+		uint32_t numIndexes = tess.numIndexes;
 
 		tess.indexes[ numIndexes ] = n3;
 		tess.indexes[ numIndexes + 1 ] = n0;
@@ -315,10 +311,10 @@ const void *RB_StretchPic( const void *data )
 	}
 
 	{
-		const unsigned char r = backEnd.color2D[0];
-		const unsigned char g = backEnd.color2D[1];
-		const unsigned char b = backEnd.color2D[2];
-		const unsigned char a = backEnd.color2D[3];
+		const unsigned char r = sf_Color2D[0]*255;
+		const unsigned char g = sf_Color2D[1]*255;
+		const unsigned char b = sf_Color2D[2]*255;
+		const unsigned char a = sf_Color2D[3]*255;
 
 		tess.vertexColors[ n0 ][ 0 ] = r;
 		tess.vertexColors[ n0 ][ 1 ] = g;
@@ -387,15 +383,15 @@ RB_DrawSurfs
 
 =============
 */
-const void	*RB_DrawSurfs( const void *data ) {
-	const drawSurfsCommand_t	*cmd;
+const void* RB_DrawSurfs( const void *data )
+{
 
 	// finish any 2D drawing if needed
 	if ( tess.numIndexes ) {
 		RB_EndSurface();
 	}
 
-	cmd = (const drawSurfsCommand_t *)data;
+	const drawSurfsCommand_t* cmd = (const drawSurfsCommand_t *)data;
 
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
@@ -433,16 +429,15 @@ const void* RB_SwapBuffers( const void *data )
 {
 
 	// finish any 2D drawing if needed
-	if ( tess.numIndexes ) {
-		RB_EndSurface();
-	}
+
+	RB_EndSurface();
 
 	// texture swapping test
 	if ( r_showImages->integer ) {
 		RB_ShowImages();
 	}
 
-	const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t *)data;
+	//const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t *)data;
 
 
 	backEnd.projection2D = qfalse;
@@ -450,7 +445,7 @@ const void* RB_SwapBuffers( const void *data )
 	// VULKAN
 	vk_end_frame();
 
-	return (const void *)(cmd + 1);
+	return (const void *)((const swapBuffersCommand_t *)data + 1);
 }
 
 /*

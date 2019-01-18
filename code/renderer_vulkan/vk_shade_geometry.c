@@ -90,22 +90,23 @@ float ProjectRadius( float r, vec3_t location, float pMatProj[16] )
         // p[2] = -dist;
 
 
-        float projected[4];
-
+        //  float projected[4];
         //	projected[0] = p[0] * pMatProj[0] + p[1] * pMatProj[4] + p[2] * pMatProj[8] + pMatProj[12];
         //  projected[1] = p[0] * pMatProj[1] - p[1] * pMatProj[5] + p[2] * pMatProj[9] + pMatProj[13];
         //	projected[2] = p[0] * pMatProj[2] + p[1] * pMatProj[6] + p[2] * pMatProj[10] + pMatProj[14];
         //  projected[3] = p[0] * pMatProj[3] + p[1] * pMatProj[7] + p[2] * pMatProj[11] + pMatProj[15];
+        //  pr = projected[1] / projected[3];
+        
+        float p1 = - r * pMatProj[5] - dist * pMatProj[9] + pMatProj[13];
+        float p3 =   r * pMatProj[7] - dist * pMatProj[11] + pMatProj[15];
 
-        projected[1] = - r * pMatProj[5] - dist * pMatProj[9] + pMatProj[13];
-        projected[3] =   r * pMatProj[7] - dist * pMatProj[11] + pMatProj[15];
-
-
-        pr = projected[1] / projected[3];
+        pr = p1 / p3;
+        
 
         if ( pr > 1.0f )
             pr = 1.0f;
     }
+
 	return pr;
 }
 
@@ -137,7 +138,7 @@ void R_SetupProjection( float pMatProj[16] )
         o[2] = tr.viewParms.or.origin[2];
 
         float farthestCornerDistance = 0;
-        int	i;
+        uint32_t	i;
 
         // set far clipping planes dynamically
         for ( i = 0; i < 8; i++ )

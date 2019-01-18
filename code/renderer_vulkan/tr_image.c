@@ -66,7 +66,7 @@ static void R_CreateDlightImage( void )
 
 void R_InitFogTable( void )
 {
-	int		i;
+	uint32_t i;
 	float	exp = 0.5;
 
 	for ( i = 0 ; i < FOG_TABLE_SIZE ; i++ )

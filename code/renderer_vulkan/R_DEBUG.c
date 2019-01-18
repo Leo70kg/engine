@@ -137,7 +137,7 @@ Also called by RE_EndRegistration
 
 void RB_ShowImages(void)
 {
-    int i = 0;
+
 	if ( !backEnd.projection2D )
     {
         backEnd.projection2D = qtrue;
@@ -152,7 +152,8 @@ void RB_ShowImages(void)
 
 	const float black[4] = {0, 0, 0, 1};
 	vk_clearColorAttachments(black);
-
+    
+    uint32_t i;
 	for (i = 0 ; i < tr.numImages ; i++)
     {
 		image_t* image = tr.images[i];

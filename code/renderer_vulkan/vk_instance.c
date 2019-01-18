@@ -924,6 +924,9 @@ void vk_initialize(void)
 	// Standard pipelines.
 	//
     create_standard_pipelines();
+
+    // print info
+    vulkanInfo_f();
 }
 
 
