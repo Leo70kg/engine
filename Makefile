@@ -1619,7 +1619,7 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/vk_frame.o \
   $(B)/renderer_vulkan/vk_screenshot.o \
   $(B)/renderer_vulkan/vk_shade_geometry.o \
-  $(B)/renderer_vulkan/vk_initialize.o \
+  $(B)/renderer_vulkan/vk_depth_attachment.o \
   \
   $(B)/renderer_vulkan/vk_shaders.o \
   $(B)/renderer_vulkan/multi_texture_add_frag.o \

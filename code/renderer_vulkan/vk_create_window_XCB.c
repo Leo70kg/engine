@@ -416,8 +416,6 @@ void vk_createWindow(void)
 
 	ri.Printf(PRINT_ALL, "...vk_createWindow...\n");
 
-
-    
 	// Create window.
 	//VKimp_SetMode(r_mode->integer, 0);
 	int mode = r_mode->integer;

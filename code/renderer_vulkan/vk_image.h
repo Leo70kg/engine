@@ -1,7 +1,7 @@
 #ifndef VK_IMAGE_H_
 #define VK_IMAGE_H_
 
-unsigned int find_memory_type(VkPhysicalDevice physical_device, unsigned int memory_type_bits, VkMemoryPropertyFlags properties);
+uint32_t find_memory_type(uint32_t memory_type_bits, VkMemoryPropertyFlags properties);
 
 void record_image_layout_transition(VkCommandBuffer command_buffer, VkImage image, VkImageAspectFlags image_aspect_flags,
 	VkAccessFlags src_access_flags, VkImageLayout old_layout, VkAccessFlags dst_access_flags, VkImageLayout new_layout);

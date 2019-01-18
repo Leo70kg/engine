@@ -3,8 +3,14 @@
 
 #include "VKimpl.h"
 #include "vk_instance.h"
-
 #include "tr_globals.h"
+#include "vk_image.h"
+#include "vk_instance.h"
+#include "vk_shade_geometry.h"
+#include "vk_pipelines.h"
+#include "vk_frame.h"
+#include "vk_shaders.h"
+#include "vk_depth_attachment.h"
 
 struct Vk_Instance vk;
 
@@ -26,7 +32,6 @@ PFN_vkGetPhysicalDeviceFormatProperties			qvkGetPhysicalDeviceFormatProperties;
 PFN_vkGetPhysicalDeviceMemoryProperties			qvkGetPhysicalDeviceMemoryProperties;
 PFN_vkGetPhysicalDeviceProperties				qvkGetPhysicalDeviceProperties;
 PFN_vkGetPhysicalDeviceQueueFamilyProperties	qvkGetPhysicalDeviceQueueFamilyProperties;
-
 
 
 PFN_vkDestroySurfaceKHR							qvkDestroySurfaceKHR;
@@ -119,7 +124,6 @@ PFN_vkQueuePresentKHR							qvkQueuePresentKHR;
 
 #ifndef NDEBUG
 
-
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_DebugCallback(
         VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT object_type,
         uint64_t object, size_t location, int32_t message_code, 
@@ -152,6 +156,7 @@ static void vk_createDebugCallback( PFN_vkDebugReportCallbackEXT qvkDebugCB)
 
     VK_CHECK(qvkCreateDebugReportCallbackEXT(vk.instance, &desc, NULL, &vk.h_debugCB));
 }
+
 #endif
 
 
@@ -362,6 +367,9 @@ static void vk_selectPhysicalDevice(void)
     free(pPhyDev);
 
     ri.Printf(PRINT_ALL, " Total %d graphics card, the first one is choosed. \n", gpu_count);
+
+    ri.Printf(PRINT_ALL, " Get physical device memory properties: vk.devMemProperties \n");
+    qvkGetPhysicalDeviceMemoryProperties(vk.physical_device, &vk.devMemProperties);
 }
 
 
@@ -432,8 +440,36 @@ static void vk_selectSurfaceFormat(void)
 		ri.Error(ERR_FATAL, "VK_IMAGE_USAGE_TRANSFER_SRC_BIT is not supported by you GPU.\n");
 
 
-    ri.Printf(PRINT_ALL, " -------- --------------------------- --------\n");
+    // To query supported format features which are properties of the physical device
+	
+    VkFormatProperties props;
+	
+    qvkGetPhysicalDeviceFormatProperties(vk.physical_device, VK_FORMAT_D24_UNORM_S8_UINT, &props);
+	//glConfig.stencilBits = 8;	
+    if ( props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT )
+    {
+        ri.Printf(PRINT_ALL, " VK_FORMAT_D24_UNORM_S8_UINT optimal Tiling feature supported.\n");
+        vk.fmt_DepthStencil = VK_FORMAT_D24_UNORM_S8_UINT;
+    }
+    else
+    {
+        qvkGetPhysicalDeviceFormatProperties(vk.physical_device, VK_FORMAT_D32_SFLOAT_S8_UINT, &props);
 
+        if ( props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT )
+        {
+            ri.Printf(PRINT_ALL, " VK_FORMAT_D32_SFLOAT_S8_UINT optimal Tiling feature supported.\n");
+            vk.fmt_DepthStencil = VK_FORMAT_D32_SFLOAT_S8_UINT;
+        }
+        else
+        {
+            //formats[0] = VK_FORMAT_X8_D24_UNORM_PACK32;
+		    //formats[1] = VK_FORMAT_D32_SFLOAT;
+            // never get here.
+	        ri.Error(ERR_FATAL, " Failed to find depth attachment format.\n");
+        }
+    }
+
+    ri.Printf(PRINT_ALL, " -------- --------------------------- --------\n");
 }
 
 
@@ -465,7 +501,7 @@ static void vk_selectQueueFamilyForPresentation(void)
     vk.queue_family_index = -1;
     
     uint32_t i;
-    for (i = 0; i < nSurfmt; i++)
+    for (i = 0; i < nSurfmt; ++i)
     {
         // To look for a queue family that has the capability of presenting
         // to our window surface
@@ -486,17 +522,15 @@ static void vk_selectQueueFamilyForPresentation(void)
         }
     }
 
+    free(pQueueFamilies);
+
     if (vk.queue_family_index == -1)
         ri.Error(ERR_FATAL, "Vulkan: failed to find queue family");
-
-    free(pQueueFamilies);
 }
-
 
 
 static void vk_createLogicalDevice(void)
 {
-
     static const char* device_extensions[1] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
@@ -519,8 +553,7 @@ static void vk_createLogicalDevice(void)
     VkExtensionProperties* pDeviceExt = 
         (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * nDevExts);
 
-    qvkEnumerateDeviceExtensionProperties(
-            vk.physical_device, NULL, &nDevExts, pDeviceExt);
+    qvkEnumerateDeviceExtensionProperties( vk.physical_device, NULL, &nDevExts, pDeviceExt);
 
 
     uint32_t j;
@@ -711,32 +744,6 @@ void vk_getProcAddress(void)
 
 void vk_clearProcAddress(void)
 {
-    ri.Printf( PRINT_ALL, " Destroy command pool: vk.command_pool. \n" );
-
-    qvkDestroyCommandPool(vk.device, vk.command_pool, NULL);
-
-    ri.Printf( PRINT_ALL, " Destroy logical device: vk.device. \n" );
-
-	qvkDestroyDevice(vk.device, NULL);
-
-    ri.Printf( PRINT_ALL, " Destroy surface: vk.surface. \n" );
-	
-    // make sure that the surface is destroyed before the instance
-    qvkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
-
-#ifndef NDEBUG
-    ri.Printf( PRINT_ALL, " Destroy callback function: vk.h_debugCB. \n" );
-
-	qvkDestroyDebugReportCallbackEXT(vk.instance, vk.h_debugCB, NULL);
-#endif
-
-    ri.Printf( PRINT_ALL, " Destroy instance: vk.instance. \n" );
-	qvkDestroyInstance(vk.instance, NULL);
-
-    ri.Printf( PRINT_ALL, " clear vk struct: vk \n" );
-	memset(&vk, 0, sizeof(vk));
-
-
     ri.Printf( PRINT_ALL, " clear all proc address \n" );
 
 	qvkCreateInstance                           = NULL;
@@ -839,6 +846,222 @@ void vk_clearProcAddress(void)
 	qvkQueuePresentKHR							= NULL;
 }
 
+static void vk_create_command_pool(VkCommandPool* pPool)
+{
+    VkCommandPoolCreateInfo desc;
+    desc.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    desc.pNext = NULL;
+    desc.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    desc.queueFamilyIndex = vk.queue_family_index;
+
+    VK_CHECK(qvkCreateCommandPool(vk.device, &desc, NULL, pPool));
+}
+
+static void vk_create_command_buffer(VkCommandPool cmd_pool, VkCommandBuffer* pBuf)
+{
+    VkCommandBufferAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.commandPool = cmd_pool;
+    // Can be submitted to a queue for execution,
+    // but cannnot be called from other command buffers.
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+    VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, pBuf));
+}
+
+
+void vk_initialize(void)
+{
+    // This function is responsible for initializing a valid Vulkan subsystem.
+
+    vk_createWindow();
+        
+    vk_getProcAddress(); 
+ 
+
+	// Swapchain. vk.physical_device required to be init. 
+	vk_createSwapChain(vk.device, vk.surface, vk.surface_format);
+
+	//
+	// Sync primitives.
+	//
+    vk_create_sync_primitives();
+
+	// we have to create a command pool before we can create command buffers
+    // command pools manage the memory that is used to store the buffers and
+    // command buffers are allocated from them.
+    ri.Printf(PRINT_ALL, " Create command pool: vk.command_pool \n");
+    vk_create_command_pool(&vk.command_pool);
+    
+    ri.Printf(PRINT_ALL, " Create command buffer: vk.command_buffer \n");
+    vk_create_command_buffer(vk.command_pool, &vk.command_buffer);
+
+    // Depth attachment image.
+    vk_createDepthAttachment();
+
+
+    vk_createFrameBuffers();
+
+	// Pipeline layout.
+	// You can use uniform values in shaders, which are globals similar to
+    // dynamic state variables that can be changes at the drawing time to
+    // alter the behavior of your shaders without having to recreate them.
+    // They are commonly used to create texture samplers in the fragment 
+    // shader. The uniform values need to be specified during pipeline
+    // creation by creating a VkPipelineLayout object.
+    
+    vk_createPipelineLayout();
+
+	//
+	vk_createGeometryBuffers();
+	//
+	// Shader modules.
+	//
+	vk_loadShaderModules();
+
+	//
+	// Standard pipelines.
+	//
+    create_standard_pipelines();
+}
+
+
+void vk_shutdown(void)
+{
+    ri.Printf( PRINT_ALL, "vk_shutdown()\n" );
+
+    vk_destroyDepthAttachment();
+
+    vk_destroyFrameBuffers();
+
+    vk_destroy_shading_data();
+
+    vk_destroy_sync_primitives();
+    
+    vk_destroyShaderModules();
+
+//
+    vk_destroyGlobalStagePipeline();
+//
+    // Command buffers will be automatically freed when their
+    // command pool is destroyed, so it don't need an explicit 
+    // cleanup.
+    ri.Printf( PRINT_ALL, " Free command buffers: vk.command_buffer. \n" );     
+    qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &vk.command_buffer); 
+    ri.Printf( PRINT_ALL, " Destroy command pool: vk.command_pool. \n" );
+    qvkDestroyCommandPool(vk.device, vk.command_pool, NULL);
+
+    ri.Printf( PRINT_ALL, " Destroy logical device: vk.device. \n" );
+	qvkDestroyDevice(vk.device, NULL);
+
+    ri.Printf( PRINT_ALL, " Destroy surface: vk.surface. \n" );
+    // make sure that the surface is destroyed before the instance
+    qvkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
+
+#ifndef NDEBUG
+    ri.Printf( PRINT_ALL, " Destroy callback function: vk.h_debugCB. \n" );
+
+	qvkDestroyDebugReportCallbackEXT(vk.instance, vk.h_debugCB, NULL);
+#endif
+
+    ri.Printf( PRINT_ALL, " Destroy instance: vk.instance. \n" );
+	qvkDestroyInstance(vk.instance, NULL);
+
+    ri.Printf( PRINT_ALL, " clear vk struct: vk \n" );
+	memset(&vk, 0, sizeof(vk));
+
+	vk_clearProcAddress();
+}
+
+
+void vulkanInfo_f( void ) 
+{
+
+	// VULKAN
+
+    ri.Printf( PRINT_ALL, "\nActive 3D API: Vulkan\n" );
+
+    // To query general properties of physical devices once enumerated
+    VkPhysicalDeviceProperties props;
+    qvkGetPhysicalDeviceProperties(vk.physical_device, &props);
+
+    uint32_t major = VK_VERSION_MAJOR(props.apiVersion);
+    uint32_t minor = VK_VERSION_MINOR(props.apiVersion);
+    uint32_t patch = VK_VERSION_PATCH(props.apiVersion);
+
+    const char* device_type;
+    if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+        device_type = "INTEGRATED_GPU";
+    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        device_type = "DISCRETE_GPU";
+    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU)
+        device_type = "VIRTUAL_GPU";
+    else if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU)
+        device_type = "CPU";
+    else
+        device_type = "Unknown";
+
+    const char* vendor_name = "unknown";
+    if (props.vendorID == 0x1002) {
+        vendor_name = "Advanced Micro Devices, Inc.";
+    } else if (props.vendorID == 0x10DE) {
+        vendor_name = "NVIDIA";
+    } else if (props.vendorID == 0x8086) {
+        vendor_name = "Intel Corporation";
+    }
+
+    ri.Printf(PRINT_ALL, "Vk api version: %d.%d.%d\n", major, minor, patch);
+    ri.Printf(PRINT_ALL, "Vk driver version: %d\n", props.driverVersion);
+    ri.Printf(PRINT_ALL, "Vk vendor id: 0x%X (%s)\n", props.vendorID, vendor_name);
+    ri.Printf(PRINT_ALL, "Vk device id: 0x%X\n", props.deviceID);
+    ri.Printf(PRINT_ALL, "Vk device type: %s\n", device_type);
+    ri.Printf(PRINT_ALL, "Vk device name: %s\n", props.deviceName);
+
+//    ri.Printf(PRINT_ALL, "\n The maximum number of sampler objects,  
+//    as created by vkCreateSampler, which can simultaneously exist on a device is: %d\n", 
+//        props.limits.maxSamplerAllocationCount);
+//	 4000
+
+    // Look for device extensions
+    {
+        uint32_t nDevExts = 0;
+
+        // To query the extensions available to a given physical device
+        VK_CHECK( qvkEnumerateDeviceExtensionProperties( vk.physical_device, NULL, &nDevExts, NULL) );
+
+        VkExtensionProperties* pDeviceExt = 
+            (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * nDevExts);
+
+        qvkEnumerateDeviceExtensionProperties(
+                vk.physical_device, NULL, &nDevExts, pDeviceExt);
+
+
+        ri.Printf(PRINT_ALL, "---------- Total Device Extension Supported ---------- \n");
+        uint32_t i;
+        for (i=0; i<nDevExts; i++)
+        {
+            ri.Printf(PRINT_ALL, " %s \n", pDeviceExt[i].extensionName);
+        }
+        ri.Printf(PRINT_ALL, "---------- -------------------------------- ---------- \n");
+    }
+
+    ri.Printf(PRINT_ALL, "Vk instance extensions: \n%s\n\n", glConfig.extensions_string);
+
+
+	//
+	// Info that for UI display
+	//
+	strncpy( glConfig.vendor_string, vendor_name, sizeof( glConfig.vendor_string ) );
+	strncpy( glConfig.renderer_string, props.deviceName, sizeof( glConfig.renderer_string ) );
+    if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
+         glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;     
+	char tmpBuf[128] = {0};
+
+    snprintf(tmpBuf, 128, " Vk api version: %d.%d.%d ", major, minor, patch);
+	
+    strncpy( glConfig.version_string, tmpBuf, sizeof( glConfig.version_string ) );
+}
 
 
 const char * cvtResToStr(VkResult result)
@@ -913,4 +1136,3 @@ const char * cvtResToStr(VkResult result)
 
     return "UNKNOWN_ERROR";
 }
-

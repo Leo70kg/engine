@@ -111,6 +111,14 @@ extern PFN_vkGetSwapchainImagesKHR						qvkGetSwapchainImagesKHR;
 extern PFN_vkQueuePresentKHR							qvkQueuePresentKHR;
 
 
+// After calling this function we get fully functional vulkan subsystem.
+void vk_initialize(void);
+
+// Shutdown vulkan subsystem by releasing resources acquired by Vk_Instance.
+void vk_shutdown(void);
+
+void vulkanInfo_f( void );
+// Initializes VK_Instance structure.
 void vk_getProcAddress(void);
 void vk_clearProcAddress(void);
 
@@ -143,8 +151,25 @@ struct Vk_Instance {
 	VkSurfaceKHR surface;
 	VkSurfaceFormatKHR surface_format;
     VkSurfaceCapabilitiesKHR surface_caps;
-    
-	uint32_t queue_family_index;
+
+// Depth/stencil formats are considered opaque and need not be stored
+// in the exact number of bits pertexel or component ordering indicated
+// by the format enum. However, implementations must not substitute a
+// different depth or stencil precision than that described in the
+// format (e.g. D16 must not be implemented as D24 or D32).
+
+// The features for the set of formats (VkFormat) supported by the
+// implementation are queried individually using the 
+// vkGetPhysicalDeviceFormatProperties command.
+// To determine the set of valid usage bits for a given format, 
+// call vkGetPhysicalDeviceFormatProperties.
+
+// depth and stencil aspects of a given image subresource must always be in the same layout.
+
+    VkFormat fmt_DepthStencil;
+	VkPhysicalDeviceMemoryProperties devMemProperties;
+	
+    uint32_t queue_family_index;
 	VkDevice device;
 	VkQueue queue;
 
@@ -152,7 +177,7 @@ struct Vk_Instance {
 	uint32_t swapchain_image_count ;
 	VkImage swapchain_images_array[MAX_SWAPCHAIN_IMAGES];
 	VkImageView swapchain_image_views[MAX_SWAPCHAIN_IMAGES];
-	uint32_t swapchain_image_index;
+	uint32_t idx_swapchain_image;
 
 
 	VkCommandPool command_pool;
@@ -167,7 +192,6 @@ struct Vk_Instance {
 
 	VkDescriptorPool descriptor_pool;
 	VkDescriptorSetLayout set_layout;
-
 
     // Pipeline layout: the uniform and push values referenced by 
     // the shader that can be updated at draw time

@@ -80,7 +80,7 @@ static void vk_read_pixels(unsigned char* buffer)
 	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	alloc_info.pNext = NULL;
 	alloc_info.allocationSize = memory_requirements.size;
-	alloc_info.memoryTypeIndex = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
+	alloc_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	
     VkDeviceMemory memory;
@@ -109,7 +109,7 @@ static void vk_read_pixels(unsigned char* buffer)
         VK_CHECK(qvkBeginCommandBuffer(cmdBuf, &begin_info));
 
         record_image_layout_transition(cmdBuf, 
-                vk.swapchain_images_array[vk.swapchain_image_index], 
+                vk.swapchain_images_array[vk.idx_swapchain_image], 
                 VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_MEMORY_READ_BIT, 
                 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_TRANSFER_READ_BIT, 
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -199,7 +199,7 @@ static void vk_read_pixels(unsigned char* buffer)
             region.dstOffsets[1] = region.srcOffsets[1];
 
             qvkCmdBlitImage(command_buffer,
-                    vk.swapchain_images_array[vk.swapchain_image_index], 
+                    vk.swapchain_images_array[vk.idx_swapchain_image], 
                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
                     VK_IMAGE_LAYOUT_GENERAL, 1, &region, VK_FILTER_NEAREST);
         }
@@ -259,7 +259,7 @@ static void vk_read_pixels(unsigned char* buffer)
             region.extent.depth = 1;
 
             qvkCmdCopyImage(command_buffer, 
-                    vk.swapchain_images_array[vk.swapchain_image_index], 
+                    vk.swapchain_images_array[vk.idx_swapchain_image], 
                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
 		

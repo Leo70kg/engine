@@ -308,9 +308,7 @@ VkRect2D get_scissor_rect(void)
         r.offset.y = backEnd.viewParms.viewportY;
         r.extent.width = backEnd.viewParms.viewportWidth;
 		r.extent.height = backEnd.viewParms.viewportHeight;
-  
         //ri.Printf(PRINT_ALL, "(%d, %d, %d, %d)\n", r.offset.x, r.offset.y, r.extent.width, r.extent.height);
-
     }
 
 	return r;
@@ -363,7 +361,7 @@ void vk_createGeometryBuffers(void)
     VkDeviceSize idxBufOffset = ~mask & (vb_memory_requirements.size + mask);
 
     uint32_t memory_type_bits = vb_memory_requirements.memoryTypeBits & ib_memory_requirements.memoryTypeBits;
-    uint32_t memory_type = find_memory_type(vk.physical_device, memory_type_bits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    uint32_t memory_type = find_memory_type(memory_type_bits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     VkMemoryAllocateInfo alloc_info;
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;

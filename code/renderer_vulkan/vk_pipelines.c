@@ -645,7 +645,7 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 
 static VkPipeline vk_find_pipeline(struct Vk_Pipeline_Def* def)
 {
-    int i = 0;
+    uint32_t i = 0;
 	for (i = 0; i < s_numPipelines; i++)
     {
 		if (s_pipeline_defs[i].shader_type == def->shader_type &&
@@ -894,7 +894,7 @@ void vk_destroyShaderStagePipeline(void)
 {
     // shader stage
     qvkDeviceWaitIdle(vk.device);
-    int i;
+    uint32_t i;
     for (i = 0; i < s_numPipelines; i++)
     {
 		qvkDestroyPipeline(vk.device, s_pipeline_defs[i].pipeline, NULL);

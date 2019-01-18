@@ -60,14 +60,14 @@ const static textureMode_t texModes[] = {
 #define MAX_VK_SAMPLERS     32
 static struct Vk_Sampler_Def s_SamplerDefs[MAX_VK_SAMPLERS] = {0};
 
-static int s_NumSamplers = 0;
+static uint32_t s_NumSamplers = 0;
 static VkSampler s_ImgSamplers[MAX_VK_SAMPLERS] = {0};
 
 
 
 void vk_free_sampler(void)
 {
-    int i = 0;
+    uint32_t i = 0;
     for (i = 0; i < s_NumSamplers; i++)
     {
         if(s_ImgSamplers[i] != VK_NULL_HANDLE)
@@ -109,7 +109,7 @@ VkSampler vk_find_sampler(VkBool32 mipmap, VkBool32 repeat_texture)
 	}
 
 	// Look for sampler among existing samplers.
-	int i;
+	uint32_t i;
     for (i = 0; i < s_NumSamplers; i++)
     {
 		if (( s_SamplerDefs[i].repeat_texture == sampler_def.repeat_texture) &&

@@ -213,7 +213,7 @@ static void allocate_and_bind_image_memory(VkImage image)
 		alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		alloc_info.pNext = NULL;
 		alloc_info.allocationSize = IMAGE_CHUNK_SIZE;
-		alloc_info.memoryTypeIndex = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		alloc_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		VkDeviceMemory memory;
 		VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
@@ -303,14 +303,12 @@ static void vk_create_image(uint32_t width, uint32_t height, uint32_t mipLevels,
 }
 
 
-unsigned int find_memory_type(VkPhysicalDevice physical_device, unsigned int memory_type_bits, VkMemoryPropertyFlags properties)
+uint32_t find_memory_type(uint32_t memory_type_bits, VkMemoryPropertyFlags properties)
 {
-	VkPhysicalDeviceMemoryProperties memory_properties;
-	qvkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
-    unsigned int i;
-	for (i = 0; i < memory_properties.memoryTypeCount; i++)
+    uint32_t i;
+	for (i = 0; i < vk.devMemProperties.memoryTypeCount; i++)
     {
-		if ( ((memory_type_bits & (1 << i)) != 0) && (memory_properties.memoryTypes[i].propertyFlags & properties) == properties)
+		if ( ((memory_type_bits & (1 << i)) != 0) && (vk.devMemProperties.memoryTypes[i].propertyFlags & properties) == properties)
         {
 			return i;
 		}
@@ -335,6 +333,7 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size)
 
         if (s_MemStgBuf != VK_NULL_HANDLE)
         {
+            qvkUnmapMemory(vk.device, s_MemStgBuf);
             qvkFreeMemory(vk.device, s_MemStgBuf, NULL);
             memset(&s_MemStgBuf, 0, sizeof(VkDeviceMemory));
         }
@@ -368,7 +367,7 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size)
             VkMemoryRequirements memory_requirements;
             qvkGetBufferMemoryRequirements(vk.device, s_StagingBuffer, &memory_requirements);
 
-            uint32_t memory_type = find_memory_type(vk.physical_device, memory_requirements.memoryTypeBits,
+            uint32_t memory_type = find_memory_type(memory_requirements.memoryTypeBits,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
             VkMemoryAllocateInfo alloc_info;
