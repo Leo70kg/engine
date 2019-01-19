@@ -346,15 +346,21 @@ endif
 
   CLIENT_LIBS=$(SDL_LIBS)
 
-#  XCB_CFLAGS = $(shell PKG_CONFIG --silence-errors --cflags xcb)
-#  XCB_LIBS = $(shell pkg-config --libs xcb)
+
 
 ifeq ($(BUILD_WITH_SDL), 1)
-  RENDERER_LIBS = $(SDL_LIBS)
+  RENDERER_LIBS = $(SDL_LIBS) 
 else
   RENDERER_LIBS = -lGL
-# $(XCB_LIBS)
 endif
+
+ifeq ($(BUILD_WITH_XCB), 1)
+#  XCB_CFLAGS = $(shell PKG_CONFIG --silence-errors --cflags xcb)
+  XCB_LIBS = $(shell pkg-config --libs xcb)
+  RENDERER_LIBS += $(XCB_LIBS)
+endif
+
+
 
   CLIENT_CFLAGS += $(CURL_CFLAGS)
   CLIENT_LIBS += $(CURL_LIBS)

@@ -20,8 +20,12 @@
 #define ST0_OFFSET          (COLOR_OFFSET + COLOR_SIZE)
 #define ST1_OFFSET          (ST0_OFFSET + ST0_SIZE)
 
-struct ShadingData_t{
-
+struct ShadingData_t
+{
+    // Buffers represent linear arrays of data which are used for various purposes
+    // by binding them to a graphics or compute pipeline via descriptor sets or 
+    // via certain commands,  or by directly specifying them as parameters to 
+    // certain commands. Buffers are represented by VkBuffer handles:
 	VkBuffer vertex_buffer;
 	unsigned char* vertex_buffer_ptr ; // pointer to mapped vertex buffer
 	uint32_t xyz_elements;
@@ -43,17 +47,6 @@ VkBuffer vk_getIndexBuffer(void)
 {
     return shadingDat.index_buffer;
 }
-
-
-void vk_destroy_shading_data(void)
-{
-    qvkDestroyBuffer(vk.device, shadingDat.vertex_buffer, NULL);
-	qvkDestroyBuffer(vk.device, shadingDat.index_buffer, NULL);
-    
-    qvkUnmapMemory(vk.device, shadingDat.geometry_buffer_memory);
-	qvkFreeMemory(vk.device, shadingDat.geometry_buffer_memory, NULL);
-}
-
 
 
 static float s_modelview_matrix[16] QALIGN(16);
@@ -322,34 +315,49 @@ VkRect2D get_scissor_rect(void)
 // are guaranteed to meet any alignment requirement of the implementation
 //
 // Host access to buffer must be externally synchronized
+
+void vk_createVertexBuffer(void)
+{
+    ri.Printf(PRINT_ALL, " Create vertex buffer: shadingDat.vertex_buffer \n");
+
+    VkBufferCreateInfo desc;
+    desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    desc.pNext = NULL;
+    desc.flags = 0;
+    desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    desc.queueFamilyIndexCount = 0;
+    desc.pQueueFamilyIndices = NULL;
+    //VERTEX_BUFFER_SIZE
+    desc.size = XYZ_SIZE + COLOR_SIZE + ST0_SIZE + ST1_SIZE;
+    desc.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    
+    VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &shadingDat.vertex_buffer));
+}
+
+void vk_createIndexBuffer(void)
+{
+    ri.Printf(PRINT_ALL, " Create index buffer: shadingDat.index_buffer \n");
+
+    VkBufferCreateInfo desc;
+    desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    desc.pNext = NULL;
+    desc.flags = 0;
+    desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    desc.queueFamilyIndexCount = 0;
+    desc.pQueueFamilyIndices = NULL;
+    desc.size = INDEX_BUFFER_SIZE;
+    desc.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+    VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &shadingDat.index_buffer));
+}
+
 void vk_createGeometryBuffers(void)
 {
-    {
-        VkBufferCreateInfo desc;
-        desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        desc.pNext = NULL;
-        desc.flags = 0;
-        desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        desc.queueFamilyIndexCount = 0;
-        desc.pQueueFamilyIndices = NULL;
 
-        //VERTEX_BUFFER_SIZE
-        desc.size = XYZ_SIZE + COLOR_SIZE + ST0_SIZE + ST1_SIZE;
-        desc.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
-
-        // Buffers represent linear arrays of data which are used for
-        // various purposes by binding them to a graphics or compute 
-        // pipeline via descriptor sets or via certain commands, 
-        // or by directly specifying them as parameters to certain commands.
-        // Buffers are represented by VkBuffer handles:
-
-        VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &shadingDat.vertex_buffer));
-
-        desc.size = INDEX_BUFFER_SIZE;
-        desc.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &shadingDat.index_buffer));
-    }
+    vk_createVertexBuffer();
+    vk_createIndexBuffer();
+    // The buffer has been created, but it doesn't actually have any memory
+    // assigned to it yet.
 
 
     VkMemoryRequirements vb_memory_requirements;
@@ -362,13 +370,24 @@ void vk_createGeometryBuffers(void)
     VkDeviceSize idxBufOffset = ~mask & (vb_memory_requirements.size + mask);
 
     uint32_t memory_type_bits = vb_memory_requirements.memoryTypeBits & ib_memory_requirements.memoryTypeBits;
-    uint32_t memory_type = find_memory_type(memory_type_bits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     VkMemoryAllocateInfo alloc_info;
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.allocationSize = idxBufOffset + ib_memory_requirements.size;
-    alloc_info.memoryTypeIndex = memory_type;
+    // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit specifies that memory allocated with
+    // this type can be mapped for host access using vkMapMemory.
+    //
+    // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache
+    // management commands vkFlushMappedMemoryRanges and vkInvalidateMappedMemoryRanges
+    // are not needed to flush host writes to the device or make device writes visible
+    // to the host, respectively.
+    alloc_info.memoryTypeIndex = find_memory_type(memory_type_bits, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    ri.Printf(PRINT_ALL, " Allocate device memory: shadingDat.geometry_buffer_memory(%ld bytes). \n",
+            alloc_info.allocationSize);
+
     VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &shadingDat.geometry_buffer_memory));
 
     // To attach memory to a buffer object
@@ -387,13 +406,12 @@ void vk_createGeometryBuffers(void)
     qvkBindBufferMemory(vk.device, shadingDat.vertex_buffer, shadingDat.geometry_buffer_memory, 0);
     qvkBindBufferMemory(vk.device, shadingDat.index_buffer, shadingDat.geometry_buffer_memory, idxBufOffset);
 
-
     // Host Access to Device Memory Objects
     // Memory objects created with vkAllocateMemory are not directly host accessible.
-    // Memory objects created with the memory property
-    // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT are considered mappable.Memory objects
-    // must be mappable in order to be successfully mapped on the host
-    // VK_WHOLE_SIZE to map from offset to the end of the allocation.
+    // Memory objects created with the memory property VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+    // are considered mappable. 
+    // Memory objects must be mappable in order to be successfully mapped on the host
+    // VK_WHOLE_SIZE: map from offset to the end of the allocation.
     // &data points to a pointer in which is returned a host-accessible pointer
     // to the beginning of the mapped range. This pointer minus offset must be
     // aligned to at least VkPhysicalDeviceLimits::minMemoryMapAlignment.
@@ -403,6 +421,18 @@ void vk_createGeometryBuffers(void)
     shadingDat.index_buffer_ptr = (unsigned char*)data + idxBufOffset;
 }
 
+
+void vk_destroy_shading_data(void)
+{
+    ri.Printf(PRINT_ALL, " Destroy vertex/index buffer: shadingDat.vertex_buffer shadingDat.index_buffer. \n");
+    ri.Printf(PRINT_ALL, " Free device memory: shadingDat.geometry_buffer_memory. \n");
+
+    qvkDestroyBuffer(vk.device, shadingDat.vertex_buffer, NULL);
+	qvkDestroyBuffer(vk.device, shadingDat.index_buffer, NULL);
+    
+    qvkUnmapMemory(vk.device, shadingDat.geometry_buffer_memory);
+	qvkFreeMemory(vk.device, shadingDat.geometry_buffer_memory, NULL);
+}
 
 
 void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed)
@@ -491,7 +521,6 @@ void vk_resetGeometryBuffer(void)
 
 void vk_bind_geometry(void) 
 {
-
 
 	// xyz stream
 	{

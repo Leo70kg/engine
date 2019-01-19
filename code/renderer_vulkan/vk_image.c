@@ -323,6 +323,7 @@ static void ensure_staging_buffer_allocation(VkDeviceSize size)
 {
     if(s_StagingBufferSize < size)
     {
+        ri.Printf(PRINT_ALL, "ensure_staging_buffer_allocation: %ld\n", size);
         s_StagingBufferSize = size;
 
         if (s_StagingBuffer != VK_NULL_HANDLE)
@@ -396,7 +397,7 @@ static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height,
 
 	uint32_t buffer_size = 0;
 
-    while (1)
+    while ((width != 1) || (height != 1))
     {
 		VkBufferImageCopy region;
 		region.bufferOffset = buffer_size;
@@ -419,8 +420,8 @@ static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height,
 
 		buffer_size += width * height * 4;
 
-		if ((width == 1) && (height == 1))
-			break;
+//		if ((width == 1) && (height == 1))
+//			break;
 
 		width >>= 1;
 		if (width < 1)

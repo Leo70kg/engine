@@ -257,55 +257,58 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 
     vk_specifyShaderModule(def->shader_type, def->clipping_plane, &shaderStages[0].module, &shaderStages[1].module);
 
+	// ============== Vertex Input Description =================
+    // Applications specify vertex input attribute and vertex input binding
+    // descriptions as part of graphics pipeline creation	
+    // A vertex binding describes at which rate to load data
+    // from memory throughout the vertices
 
-	//
-	// Vertex input
-	//
-	VkVertexInputBindingDescription bindings[4];
-	// xyz array
-	bindings[0].binding = 0;
-	bindings[0].stride = sizeof(vec4_t);
-	bindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    VkVertexInputBindingDescription bindings[4];
+    {
+        // xyz array
+        bindings[0].binding = 0;
+        // The stride parameter specifies the number of bytes from one entry to the next
+        bindings[0].stride = sizeof(vec4_t);
+        // move to the next data entry after each vertex
+        bindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        // color array
+        bindings[1].binding = 1;
+        bindings[1].stride = sizeof(color4ub_t);
+        bindings[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        // st0 array
+        bindings[2].binding = 2;
+        bindings[2].stride = sizeof(vec2_t);
+        bindings[2].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        // st1 array
+        bindings[3].binding = 3;
+        bindings[3].stride = sizeof(vec2_t);
+        bindings[3].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    }
 
-	// color array
-	bindings[1].binding = 1;
-	bindings[1].stride = sizeof(color4ub_t);
-	bindings[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	// st0 array
-	bindings[2].binding = 2;
-	bindings[2].stride = sizeof(vec2_t);
-	bindings[2].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	// st1 array
-	bindings[3].binding = 3;
-	bindings[3].stride = sizeof(vec2_t);
-	bindings[3].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
+    // Describes how to handle vertex input
 	VkVertexInputAttributeDescription attribs[4];
-	// xyz
-	attribs[0].location = 0;
-	attribs[0].binding = 0;
-	attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	attribs[0].offset = 0;
-
-	// color
-	attribs[1].location = 1;
-	attribs[1].binding = 1;
-	attribs[1].format = VK_FORMAT_R8G8B8A8_UNORM;
-	attribs[1].offset = 0;
-
-	// st0
-	attribs[2].location = 2;
-	attribs[2].binding = 2;
-	attribs[2].format = VK_FORMAT_R32G32_SFLOAT;
-	attribs[2].offset = 0;
-
-	// st1
-	attribs[3].location = 3;
-	attribs[3].binding = 3;
-	attribs[3].format = VK_FORMAT_R32G32_SFLOAT;
-	attribs[3].offset = 0;
+    {
+        // xyz
+        attribs[0].location = 0;
+        attribs[0].binding = 0;
+        attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        attribs[0].offset = 0;
+        // color
+        attribs[1].location = 1;
+        attribs[1].binding = 1;
+        attribs[1].format = VK_FORMAT_R8G8B8A8_UNORM;
+        attribs[1].offset = 0;
+        // st0
+        attribs[2].location = 2;
+        attribs[2].binding = 2;
+        attribs[2].format = VK_FORMAT_R32G32_SFLOAT;
+        attribs[2].offset = 0;
+        // st1
+        attribs[3].location = 3;
+        attribs[3].binding = 3;
+        attribs[3].format = VK_FORMAT_R32G32_SFLOAT;
+        attribs[3].offset = 0;
+    }
 
 	VkPipelineVertexInputStateCreateInfo vertex_input_state;
 	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
