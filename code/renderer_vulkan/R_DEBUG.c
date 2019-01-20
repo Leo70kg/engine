@@ -163,11 +163,6 @@ void RB_ShowImages(void)
 		float x = i % 20 * w;
 		float y = i / 20 * h;
 
-		// show in proportional size in mode 2
-		if ( r_showImages->integer == 2 ) {
-			w *= image->uploadWidth / 512.0f;
-			h *= image->uploadHeight / 512.0f;
-		}
 
 		GL_Bind( image );
 

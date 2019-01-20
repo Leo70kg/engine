@@ -15,8 +15,8 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
 						VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode );
 
 
-void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );
-void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height );
+void R_LoadImage(const char *name, unsigned char **pic, uint32_t* width, uint32_t* height );
+void R_LoadImage2(const char *name, unsigned char **pic, uint32_t* width, uint32_t* height );
 
 
 void R_CreateBuiltinImages(void);

@@ -1637,14 +1637,15 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/single_texture_frag.o \
   $(B)/renderer_vulkan/single_texture_vert.o \
   \
-  $(B)/renderer_vulkan/fun_log.o \
-  \
+  $(B)/renderer_vulkan/fun_log.o
+# \
+  $(B)/renderer_vulkan/R_LoadImage.o \
   $(B)/renderer_vulkan/tr_image_png.o \
   $(B)/renderer_vulkan/tr_image_jpg.o \
   $(B)/renderer_vulkan/tr_image_bmp.o \
   $(B)/renderer_vulkan/tr_image_tga.o \
-  $(B)/renderer_vulkan/tr_image_pcx.o \
-  $(B)/renderer_vulkan/R_LoadImage.o \
+  $(B)/renderer_vulkan/tr_image_pcx.o 
+
 
 
 ifeq ($(BUILD_WITH_XCB), 1)

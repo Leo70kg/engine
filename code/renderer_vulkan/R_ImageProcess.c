@@ -82,7 +82,7 @@ void R_SetColorMappings( void )
 Scale up the pixel values in a texture to increase the lighting range
 ================
 */
-static void R_LightScaleTexture (unsigned char* dst, const unsigned char* in, unsigned int nBytes)
+void R_LightScaleTexture (unsigned char* dst, unsigned char* in, unsigned int nBytes)
 {
     unsigned int i;
 
@@ -151,15 +151,15 @@ R_BlendOverTexture
 Apply a color blend over a set of pixels
 ==================
 */
-static void R_BlendOverTexture(unsigned char* data, const unsigned int pixelCount, const unsigned char blend[4])
+void R_BlendOverTexture(unsigned char* data, const uint32_t pixelCount, uint32_t l)
 {
-	unsigned int i;
-    const unsigned int alpha = blend[3];
+	uint32_t i;
+    const unsigned int alpha = mipBlendColors[l][3];
 	const unsigned int inverseAlpha = 255 - alpha;
     
-	const unsigned int bR = blend[0] * alpha;
-	const unsigned int bG = blend[1] * alpha;
-	const unsigned int bB = blend[2] * alpha;
+	const unsigned int bR = mipBlendColors[l][0] * alpha;
+	const unsigned int bG = mipBlendColors[l][1] * alpha;
+	const unsigned int bB = mipBlendColors[l][2] * alpha;
 
 	for ( i = 0; i < pixelCount; i++, data+=4 )
     {
@@ -177,16 +177,15 @@ R_MipMap
 Operates in place, quartering the size of the texture, no error checking
 ================
 */
-static void R_MipMap(unsigned char* in, unsigned int width, unsigned int height)
+void R_MipMap(const unsigned char* in, uint32_t width, uint32_t height, unsigned char* out)
 {
 
-	if ( (width == 1) && (height == 1) )
+	if ( (width <= 1) && (height <= 1) )
 		return;
 
     unsigned int i;
 
     const unsigned int row = width * 4;
-    unsigned char* out = in;
 	width >>= 1;
 	height >>= 1;
 
@@ -226,12 +225,12 @@ Operates in place, quartering the size of the texture
 Proper linear filter, no error checking
 ================
 */
-static void R_MipMap2( unsigned char * in, unsigned int inWidth, unsigned int inHeight )
+void R_MipMap2(const unsigned char* in, uint32_t inWidth, uint32_t inHeight, unsigned char* out)
 {
 
 	int	i, j;
 
-	if ( (inWidth == 1) && (inWidth == 1) )
+	if ( (inWidth <= 1) && (inWidth <= 1) )
 		return;
 	//ri.Printf (PRINT_ALL, "\n---R_MipMap2---\n");
     // Not run time funs, can be used for best view effects
@@ -290,7 +289,7 @@ static void R_MipMap2( unsigned char * in, unsigned int inWidth, unsigned int in
 		}
 	}
 
-	memcpy( in, temp, nBytes );
+	memcpy( out, temp, nBytes );
 	free( temp );
 }
 
@@ -328,9 +327,8 @@ static void DEBUG_resample(const char *name, unsigned char* data, unsigned char*
 }
 
 
-
-static void ResampleTexture(const unsigned char *pIn, const unsigned int inwidth, const unsigned int inheight,
-                                    unsigned char *pOut, const unsigned int outwidth, const unsigned int outheight)
+void ResampleTexture(const unsigned char *pIn, const unsigned int inwidth, const unsigned int inheight,
+                                unsigned char *pOut, const unsigned int outwidth, const unsigned int outheight)
 {
 	unsigned int i, j;
 	unsigned int p1[2048], p2[2048];
@@ -388,7 +386,7 @@ static void ResampleTexture(const unsigned char *pIn, const unsigned int inwidth
 }
 
 
-static void GetScaledDimension(const unsigned int width, const unsigned int height, unsigned int *outW, unsigned int *outH, VkBool32 isPicMip)
+void GetScaledDimension(const unsigned int width, const unsigned int height, unsigned int *outW, unsigned int *outH, VkBool32 isPicMip)
 {
     const unsigned int max_texture_size = 2048;
     
@@ -419,9 +417,85 @@ static void GetScaledDimension(const unsigned int width, const unsigned int heig
     *outH = scaled_height;
 }
 
+/*
+void doMipMaping(const unsigned char* const in_buffer, uint32_t nBs)
+{
+    // In computer graphics, mipmaps (also MIP maps) or pyramids are pre-calculated,
+    // optimized sequences of images, each of which is a progressively lower resolution
+    // representation of the same image. The height and width of each image, or level, 
+    // in the mipmap is a power of two smaller than the previous level. 
+    // Mipmaps do not have to be square. They are intended to increase rendering speed
+    // and reduce aliasing artifacts.
+    // A high-resolution mipmap image is used for high-density samples, such as for 
+    // objects close to the camera. Lower-resolution images are used as the object
+    // appears farther away.
+    // This is a more efficient way of downfiltering (minifying) a texture than
+    // sampling all texels in the original texture that would contribute to a 
+    // screen pixel; it is faster to take a constant number of samples from the
+    // appropriately downfiltered textures. Mipmaps are widely used in 3D computer games. 
+
+    // The letters "MIP" in the name are an acronym of the Latin phrase multum in parvo, 
+    // meaning "much in little".Since mipmaps, by definition, are pre-allocated, 
+    // additional storage space is required to take advantage of them. 
+    // Mipmap textures are used in 3D scenes to decrease the time required to 
+    // render a scene. They also improve the scene's realism.
+
+    // mip-mapping of 1/3 more memory per texture.
 
 
+    uint32_t miplevel = 1;
 
+    //unsigned char* in_buffer = upload_data->buffer;
+    unsigned char* dst_ptr = in_buffer + nBs;
+
+    // Use the normal mip-mapping to go down from [scaled_width, scaled_height] to [1,1] dimensions.
+    while (1)
+    {
+
+        if ( r_simpleMipMaps->integer )
+        {
+            R_MipMap(in_buffer, scaled_width, scaled_height, dst_ptr);
+        }
+        else
+        {
+            R_MipMap2(in_buffer, scaled_width, scaled_height, dst_ptr);
+        }
+
+        //ri.Printf( PRINT_WARNING, "%s, width: %d, height: %d, scaled_width: %d, scaled_height: %d\n",
+        //name, width, height, scaled_width, scaled_height );
+
+
+        scaled_width >>= 1;
+        if (scaled_width < 1)
+            scaled_width = 1;
+
+        scaled_height >>= 1;
+        if (scaled_height < 1)
+            scaled_height = 1;
+
+
+        uint32_t mip_level_size = scaled_width * scaled_height * 4;
+
+        if ( r_colorMipLevels->integer ) {
+            R_BlendOverTexture( in_buffer, scaled_width * scaled_height, mipBlendColors[miplevel] );
+        }
+
+        upload_data->buffer_size += mip_level_size;
+
+        ++miplevel;
+
+        if((scaled_width == 1) && (scaled_height == 1))
+            break;
+        in_buffer = dst_ptr;
+        dst_ptr += mip_level_size; 
+    }
+
+    upload_data->mip_levels = miplevel;
+
+}
+*/
+
+/*
 void generate_image_upload_data(
         const char *name, 
         struct Image_Upload_Data* upload_data, 
@@ -453,100 +527,21 @@ void generate_image_upload_data(
 
     // At this point width == scaled_width and height == scaled_height.
     // there no need to go down from [width, height] to [scaled_width, scaled_height]
-    
+    unsigned int nBs = 4 * scaled_width * scaled_height;
+    upload_data->buffer = (unsigned char*) malloc( 2 * nBs);
+    upload_data->base_level_width = scaled_width;
+    upload_data->base_level_height = scaled_height;
+    //upload_data->buffer_size = nBs;
+    //upload_data->mip_levels = 1;    
+    memcpy(upload_data->buffer, pDat, nBs);
 
 	if (mipmap)
     {
-        // In computer graphics, mipmaps (also MIP maps) or pyramids are pre-calculated,
-        // optimized sequences of images, each of which is a progressively lower resolution
-        // representation of the same image. The height and width of each image, or level, 
-        // in the mipmap is a power of two smaller than the previous level. 
-        // Mipmaps do not have to be square. They are intended to increase rendering speed
-        // and reduce aliasing artifacts.
-        // A high-resolution mipmap image is used for high-density samples, such as for 
-        // objects close to the camera. Lower-resolution images are used as the object
-        // appears farther away.
-        // This is a more efficient way of downfiltering (minifying) a texture than
-        // sampling all texels in the original texture that would contribute to a 
-        // screen pixel; it is faster to take a constant number of samples from the
-        // appropriately downfiltered textures. Mipmaps are widely used in 3D computer games. 
+        R_LightScaleTexture(upload_data->buffer, upload_data->buffer, nBs);
 
-        // The letters "MIP" in the name are an acronym of the Latin phrase multum in parvo, 
-        // meaning "much in little".Since mipmaps, by definition, are pre-allocated, 
-        // additional storage space is required to take advantage of them. 
-        // Mipmap textures are used in 3D scenes to decrease the time required to 
-        // render a scene. They also improve the scene's realism.
-        
-        // mip-mapping of 1/3 more memory per texture. 3/2 > 4/3
-
-        unsigned int nBs = 4 * scaled_width * scaled_height;
-	    
-        upload_data->buffer = (unsigned char*) malloc( 2 * nBs);
-	    upload_data->base_level_width = scaled_width;
-	    upload_data->base_level_height = scaled_height;
-
-        //unsigned int nBytes = scaled_width * scaled_height * sizeof( unsigned int);
-        unsigned char * scaled_buffer = (unsigned char *)malloc( nBs );
-
-        R_LightScaleTexture(scaled_buffer, pDat, nBs);
-
-        memcpy(upload_data->buffer, scaled_buffer, nBs);
-        upload_data->buffer_size = nBs;
-
-        
-        unsigned int miplevel = 0;
-
-        // Use the normal mip-mapping to go down from [scaled_width, scaled_height] to [1,1] dimensions.
-        while (scaled_width > 1 || scaled_height > 1)
-        {
-            if ( r_simpleMipMaps->integer )
-            {
-                R_MipMap(scaled_buffer, scaled_width, scaled_height);
-            }
-            else
-            {
-                R_MipMap2(scaled_buffer, scaled_width, scaled_height);
-            }
-
-            //ri.Printf( PRINT_WARNING, "%s, width: %d, height: %d, scaled_width: %d, scaled_height: %d\n",
-            //name, width, height, scaled_width, scaled_height );
-
-
-            scaled_width >>= 1;
-            if (scaled_width < 1)
-                scaled_width = 1;
-
-            scaled_height >>= 1;
-            if (scaled_height < 1)
-                scaled_height = 1;
-            
-            miplevel++;
-            unsigned int mip_level_size = scaled_width * scaled_height * 4;
-
-            if ( r_colorMipLevels->integer ) {
-                R_BlendOverTexture( scaled_buffer, scaled_width * scaled_height, mipBlendColors[miplevel] );
-            }
-            
-            memcpy(upload_data->buffer+upload_data->buffer_size, scaled_buffer, mip_level_size);
-            upload_data->buffer_size += mip_level_size;
-        }
-
-        upload_data->mip_levels = miplevel + 1;
-
-        free(scaled_buffer);
+        doMipMaping(upload_data->buffer, nBs);
     }
-    else
-    {
-        const unsigned int nB = 4 * scaled_width * scaled_height;
 
-		upload_data->mip_levels = 1;
-	    upload_data->base_level_width = scaled_width;
-	    upload_data->base_level_height = scaled_height;
-        upload_data->buffer_size = nB;
-		upload_data->buffer = (unsigned char*) malloc(nB);
- 
-        memcpy(upload_data->buffer, pDat, nB);
-	}
 
 
     if (resampled_buffer != NULL)
@@ -557,7 +552,7 @@ void generate_image_upload_data(
     }
 
 }
-
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // DEBUG HELPER FUNCTIONAS ...

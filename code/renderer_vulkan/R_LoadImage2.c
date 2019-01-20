@@ -42,7 +42,7 @@ static void LoadPCX32 ( const char *filename, unsigned char **pic, int *width, i
 /*
     Loads any of the supported image types into a cannonical 32 bit format.
 */
-void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height)
+void R_LoadImage2(const char *name, unsigned char **pic, uint32_t* width, uint32_t* height)
 {
 
 	*pic = NULL;
