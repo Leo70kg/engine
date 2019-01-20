@@ -180,9 +180,11 @@ Operates in place, quartering the size of the texture, no error checking
 void R_MipMap(const unsigned char* in, uint32_t width, uint32_t height, unsigned char* out)
 {
 
-	if ( (width <= 1) && (height <= 1) )
+	if ( (width == 1) && (height == 1) )
+    {
+        out[0] = in[0];
 		return;
-
+    }
     unsigned int i;
 
     const unsigned int row = width * 4;
@@ -230,8 +232,11 @@ void R_MipMap2(const unsigned char* in, uint32_t inWidth, uint32_t inHeight, uns
 
 	int	i, j;
 
-	if ( (inWidth <= 1) && (inWidth <= 1) )
+	if ( (inWidth == 1) && (inHeight == 1) )
+    {
+        out[0] = in[0];
 		return;
+    }
 	//ri.Printf (PRINT_ALL, "\n---R_MipMap2---\n");
     // Not run time funs, can be used for best view effects
 

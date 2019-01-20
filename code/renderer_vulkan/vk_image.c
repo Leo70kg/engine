@@ -562,14 +562,14 @@ void vk_destroyImageRes(void)
 
 		if (s_vkImages[i].handle != VK_NULL_HANDLE)
         {
-            ri.Printf(PRINT_ALL, " Destroy VkImage s_vkImages[%d].{VkImage VkImageView} \n", i);
+            //ri.Printf(PRINT_ALL, " Destroy VkImage s_vkImages[%d].{VkImage VkImageView} \n", i);
 			qvkDestroyImage(vk.device, s_vkImages[i].handle, NULL);
 			qvkDestroyImageView(vk.device, s_vkImages[i].view, NULL);
    		}
 
         if(s_vkImages[i].descriptor_set != VK_NULL_HANDLE)
         {   
-            ri.Printf(PRINT_ALL, " Free Descriptor Sets s_vkImages[%d].descriptor_set. \n", i);
+            //ri.Printf(PRINT_ALL, " Free Descriptor Sets s_vkImages[%d].descriptor_set. \n", i);
             //To free allocated descriptor sets
             qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &s_vkImages[i].descriptor_set);
         }
@@ -727,7 +727,7 @@ void vk_createDescriptorSet(VkImageView imageView, VkSampler sampler, VkDescript
     desc.pSetLayouts = &vk.set_layout;
 
     VK_CHECK(qvkAllocateDescriptorSets(vk.device, &desc, pDespSet));
-    ri.Printf(PRINT_ALL, " Allocate Descriptor Sets \n");
+    //ri.Printf(PRINT_ALL, " Allocate Descriptor Sets \n");
 
 
     VkDescriptorImageInfo image_info;
@@ -852,12 +852,15 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
             //name, width, height, scaled_width, scaled_height );
 
             scaled_width >>= 1;
-            if (scaled_width < 1)
-                scaled_width = 1;
+            //if (scaled_width == 0)
+            //    scaled_width = 1;
 
             scaled_height >>= 1;
-            if (scaled_height < 1)
-                scaled_height = 1;
+            //if (scaled_height == 0)
+            //    scaled_height = 1;
+            
+            if((scaled_width == 0) && (scaled_height == 0))
+                break;
 
 
             uint32_t mip_level_size = scaled_width * scaled_height * 4;
@@ -868,8 +871,6 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
 
             ++mipMapLevels;
 
-            if((scaled_width == 1) && (scaled_height == 1))
-                break;
 
             in_buffer = dst_ptr;
             dst_ptr += mip_level_size; 
@@ -892,14 +893,14 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
     else
         vk_uploadSingleImage(s_vkImages[pImage->index].handle, base_width, base_height, upload_buffer);
 
-//    s_CurrentDescriptorSets[s_CurTmu] = pCurImg->descriptor_set;
+    s_CurrentDescriptorSets[s_CurTmu] = pCurImg->descriptor_set;
 
     free(upload_buffer);
-/*	
+	
     if (s_CurTmu) {
 		s_CurTmu = 0;
 	}
-*/
+
     return pImage;
 }
 
