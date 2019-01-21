@@ -59,7 +59,7 @@ static int		nummodes;
 
 static qboolean	vid_initialized = false;
 
-static SDL_Window* SDL_window;
+static SDL_Window	*draw_context;
 static SDL_SysWMinfo sys_wm_info;
 
 static qboolean	vid_locked = false; //johnfitz
@@ -202,7 +202,7 @@ VID_GetCurrentWidth
 static int VID_GetCurrentWidth (void)
 {
 	int w = 0, h = 0;
-	SDL_Vulkan_GetDrawableSize(SDL_window, &w, &h);
+	SDL_Vulkan_GetDrawableSize(draw_context, &w, &h);
 	return w;
 }
 
@@ -214,7 +214,7 @@ VID_GetCurrentHeight
 static int VID_GetCurrentHeight (void)
 {
 	int w = 0, h = 0;
-	SDL_Vulkan_GetDrawableSize(SDL_window, &w, &h);
+	SDL_Vulkan_GetDrawableSize(draw_context, &w, &h);
 	return h;
 }
 
@@ -228,7 +228,7 @@ static int VID_GetCurrentRefreshRate (void)
 	SDL_DisplayMode mode;
 	int current_display;
 	
-	current_display = SDL_GetWindowDisplayIndex(SDL_window);
+	current_display = SDL_GetWindowDisplayIndex(draw_context);
 	
 	if (0 != SDL_GetCurrentDisplayMode(current_display, &mode))
 		return DEFAULT_REFRESHRATE;
@@ -243,7 +243,7 @@ VID_GetCurrentBPP
 */
 static int VID_GetCurrentBPP (void)
 {
-	const Uint32 pixelFormat = SDL_GetWindowPixelFormat(SDL_window);
+	const Uint32 pixelFormat = SDL_GetWindowPixelFormat(draw_context);
 	return SDL_BITSPERPIXEL(pixelFormat);
 }
 
@@ -256,7 +256,7 @@ returns true if we are in regular fullscreen or "desktop fullscren"
 */
 static qboolean VID_GetFullscreen (void)
 {
-	return (SDL_GetWindowFlags(SDL_window) & SDL_WINDOW_FULLSCREEN) != 0;
+	return (SDL_GetWindowFlags(draw_context) & SDL_WINDOW_FULLSCREEN) != 0;
 }
 
 /*
@@ -268,7 +268,7 @@ returns true if we are specifically in "desktop fullscreen" mode
 */
 static qboolean VID_GetDesktopFullscreen (void)
 {
-	return (SDL_GetWindowFlags(SDL_window) & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP;
+	return (SDL_GetWindowFlags(draw_context) & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP;
 }
 
 /*
@@ -290,7 +290,7 @@ used by pl_win.c
 */
 void *VID_GetWindow (void)
 {
-	return SDL_window;
+	return draw_context;
 }
 
 /*
@@ -300,7 +300,7 @@ VID_HasMouseOrInputFocus
 */
 qboolean VID_HasMouseOrInputFocus (void)
 {
-	return (SDL_GetWindowFlags(SDL_window) & (SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_INPUT_FOCUS)) != 0;
+	return (SDL_GetWindowFlags(draw_context) & (SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_INPUT_FOCUS)) != 0;
 }
 
 /*
@@ -310,7 +310,7 @@ VID_IsMinimized
 */
 qboolean VID_IsMinimized (void)
 {
-	return !(SDL_GetWindowFlags(SDL_window) & SDL_WINDOW_SHOWN);
+	return !(SDL_GetWindowFlags(draw_context) & SDL_WINDOW_SHOWN);
 }
 
 /*
@@ -401,43 +401,43 @@ static qboolean VID_SetMode (int width, int height, int refreshrate, int bpp, qb
 	q_snprintf(caption, sizeof(caption), "vkQuake " VKQUAKE_VER_STRING);
 
 	/* Create the window if needed, hidden */
-	if (!SDL_window)
+	if (!draw_context)
 	{
 		flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN;
 
 		if (vid_borderless.value)
 			flags |= SDL_WINDOW_BORDERLESS;
 		
-		SDL_window = SDL_CreateWindow (caption, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, flags);
-		if (!SDL_window)
+		draw_context = SDL_CreateWindow (caption, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, flags);
+		if (!draw_context)
 			Sys_Error ("Couldn't create window: %s", SDL_GetError());
 
 		SDL_VERSION(&sys_wm_info.version);
-		if(!SDL_GetWindowWMInfo(SDL_window,&sys_wm_info))
+		if(!SDL_GetWindowWMInfo(draw_context,&sys_wm_info))
 			Sys_Error ("Couldn't get window wm info: %s", SDL_GetError());
 
 		previous_display = -1;
 	}
 	else
 	{
-		previous_display = SDL_GetWindowDisplayIndex(SDL_window);
+		previous_display = SDL_GetWindowDisplayIndex(draw_context);
 	}
 
 	/* Ensure the window is not fullscreen */
 	if (VID_GetFullscreen ())
 	{
-		if (SDL_SetWindowFullscreen (SDL_window, 0) != 0)
+		if (SDL_SetWindowFullscreen (draw_context, 0) != 0)
 			Sys_Error("Couldn't set fullscreen state mode: %s", SDL_GetError());
 	}
 
 	/* Set window size and display mode */
-	SDL_SetWindowSize (SDL_window, width, height);
+	SDL_SetWindowSize (draw_context, width, height);
 	if (previous_display >= 0)
-		SDL_SetWindowPosition (SDL_window, SDL_WINDOWPOS_CENTERED_DISPLAY(previous_display), SDL_WINDOWPOS_CENTERED_DISPLAY(previous_display));
+		SDL_SetWindowPosition (draw_context, SDL_WINDOWPOS_CENTERED_DISPLAY(previous_display), SDL_WINDOWPOS_CENTERED_DISPLAY(previous_display));
 	else
-		SDL_SetWindowPosition(SDL_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-	SDL_SetWindowDisplayMode (SDL_window, VID_SDL2_GetDisplayMode(width, height, refreshrate, bpp));
-	SDL_SetWindowBordered (SDL_window, vid_borderless.value ? SDL_FALSE : SDL_TRUE);
+		SDL_SetWindowPosition(draw_context, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+	SDL_SetWindowDisplayMode (draw_context, VID_SDL2_GetDisplayMode(width, height, refreshrate, bpp));
+	SDL_SetWindowBordered (draw_context, vid_borderless.value ? SDL_FALSE : SDL_TRUE);
 
 	/* Make window fullscreen if needed, and show the window */
 
@@ -445,11 +445,11 @@ static qboolean VID_SetMode (int width, int height, int refreshrate, int bpp, qb
 		Uint32 flags = vid_desktopfullscreen.value ?
 			SDL_WINDOW_FULLSCREEN_DESKTOP :
 			SDL_WINDOW_FULLSCREEN;
-		if (SDL_SetWindowFullscreen (SDL_window, flags) != 0)
+		if (SDL_SetWindowFullscreen (draw_context, flags) != 0)
 			Sys_Error ("Couldn't set fullscreen state mode: %s", SDL_GetError());
 	}
 
-	SDL_ShowWindow (SDL_window);
+	SDL_ShowWindow (draw_context);
 
 	vid.width = VID_GetCurrentWidth();
 	vid.height = VID_GetCurrentHeight();
@@ -593,11 +593,11 @@ static void GL_InitInstance( void )
 	VkResult err;
 	unsigned int sdl_extension_count;
 
-	if(!SDL_Vulkan_GetInstanceExtensions(SDL_window, &sdl_extension_count, NULL))
+	if(!SDL_Vulkan_GetInstanceExtensions(draw_context, &sdl_extension_count, NULL))
 		Sys_Error("SDL_Vulkan_GetInstanceExtensions failed: %s", SDL_GetError());
 
 	const char ** const instance_extensions = malloc(sizeof(const char *) * (sdl_extension_count + 1));
-	if(!SDL_Vulkan_GetInstanceExtensions(SDL_window, &sdl_extension_count, instance_extensions))
+	if(!SDL_Vulkan_GetInstanceExtensions(draw_context, &sdl_extension_count, instance_extensions))
 		Sys_Error("SDL_Vulkan_GetInstanceExtensions failed: %s", SDL_GetError());
 
 	instance_extensions[sdl_extension_count] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
@@ -633,7 +633,7 @@ static void GL_InitInstance( void )
 	if (err != VK_SUCCESS)
 		Sys_Error("Couldn't create Vulkan instance");
 
-	if (!SDL_Vulkan_CreateSurface(SDL_window, vulkan_instance, &vulkan_surface))
+	if (!SDL_Vulkan_CreateSurface(draw_context, vulkan_instance, &vulkan_surface))
 		Sys_Error("Couldn't create Vulkan surface");
 
 	fpGetInstanceProcAddr = SDL_Vulkan_GetVkGetInstanceProcAddr();
@@ -2011,7 +2011,7 @@ void VID_Shutdown (void)
 	if (vid_initialized)
 	{
 		SDL_QuitSubSystem(SDL_INIT_VIDEO);
-		SDL_window = NULL;
+		draw_context = NULL;
 		PL_VID_Shutdown();
 	}
 }
@@ -2049,7 +2049,7 @@ VID_DescribeCurrentMode_f
 */
 static void VID_DescribeCurrentMode_f (void)
 {
-	if (SDL_window)
+	if (draw_context)
 		Con_Printf("%dx%dx%d %dHz %s\n",
 			VID_GetCurrentWidth(),
 			VID_GetCurrentHeight(),
@@ -2405,7 +2405,7 @@ void	VID_Toggle (void)
 		flags = vid_desktopfullscreen.value ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN;
 	}
 
-	toggleWorked = SDL_SetWindowFullscreen(SDL_window, flags) == 0;
+	toggleWorked = SDL_SetWindowFullscreen(draw_context, flags) == 0;
 
 	if (toggleWorked)
 	{
@@ -2441,7 +2441,7 @@ VID_SyncCvars -- johnfitz -- set vid cvars to match current video mode
 */
 void VID_SyncCvars (void)
 {
-	if (SDL_window)
+	if (draw_context)
 	{
 		if (!VID_GetDesktopFullscreen())
 		{
@@ -3254,8 +3254,6 @@ void SCR_ScreenShot_f (void)
 	err = vkDeviceWaitIdle(vulkan_globals.device);
 	if (err != VK_SUCCESS)
 		Sys_Error("vkDeviceWaitIdle failed");
-
-
 
 	void * buffer_ptr;
 	vkMapMemory(vulkan_globals.device, memory, 0, glwidth * glheight * 4, 0, &buffer_ptr);

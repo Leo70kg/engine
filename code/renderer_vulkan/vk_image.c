@@ -116,7 +116,7 @@ static void vk_free_staging_buffer(void)
 // outside of TR since it shouldn't be cleared during ref re-init
 // the renderer front end should never modify glstate_t
 //typedef struct {
-static int	s_CurTextures[2];
+
 int	s_CurTmu;
 //	int			texEnv[2];
 //	int			faceCulling;
@@ -127,6 +127,7 @@ int	s_CurTmu;
 
 void GL_Bind( image_t* pImage )
 {
+    static int	s_CurTextures[2];
 	if ( s_CurTextures[s_CurTmu] != pImage->texnum )
     {
 		s_CurTextures[s_CurTmu] = pImage->texnum;
@@ -584,7 +585,7 @@ void vk_destroyImageRes(void)
     VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
     
     ///////////////////////////////////
-    s_CurTextures[0] = s_CurTextures[1] = 0;
+    // s_CurTextures[0] = s_CurTextures[1] = 0;
 	s_CurTmu = 0;
 }
 

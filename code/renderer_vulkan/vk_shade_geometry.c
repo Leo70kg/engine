@@ -253,7 +253,6 @@ static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 		viewport.height = backEnd.viewParms.viewportHeight;
 	}
 
-
     switch(depth_range)
     {
         case normal:
@@ -358,7 +357,6 @@ void vk_createGeometryBuffers(void)
     vk_createIndexBuffer();
     // The buffer has been created, but it doesn't actually have any memory
     // assigned to it yet.
-
 
     VkMemoryRequirements vb_memory_requirements;
     qvkGetBufferMemoryRequirements(vk.device, shadingDat.vertex_buffer, &vb_memory_requirements);
@@ -563,22 +561,40 @@ void vk_bind_geometry(void)
 	    get_mvp_transform(push_constants, backEnd.projection2D);
         //ri.Printf( PRINT_ALL, "backEnd.projection2D = %d\n", backEnd.projection2D);
 		// Eye space transform.
+
+        /*
 		// NOTE: backEnd.or.modelMatrix incorporates s_flipMatrix, so it should be taken into account 
 		// when computing clipping plane too.
-		float* eye_xform = push_constants + 16;
-		for (i = 0; i < 12; i++)
-        {
-			eye_xform[i] = backEnd.or.modelMatrix[(i%4)*4 + i/4 ];
-		}
-
 		// Clipping plane in eye coordinates.
-        /*
+
 		float world_plane[4];
 		world_plane[0] = backEnd.viewParms.portalPlane.normal[0];
 		world_plane[1] = backEnd.viewParms.portalPlane.normal[1];
 		world_plane[2] = backEnd.viewParms.portalPlane.normal[2];
 		world_plane[3] = backEnd.viewParms.portalPlane.dist;
+
+        float* eye_xform = push_constants + 16;
+		for (i = 0; i < 12; i++)
+        {
+			eye_xform[i] = backEnd.or.modelMatrix[(i%4)*4 + i/4 ];
+		}
         */
+
+		push_constants[16] = backEnd.or.modelMatrix[0];
+		push_constants[17] = backEnd.or.modelMatrix[4];
+		push_constants[18] = backEnd.or.modelMatrix[8];
+		push_constants[19] = backEnd.or.modelMatrix[12];
+
+		push_constants[20] = backEnd.or.modelMatrix[1];
+		push_constants[21] = backEnd.or.modelMatrix[5];
+		push_constants[22] = backEnd.or.modelMatrix[9];
+		push_constants[23] = backEnd.or.modelMatrix[13];
+
+		push_constants[24] = backEnd.or.modelMatrix[2];
+		push_constants[25] = backEnd.or.modelMatrix[6];
+		push_constants[26] = backEnd.or.modelMatrix[10];
+		push_constants[27] = backEnd.or.modelMatrix[14];
+
 		float eye_plane[4];
 		eye_plane[0] = DotProduct (backEnd.viewParms.or.axis[0], backEnd.viewParms.portalPlane.normal);
 		eye_plane[1] = DotProduct (backEnd.viewParms.or.axis[1], backEnd.viewParms.portalPlane.normal);
@@ -603,17 +619,35 @@ void vk_bind_geometry(void)
     {
       	// push constants are another way of passing dynamic values to shaders
  	    // Specify push constants.
-	    float push_constants[16] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
+	    float mvp[16] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
         
         //ri.Printf( PRINT_ALL, "projection2D = %d\n", backEnd.projection2D); 
-	    
-        get_mvp_transform(push_constants, backEnd.projection2D);
+	    //get_mvp_transform(push_constants, backEnd.projection2D);
+
+        if (backEnd.projection2D)
+        {
+            float mvp0 = 2.0f / glConfig.vidWidth;
+            float mvp5 = 2.0f / glConfig.vidHeight;
+
+            mvp[0]  =  mvp0; mvp[1]  =  0.0f; mvp[2]  = 0.0f; mvp[3]  = 0.0f;
+            mvp[4]  =  0.0f; mvp[5]  =  mvp5; mvp[6]  = 0.0f; mvp[7]  = 0.0f;
+            mvp[8]  =  0.0f; mvp[9]  =  0.0f; mvp[10] = 1.0f; mvp[11] = 0.0f;
+            mvp[12] = -1.0f; mvp[13] = -1.0f; mvp[14] = 0.0f; mvp[15] = 1.0f;
+        }
+        else
+        {
+            // update q3's proj matrix (opengl) to vulkan conventions:
+            // z - [0, 1] instead of [-1, 1] and invert y direction
+
+            MatrixMultiply4x4_SSE(s_modelview_matrix, backEnd.viewParms.projectionMatrix, mvp);
+        }
+
 
         // As described above in section Pipeline Layouts, the pipeline layout defines shader push constants
         // which are updated via Vulkan commands rather than via writes to memory or copy commands.
         // Push constants represent a high speed path to modify constant data in pipelines
         // that is expected to outperform memory-backed resource updates.
-	    qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 64, push_constants);
+	    qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 64, mvp);
     }
 
 }

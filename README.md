@@ -37,7 +37,7 @@ following problem when you launch OA:
 ```
 Vulkan support is either not configured in SDL or not available in video driver.
 ```
-This problem can be solved easily by compiling the SDL from source, very easy!.
+This problem can be solved easily by compiling the SDL 2.0.9 from source, very easy!.
 
 ## Building on Windows 7 or 10 ##
 
@@ -54,7 +54,7 @@ pacman -S mingw-w64-x86_64-gcc make git
 ```sh
 git clone https://github.com/suijingfeng/engine.git
 cd engine
-make ARCH=x86_64
+make
 ```
 5. Find the executables and dlls in build/release-mingw64-x86\_64 . 
 
@@ -77,17 +77,17 @@ $ ./openarena.x86_64
 
 
 This feature is enabled by default. If you wish to disable it, 
-set `USE\_RENDERER\_DLOPEN=0` in the Makefile.
+set `USE_RENDERER_DLOPEN=0` in the Makefile.
 This allow for build modular renderers and select or switch 
 the renderer at runtime rather than compiling into one binary.
-When you start OpenArena, you can pass the name of the dynamic library to load. 
+When you start OpenArena, you can switch witch dynamic library to load by passing its name. 
 
 Example:
 
 ```sh
 
 # new vulkan renderer backend, under developing, 
-# work on ubuntu 18.04, ubuntu16.04, win10.
+# work on ubuntu 18.04, ubuntu16.04, win10, win7.
 $ ./openarena.x86_64 +set cl_renderer vulkan
 
 # Enable renderergl2:
@@ -102,13 +102,15 @@ $ ./openarena.x86_64 +set cl_renderer openarena
 ```
 
 Q: How to enable vulkan support from the pulldown console ?
-A: As following:
 ```sh
 \cl_renerer vulkan
 \vid_restart
 ```
-Q: How to check that Vulkan backend is really active? 
-A: Type \vkinfo in the console reports information about active rendering backend.
+Q: How to check that Vulkan backend is really active ? 
+```sh
+\vkinfo
+```
+Type \vkinfo in the console reports information about active rendering backend.
 
 
 
@@ -144,13 +146,13 @@ In particular the Open Arena Expanded topic: http://openarena.ws/board/index.php
 
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
-## extra
+## bugs/issues
 
 * About com\_hunkmegs
 
 When i playing CTF on :F for stupid server with default com\_hunkmegs = 128 setting, the following errors occurs:
 ```
-ERROR: Hunk\_Alloc failed on 739360: code/renderergl2/tr\_model.c, line: 535 (sizeof(*v) * (md3Surf->numVerts * md3Surf->numFrames)).
+ERROR: Hunk_Alloc failed on 739360: code/renderergl2/tr_model.c, line: 535 (sizeof(*v) * (md3Surf->numVerts * md3Surf->numFrames)).
 ```
 OpenGL2 renderer seems use more memory, Upping com\_hunkmegs to 256 will generally be OK.
 
@@ -172,16 +174,17 @@ ri.Printf( PRINT_WARNING, "s_worldData.lightGridBounds[i]=%d\n", s_worldData.lig
 
     Build OA with GCC without this issue.
 
+* E\_AddRefEntityToScene passed a refEntity which has an origin with a NaN component
+* Unpure client detected. Invalid .PK3 files referenced!
+* Shader rocketThrust has a stage with no image
+
+## TODO
+* merge rendergl1, rendereroa, renderer\_mydev to one module
+* r\_gamma shader
+* have issues with \minimize when use vulkan renderer in fullscreen. recreate the swapchain ?
+
 * Use gprof to examine the performance of the program
 ```
 gprof openarena.x86_64 gmon.out > report.txt
 ```
-## bugs
-* have small issues with \minimize when use vulkan renderer.
-* E_AddRefEntityToScene passed a refEntity which has an origin with a NaN component
-* Unpure client detected. Invalid .PK3 files referenced!
-* Shader rocketThrust has a stage with no image
-## TODO
-* merge rendergl1, rendereroa, renderer_mydev to one
-* r_gamma
-* \minimize
+

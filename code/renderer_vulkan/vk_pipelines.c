@@ -60,11 +60,7 @@ struct Vk_Pipeline_Def {
 };
 
 
-
-
 struct GlobalPipelineManager g_stdPipelines;
-
-
 
 #define MAX_VK_PIPELINES        1024
 static struct Vk_Pipeline_Def s_pipeline_defs[MAX_VK_PIPELINES];
@@ -913,6 +909,9 @@ void vk_destroyGlobalStagePipeline(void)
 
 	qvkDestroyDescriptorSetLayout(vk.device, vk.set_layout, NULL); 
     qvkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL);
+    // You don't need to explicitly clean up descriptor sets,
+    // because they will be automaticall freed when the descripter pool
+    // is destroyed.
    	qvkDestroyDescriptorPool(vk.device, vk.descriptor_pool, NULL);    
     // 
     qvkDestroyPipeline(vk.device, g_stdPipelines.skybox_pipeline, NULL);
