@@ -16,25 +16,6 @@ struct Chunk {
 };
 
 
-struct Vk_Image {
-	VkImage handle;
-
-    // To use any VkImage, including those in the swap chain, int the render pipeline
-    // we have to create a VkImageView object. An image view is quite literally a
-    // view into image. It describe how to access the image and witch part of the
-    // image to access, if it should be treated as a 2D texture depth texture without
-    // any mipmapping levels.
-    
-    VkImageView view;
-
-	// Descriptor set that contains single descriptor used to access the given image.
-	// It is updated only once during image initialization.
-	VkDescriptorSet descriptor_set;
-};
-
-// should be the same as MAX_DRAWIMAGES
-
-static struct Vk_Image  s_vkImages[MAX_DRAWIMAGES];
 
 #define MAX_IMAGE_CHUNKS        16
 static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS];
@@ -135,7 +116,7 @@ void GL_Bind( image_t* pImage )
         pImage->frameUsed = tr.frameCount;
 
 		// VULKAN
-		s_CurrentDescriptorSets[s_CurTmu] = s_vkImages[pImage->index].descriptor_set;
+		s_CurrentDescriptorSets[s_CurTmu] = pImage->descriptor_set;
 	}
 }
 
@@ -558,25 +539,25 @@ void vk_destroyImageRes(void)
 
 
 	uint32_t i = 0;
-	for (i = 0; i < MAX_DRAWIMAGES; i++)
+	for (i = 0; i < tr.numImages; i++)
     {
 
-		if (s_vkImages[i].handle != VK_NULL_HANDLE)
+		if (tr.images[i]->handle != VK_NULL_HANDLE)
         {
-            //ri.Printf(PRINT_ALL, " Destroy VkImage s_vkImages[%d].{VkImage VkImageView} \n", i);
-			qvkDestroyImage(vk.device, s_vkImages[i].handle, NULL);
-			qvkDestroyImageView(vk.device, s_vkImages[i].view, NULL);
+            ri.Printf(PRINT_ALL, " tr.images[%d].{VkImage VkImageView} \n", i);
+			qvkDestroyImageView(vk.device, tr.images[i]->view, NULL);
+            qvkDestroyImage(vk.device, tr.images[i]->handle, NULL);
+
    		}
 
-        if(s_vkImages[i].descriptor_set != VK_NULL_HANDLE)
+        if(tr.images[i]->descriptor_set != VK_NULL_HANDLE)
         {   
             //ri.Printf(PRINT_ALL, " Free Descriptor Sets s_vkImages[%d].descriptor_set. \n", i);
             //To free allocated descriptor sets
-            qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &s_vkImages[i].descriptor_set);
+            qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &tr.images[i]->descriptor_set);
         }
 	}
     
-    memset(s_vkImages, 0, MAX_DRAWIMAGES*sizeof(struct Vk_Image));
 	
     memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
 
@@ -878,25 +859,32 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
         }
     }
 
-    struct Vk_Image * pCurImg = &s_vkImages[pImage->index];
+	//vk_createImageHandle(base_width, base_height, mipMapLevels, &pCurImg->handle);
+    vk_createImageHandle(base_width, base_height, mipMapLevels, &pImage->handle);
 
-	vk_createImageHandle(base_width, base_height, mipMapLevels, &pCurImg->handle);
+    //allocate_and_bind_image_memory(pCurImg->handle);
+	allocate_and_bind_image_memory(pImage->handle);
 
-    allocate_and_bind_image_memory(pCurImg->handle);
-	
-    vk_createImageView(pCurImg->handle, &pCurImg->view);
-    
-    vk_createDescriptorSet(pCurImg->view ,vk_find_sampler(isMipMap, glWrapClampMode == GL_REPEAT),
-            &pCurImg->descriptor_set);
+    //vk_createImageView(pCurImg->handle, &pCurImg->view);
+    vk_createImageView(pImage->handle, &pImage->view);
+
+    // vk_createDescriptorSet(pCurImg->view , vk_find_sampler(isMipMap, glWrapClampMode == GL_REPEAT), &pCurImg->descriptor_set);
+
+    vk_createDescriptorSet(pImage->view , vk_find_sampler(isMipMap, glWrapClampMode == GL_REPEAT), &pImage->descriptor_set);
+
+//    if(isMipMap)
+//        vk_upload_image_data(pCurImg->handle, base_width, base_height, upload_buffer);
+//    else
+//        vk_uploadSingleImage(pCurImg->handle, base_width, base_height, upload_buffer);
 
     if(isMipMap)
-        vk_upload_image_data(s_vkImages[pImage->index].handle, base_width, base_height, upload_buffer);
+        vk_upload_image_data(pImage->handle, base_width, base_height, upload_buffer);
     else
-        vk_uploadSingleImage(s_vkImages[pImage->index].handle, base_width, base_height, upload_buffer);
+        vk_uploadSingleImage(pImage->handle, base_width, base_height, upload_buffer);
 
     free(upload_buffer);
 
-    s_CurrentDescriptorSets[s_CurTmu] = pCurImg->descriptor_set;
+    s_CurrentDescriptorSets[s_CurTmu] = pImage->descriptor_set;
 	
     if (s_CurTmu) {
 		s_CurTmu = 0;
@@ -968,7 +956,8 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
 
 	// GL_Bind( tr.scratchImage[client] );
     image_t* prtImage = tr.scratchImage[client];
-    struct Vk_Image* pImage = &s_vkImages[prtImage->index];
+ 
+    
 	
     // if the scratchImage isn't in the format we want, specify it as a new texture
     if ( (cols != prtImage->width) || (rows != prtImage->height) )
@@ -981,26 +970,26 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
 
         // VULKAN
 
-        qvkDestroyImage(vk.device, pImage->handle, NULL);
-        qvkDestroyImageView(vk.device, pImage->view, NULL);
-        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImage->descriptor_set);
+        qvkDestroyImage(vk.device, prtImage->handle, NULL);
+        qvkDestroyImageView(vk.device, prtImage->view, NULL);
+        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &prtImage->descriptor_set);
         
-        vk_createImageHandle(cols, rows, 1, &pImage->handle);
+        vk_createImageHandle(cols, rows, 1, &prtImage->handle);
 
-        allocate_and_bind_image_memory(pImage->handle);
+        allocate_and_bind_image_memory(prtImage->handle);
 	
-        vk_createImageView(pImage->handle, &pImage->view);
+        vk_createImageView(prtImage->handle, &prtImage->view);
     
-        vk_createDescriptorSet(pImage->view , vk_find_sampler(0, 0), &pImage->descriptor_set);
+        vk_createDescriptorSet(prtImage->view , vk_find_sampler(0, 0), &prtImage->descriptor_set);
         
-        vk_uploadSingleImage(pImage->handle, cols, rows, data);
+        vk_uploadSingleImage(prtImage->handle, cols, rows, data);
     }
     else if (dirty)
     {
         // otherwise, just subimage upload it so that
         // drivers can tell we are going to be changing
         // it and don't try and do a texture compression       
-        vk_uploadSingleImage(pImage->handle, cols, rows, data);
+        vk_uploadSingleImage(prtImage->handle, cols, rows, data);
     }
 
 }
