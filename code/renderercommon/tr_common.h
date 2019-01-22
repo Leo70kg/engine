@@ -60,46 +60,7 @@ union f16_u {
 };
 
 
-typedef enum
-{
-	IMGTYPE_COLORALPHA, // for color, lightmap, diffuse, and specular
-	IMGTYPE_NORMAL,
-	IMGTYPE_NORMALHEIGHT,
-	IMGTYPE_DELUXE, // normals are swizzled, deluxe are not
-} imgType_t;
 
-typedef enum
-{
-	IMGFLAG_NONE           = 0x0000,
-	IMGFLAG_MIPMAP         = 0x0001,
-	IMGFLAG_PICMIP         = 0x0002,
-	IMGFLAG_CUBEMAP        = 0x0004,
-	IMGFLAG_NO_COMPRESSION = 0x0010,
-	IMGFLAG_NOLIGHTSCALE   = 0x0020,
-	IMGFLAG_CLAMPTOEDGE    = 0x0040,
-	IMGFLAG_GENNORMALMAP   = 0x0080,
-} imgFlags_t;
-
-
-typedef struct image_s {
-	char		imgName[MAX_QPATH];		// game path, including extension
-	int			width, height;				// source image
-	int			uploadWidth, uploadHeight;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
-	uint32_t texnum;					// gl texture binding
-
-	int			frameUsed;			// for texture usage in frame statistics
-
-	int			internalFormat;
-	int			TMU;				// only needed for voodoo2
-    int         index;
-	imgType_t   type;
-	imgFlags_t  flags;
-
-    int			wrapClampMode;		// GL_CLAMP or GL_REPEAT, for vulkan
-    qboolean    mipmap;             // for vulkan
-    qboolean    allowPicmip;        // for vulkan
-	struct image_s*	next;
-} image_t;
 
 
 // any change in the LIGHTMAP_* defines here MUST be reflected in
@@ -184,17 +145,15 @@ static inline void VectorNorm( float v[3] )
 {
 	float length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
 
-    if(length == 0)
+    if(length != 0)
     {
-//		ri.Printf( PRINT_WARNING, "VectorNorm: Trying to normalize zero vector!\n");
-        return;
+        /* writing it this way allows gcc to recognize that rsqrt can be used */
+        length = 1.0f / sqrtf (length);
+        v[0] *= length;
+        v[1] *= length;
+        v[2] *= length;
     }
 
-	/* writing it this way allows gcc to recognize that rsqrt can be used */
-	length = 1.0f / sqrtf (length);
-	v[0] *= length;
-	v[1] *= length;
-	v[2] *= length;
 }
 
 static inline void VectorNorm2(const float v[3], float out[3])

@@ -397,6 +397,7 @@ void RE_RenderScene( const refdef_t *fd )
 //	parms.viewportY = glConfig.vidHeight - ( tr.refdef.y + tr.refdef.height );
 	parms.viewportY =  fd->y;
 
+
     parms.viewportWidth = fd->width;
 	parms.viewportHeight = fd->height;
 

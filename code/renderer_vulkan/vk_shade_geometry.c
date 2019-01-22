@@ -436,27 +436,20 @@ void vk_destroy_shading_data(void)
 void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed)
 {
 
-	// color
-	{
-		if ((shadingDat.color_st_elements + tess.numVertexes) * sizeof(color4ub_t) > COLOR_SIZE)
-			ri.Error(ERR_DROP, "vulkan: vertex buffer overflow (color)\n");
+    // color
+    if ((shadingDat.color_st_elements + tess.numVertexes) * sizeof(color4ub_t) > COLOR_SIZE)
+        ri.Error(ERR_DROP, "vulkan: vertex buffer overflow (color)\n");
 
-		unsigned char* dst = shadingDat.vertex_buffer_ptr + COLOR_OFFSET + shadingDat.color_st_elements * sizeof(color4ub_t);
-		memcpy(dst, tess.svars.colors, tess.numVertexes * sizeof(color4ub_t));
-	}
-	// st0
-	{
-		if ((shadingDat.color_st_elements + tess.numVertexes) * sizeof(vec2_t) > ST0_SIZE)
-			ri.Error(ERR_DROP, "vulkan: vertex buffer overflow (st0)\n");
+    unsigned char* dst_color = shadingDat.vertex_buffer_ptr + COLOR_OFFSET + shadingDat.color_st_elements * sizeof(color4ub_t);
+    memcpy(dst_color, tess.svars.colors, tess.numVertexes * sizeof(color4ub_t));
+    // st0
 
-		unsigned char* dst = shadingDat.vertex_buffer_ptr + ST0_OFFSET + shadingDat.color_st_elements * sizeof(vec2_t);
-		memcpy(dst, tess.svars.texcoords[0], tess.numVertexes * sizeof(vec2_t));
-	}
+    unsigned char* dst_st0 = shadingDat.vertex_buffer_ptr + ST0_OFFSET + shadingDat.color_st_elements * sizeof(vec2_t);
+    memcpy(dst_st0, tess.svars.texcoords[0], tess.numVertexes * sizeof(vec2_t));
+
 	// st1
-	if (multitexture) {
-		if ((shadingDat.color_st_elements + tess.numVertexes) * sizeof(vec2_t) > ST1_SIZE)
-			ri.Error(ERR_DROP, "vulkan: vertex buffer overflow (st1)\n");
-
+	if (multitexture)
+    {
 		unsigned char* dst = shadingDat.vertex_buffer_ptr + ST1_OFFSET + shadingDat.color_st_elements * sizeof(vec2_t);
 		memcpy(dst, tess.svars.texcoords[1], tess.numVertexes * sizeof(vec2_t));
 	}
@@ -522,29 +515,29 @@ void vk_bind_geometry(void)
 
 	// xyz stream
 	{
-		if ((shadingDat.xyz_elements + tess.numVertexes) * sizeof(vec4_t) > XYZ_SIZE)
-			ri.Error(ERR_DROP, "vk_bind_geometry: vertex buffer overflow (xyz)\n");
-
 		unsigned char* dst = shadingDat.vertex_buffer_ptr + XYZ_OFFSET + shadingDat.xyz_elements * sizeof(vec4_t);
 		memcpy(dst, tess.xyz, tess.numVertexes * sizeof(vec4_t));
 
 		VkDeviceSize xyz_offset = XYZ_OFFSET + shadingDat.xyz_elements * sizeof(vec4_t);
 		qvkCmdBindVertexBuffers(vk.command_buffer, 0, 1, &shadingDat.vertex_buffer, &xyz_offset);
 		shadingDat.xyz_elements += tess.numVertexes;
+
+        if (shadingDat.xyz_elements * sizeof(vec4_t) > XYZ_SIZE)
+			ri.Error(ERR_DROP, "vk_bind_geometry: vertex buffer overflow (xyz)\n");
 	}
 
 	// indexes stream
 	{
 		size_t indexes_size = tess.numIndexes * sizeof(uint32_t);        
 
-		if (shadingDat.index_buffer_offset + indexes_size > INDEX_BUFFER_SIZE)
-			ri.Error(ERR_DROP, "vk_bind_geometry: index buffer overflow\n");
-
 		unsigned char* dst = shadingDat.index_buffer_ptr + shadingDat.index_buffer_offset;
 		memcpy(dst, tess.indexes, indexes_size);
 
 		qvkCmdBindIndexBuffer(vk.command_buffer, shadingDat.index_buffer, shadingDat.index_buffer_offset, VK_INDEX_TYPE_UINT32);
 		shadingDat.index_buffer_offset += indexes_size;
+
+        if (shadingDat.index_buffer_offset > INDEX_BUFFER_SIZE)
+			ri.Error(ERR_DROP, "vk_bind_geometry: index buffer overflow\n");
 	}
 
 

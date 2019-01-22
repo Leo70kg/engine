@@ -33,8 +33,8 @@ struct Vk_Image {
 };
 
 // should be the same as MAX_DRAWIMAGES
-#define MAX_VK_IMAGES   2048
-static struct Vk_Image  s_vkImages[MAX_VK_IMAGES];
+
+static struct Vk_Image  s_vkImages[MAX_DRAWIMAGES];
 
 #define MAX_IMAGE_CHUNKS        16
 static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS];
@@ -558,7 +558,7 @@ void vk_destroyImageRes(void)
 
 
 	uint32_t i = 0;
-	for (i = 0; i < MAX_VK_IMAGES; i++)
+	for (i = 0; i < MAX_DRAWIMAGES; i++)
     {
 
 		if (s_vkImages[i].handle != VK_NULL_HANDLE)
@@ -576,7 +576,7 @@ void vk_destroyImageRes(void)
         }
 	}
     
-    memset(s_vkImages, 0, MAX_VK_IMAGES*sizeof(struct Vk_Image));
+    memset(s_vkImages, 0, MAX_DRAWIMAGES*sizeof(struct Vk_Image));
 	
     memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
 
@@ -800,7 +800,7 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
     // lightmaps are always allocated on TMU 1
 	pImage->TMU = s_CurTmu = (strncmp(name, "*lightmap", 9) == 0);
 	
-    // GL_Bind(pImage);
+    GL_Bind(pImage);
 
 	// convert to exact power of 2 sizes
 	unsigned int scaled_width, scaled_height;
@@ -894,9 +894,9 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
     else
         vk_uploadSingleImage(s_vkImages[pImage->index].handle, base_width, base_height, upload_buffer);
 
-    s_CurrentDescriptorSets[s_CurTmu] = pCurImg->descriptor_set;
-
     free(upload_buffer);
+
+    s_CurrentDescriptorSets[s_CurTmu] = pCurImg->descriptor_set;
 	
     if (s_CurTmu) {
 		s_CurTmu = 0;
