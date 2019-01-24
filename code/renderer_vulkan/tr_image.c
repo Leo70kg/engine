@@ -27,42 +27,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/ref_import.h"
 
 
-/*
-================
-R_CreateDlightImage
-================
-*/
-static void R_CreateDlightImage( void )
-{
-    #define	DLIGHT_SIZE	16
-
-	int		x,y;
-	unsigned char data[DLIGHT_SIZE][DLIGHT_SIZE][4];
-
-	// make a centered inverse-square falloff blob for dynamic lighting
-	for (x=0; x<DLIGHT_SIZE; x++)
-    {
-		for (y=0; y<DLIGHT_SIZE; y++)
-        {
-			float d = ( DLIGHT_SIZE/2 - 0.5f - x ) * ( DLIGHT_SIZE/2 - 0.5f - x ) +
-				( DLIGHT_SIZE/2 - 0.5f - y ) * ( DLIGHT_SIZE/2 - 0.5f - y );
-			int b = 4000 / d;
-			if (b > 255) {
-				b = 255;
-			} else if ( b < 75 ) {
-				b = 0;
-			}
-
-			data[y][x][0] = 
-			data[y][x][1] = 
-			data[y][x][2] = b;
-			data[y][x][3] = 255;			
-		}
-	}
-	tr.dlightImage = R_CreateImage("*dlight", (unsigned char *)data, DLIGHT_SIZE, DLIGHT_SIZE, qfalse, qfalse, GL_CLAMP );
-}
-
-
 
 void R_InitFogTable( void )
 {
@@ -111,121 +75,9 @@ float R_FogFactor( float s, float t )
 	return d;
 }
 
-/*
-================
-R_CreateFogImage
-================
-*/
-static void R_CreateFogImage( void )
-{
-    #define	FOG_S	256
-    #define	FOG_T	32
-
-	unsigned int x,y;
-
-	unsigned char* data = (unsigned char*) malloc( FOG_S * FOG_T * 4 );
-
-	// S is distance, T is depth
-	for (x=0 ; x<FOG_S ; x++)
-    {
-		for (y=0 ; y<FOG_T ; y++)
-        {
-			float d = R_FogFactor( ( x + 0.5f ) / FOG_S, ( y + 0.5f ) / FOG_T );
-
-            unsigned int index = (y*FOG_S+x)*4;
-			data[index ] = 
-			data[index+1] = 
-			data[index+2] = 255;
-			data[index+3] = 255*d;
-		}
-	}
-	// standard openGL clamping doesn't really do what we want -- it includes
-	// the border color at the edges.  OpenGL 1.2 has clamp-to-edge, which does
-	// what we want.
-	tr.fogImage = R_CreateImage("*fog", (unsigned char *)data, FOG_S, FOG_T, qfalse, qfalse, GL_CLAMP );
-	
-    free( data );
-}
-
-/*
-==================
-R_CreateDefaultImage
-==================
-*/
-static void R_CreateDefaultImage( void )
-{
-    #define	DEFAULT_SIZE	16
-
-	unsigned char data[DEFAULT_SIZE][DEFAULT_SIZE][4];
-
-	// the default image will be a box, to allow you to see the mapping coordinates
-	memset( data, 32, sizeof( data ) );
-
-    unsigned int x;
-	for ( x = 0; x < DEFAULT_SIZE; x++ )
-    {
-		data[0][x][0] =
-		data[0][x][1] =
-		data[0][x][2] =
-		data[0][x][3] = 255;
-
-		data[x][0][0] =
-		data[x][0][1] =
-		data[x][0][2] =
-		data[x][0][3] = 255;
-
-		data[DEFAULT_SIZE-1][x][0] =
-		data[DEFAULT_SIZE-1][x][1] =
-		data[DEFAULT_SIZE-1][x][2] =
-		data[DEFAULT_SIZE-1][x][3] = 255;
-
-		data[x][DEFAULT_SIZE-1][0] =
-		data[x][DEFAULT_SIZE-1][1] =
-		data[x][DEFAULT_SIZE-1][2] =
-		data[x][DEFAULT_SIZE-1][3] = 255;
-	}
-	tr.defaultImage = R_CreateImage("*default", (unsigned char *)data, DEFAULT_SIZE, DEFAULT_SIZE, qtrue, qfalse, GL_REPEAT );
-}
-
-/*
-==================
-R_CreateBuiltinImages
-==================
-*/
-void R_CreateBuiltinImages( void )
-{
-	int		x,y;
-	unsigned char data[DEFAULT_SIZE][DEFAULT_SIZE][4];
-
-	R_CreateDefaultImage();
-
-	// we use a solid white image instead of disabling texturing
-	memset( data, 255, sizeof( data ) );
-	tr.whiteImage = R_CreateImage("*white", (unsigned char *)data, 8, 8, qfalse, qfalse, GL_REPEAT );
-
-	// with overbright bits active, we need an image which is some fraction of full color,
-	// for default lightmaps, etc
-	for (x=0 ; x<DEFAULT_SIZE ; x++) {
-		for (y=0 ; y<DEFAULT_SIZE ; y++) {
-			data[y][x][0] = 
-			data[y][x][1] = 
-			data[y][x][2] = tr.identityLightByte;
-			data[y][x][3] = 255;			
-		}
-	}
-
-	tr.identityLightImage = R_CreateImage("*identityLight", (unsigned char *)data, 8, 8, qfalse, qfalse, GL_REPEAT );
 
 
-	for(x=0;x<32;x++)
-    {
-		// scratchimage is usually used for cinematic drawing
-		tr.scratchImage[x] = R_CreateImage("*scratch", (unsigned char *)data, DEFAULT_SIZE, DEFAULT_SIZE, qfalse, qtrue, GL_CLAMP );
-	}
 
-	R_CreateDlightImage();
-	R_CreateFogImage();
-}
 
 
 

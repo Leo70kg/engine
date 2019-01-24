@@ -166,14 +166,7 @@ void RE_Shutdown( qboolean destroyWindow )
 
     ri.Cmd_RemoveCommand("pipelineList");
 
-	if ( tr.registered )
-    {
-        R_IssueRenderCommands( qfalse );
-		
-        memset( tr.images, 0, sizeof( tr.images ) );
 
-	    tr.numImages = 0;
-	}
 
 
 	R_DoneFreeType();
@@ -199,6 +192,15 @@ void RE_Shutdown( qboolean destroyWindow )
         vk_shutdown();
         vk_destroyWindow();
     }
+    
+	if ( tr.registered )
+    {
+        R_IssueRenderCommands( qfalse );
+		
+        memset( tr.images, 0, sizeof( tr.images ) );
+
+	    tr.numImages = 0;
+	}
 
 	tr.registered = qfalse;
 }

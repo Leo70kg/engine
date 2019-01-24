@@ -3,7 +3,6 @@
 
 void GetScaledDimension(const unsigned int width, const unsigned int height, unsigned int *outW, unsigned int *outH, VkBool32 isPicMip);
 
-void R_resetGammaIntensityTable(void);
 void R_SetColorMappings( void );
 void R_LightScaleTexture (unsigned char* dst, unsigned char* in, unsigned int nBytes);
 void ResampleTexture(const unsigned char *pIn, const unsigned int inwidth, const unsigned int inheight,

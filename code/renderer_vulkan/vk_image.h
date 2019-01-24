@@ -19,8 +19,6 @@ void R_LoadImage(const char *name, unsigned char **pic, uint32_t* width, uint32_
 void R_LoadImage2(const char *name, unsigned char **pic, uint32_t* width, uint32_t* height );
 
 
-void R_CreateBuiltinImages(void);
-
 
 VkDescriptorSet* getCurDescriptorSetsPtr(void);
 

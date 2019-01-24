@@ -44,11 +44,13 @@ typedef struct {
 	image_t					*dlightImage;	// inverse-quare highlight for projective adding
 	image_t					*whiteImage;			// full of 0xff
 	image_t					*identityLightImage;	// full of tr.identityLightByte
+	image_t					*fontIamge;	
 
 	shader_t				*defaultShader;
     shader_t                *cinematicShader;
 	shader_t				*shadowShader;
 	shader_t				*projectionShadowShader;
+//	shader_t				*fontShader;
 
 	int						numLightmaps;
 	image_t					*lightmaps[MAX_LIGHTMAPS];

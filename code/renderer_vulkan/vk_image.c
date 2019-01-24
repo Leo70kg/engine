@@ -25,12 +25,19 @@ static int s_NumImageChunks = 0;
 
 ///////////////////////////////////////
 
-// Host visible memory used to copy image data to device local memory.
-static VkBuffer s_StagingBuffer;
-static VkDeviceMemory s_MemStgBuf;
+struct StagingBufferImage
+{
+    VkBuffer buff;
+    VkDeviceMemory deviceMem;
 // pointer to mapped staging buffer
-static unsigned char* s_pStgBuf = NULL;
-static VkDeviceSize s_StagingBufferSize = 0;
+//    unsigned char* pBufMapped;
+    VkDeviceSize size;
+};
+
+struct StagingBufferImage StagImg;
+
+
+// Host visible memory used to copy image data to device local memory.
 
 ////////////////////////////////////////
 
@@ -73,24 +80,6 @@ static void vk_free_chunk(void)
 	}
     s_NumImageChunks = 0;
 }
-
-static void vk_free_staging_buffer(void)
-{
-	if (s_MemStgBuf != VK_NULL_HANDLE)
-    {
-		qvkFreeMemory(vk.device, s_MemStgBuf, NULL);
-        memset(&s_MemStgBuf, 0, sizeof(VkDeviceMemory));
-    }
-
-	if (s_StagingBuffer != VK_NULL_HANDLE)
-    {
-        qvkDestroyBuffer(vk.device, s_StagingBuffer, NULL);
-        memset(&s_StagingBuffer, 0, sizeof(VkBuffer));
-    }
-    s_StagingBufferSize = 0;
-	s_pStgBuf = NULL;
-}
-
 
 
 
@@ -191,73 +180,75 @@ uint32_t find_memory_type(uint32_t memory_type_bits, VkMemoryPropertyFlags prope
 }
 
 
-static void ensure_staging_buffer_allocation(VkDeviceSize size)
+static void allocateStagingBuffer(uint32_t size)
 {
-    if(s_StagingBufferSize < size)
-    {
-        ri.Printf(PRINT_ALL, "ensure_staging_buffer_allocation: %ld\n", size);
-        s_StagingBufferSize = size;
+        ri.Printf(PRINT_ALL, " Allocate Staging Buffer: %d\n", size);
+        StagImg.size = size;
 
-        if (s_StagingBuffer != VK_NULL_HANDLE)
-        {
-            qvkDestroyBuffer(vk.device, s_StagingBuffer, NULL);
-            memset(&s_StagingBuffer, 0, sizeof(VkBuffer));
-        }
+        // Vulkan supports two primary resource types: buffers and images. 
+        // Resources are views of memory with associated formatting and 
+        // dimensionality. Buffers are essentially unformatted arrays of
+        // bytes whereas images contain format information, can be 
+        // multidimensional and may have associated metadata.
+        VkBufferCreateInfo buffer_desc;
+        buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_desc.pNext = NULL;
+        buffer_desc.flags = 0;
+        buffer_desc.size = size;
 
-        if (s_MemStgBuf != VK_NULL_HANDLE)
-        {
-            qvkUnmapMemory(vk.device, s_MemStgBuf);
-            qvkFreeMemory(vk.device, s_MemStgBuf, NULL);
-            memset(&s_MemStgBuf, 0, sizeof(VkDeviceMemory));
-        }
-
-        {
-            // Vulkan supports two primary resource types: buffers and images. 
-            // Resources are views of memory with associated formatting and 
-            // dimensionality. Buffers are essentially unformatted arrays of
-            // bytes whereas images contain format information, can be 
-            // multidimensional and may have associated metadata.
-            VkBufferCreateInfo buffer_desc;
-            buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            buffer_desc.pNext = NULL;
-            buffer_desc.flags = 0;
-            buffer_desc.size = size;
-            
-            // Source buffers must have been created with the 
-            // VK_BUFFER_USAGE_TRANSFER_SRC_BIT usage bit enabled and
-            // destination buffers must have been created with the
-            // VK_BUFFER_USAGE_TRANSFER_DST_BIT usage bit enabled.
-            buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-            buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            buffer_desc.queueFamilyIndexCount = 0;
-            buffer_desc.pQueueFamilyIndices = NULL;
-            VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &s_StagingBuffer));
-        }
+        // Source buffers must have been created with the 
+        // VK_BUFFER_USAGE_TRANSFER_SRC_BIT usage bit enabled and
+        // destination buffers must have been created with the
+        // VK_BUFFER_USAGE_TRANSFER_DST_BIT usage bit enabled.
+        buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        buffer_desc.queueFamilyIndexCount = 0;
+        buffer_desc.pQueueFamilyIndices = NULL;
+        VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &StagImg.buff));
+        
         // To determine the memory requirements for a buffer resource
 
-        {
-            VkMemoryRequirements memory_requirements;
-            qvkGetBufferMemoryRequirements(vk.device, s_StagingBuffer, &memory_requirements);
+        VkMemoryRequirements memory_requirements;
+        qvkGetBufferMemoryRequirements(vk.device, StagImg.buff, &memory_requirements);
 
-            uint32_t memory_type = find_memory_type(memory_requirements.memoryTypeBits,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        uint32_t memory_type = find_memory_type(memory_requirements.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-            VkMemoryAllocateInfo alloc_info;
-            alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            alloc_info.pNext = NULL;
-            alloc_info.allocationSize = memory_requirements.size;
-            alloc_info.memoryTypeIndex = memory_type;
-            VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &s_MemStgBuf));
-        }
+        VkMemoryAllocateInfo alloc_info;
+        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.pNext = NULL;
+        alloc_info.allocationSize = memory_requirements.size;
+        alloc_info.memoryTypeIndex = memory_type;
+        VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &StagImg.deviceMem));
+
         
-        VK_CHECK(qvkBindBufferMemory(vk.device, s_StagingBuffer, s_MemStgBuf, 0));
+        VK_CHECK(qvkBindBufferMemory(vk.device, StagImg.buff, StagImg.deviceMem, 0));
 
-        void* data;
-        VK_CHECK(qvkMapMemory(vk.device, s_MemStgBuf, 0, VK_WHOLE_SIZE, 0, &data));
+        //void* data;
+        //VK_CHECK(qvkMapMemory(vk.device, StagImg.deviceMem, 0, VK_WHOLE_SIZE, 0, &data));
 
-        s_pStgBuf = (unsigned char *)data;
-    }
+        //StagImg.pBufMapped = (unsigned char *)data;
 }
+
+
+
+static void vk_destroy_staging_buffer(void)
+{
+
+	if (StagImg.buff != VK_NULL_HANDLE)
+    {
+        qvkDestroyBuffer(vk.device, StagImg.buff, NULL);
+    }
+    
+	if (StagImg.deviceMem != VK_NULL_HANDLE)
+    {
+		qvkFreeMemory(vk.device, StagImg.deviceMem, NULL);
+    }
+
+    memset(&StagImg, 0, sizeof(StagImg));
+}
+
+
 
 
 static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height, const unsigned char* pPixels)
@@ -299,10 +290,15 @@ static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height,
 	}
 
 
-	ensure_staging_buffer_allocation(buffer_size);
-    memcpy(s_pStgBuf, pPixels, buffer_size);
+    void* data;
+    
+    VK_CHECK(qvkMapMemory(vk.device, StagImg.deviceMem, 0, VK_WHOLE_SIZE, 0, &data));
 
+    memcpy(data, pPixels, buffer_size);
 
+    qvkUnmapMemory(vk.device, StagImg.deviceMem);
+    
+    
     VkCommandBuffer cmd_buf;
     {
         VkCommandBufferAllocateInfo alloc_info;
@@ -332,7 +328,7 @@ static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height,
 	barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.buffer = s_StagingBuffer;
+	barrier.buffer = StagImg.buff;
 	barrier.offset = 0;
 	barrier.size = VK_WHOLE_SIZE;
     
@@ -369,13 +365,13 @@ static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height,
     // To copy data from a buffer object to an image object
     
     // command_buffer is the command buffer into which the command will be recorded.
-    // s_StagingBuffer is the source buffer.
+    // StagImg.buff is the source buffer.
     // image is the destination image.
     // dstImageLayout is the layout of the destination image subresources.
     // curLevel is the number of regions to copy.
     // pRegions is a pointer to an array of VkBufferImageCopy structures
     // specifying the regions to copy.
-    qvkCmdCopyBufferToImage(cmd_buf, s_StagingBuffer, image,
+    qvkCmdCopyBufferToImage(cmd_buf, StagImg.buff, image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, curLevel, regions);
 
     record_image_layout_transition(cmd_buf, image,
@@ -427,9 +423,11 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
 
     const uint32_t buffer_size = width * height * 4;
 
-	ensure_staging_buffer_allocation(buffer_size);
-    memcpy(s_pStgBuf, pPixels, buffer_size);
-
+    void* data;
+    VK_CHECK(qvkMapMemory(vk.device, StagImg.deviceMem, 0, VK_WHOLE_SIZE, 0, &data));
+    memcpy(data, pPixels, buffer_size);
+    qvkUnmapMemory(vk.device, StagImg.deviceMem);
+    
     VkCommandBuffer cmd_buf;
     {
         VkCommandBufferAllocateInfo alloc_info;
@@ -457,7 +455,7 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
 	barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.buffer = s_StagingBuffer;
+	barrier.buffer = StagImg.buff;
 	barrier.offset = 0;
 	barrier.size = VK_WHOLE_SIZE;
     
@@ -494,13 +492,13 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
     // To copy data from a buffer object to an image object
     
     // command_buffer is the command buffer into which the command will be recorded.
-    // s_StagingBuffer is the source buffer.
+    // StagImg.buff is the source buffer.
     // image is the destination image.
     // dstImageLayout is the layout of the destination image subresources.
     // num_regions is the number of regions to copy.
     // pRegions is a pointer to an array of VkBufferImageCopy structures
     // specifying the regions to copy.
-    qvkCmdCopyBufferToImage(cmd_buf, s_StagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    qvkCmdCopyBufferToImage(cmd_buf, StagImg.buff, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
     record_image_layout_transition(cmd_buf, image,
             VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -527,50 +525,6 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
     
 	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmd_buf);
 }
-
-
-void vk_destroyImageRes(void)
-{
-    vk_free_sampler();
-
-	vk_free_staging_buffer();   
-
-	vk_free_chunk();
-
-
-	uint32_t i = 0;
-	for (i = 0; i < tr.numImages; i++)
-    {
-
-		if (tr.images[i]->handle != VK_NULL_HANDLE)
-        {
-            ri.Printf(PRINT_ALL, " tr.images[%d].{VkImage VkImageView} \n", i);
-			qvkDestroyImageView(vk.device, tr.images[i]->view, NULL);
-            qvkDestroyImage(vk.device, tr.images[i]->handle, NULL);
-
-   		}
-
-        if(tr.images[i]->descriptor_set != VK_NULL_HANDLE)
-        {   
-            //ri.Printf(PRINT_ALL, " Free Descriptor Sets s_vkImages[%d].descriptor_set. \n", i);
-            //To free allocated descriptor sets
-            qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &tr.images[i]->descriptor_set);
-        }
-	}
-    
-	
-    memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
-
-    R_resetGammaIntensityTable();
-	
-    VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
-    
-    ///////////////////////////////////
-    // s_CurTextures[0] = s_CurTextures[1] = 0;
-	s_CurTmu = 0;
-}
-
-
 
 
 
@@ -663,7 +617,7 @@ static void vk_createImageHandle(const uint32_t width, const uint32_t height, co
     VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, pImage));
 }
 
-void vk_createImageView(VkImage h_image, VkImageView* pView)
+static void vk_createImageView(VkImage h_image, VkImageView* pView)
 {
     VkImageViewCreateInfo desc;
     desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -691,7 +645,7 @@ void vk_createImageView(VkImage h_image, VkImageView* pView)
 }
 
 
-void vk_createDescriptorSet(VkImageView imageView, VkSampler sampler, VkDescriptorSet* pDespSet)
+static void vk_createDescriptorSet(VkImageView imageView, VkSampler sampler, VkDescriptorSet* pDespSet)
 {
 
 	// create associated descriptor set
@@ -859,23 +813,11 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
         }
     }
 
-	//vk_createImageHandle(base_width, base_height, mipMapLevels, &pCurImg->handle);
     vk_createImageHandle(base_width, base_height, mipMapLevels, &pImage->handle);
-
-    //allocate_and_bind_image_memory(pCurImg->handle);
 	allocate_and_bind_image_memory(pImage->handle);
-
-    //vk_createImageView(pCurImg->handle, &pCurImg->view);
     vk_createImageView(pImage->handle, &pImage->view);
-
-    // vk_createDescriptorSet(pCurImg->view , vk_find_sampler(isMipMap, glWrapClampMode == GL_REPEAT), &pCurImg->descriptor_set);
-
     vk_createDescriptorSet(pImage->view , vk_find_sampler(isMipMap, glWrapClampMode == GL_REPEAT), &pImage->descriptor_set);
 
-//    if(isMipMap)
-//        vk_upload_image_data(pCurImg->handle, base_width, base_height, upload_buffer);
-//    else
-//        vk_uploadSingleImage(pCurImg->handle, base_width, base_height, upload_buffer);
 
     if(isMipMap)
         vk_upload_image_data(pImage->handle, base_width, base_height, upload_buffer);
@@ -892,6 +834,7 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
 
     return pImage;
 }
+
 
 
 image_t* R_FindImageFile(const char *name, VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode)
@@ -950,6 +893,25 @@ image_t* R_FindImageFile(const char *name, VkBool32 mipmap, VkBool32 allowPicmip
 	return image;
 }
 
+/*
+static void R_DestroySingleImage( image_t* pImg )
+{
+    if (pImg->handle != VK_NULL_HANDLE)
+    {
+        qvkDestroyImageView(vk.device, pImg->view, NULL);
+        qvkDestroyImage(vk.device, pImg->handle, NULL);
+        pImg->handle = VK_NULL_HANDLE;
+    }
+
+    if(pImg->descriptor_set != VK_NULL_HANDLE)
+    {   
+        //ri.Printf(PRINT_ALL, " Free Descriptor Sets s_vkImages[%d].descriptor_set. \n", i);
+        //To free allocated descriptor sets
+        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImg->descriptor_set);
+        pImg->descriptor_set = VK_NULL_HANDLE;
+    }
+}
+*/
 
 void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *data, int client, VkBool32 dirty)
 {
@@ -958,11 +920,10 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
     image_t* prtImage = tr.scratchImage[client];
  
     
-	
     // if the scratchImage isn't in the format we want, specify it as a new texture
     if ( (cols != prtImage->width) || (rows != prtImage->height) )
     {
-        ri.Printf(PRINT_ALL, "w=%d, h=%d, cols=%d, rows=%d, client=%d, prtImage->width=%d\n, prtImage->height=%d", 
+        ri.Printf(PRINT_ALL, "w=%d, h=%d, cols=%d, rows=%d, client=%d, prtImage->width=%d\n, prtImage->height=%d\n", 
            w, h, cols, rows, client, prtImage->width, prtImage->height);
 
         prtImage->width = cols;
@@ -995,15 +956,220 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
 }
 
 
+static void R_CreateDefaultImage( void )
+{
+    #define	DEFAULT_SIZE	16
+
+	unsigned char data[DEFAULT_SIZE][DEFAULT_SIZE][4];
+
+	// the default image will be a box, to allow you to see the mapping coordinates
+	memset( data, 32, sizeof( data ) );
+
+    unsigned int x;
+	for ( x = 0; x < DEFAULT_SIZE; x++ )
+    {
+		data[0][x][0] =
+		data[0][x][1] =
+		data[0][x][2] =
+		data[0][x][3] = 255;
+
+		data[x][0][0] =
+		data[x][0][1] =
+		data[x][0][2] =
+		data[x][0][3] = 255;
+
+		data[DEFAULT_SIZE-1][x][0] =
+		data[DEFAULT_SIZE-1][x][1] =
+		data[DEFAULT_SIZE-1][x][2] =
+		data[DEFAULT_SIZE-1][x][3] = 255;
+
+		data[x][DEFAULT_SIZE-1][0] =
+		data[x][DEFAULT_SIZE-1][1] =
+		data[x][DEFAULT_SIZE-1][2] =
+		data[x][DEFAULT_SIZE-1][3] = 255;
+	}
+	tr.defaultImage = R_CreateImage("*default", (unsigned char *)data, DEFAULT_SIZE, DEFAULT_SIZE, qtrue, qfalse, GL_REPEAT );
+}
+
+
+
+static void R_CreateWhiteImage(void)
+{
+	// we use a solid white image instead of disabling texturing
+	unsigned char data[DEFAULT_SIZE][DEFAULT_SIZE][4];
+	memset( data, 255, sizeof( data ) );
+	tr.whiteImage = R_CreateImage("*white", (unsigned char *)data, 8, 8, qfalse, qfalse, GL_REPEAT );
+}
+
+
+
+static void R_CreateIdentityLightImage(void)
+{
+    uint32_t x,y;
+	unsigned char data[DEFAULT_SIZE][DEFAULT_SIZE][4];
+
+	// with overbright bits active, we need an image which is some fraction of full color,
+	// for default lightmaps, etc
+	for (x=0 ; x<DEFAULT_SIZE ; x++) {
+		for (y=0 ; y<DEFAULT_SIZE ; y++) {
+			data[y][x][0] = 
+			data[y][x][1] = 
+			data[y][x][2] = tr.identityLightByte;
+			data[y][x][3] = 255;
+		}
+	}
+	tr.identityLightImage = R_CreateImage("*identityLight", (unsigned char *)data, 8, 8, qfalse, qfalse, GL_REPEAT );
+
+}
+
+
+static void R_CreateDlightImage( void )
+{
+    #define	DLIGHT_SIZE	16
+
+	uint32_t x,y;
+	unsigned char data[DLIGHT_SIZE][DLIGHT_SIZE][4];
+
+	// make a centered inverse-square falloff blob for dynamic lighting
+	for (x=0; x<DLIGHT_SIZE; x++)
+    {
+		for (y=0; y<DLIGHT_SIZE; y++)
+        {
+			float d = ( DLIGHT_SIZE/2 - 0.5f - x ) * ( DLIGHT_SIZE/2 - 0.5f - x ) +
+				( DLIGHT_SIZE/2 - 0.5f - y ) * ( DLIGHT_SIZE/2 - 0.5f - y );
+			int b = 4000 / d;
+			if (b > 255) {
+				b = 255;
+			} else if ( b < 75 ) {
+				b = 0;
+			}
+
+			data[y][x][0] = 
+			data[y][x][1] = 
+			data[y][x][2] = b;
+			data[y][x][3] = 255;			
+		}
+	}
+	tr.dlightImage = R_CreateImage("*dlight", (unsigned char *)data, DLIGHT_SIZE, DLIGHT_SIZE, qfalse, qfalse, GL_CLAMP );
+}
+
+
+static void R_CreateFogImage( void )
+{
+    #define	FOG_S	256
+    #define	FOG_T	32
+
+	unsigned int x,y;
+
+	unsigned char* data = (unsigned char*) malloc( FOG_S * FOG_T * 4 );
+
+	// S is distance, T is depth
+	for (x=0 ; x<FOG_S ; x++)
+    {
+		for (y=0 ; y<FOG_T ; y++)
+        {
+			float d = R_FogFactor( ( x + 0.5f ) / FOG_S, ( y + 0.5f ) / FOG_T );
+
+            unsigned int index = (y*FOG_S+x)*4;
+			data[index ] = 
+			data[index+1] = 
+			data[index+2] = 255;
+			data[index+3] = 255*d;
+		}
+	}
+	// standard openGL clamping doesn't really do what we want -- it includes
+	// the border color at the edges.  OpenGL 1.2 has clamp-to-edge, which does
+	// what we want.
+	tr.fogImage = R_CreateImage("*fog", (unsigned char *)data, FOG_S, FOG_T, qfalse, qfalse, GL_CLAMP );
+	
+    free( data );
+}
+
+static void R_CreateScratchImage(void)
+{
+    uint32_t x;
+	unsigned char data[DEFAULT_SIZE][DEFAULT_SIZE][4];
+
+	for(x=0;x<32;x++)
+    {
+		// scratchimage is usually used for cinematic drawing
+		tr.scratchImage[x] = R_CreateImage("*scratch", (unsigned char *)data, DEFAULT_SIZE, DEFAULT_SIZE, qfalse, qtrue, GL_CLAMP );
+	}
+}
+
+
 void R_InitImages( void )
 {
     memset(hashTable, 0, sizeof(hashTable));
-    // important
-    R_resetGammaIntensityTable();
+    
+    allocateStagingBuffer(4 * 1024 * 1024);
 
 	// build brightness translation tables
 	R_SetColorMappings();
 
 	// create default texture and white texture
-	R_CreateBuiltinImages();
+	// R_CreateBuiltinImages();
+
+    R_CreateDefaultImage();
+
+    R_CreateWhiteImage();
+
+    R_CreateIdentityLightImage();
+
+    R_CreateScratchImage();
+
+	R_CreateDlightImage();
+
+	R_CreateFogImage();
+}
+
+void vk_destroyImageRes(void)
+{
+    vk_free_sampler();
+
+	vk_destroy_staging_buffer();   
+
+    vk_free_chunk();
+
+    ri.Printf(PRINT_ALL, " tr.images[1:%d].{VkImage VkImageView descriptor_set} \n", tr.numImages);
+	uint32_t i = 0;
+	for (i = 0; i < tr.numImages; i++)
+    {
+		if (tr.images[i]->handle != VK_NULL_HANDLE)
+        {
+			qvkDestroyImageView(vk.device, tr.images[i]->view, NULL);
+            qvkDestroyImage(vk.device, tr.images[i]->handle, NULL);
+   		}
+
+        if(tr.images[i]->descriptor_set != VK_NULL_HANDLE)
+        {   
+            //ri.Printf(PRINT_ALL, " Free Descriptor Sets s_vkImages[%d].descriptor_set. \n", i);
+            //To free allocated descriptor sets
+            qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &tr.images[i]->descriptor_set);
+        }
+	}
+
+/*
+
+    R_DestroySingleImage(tr.defaultImage);
+    R_DestroySingleImage(tr.whiteImage);
+    R_DestroySingleImage(tr.identityLightImage);
+    R_DestroySingleImage(tr.dlightImage);
+    R_DestroySingleImage(tr.fogImage);
+    for(i=0; i<32; i++)
+    {
+		// scratchimage is usually used for cinematic drawing
+		R_DestroySingleImage(tr.scratchImage[i]);
+	}
+//    R_DestroySingleImage(tr.fontIamge);
+
+*/
+	
+    memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
+
+    VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
+    
+    ///////////////////////////////////
+    // s_CurTextures[0] = s_CurTextures[1] = 0;
+	s_CurTmu = 0;
 }

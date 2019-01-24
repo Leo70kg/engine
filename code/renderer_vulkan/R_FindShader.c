@@ -147,7 +147,6 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 	}
 
 
-
 	// use (fullbright) vertex lighting if the bsp file doesn't have lightmaps
 	if ( (lightmapIndex >= 0) && (lightmapIndex >= tr.numLightmaps) )
     {
@@ -211,7 +210,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
             return FinishShader();
         }
     }
-/*
+
     if(NULL != strstr(name, "rocketThrust"))
     {
         ri.Printf(PRINT_WARNING, "R_FindShader: %s\n", name);
@@ -248,7 +247,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
             fileName[i] = '\0';
         }
     }
-*/
+
     image_t* image = R_FindImageFile( name, mipRawImage, mipRawImage, mipRawImage ? GL_REPEAT : GL_CLAMP );
 
 
@@ -330,9 +329,6 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int lightmapIndex, image_
 {
 
 	int hash = generateHashValue(name, FILE_HASH_SIZE);
-
-
-
 
 	//
 	// see if the shader is already loaded
