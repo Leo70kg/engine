@@ -141,9 +141,8 @@ static void allocate_and_bind_image_memory(VkImage image)
 	// Allocate a new chunk in case we couldn't find suitable existing chunk.
 	if (chunk == NULL)
     {
-		if (s_NumImageChunks >= MAX_IMAGE_CHUNKS) {
-			ri.Error(ERR_FATAL, "Vulkan: image chunk limit has been reached");
-		}
+
+        ri.Printf(PRINT_WARNING, " Allocate a new chunk.\n");
 
 		VkMemoryAllocateInfo alloc_info;
 		alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -155,9 +154,13 @@ static void allocate_and_bind_image_memory(VkImage image)
 		VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
 
 		chunk = &s_ImageChunks[s_NumImageChunks];
-		s_NumImageChunks++;
-		chunk->memory = memory;
+        chunk->memory = memory;
 		chunk->used = memory_requirements.size;
+
+		s_NumImageChunks++;
+        if (s_NumImageChunks >= MAX_IMAGE_CHUNKS) {
+			ri.Error(ERR_FATAL, "Vulkan: image chunk limit has been reached");
+		}
 	}
 
 	VK_CHECK(qvkBindImageMemory(vk.device, image, chunk->memory, chunk->used - memory_requirements.size));
@@ -182,52 +185,47 @@ uint32_t find_memory_type(uint32_t memory_type_bits, VkMemoryPropertyFlags prope
 
 static void allocateStagingBuffer(uint32_t size)
 {
-        ri.Printf(PRINT_ALL, " Allocate Staging Buffer: %d\n", size);
-        StagImg.size = size;
+    ri.Printf(PRINT_ALL, " Allocate Staging Buffer: %d\n", size);
+    StagImg.size = size;
 
-        // Vulkan supports two primary resource types: buffers and images. 
-        // Resources are views of memory with associated formatting and 
-        // dimensionality. Buffers are essentially unformatted arrays of
-        // bytes whereas images contain format information, can be 
-        // multidimensional and may have associated metadata.
-        VkBufferCreateInfo buffer_desc;
-        buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_desc.pNext = NULL;
-        buffer_desc.flags = 0;
-        buffer_desc.size = size;
+    // Vulkan supports two primary resource types: buffers and images. 
+    // Resources are views of memory with associated formatting and 
+    // dimensionality. Buffers are essentially unformatted arrays of
+    // bytes whereas images contain format information, can be 
+    // multidimensional and may have associated metadata.
+    VkBufferCreateInfo buffer_desc;
+    buffer_desc.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_desc.pNext = NULL;
+    buffer_desc.flags = 0;
+    buffer_desc.size = size;
 
-        // Source buffers must have been created with the 
-        // VK_BUFFER_USAGE_TRANSFER_SRC_BIT usage bit enabled and
-        // destination buffers must have been created with the
-        // VK_BUFFER_USAGE_TRANSFER_DST_BIT usage bit enabled.
-        buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        buffer_desc.queueFamilyIndexCount = 0;
-        buffer_desc.pQueueFamilyIndices = NULL;
-        VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &StagImg.buff));
-        
-        // To determine the memory requirements for a buffer resource
+    // Source buffers must have been created with the 
+    // VK_BUFFER_USAGE_TRANSFER_SRC_BIT usage bit enabled and
+    // destination buffers must have been created with the
+    // VK_BUFFER_USAGE_TRANSFER_DST_BIT usage bit enabled.
+    buffer_desc.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buffer_desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buffer_desc.queueFamilyIndexCount = 0;
+    buffer_desc.pQueueFamilyIndices = NULL;
+    VK_CHECK(qvkCreateBuffer(vk.device, &buffer_desc, NULL, &StagImg.buff));
 
-        VkMemoryRequirements memory_requirements;
-        qvkGetBufferMemoryRequirements(vk.device, StagImg.buff, &memory_requirements);
+    // To determine the memory requirements for a buffer resource
 
-        uint32_t memory_type = find_memory_type(memory_requirements.memoryTypeBits,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    VkMemoryRequirements memory_requirements;
+    qvkGetBufferMemoryRequirements(vk.device, StagImg.buff, &memory_requirements);
 
-        VkMemoryAllocateInfo alloc_info;
-        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        alloc_info.pNext = NULL;
-        alloc_info.allocationSize = memory_requirements.size;
-        alloc_info.memoryTypeIndex = memory_type;
-        VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &StagImg.deviceMem));
+    uint32_t memory_type = find_memory_type(memory_requirements.memoryTypeBits,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-        
-        VK_CHECK(qvkBindBufferMemory(vk.device, StagImg.buff, StagImg.deviceMem, 0));
+    VkMemoryAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.allocationSize = memory_requirements.size;
+    alloc_info.memoryTypeIndex = memory_type;
+    VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &StagImg.deviceMem));
 
-        //void* data;
-        //VK_CHECK(qvkMapMemory(vk.device, StagImg.deviceMem, 0, VK_WHOLE_SIZE, 0, &data));
 
-        //StagImg.pBufMapped = (unsigned char *)data;
+    VK_CHECK(qvkBindBufferMemory(vk.device, StagImg.buff, StagImg.deviceMem, 0));
 }
 
 
@@ -748,7 +746,7 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
 
 	if ( (scaled_width != width) || (scaled_height != height) )
     {
-        ResampleTexture (pic, width, height, upload_buffer, scaled_width, scaled_height);
+        ResampleTexture (upload_buffer, width, height, pic, scaled_width, scaled_height);
 	}
     else
     {
@@ -762,7 +760,9 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
 	const uint32_t base_height = scaled_height;
     uint32_t mipMapLevels = 1;
 
-	if (isMipMap)
+
+
+    if (isMipMap)
     {
 
         R_LightScaleTexture(upload_buffer, upload_buffer, nBytes);
@@ -784,8 +784,8 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
                 R_MipMap2(in_buffer, scaled_width, scaled_height, dst_ptr);
             }
 
-            //ri.Printf( PRINT_WARNING, "%s, width: %d, height: %d, scaled_width: %d, scaled_height: %d\n",
-            //name, width, height, scaled_width, scaled_height );
+            //ri.Printf( PRINT_WARNING, "%s, scaled_width: %d, scaled_height: %d\n",
+            //    name, scaled_width, scaled_height );
 
             scaled_width >>= 1;
             //if (scaled_width == 0)
@@ -794,7 +794,8 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
             scaled_height >>= 1;
             //if (scaled_height == 0)
             //    scaled_height = 1;
-            
+
+            ++mipMapLevels;
             if((scaled_width == 0) && (scaled_height == 0))
                 break;
 
@@ -805,13 +806,13 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
                 R_BlendOverTexture( in_buffer, scaled_width * scaled_height, mipMapLevels );
             }
 
-            ++mipMapLevels;
-
 
             in_buffer = dst_ptr;
             dst_ptr += mip_level_size; 
         }
     }
+
+    // ri.Printf( PRINT_WARNING, "mipMapLevels: %d\n", mipMapLevels);
 
     vk_createImageHandle(base_width, base_height, mipMapLevels, &pImage->handle);
 	allocate_and_bind_image_memory(pImage->handle);
@@ -916,7 +917,7 @@ static void R_DestroySingleImage( image_t* pImg )
 void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *data, int client, VkBool32 dirty)
 {
 
-	// GL_Bind( tr.scratchImage[client] );
+	GL_Bind( tr.scratchImage[client] );
     image_t* prtImage = tr.scratchImage[client];
  
     

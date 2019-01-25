@@ -328,8 +328,8 @@ static void DEBUG_resample(const char *name, unsigned char* data, unsigned char*
 }
 
 
-void ResampleTexture(const unsigned char *pIn, const unsigned int inwidth, const unsigned int inheight,
-                                unsigned char *pOut, const unsigned int outwidth, const unsigned int outheight)
+void ResampleTexture(unsigned char *pOut, const unsigned int inwidth, const unsigned int inheight,
+                               const unsigned char *pIn, const unsigned int outwidth, const unsigned int outheight)
 {
 	unsigned int i, j;
 	unsigned int p1[2048], p2[2048];
