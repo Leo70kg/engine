@@ -123,6 +123,9 @@ void R_Init( void )
 
     ri.Cmd_AddCommand( "pipelineList", R_PipelineList_f );
 
+    ri.Cmd_AddCommand( "gpuMem", gpuMemUsageInfo_f );
+
+
     R_InitScene();
 
     // VULKAN
@@ -166,7 +169,7 @@ void RE_Shutdown( qboolean destroyWindow )
 
     ri.Cmd_RemoveCommand("pipelineList");
 
-
+    ri.Cmd_RemoveCommand( "gpuMem");
 
 
 	R_DoneFreeType();

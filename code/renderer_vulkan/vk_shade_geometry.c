@@ -209,7 +209,7 @@ void R_SetupProjection( float pMatProj[16] )
 
 }
 
-
+/*
 static void get_mvp_transform(float* mvp, const int isProj2D)
 {
 	if (isProj2D)
@@ -229,10 +229,7 @@ static void get_mvp_transform(float* mvp, const int isProj2D)
         MatrixMultiply4x4_SSE(s_modelview_matrix, backEnd.viewParms.projectionMatrix, mvp);
 	}
 }
-
-
-
-
+*/
 
 static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 {
@@ -430,6 +427,8 @@ void vk_destroy_shading_data(void)
     
     qvkUnmapMemory(vk.device, shadingDat.geometry_buffer_memory);
 	qvkFreeMemory(vk.device, shadingDat.geometry_buffer_memory, NULL);
+
+    memset(&shadingDat, 0, sizeof(shadingDat));
 }
 
 
@@ -551,7 +550,10 @@ void vk_bind_geometry(void)
         // 32 * 4 = 128 BYTES
 	    const unsigned int push_constants_size = 128;
     
-	    get_mvp_transform(push_constants, backEnd.projection2D);
+
+        MatrixMultiply4x4_SSE(s_modelview_matrix, backEnd.viewParms.projectionMatrix, push_constants);
+
+
         //ri.Printf( PRINT_ALL, "backEnd.projection2D = %d\n", backEnd.projection2D);
 		// Eye space transform.
 
@@ -615,7 +617,6 @@ void vk_bind_geometry(void)
 	    float mvp[16] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
         
         //ri.Printf( PRINT_ALL, "projection2D = %d\n", backEnd.projection2D); 
-	    //get_mvp_transform(push_constants, backEnd.projection2D);
 
         if (backEnd.projection2D)
         {

@@ -12,15 +12,21 @@
 
 struct Chunk {
 	VkDeviceMemory memory;
-	VkDeviceSize used;
+	uint32_t used;
 };
 
 
 
 #define MAX_IMAGE_CHUNKS        16
 static struct Chunk s_ImageChunks[MAX_IMAGE_CHUNKS];
-static int s_NumImageChunks = 0;
+static uint32_t s_NumImageChunks = 0;
 
+
+void gpuMemUsageInfo_f(void)
+{
+    ri.Printf(PRINT_ALL, "Number of image chunks:%d, used: %d\n",
+            s_NumImageChunks, s_ImageChunks[s_NumImageChunks].used );
+}
 
 
 ///////////////////////////////////////
@@ -94,10 +100,11 @@ int	s_CurTmu;
 //} glstate_t;
 
 
+static int	s_CurTextures[2];
 
 void GL_Bind( image_t* pImage )
 {
-    static int	s_CurTextures[2];
+
 	if ( s_CurTextures[s_CurTmu] != pImage->texnum )
     {
 		s_CurTextures[s_CurTmu] = pImage->texnum;
@@ -109,6 +116,13 @@ void GL_Bind( image_t* pImage )
 	}
 }
 
+/*
+typedef struct VkMemoryRequirements {
+    VkDeviceSize size;
+    VkDeviceSize alignment;
+    uint32_t memoryTypeBits;
+} VkMemoryRequirements;
+*/
 
 static void allocate_and_bind_image_memory(VkImage image)
 {
@@ -116,11 +130,6 @@ static void allocate_and_bind_image_memory(VkImage image)
 	VkMemoryRequirements memory_requirements;
 	qvkGetImageMemoryRequirements(vk.device, image, &memory_requirements);
 
-	if (memory_requirements.size > IMAGE_CHUNK_SIZE) {
-		ri.Error(ERR_FATAL, "Vulkan: could not allocate memory, image is too large.");
-	}
-
-	struct Chunk* chunk = NULL;
 
 	// Try to find an existing chunk of sufficient capacity.
 	uint64_t mask = (memory_requirements.alignment - 1);
@@ -128,42 +137,48 @@ static void allocate_and_bind_image_memory(VkImage image)
 	for (i = 0; i < s_NumImageChunks; i++)
  	{
 		// ensure that memory region has proper alignment
-		VkDeviceSize offset = (s_ImageChunks[i].used + mask) & (~mask);
-
-		if (offset + memory_requirements.size <= IMAGE_CHUNK_SIZE)
+		VkDeviceSize offset_aligned = (s_ImageChunks[i].used + mask) & (~mask);
+        uint32_t needed = offset_aligned + memory_requirements.size; 
+		if (needed <= IMAGE_CHUNK_SIZE)
 		{
-			chunk = &s_ImageChunks[i];
-			chunk->used = offset + memory_requirements.size;
-			break;
+			s_ImageChunks[i].used = needed;
+            
+            VK_CHECK(qvkBindImageMemory(vk.device, image, s_ImageChunks[i].memory, offset_aligned));
+
+            ri.Printf(PRINT_WARNING, " Chunks[%d].used = %d \n", i, needed);
+
+			return;
 		}
 	}
+
 
 	// Allocate a new chunk in case we couldn't find suitable existing chunk.
-	if (chunk == NULL)
+    ri.Printf(PRINT_WARNING, " Allocate a new chunk.\n");
+
+    VkMemoryAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.allocationSize = IMAGE_CHUNK_SIZE;
+    alloc_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+
+
+    VK_CHECK(qvkAllocateMemory( vk.device, &alloc_info, NULL, &s_ImageChunks[s_NumImageChunks].memory) );
+    s_ImageChunks[s_NumImageChunks].used = memory_requirements.size;
+
+    // To attach memory to a VkImage object created without the VK_IMAGE_CREATE_DISJOINT_BIT set
+    // chunk->memory is the VkDeviceMemory object describing the device memory to attach.
+    // memoryOffset is the start offset of the region of memory which is to be bound to the image. 
+    // The number of bytes returned in the VkMemoryRequirements::size member in memory,
+    // starting from memoryOffset bytes, will be bound to the specified image.
+	VK_CHECK(qvkBindImageMemory(vk.device, image, s_ImageChunks[s_NumImageChunks].memory, 0));
+
+    // s_NumImageChunks++;
+    if (++s_NumImageChunks > MAX_IMAGE_CHUNKS)
     {
+        ri.Error(ERR_FATAL, "Vulkan: image chunk limit has been reached");
+    }
 
-        ri.Printf(PRINT_WARNING, " Allocate a new chunk.\n");
-
-		VkMemoryAllocateInfo alloc_info;
-		alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		alloc_info.pNext = NULL;
-		alloc_info.allocationSize = IMAGE_CHUNK_SIZE;
-		alloc_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		VkDeviceMemory memory;
-		VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
-
-		chunk = &s_ImageChunks[s_NumImageChunks];
-        chunk->memory = memory;
-		chunk->used = memory_requirements.size;
-
-		s_NumImageChunks++;
-        if (s_NumImageChunks >= MAX_IMAGE_CHUNKS) {
-			ri.Error(ERR_FATAL, "Vulkan: image chunk limit has been reached");
-		}
-	}
-
-	VK_CHECK(qvkBindImageMemory(vk.device, image, chunk->memory, chunk->used - memory_requirements.size));
 }
 
 
@@ -1171,6 +1186,6 @@ void vk_destroyImageRes(void)
     VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
     
     ///////////////////////////////////
-    // s_CurTextures[0] = s_CurTextures[1] = 0;
+    s_CurTextures[0] = s_CurTextures[1] = 0;
 	s_CurTmu = 0;
 }
