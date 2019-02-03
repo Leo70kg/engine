@@ -211,13 +211,11 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
         }
     }
 
-    if(NULL != strstr(name, "rocketThrust"))
-    {
-        ri.Printf(PRINT_WARNING, "R_FindShader: %s\n", name);
-    }
 
 	// if not defined in the in-memory shader descriptions,
 	// look for a single supported image file
+
+    /*
     char fileName[128] = {0};
     {
         qboolean ptExist = qfalse;
@@ -247,14 +245,16 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
             fileName[i] = '\0';
         }
     }
+    */
+
 
     image_t* image = R_FindImageFile( name, mipRawImage, mipRawImage, mipRawImage ? GL_REPEAT : GL_CLAMP );
-
+//    if(image != NULL)
+        R_CreateDefaultShadingCmds(name, image);
 
 	//
 	// create the default shading commands
 	//
-    R_CreateDefaultShadingCmds(name, image);
 
     return FinishShader();
 }

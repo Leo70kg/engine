@@ -100,10 +100,11 @@ int	s_CurTmu;
 //} glstate_t;
 
 
-static int	s_CurTextures[2];
+    static int	s_CurTextures[2];
 
 void GL_Bind( image_t* pImage )
 {
+
 
 	if ( s_CurTextures[s_CurTmu] != pImage->texnum )
     {
@@ -145,7 +146,7 @@ static void allocate_and_bind_image_memory(VkImage image)
             
             VK_CHECK(qvkBindImageMemory(vk.device, image, s_ImageChunks[i].memory, offset_aligned));
 
-            ri.Printf(PRINT_WARNING, " Chunks[%d].used = %d \n", i, needed);
+            ri.Printf(PRINT_ALL, " Chunks[%d].used = %d \n", i, needed);
 
 			return;
 		}
@@ -295,11 +296,17 @@ static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height,
 
 		buffer_size += width * height * 4;
 
-		width >>= 1;
-        height >>= 1;
-
-        if ((width == 0) || (height == 0))
+        if ((width == 1) && (height == 1))
 			break;
+
+		width >>= 1;
+        if (width == 0) 
+            width = 1;
+
+        height >>= 1;
+        if (height == 0)
+            height = 1;
+
 	}
 
 
@@ -773,8 +780,8 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
 
 	const uint32_t base_width = scaled_width;
 	const uint32_t base_height = scaled_height;
-    uint32_t mipMapLevels = 1;
 
+    uint32_t mipMapLevels = 1;
 
 
     if (isMipMap)
@@ -799,20 +806,22 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
                 R_MipMap2(in_buffer, scaled_width, scaled_height, dst_ptr);
             }
 
-            //ri.Printf( PRINT_WARNING, "%s, scaled_width: %d, scaled_height: %d\n",
-            //    name, scaled_width, scaled_height );
+            ri.Printf( PRINT_WARNING, "%s, scaled_width: %d, scaled_height: %d\n",
+                name, scaled_width, scaled_height );
+            
+            if((scaled_width == 1) && (scaled_height == 1))
+                break;
 
             scaled_width >>= 1;
-            //if (scaled_width == 0)
-            //    scaled_width = 1;
+            if (scaled_width == 0)
+                scaled_width = 1;
 
             scaled_height >>= 1;
-            //if (scaled_height == 0)
-            //    scaled_height = 1;
+            if (scaled_height == 0)
+                scaled_height = 1;
+
 
             ++mipMapLevels;
-            if((scaled_width == 0) && (scaled_height == 0))
-                break;
 
 
             uint32_t mip_level_size = scaled_width * scaled_height * 4;
@@ -825,15 +834,17 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
             in_buffer = dst_ptr;
             dst_ptr += mip_level_size; 
         }
+
+        ri.Printf( PRINT_WARNING, "mipMapLevels: %d, base_width: %d, base_height: %d\n", mipMapLevels, base_width, base_height);
+
     }
 
-    // ri.Printf( PRINT_WARNING, "mipMapLevels: %d\n", mipMapLevels);
 
     vk_createImageHandle(base_width, base_height, mipMapLevels, &pImage->handle);
 	allocate_and_bind_image_memory(pImage->handle);
     vk_createImageView(pImage->handle, &pImage->view);
     vk_createDescriptorSet(pImage->view , vk_find_sampler(isMipMap, glWrapClampMode == GL_REPEAT), &pImage->descriptor_set);
-
+    s_CurrentDescriptorSets[s_CurTmu] = pImage->descriptor_set;
 
     if(isMipMap)
         vk_upload_image_data(pImage->handle, base_width, base_height, upload_buffer);
@@ -842,7 +853,7 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
 
     free(upload_buffer);
 
-    s_CurrentDescriptorSets[s_CurTmu] = pImage->descriptor_set;
+
 	
     if (s_CurTmu) {
 		s_CurTmu = 0;
@@ -932,7 +943,7 @@ static void R_DestroySingleImage( image_t* pImg )
 void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *data, int client, VkBool32 dirty)
 {
 
-	GL_Bind( tr.scratchImage[client] );
+//	GL_Bind( tr.scratchImage[client] );
     image_t* prtImage = tr.scratchImage[client];
  
     
@@ -1118,7 +1129,7 @@ void R_InitImages( void )
 {
     memset(hashTable, 0, sizeof(hashTable));
     
-    allocateStagingBuffer(4 * 1024 * 1024);
+    allocateStagingBuffer(4 * 2048 * 2048);
 
 	// build brightness translation tables
 	R_SetColorMappings();
@@ -1185,7 +1196,7 @@ void vk_destroyImageRes(void)
 
     VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
     
-    ///////////////////////////////////
     s_CurTextures[0] = s_CurTextures[1] = 0;
+
 	s_CurTmu = 0;
 }

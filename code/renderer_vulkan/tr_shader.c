@@ -2137,8 +2137,9 @@ void R_CreateDefaultShadingCmds(const char* name, image_t* image)
 	{
 		ri.Printf( PRINT_WARNING, "R_CreateDefaultShadingCmds: Couldn't find image for shader %s\n", name );
 		shader.defaultShader = qtrue;
+        return;
 	}
-    else
+//    else
     {
         if ( shader.lightmapIndex == LIGHTMAP_NONE )
         {

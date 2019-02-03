@@ -129,14 +129,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_DebugCallback(
         uint64_t object, size_t location, int32_t message_code, 
         const char* layer_prefix, const char* message, void* user_data )
 {
-#ifdef _WIN32
-	OutputDebugString(message);
-	OutputDebugString("\n");
-	DebugBreak();
-#else
     ri.Printf(PRINT_WARNING, "%s\n", message);
-
-#endif
 	return VK_FALSE;
 }
 
