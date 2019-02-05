@@ -21,9 +21,8 @@ This project is a fork of OpenArena with specific changes to the client and serv
 Install the build dependencies.
 
 ```sh
-$ sudo apt-get install libcurl4-openssl-dev libsdl2-dev libopenal-dev libvulkan-dev
-$ sudo apt-get install libgl1-mesa-dev libopus-dev libopusfile-dev libogg-dev zlib1g-dev libvorbis-dev libjpeg-dev libfreetype6-dev libxmp-dev
-$ sudo apt-get install clang gcc make
+$ sudo apt-get install libcurl4-openssl-dev libsdl2-dev libopenal-dev libvulkan-dev libgl1-mesa-dev
+$ sudo apt-get install clang gcc make git
 $ git clone https://github.com/suijingfeng/engine.git
 $ cd engine
 $ make
@@ -37,7 +36,20 @@ following problem when you launch OA:
 ```
 Vulkan support is either not configured in SDL or not available in video driver.
 ```
-This problem can be solved easily by compiling the SDL 2.0.9 from source, very easy!.
+This problem can be solved easily by compiling the SDL 2.0.9 from source:
+
+Get a copy of the source code from https://www.libsdl.org/, then extract it.
+
+```
+cd SDL
+mkdir build
+cd build
+../configure
+make
+sudo make install
+```
+
+
 
 ## Building on Windows 7 or 10 ##
 

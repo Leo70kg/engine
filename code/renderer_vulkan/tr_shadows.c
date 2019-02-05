@@ -168,9 +168,6 @@ void RB_ShadowTessEnd( void ) {
 		return;
 	}
 
-	if ( glConfig.stencilBits < 4 ) {
-		return;
-	}
 
 	VectorCopy( backEnd.currentEntity->lightDir, lightDir );
 
@@ -222,10 +219,10 @@ void RB_ShadowTessEnd( void ) {
 	R_ExtrudeShadowEdges();
 
 	// mirrors have the culling order reversed
-    int isMir = backEnd.viewParms.isMirror;
+
 	// VULKAN
-	vk_renderShadowEdges(g_stdPipelines.shadow_volume_pipelines[0][isMir]);
-	vk_renderShadowEdges(g_stdPipelines.shadow_volume_pipelines[1][isMir]);
+	vk_renderShadowEdges(g_stdPipelines.shadow_volume_pipelines[0][backEnd.viewParms.isMirror]);
+	vk_renderShadowEdges(g_stdPipelines.shadow_volume_pipelines[1][backEnd.viewParms.isMirror]);
 
 }
 

@@ -322,10 +322,7 @@ void RB_SurfaceBeam( void )
 		return;
 
 
-
-	GL_Bind( tr.whiteImage );
-
-
+    ri.Printf(PRINT_ALL, "RB_SurfaceBeam()? ");
 }
 
 //================================================================================
@@ -1006,8 +1003,12 @@ RB_SurfaceAxis
 Draws x/y/z lines from the origin for orientation debugging
 ===================
 */
-void RB_SurfaceAxis( void ) {
-	GL_Bind( tr.whiteImage );
+void RB_SurfaceAxis( void )
+{
+    // FIXME: implement this
+    //	VK_Bind( tr.whiteImage );
+	ri.Printf( PRINT_ALL, "RB_SurfaceAxis().\n" );
+
 }
 
 //===========================================================================

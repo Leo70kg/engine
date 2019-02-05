@@ -4,6 +4,7 @@
 #include "tr_globals.h"
 #include "tr_cvar.h"
 #include "vk_image.h"
+#include "vk_pipelines.h"
 #include "../renderercommon/matrix_multiplication.h"
 
 
@@ -417,6 +418,48 @@ void vk_createGeometryBuffers(void)
 }
 
 
+
+// Descriptors and Descriptor Sets
+// A descriptor is a special opaque shader variable that shaders use to access buffer 
+// and image resources in an indirect fashion. It can be thought of as a "pointer" to
+// a resource.  The Vulkan API allows these variables to be changed between draw
+// operations so that the shaders can access different resources for each draw.
+
+// A descriptor set is called a "set" because it can refer to an array of homogenous
+// resources that can be described with the same layout binding. one possible way to
+// use multiple descriptors is to construct a descriptor set with two descriptors, 
+// with each descriptor referencing a separate texture. Both textures are therefore
+// available during a draw. A command in a command buffer could then select the texture
+// to use by specifying the index of the desired texture. To describe a descriptor set,
+// you use a descriptor set layout.
+
+// Descriptor sets corresponding to bound texture images.
+
+// outside of TR since it shouldn't be cleared during ref re-init
+// the renderer front end should never modify glstate_t
+//typedef struct {
+
+static int s_CurTmu;
+//	int			texEnv[2];
+//	int			faceCulling;
+//	unsigned long	glStateBits;
+//} glstate_t;
+static VkDescriptorSet s_CurrentDescriptorSets[2] = {0};
+static int	s_CurTextures[2];
+
+void GL_Bind( image_t* pImage )
+{
+
+//    if ( s_CurTextures[s_CurTmu] != pImage->index )
+    {
+//        s_CurTextures[s_CurTmu] = pImage->index;
+
+        // VULKAN
+        s_CurrentDescriptorSets[s_CurTmu] = pImage->descriptor_set;
+    }
+}
+
+
 void vk_destroy_shading_data(void)
 {
     ri.Printf(PRINT_ALL, " Destroy vertex/index buffer: shadingDat.vertex_buffer shadingDat.index_buffer. \n");
@@ -429,8 +472,18 @@ void vk_destroy_shading_data(void)
 	qvkFreeMemory(vk.device, shadingDat.geometry_buffer_memory, NULL);
 
     memset(&shadingDat, 0, sizeof(shadingDat));
-}
 
+//////////////////////////////////////////////////////////////
+    memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
+
+    VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
+    
+    s_CurTextures[0] = s_CurTextures[1] = 0;
+
+    s_CurTmu = 0;
+
+///////////////////////////////////////////////////////////////
+}
 
 void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed)
 {
@@ -472,7 +525,7 @@ void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth
 //    Any bindings that were previously applied via these sets are no longer valid.
 
 	qvkCmdBindDescriptorSets(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        vk.pipeline_layout, 0, (multitexture ? 2 : 1), getCurDescriptorSetsPtr(), 0, NULL);
+        vk.pipeline_layout, 0, (multitexture ? 2 : 1), s_CurrentDescriptorSets, 0, NULL);
 
     // bind pipeline
 	qvkCmdBindPipeline(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -490,8 +543,8 @@ void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth
 
 	// issue draw call
 	if (indexed)
-        qvkCmdDrawIndexed(vk.command_buffer, tess.numIndexes, 1, 0, 0, 0);
-    else
+		qvkCmdDrawIndexed(vk.command_buffer, tess.numIndexes, 1, 0, 0, 0);
+	else
 		qvkCmdDraw(vk.command_buffer, tess.numVertexes, 1, 0, 0);
 
 	set_depth_attachment(VK_TRUE);
@@ -543,7 +596,6 @@ void vk_bind_geometry(void)
 
 	if (backEnd.viewParms.isPortal)
     {
-        unsigned int i = 0;
 
         // mvp transform + eye transform + clipping plane in eye space
         float push_constants[32] QALIGN(16);
@@ -569,6 +621,7 @@ void vk_bind_geometry(void)
 		world_plane[3] = backEnd.viewParms.portalPlane.dist;
 
         float* eye_xform = push_constants + 16;
+		unsigned int i = 0;
 		for (i = 0; i < 12; i++)
         {
 			eye_xform[i] = backEnd.or.modelMatrix[(i%4)*4 + i/4 ];
@@ -608,13 +661,12 @@ void vk_bind_geometry(void)
         // Push constants represent a high speed path to modify constant data in pipelines
         // that is expected to outperform memory-backed resource updates.
 	    qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, push_constants_size, push_constants);
-
 	}
     else
     {
       	// push constants are another way of passing dynamic values to shaders
- 	    // Specify push constants.
-	    float mvp[16] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
+		// Specify push constants.
+		float mvp[16] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
         
         //ri.Printf( PRINT_ALL, "projection2D = %d\n", backEnd.projection2D); 
 
@@ -641,7 +693,597 @@ void vk_bind_geometry(void)
         // which are updated via Vulkan commands rather than via writes to memory or copy commands.
         // Push constants represent a high speed path to modify constant data in pipelines
         // that is expected to outperform memory-backed resource updates.
-	    qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 64, mvp);
+		qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 64, mvp);
     }
 
 }
+
+
+
+
+static void ComputeColors( shaderStage_t *pStage )
+{
+	int		i, nVerts;
+	//
+	// rgbGen
+	//
+	switch ( pStage->rgbGen )
+	{
+		case CGEN_IDENTITY:
+			memset( tess.svars.colors, 0xff, tess.numVertexes * 4 );
+			break;
+		default:
+		case CGEN_IDENTITY_LIGHTING:
+			memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
+			break;
+		case CGEN_LIGHTING_DIFFUSE:
+			RB_CalcDiffuseColor( tess.svars.colors );
+			break;
+		case CGEN_EXACT_VERTEX:
+			memcpy( tess.svars.colors, tess.vertexColors, tess.numVertexes * sizeof( tess.vertexColors[0] ) );
+			break;
+		case CGEN_CONST:
+            
+            nVerts = tess.numVertexes;
+
+			for ( i = 0; i < nVerts; i++ )
+            {
+				memcpy(tess.svars.colors[i], pStage->constantColor, 4);
+			}
+			break;
+		case CGEN_VERTEX:
+			if ( tr.identityLight == 1 )
+			{
+				memcpy( tess.svars.colors, tess.vertexColors, tess.numVertexes * sizeof( tess.vertexColors[0] ) );
+			}
+			else
+			{
+				for ( i = 0; i < tess.numVertexes; i++ )
+				{
+					tess.svars.colors[i][0] = tess.vertexColors[i][0] * tr.identityLight;
+					tess.svars.colors[i][1] = tess.vertexColors[i][1] * tr.identityLight;
+					tess.svars.colors[i][2] = tess.vertexColors[i][2] * tr.identityLight;
+					tess.svars.colors[i][3] = tess.vertexColors[i][3];
+				}
+			}
+			break;
+		case CGEN_ONE_MINUS_VERTEX:
+			if ( tr.identityLight == 1 )
+			{
+				for ( i = 0; i < tess.numVertexes; i++ )
+				{
+					tess.svars.colors[i][0] = 255 - tess.vertexColors[i][0];
+					tess.svars.colors[i][1] = 255 - tess.vertexColors[i][1];
+					tess.svars.colors[i][2] = 255 - tess.vertexColors[i][2];
+				}
+			}
+			else
+			{
+				for ( i = 0; i < tess.numVertexes; i++ )
+				{
+					tess.svars.colors[i][0] = ( 255 - tess.vertexColors[i][0] ) * tr.identityLight;
+					tess.svars.colors[i][1] = ( 255 - tess.vertexColors[i][1] ) * tr.identityLight;
+					tess.svars.colors[i][2] = ( 255 - tess.vertexColors[i][2] ) * tr.identityLight;
+				}
+			}
+			break;
+		case CGEN_FOG:
+		{
+			fog_t* fog = tr.world->fogs + tess.fogNum;
+
+            nVerts = tess.numVertexes;
+
+			for (i = 0; i < nVerts; i++)
+			{
+				tess.svars.colors[i][0] = fog->colorRGBA[0];
+				tess.svars.colors[i][1] = fog->colorRGBA[1];
+				tess.svars.colors[i][2] = fog->colorRGBA[2];
+				tess.svars.colors[i][3] = fog->colorRGBA[3];
+			}
+		}break;
+		case CGEN_WAVEFORM:
+			RB_CalcWaveColor( &pStage->rgbWave, tess.svars.colors );
+			break;
+		case CGEN_ENTITY:
+			RB_CalcColorFromEntity( tess.svars.colors );
+			break;
+		case CGEN_ONE_MINUS_ENTITY:
+			RB_CalcColorFromOneMinusEntity( tess.svars.colors );
+			break;
+	}
+
+	//
+	// alphaGen
+	//
+	switch ( pStage->alphaGen )
+	{
+	case AGEN_SKIP:
+		break;
+	case AGEN_IDENTITY:
+		if ( pStage->rgbGen != CGEN_IDENTITY ) {
+			if ( ( pStage->rgbGen == CGEN_VERTEX && tr.identityLight != 1 ) ||
+				 pStage->rgbGen != CGEN_VERTEX ) {
+				for ( i = 0; i < tess.numVertexes; i++ ) {
+					tess.svars.colors[i][3] = 0xff;
+				}
+			}
+		}
+		break;
+	case AGEN_CONST:
+		if ( pStage->rgbGen != CGEN_CONST ) {
+			for ( i = 0; i < tess.numVertexes; i++ ) {
+				tess.svars.colors[i][3] = pStage->constantColor[3];
+			}
+		}
+		break;
+	case AGEN_WAVEFORM:
+		RB_CalcWaveAlpha( &pStage->alphaWave, ( unsigned char * ) tess.svars.colors );
+		break;
+	case AGEN_LIGHTING_SPECULAR:
+		RB_CalcSpecularAlpha( ( unsigned char * ) tess.svars.colors );
+		break;
+	case AGEN_ENTITY:
+		RB_CalcAlphaFromEntity( ( unsigned char * ) tess.svars.colors );
+		break;
+	case AGEN_ONE_MINUS_ENTITY:
+		RB_CalcAlphaFromOneMinusEntity( ( unsigned char * ) tess.svars.colors );
+		break;
+    case AGEN_VERTEX:
+		if ( pStage->rgbGen != CGEN_VERTEX ) {
+			for ( i = 0; i < tess.numVertexes; i++ ) {
+				tess.svars.colors[i][3] = tess.vertexColors[i][3];
+			}
+		}
+        break;
+    case AGEN_ONE_MINUS_VERTEX:
+        for ( i = 0; i < tess.numVertexes; i++ )
+        {
+			tess.svars.colors[i][3] = 255 - tess.vertexColors[i][3];
+        }
+        break;
+	case AGEN_PORTAL:
+		{
+			unsigned char alpha;
+
+			for ( i = 0; i < tess.numVertexes; i++ )
+			{
+				float len;
+				vec3_t v;
+
+				VectorSubtract( tess.xyz[i], backEnd.viewParms.or.origin, v );
+				len = VectorLength( v );
+
+				len /= tess.shader->portalRange;
+
+				if ( len < 0 )
+				{
+					alpha = 0;
+				}
+				else if ( len > 1 )
+				{
+					alpha = 0xff;
+				}
+				else
+				{
+					alpha = len * 0xff;
+				}
+
+				tess.svars.colors[i][3] = alpha;
+			}
+		}
+		break;
+	}
+
+	//
+	// fog adjustment for colors to fade out as fog increases
+	//
+	if ( tess.fogNum )
+	{
+		switch ( pStage->adjustColorsForFog )
+		{
+		case ACFF_MODULATE_RGB:
+			RB_CalcModulateColorsByFog( ( unsigned char * ) tess.svars.colors );
+			break;
+		case ACFF_MODULATE_ALPHA:
+			RB_CalcModulateAlphasByFog( ( unsigned char * ) tess.svars.colors );
+			break;
+		case ACFF_MODULATE_RGBA:
+			RB_CalcModulateRGBAsByFog( ( unsigned char * ) tess.svars.colors );
+			break;
+		case ACFF_NONE:
+			break;
+		}
+	}
+}
+
+static void ComputeTexCoords( shaderStage_t *pStage )
+{
+	int		i;
+	int		b;
+
+	for ( b = 0; b < NUM_TEXTURE_BUNDLES; b++ )
+    {
+		int tm;
+
+		//
+		// generate the texture coordinates
+		//
+		switch ( pStage->bundle[b].tcGen )
+		{
+            case TCGEN_IDENTITY:
+                memset( tess.svars.texcoords[b], 0, sizeof( float ) * 2 * tess.numVertexes );
+                break;
+            case TCGEN_TEXTURE:
+                for ( i = 0 ; i < tess.numVertexes ; i++ ) {
+                    tess.svars.texcoords[b][i][0] = tess.texCoords[i][0][0];
+                    tess.svars.texcoords[b][i][1] = tess.texCoords[i][0][1];
+                }
+                break;
+            case TCGEN_LIGHTMAP:
+                for ( i = 0 ; i < tess.numVertexes ; i++ ) {
+                    tess.svars.texcoords[b][i][0] = tess.texCoords[i][1][0];
+                    tess.svars.texcoords[b][i][1] = tess.texCoords[i][1][1];
+                }
+                break;
+            case TCGEN_VECTOR:
+                for ( i = 0 ; i < tess.numVertexes ; i++ ) {
+                    tess.svars.texcoords[b][i][0] = DotProduct( tess.xyz[i], pStage->bundle[b].tcGenVectors[0] );
+                    tess.svars.texcoords[b][i][1] = DotProduct( tess.xyz[i], pStage->bundle[b].tcGenVectors[1] );
+                }
+                break;
+            case TCGEN_FOG:
+                RB_CalcFogTexCoords( ( float * ) tess.svars.texcoords[b] );
+                break;
+            case TCGEN_ENVIRONMENT_MAPPED:
+                RB_CalcEnvironmentTexCoords( ( float * ) tess.svars.texcoords[b] );
+                break;
+            case TCGEN_BAD:
+                return;
+		}
+
+		//
+		// alter texture coordinates
+		//
+		for ( tm = 0; tm < pStage->bundle[b].numTexMods ; tm++ )
+        {
+			switch ( pStage->bundle[b].texMods[tm].type )
+			{
+			case TMOD_NONE:
+				tm = TR_MAX_TEXMODS;		// break out of for loop
+				break;
+
+			case TMOD_TURBULENT:
+				RB_CalcTurbulentTexCoords( &pStage->bundle[b].texMods[tm].wave, 
+						                 ( float * ) tess.svars.texcoords[b] );
+				break;
+
+			case TMOD_ENTITY_TRANSLATE:
+				RB_CalcScrollTexCoords( backEnd.currentEntity->e.shaderTexCoord,
+									 ( float * ) tess.svars.texcoords[b] );
+				break;
+
+			case TMOD_SCROLL:
+				RB_CalcScrollTexCoords( pStage->bundle[b].texMods[tm].scroll,
+										 ( float * ) tess.svars.texcoords[b] );
+				break;
+
+			case TMOD_SCALE:
+				RB_CalcScaleTexCoords( pStage->bundle[b].texMods[tm].scale,
+									 ( float * ) tess.svars.texcoords[b] );
+				break;
+			
+			case TMOD_STRETCH:
+				RB_CalcStretchTexCoords( &pStage->bundle[b].texMods[tm].wave, 
+						               ( float * ) tess.svars.texcoords[b] );
+				break;
+
+			case TMOD_TRANSFORM:
+				RB_CalcTransformTexCoords( &pStage->bundle[b].texMods[tm],
+						                 ( float * ) tess.svars.texcoords[b] );
+				break;
+
+			case TMOD_ROTATE:
+				RB_CalcRotateTexCoords( pStage->bundle[b].texMods[tm].rotateSpeed,
+										( float * ) tess.svars.texcoords[b] );
+				break;
+
+			default:
+				ri.Error( ERR_DROP, "ERROR: unknown texmod '%d' in shader '%s'\n", pStage->bundle[b].texMods[tm].type, tess.shader->name );
+				break;
+			}
+		}
+	}
+}
+
+
+static void R_BindAnimatedImage( textureBundle_t *bundle )
+{
+	int		index;
+
+	if ( bundle->isVideoMap ) {
+		ri.CIN_RunCinematic(bundle->videoMapHandle);
+		ri.CIN_UploadCinematic(bundle->videoMapHandle);
+		return;
+	}
+
+	if ( bundle->numImageAnimations <= 1 ) {
+		GL_Bind( bundle->image[0] );
+		return;
+	}
+
+	// it is necessary to do this messy calc to make sure animations line up
+	// exactly with waveforms of the same frequency
+	index = (int)( tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE );
+	index >>= FUNCTABLE_SIZE2;
+
+	if ( index < 0 ) {
+		index = 0;	// may happen with shader time offsets
+	}
+	index %= bundle->numImageAnimations;
+
+	GL_Bind( bundle->image[ index ] );
+}
+
+/*
+===================
+ProjectDlightTexture
+
+Perform dynamic lighting with another rendering pass
+===================
+*/
+static void ProjectDlightTexture( void ) {
+	int		i, l;
+	vec3_t	origin;
+	float	*texCoords;
+	byte	*colors;
+	byte	clipBits[SHADER_MAX_VERTEXES];
+	int		numIndexes;
+	float	scale;
+	float	radius;
+	vec3_t	floatColor;
+	float	modulate;
+
+	if ( !backEnd.refdef.num_dlights ) {
+		return;
+	}
+
+	for ( l = 0 ; l < backEnd.refdef.num_dlights ; l++ ) {
+		dlight_t	*dl;
+
+		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
+			continue;	// this surface definately doesn't have any of this light
+		}
+		texCoords = tess.svars.texcoords[0][0];
+		colors = tess.svars.colors[0];
+
+		dl = &backEnd.refdef.dlights[l];
+		VectorCopy( dl->transformed, origin );
+        radius = dl->radius;
+		scale = 1.0f / radius;
+
+		floatColor[0] = dl->color[0] * 255.0f;
+		floatColor[1] = dl->color[1] * 255.0f;
+		floatColor[2] = dl->color[2] * 255.0f;
+
+		for ( i = 0 ; i < tess.numVertexes ; i++, texCoords += 2, colors += 4 ) {
+			vec3_t	dist;
+			int		clip;
+
+			backEnd.pc.c_dlightVertexes++;
+
+			VectorSubtract( origin, tess.xyz[i], dist );
+			texCoords[0] = 0.5f + dist[0] * scale;
+			texCoords[1] = 0.5f + dist[1] * scale;
+
+			clip = 0;
+			if ( texCoords[0] < 0.0f ) {
+				clip |= 1;
+			} else if ( texCoords[0] > 1.0f ) {
+				clip |= 2;
+			}
+			if ( texCoords[1] < 0.0f ) {
+				clip |= 4;
+			} else if ( texCoords[1] > 1.0f ) {
+				clip |= 8;
+			}
+			// modulate the strength based on the height and color
+			if ( dist[2] > radius ) {
+				clip |= 16;
+				modulate = 0.0f;
+			} else if ( dist[2] < -radius ) {
+				clip |= 32;
+				modulate = 0.0f;
+			} else {
+				dist[2] = fabs(dist[2]);
+				if ( dist[2] < radius * 0.5f ) {
+					modulate = 1.0f;
+				} else {
+					modulate = 2.0f * (radius - dist[2]) * scale;
+				}
+			}
+			clipBits[i] = clip;
+
+			colors[0] = (floatColor[0] * modulate);
+			colors[1] = (floatColor[1] * modulate);
+			colors[2] = (floatColor[2] * modulate);
+			colors[3] = 255;
+		}
+
+		// build a list of triangles that need light
+		numIndexes = 0;
+		for ( i = 0 ; i < tess.numIndexes ; i += 3 ) {
+			int		a, b, c;
+
+			a = tess.indexes[i];
+			b = tess.indexes[i+1];
+			c = tess.indexes[i+2];
+			if ( clipBits[a] & clipBits[b] & clipBits[c] ) {
+				continue;	// not lighted
+			}
+			numIndexes += 3;
+		}
+
+		if ( !numIndexes ) {
+			continue;
+		}
+
+
+
+		GL_Bind( tr.dlightImage );
+		// include GLS_DEPTHFUNC_EQUAL so alpha tested surfaces don't add light where they aren't rendered
+		backEnd.pc.c_totalIndexes += numIndexes;
+		backEnd.pc.c_dlightIndexes += numIndexes;
+
+		// VULKAN
+
+		VkPipeline pipeline = g_stdPipelines.dlight_pipelines[dl->additive > 0 ? 1 : 0][tess.shader->cullType][tess.shader->polygonOffset];
+		vk_shade_geometry(pipeline, qfalse, normal, qtrue);
+
+	}
+}
+
+
+
+/*
+===================
+RB_FogPass
+
+Blends a fog texture on top of everything else
+===================
+*/
+static void RB_FogPass( void ) {
+
+	unsigned int i;
+
+	fog_t* fog = tr.world->fogs + tess.fogNum;
+
+    const unsigned int nVerts = tess.numVertexes;
+	for (i = 0; i < nVerts; i++)
+	{
+		tess.svars.colors[i][0] = fog->colorRGBA[0];
+		tess.svars.colors[i][1] = fog->colorRGBA[1];
+		tess.svars.colors[i][2] = fog->colorRGBA[2];
+		tess.svars.colors[i][3] = fog->colorRGBA[3];
+	}
+
+	RB_CalcFogTexCoords( ( float * ) tess.svars.texcoords[0] );
+
+	GL_Bind( tr.fogImage );
+
+	// VULKAN
+
+    assert(tess.shader->fogPass > 0);
+    VkPipeline pipeline = g_stdPipelines.fog_pipelines[tess.shader->fogPass - 1][tess.shader->cullType][tess.shader->polygonOffset];
+    vk_shade_geometry(pipeline, qfalse, normal, qtrue);
+}
+
+
+void RB_StageIteratorGeneric( void )
+{
+//	shaderCommands_t *input;
+
+//	input = &tess;
+
+	RB_DeformTessGeometry();
+
+	// call shader function
+	//
+	// VULKAN
+
+	vk_bind_geometry();
+    
+    uint32_t stage = 0;
+
+	for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ )
+	{
+		if ( NULL == tess.xstages[stage])
+		{
+			break;
+		}
+
+		ComputeColors( tess.xstages[stage] );
+		ComputeTexCoords( tess.xstages[stage] );
+
+        // base
+        s_CurTmu = 0 ;
+
+        // set state
+		R_BindAnimatedImage( &tess.xstages[stage]->bundle[0] );
+		//
+		// do multitexture
+		//
+        qboolean multitexture = (tess.xstages[stage]->bundle[1].image[0] != NULL);
+
+		if ( multitexture )
+		{
+            // DrawMultitextured( input, stage );
+            // output = t0 * t1 or t0 + t1
+
+            // t0 = most upstream according to spec
+            // t1 = most downstream according to spec
+            // this is an ugly hack to work around a GeForce driver
+            // bug with multitexture and clip planes
+
+
+            // lightmap/secondary pass
+            s_CurTmu = 1 ;
+
+            R_BindAnimatedImage( &tess.xstages[stage]->bundle[1] );
+            // disable texturing on TEXTURE1, then select TEXTURE0
+            s_CurTmu = 0;
+		}
+
+        
+        enum Vk_Depth_Range depth_range = normal;
+        if (tess.shader->isSky)
+        {
+            depth_range = force_one;
+            if (r_showsky->integer)
+                depth_range = force_zero;
+        }
+        else if (backEnd.currentEntity->e.renderfx & RF_DEPTHHACK)
+        {
+            depth_range = weapon;
+        }
+
+        if (r_lightmap->integer && multitexture)
+            GL_Bind(tr.whiteImage); // replace diffuse texture with a white one thus effectively render only lightmap
+
+        
+        if (backEnd.viewParms.isMirror)
+        {
+            vk_shade_geometry(tess.xstages[stage]->vk_mirror_pipeline, multitexture, depth_range, qtrue);
+        }
+        else if (backEnd.viewParms.isPortal)
+        {
+            vk_shade_geometry(tess.xstages[stage]->vk_portal_pipeline, multitexture, depth_range, qtrue);
+        }
+        else
+        {
+            vk_shade_geometry(tess.xstages[stage]->vk_pipeline, multitexture, depth_range, qtrue);
+        }
+
+                
+		// allow skipping out to show just lightmaps during development
+		if ( r_lightmap->integer && ( tess.xstages[stage]->bundle[0].isLightmap || tess.xstages[stage]->bundle[1].isLightmap ) )
+		{
+			break;
+		}
+	}
+
+	// 
+	// now do any dynamic lighting needed
+	//
+	if ( tess.dlightBits && tess.shader->sort <= SS_OPAQUE
+		&& !(tess.shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY) ) ) {
+		ProjectDlightTexture();
+	}
+
+	//
+	// now do fog
+	//
+	if ( tess.fogNum && tess.shader->fogPass ) {
+		RB_FogPass();
+	}
+}
+

@@ -250,7 +250,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 
     image_t* image = R_FindImageFile( name, mipRawImage, mipRawImage, mipRawImage ? GL_REPEAT : GL_CLAMP );
 //    if(image != NULL)
-        R_CreateDefaultShadingCmds(name, image);
+    R_CreateDefaultShadingCmds(name, image);
 
 	//
 	// create the default shading commands

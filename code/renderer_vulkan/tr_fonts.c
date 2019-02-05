@@ -502,7 +502,7 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font)
 				WriteTGA(name, imageBuff, 256, 256);
 			}
 
-			image = R_CreateImage(name, imageBuff, 256, 256, qfalse, qfalse, GL_CLAMP);
+			image = R_CreateImage(name, imageBuff, 256, 256, qfalse, qfalse, GL_CLAMP, 0);
 
             ri.Printf(PRINT_WARNING, "RE_RegisterFont: ri.Malloc failure during output image creation.\n");
 
