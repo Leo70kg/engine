@@ -18,7 +18,7 @@ struct StagingBufferImage
     VkBuffer buff;
     VkDeviceMemory devMemMappable;
     VkDeviceMemory devMemStoreImg;
-    uint32_t used;
+    uint32_t memUsed;
 
 // pointer to mapped staging buffer
 //    unsigned char* pBufMapped;
@@ -29,7 +29,7 @@ struct StagingBufferImage StagImg;
 
 void gpuMemUsageInfo_f(void)
 {
-    ri.Printf(PRINT_ALL, "device local memory used: %d\n", StagImg.used );
+    ri.Printf(PRINT_ALL, "device local memory used: %d\n", StagImg.memUsed );
 }
 
 
@@ -183,7 +183,7 @@ static void allocateStagingBuffer(uint32_t size)
 
     VK_CHECK(qvkAllocateMemory( vk.device, &dev_local_alloc_info, NULL, &StagImg.devMemStoreImg ) );
     
-    StagImg.used = 0;
+    StagImg.memUsed = 0;
 
 }
 
@@ -198,12 +198,12 @@ static void vk_destroy_staging_buffer(void)
     
     if (StagImg.devMemMappable != VK_NULL_HANDLE)
     {
-	qvkFreeMemory(vk.device, StagImg.devMemMappable, NULL);
+        qvkFreeMemory(vk.device, StagImg.devMemMappable, NULL);
     }
 
     if (StagImg.devMemStoreImg != VK_NULL_HANDLE)
     {
-	qvkFreeMemory(vk.device, StagImg.devMemStoreImg, NULL);
+        qvkFreeMemory(vk.device, StagImg.devMemStoreImg, NULL);
     }
 
     memset(&StagImg, 0, sizeof(StagImg));
@@ -278,7 +278,6 @@ static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height,
         alloc_info.commandBufferCount = 1;
         VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &cmd_buf));
     }
-
 
     {
         VkCommandBufferBeginInfo begin_info;
@@ -406,9 +405,7 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
         alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         alloc_info.commandBufferCount = 1;
         VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &cmd_buf));
-    }
-
-    {
+ 
         VkCommandBufferBeginInfo begin_info;
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.pNext = NULL;
@@ -474,10 +471,9 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    ////////
-    
     VK_CHECK(qvkEndCommandBuffer(cmd_buf));
 
+    ////////
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
@@ -544,12 +540,10 @@ void record_image_layout_transition(
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-// vkCmdPipelineBarrier is a synchronization command that 
-// inserts a dependency between commands submitted to the
-// same queue, or between commands in the same subpass.
-// When vkCmdPipelineBarrier is submitted to a queue, 
-// it defines a memory dependency between commands that
-// were submitted before it, and those submitted after it.
+// vkCmdPipelineBarrier is a synchronization command that inserts a dependency between
+// commands submitted to the same queue, or between commands in the same subpass.
+// When vkCmdPipelineBarrier is submitted to a queue, it defines a memory dependency
+// between commands that were submitted before it, and those submitted after it.
     
     // cmdBuf is the command buffer into which the command is recorded.
 	qvkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
@@ -597,14 +591,14 @@ static VkImage vk_createImageAndBindWithMemory(const uint32_t width, const uint3
     uint32_t mask = (memory_requirements.alignment - 1);
 
     // ensure that memory region has proper alignment
-    uint32_t offset_aligned = (StagImg.used + mask) & (~mask);
-    uint32_t needed = offset_aligned + memory_requirements.size; 
+    uint32_t offset_aligned = (StagImg.memUsed + mask) & (~mask);
     
-    // ensure that device local memory is enough
-    assert (needed <= IMAGE_CHUNK_SIZE);
+    StagImg.memUsed = offset_aligned + memory_requirements.size;
 
-    StagImg.used = needed;
-    
+    // ensure that device local memory is enough
+    assert (StagImg.memUsed <= IMAGE_CHUNK_SIZE);
+
+
     // To attach memory to a VkImage object created without the VK_IMAGE_CREATE_DISJOINT_BIT set
     //
     // StagImg.devMemStoreImg is the VkDeviceMemory object describing the device memory to attach.
@@ -614,9 +608,11 @@ static VkImage vk_createImageAndBindWithMemory(const uint32_t width, const uint3
 
     VK_CHECK(qvkBindImageMemory(vk.device, this_image, StagImg.devMemStoreImg, offset_aligned));
     // 	for debug info
-    ri.Printf(PRINT_ALL, " StagImg.used = %dk bytes\n", StagImg.used / 1024);
+    ri.Printf(PRINT_ALL, " StagImg.memUsed = %d MB\n", StagImg.memUsed / (1024 * 1024));
     return this_image;
 }
+
+
 
 static void vk_createImageView(VkImage h_image, VkImageView* pView)
 {
@@ -796,7 +792,7 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
                 R_MipMap2(in_buffer, scaled_width, scaled_height, dst_ptr);
             }
 
-            ri.Printf( PRINT_WARNING, "%s, scaled_width: %d, scaled_height: %d\n", name, scaled_width, scaled_height );
+            // ri.Printf( PRINT_WARNING, "%s, scaled_width: %d, scaled_height: %d\n", name, scaled_width, scaled_height );
             
             if((scaled_width == 1) && (scaled_height == 1))
                 break;
@@ -831,7 +827,7 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, ui
 
     pImage->handle = vk_createImageAndBindWithMemory(base_width, base_height, mipMapLevels);
     vk_createImageView(pImage->handle, &pImage->view);
-    vk_createDescriptorSet(pImage->view , vk_find_sampler(isMipMap, glWrapClampMode == GL_REPEAT), &pImage->descriptor_set);
+    vk_createDescriptorSet(pImage->view, vk_find_sampler(isMipMap, glWrapClampMode == GL_REPEAT), &pImage->descriptor_set);
 //    s_CurrentDescriptorSets[s_CurTmu] = pImage->descriptor_set;
 
     if(isMipMap)
@@ -963,7 +959,7 @@ static void R_CreateDefaultImage( void )
 	// the default image will be a box, to allow you to see the mapping coordinates
 	memset( data, 32, sizeof( data ) );
 
-	unsigned int x;
+	uint32_t x;
 	for ( x = 0; x < DEFAULT_SIZE; x++ )
 	{
 		data[0][x][0] =

@@ -139,7 +139,7 @@ static void vk_renderShadowEdges(VkPipeline vk_pipeline)
 		}
 
         vk_bind_geometry();
-        vk_shade_geometry(vk_pipeline, qfalse, normal, qtrue);
+        vk_shade_geometry(vk_pipeline, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 
 
 		i += count;
@@ -282,7 +282,7 @@ void RB_ShadowFinish( void )
     reset_modelview_matrix();
 
     vk_bind_geometry();
-    vk_shade_geometry(g_stdPipelines.shadow_finish_pipeline, qfalse, normal, qtrue);
+    vk_shade_geometry(g_stdPipelines.shadow_finish_pipeline, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 
     set_modelview_matrix(bak);
 

@@ -481,7 +481,7 @@ static void DrawSkyBox( shader_t *shader )
         memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
 
         vk_bind_geometry();
-        vk_shade_geometry(g_stdPipelines.skybox_pipeline, qfalse, r_showsky->integer ? force_zero : force_one, qtrue);
+        vk_shade_geometry(g_stdPipelines.skybox_pipeline, VK_FALSE, r_showsky->integer ? DEPTH_RANGE_ZERO : DEPTH_RANGE_ONE, VK_TRUE);
 
 	}
 

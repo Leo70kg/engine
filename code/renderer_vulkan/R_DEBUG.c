@@ -86,8 +86,9 @@ void R_DebugPolygon( int color, int numPoints, float *points )
 	}
 
 
+
     vk_bind_geometry();
-    vk_shade_geometry(g_stdPipelines.surface_debug_pipeline_solid, qfalse, normal, qtrue);
+    vk_shade_geometry(g_stdPipelines.surface_debug_pipeline_solid, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 
 
 	// Outline.
@@ -103,7 +104,7 @@ void R_DebugPolygon( int color, int numPoints, float *points )
 
 
     vk_bind_geometry();
-    vk_shade_geometry(g_stdPipelines.surface_debug_pipeline_outline, qfalse, force_zero, qfalse);
+    vk_shade_geometry(g_stdPipelines.surface_debug_pipeline_outline, VK_FALSE, DEPTH_RANGE_ZERO, VK_FALSE);
 	
     tess.numVertexes = 0;
 }
@@ -200,7 +201,7 @@ void RB_ShowImages(void)
 
 
         vk_bind_geometry();
-        vk_shade_geometry(g_stdPipelines.images_debug_pipeline, qfalse, normal, qtrue);
+        vk_shade_geometry(g_stdPipelines.images_debug_pipeline, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 
 	}
 	tess.numIndexes = 0;
@@ -222,7 +223,7 @@ void DrawTris (shaderCommands_t *input)
 
     memset(tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
     VkPipeline pipeline = backEnd.viewParms.isMirror ? g_stdPipelines.tris_mirror_debug_pipeline : g_stdPipelines.tris_debug_pipeline;
-    vk_shade_geometry(pipeline, qfalse, force_zero, qtrue);
+    vk_shade_geometry(pipeline, VK_FALSE, DEPTH_RANGE_ZERO, VK_FALSE);
 
 }
 
@@ -261,7 +262,7 @@ void DrawNormals (shaderCommands_t *input)
 
 
         vk_bind_geometry();
-        vk_shade_geometry(g_stdPipelines.normals_debug_pipeline, qfalse, force_zero, qfalse);
+        vk_shade_geometry(g_stdPipelines.normals_debug_pipeline, VK_FALSE, DEPTH_RANGE_ZERO, VK_TRUE);
 
         i += count;
     }

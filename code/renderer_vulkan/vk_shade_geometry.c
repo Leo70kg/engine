@@ -253,25 +253,25 @@ static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 
     switch(depth_range)
     {
-        case normal:
+        case DEPTH_RANGE_NORMAL:
         {
         	viewport.minDepth = 0.0f;
 		    viewport.maxDepth = 1.0f;
         }break;
 
-        case force_zero:
+        case DEPTH_RANGE_ZERO:
         {
 		    viewport.minDepth = 0.0f;
 		    viewport.maxDepth = 0.0f;
 	    }break;
         
-        case force_one:
+        case DEPTH_RANGE_ONE:
         {
 		    viewport.minDepth = 1.0f;
 		    viewport.maxDepth = 1.0f;
 	    }break;
 
-        case weapon:
+        case DEPTH_RANGE_WEAPON:
         {
             viewport.minDepth = 0.0f;
 		    viewport.maxDepth = 0.3f;
@@ -445,7 +445,7 @@ static int s_CurTmu;
 //	unsigned long	glStateBits;
 //} glstate_t;
 static VkDescriptorSet s_CurrentDescriptorSets[2] = {0};
-static int	s_CurTextures[2];
+// static int	s_CurTextures[2];
 
 void GL_Bind( image_t* pImage )
 {
@@ -478,7 +478,7 @@ void vk_destroy_shading_data(void)
 
     VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
     
-    s_CurTextures[0] = s_CurTextures[1] = 0;
+//    s_CurTextures[0] = s_CurTextures[1] = 0;
 
     s_CurTmu = 0;
 
@@ -580,7 +580,7 @@ void vk_bind_geometry(void)
 
 	// indexes stream
 	{
-		size_t indexes_size = tess.numIndexes * sizeof(uint32_t);        
+		const uint32_t indexes_size = tess.numIndexes * sizeof(uint32_t);        
 
 		unsigned char* dst = shadingDat.index_buffer_ptr + shadingDat.index_buffer_offset;
 		memcpy(dst, tess.indexes, indexes_size);
@@ -604,7 +604,6 @@ void vk_bind_geometry(void)
     
 
         MatrixMultiply4x4_SSE(s_modelview_matrix, backEnd.viewParms.projectionMatrix, push_constants);
-
 
         //ri.Printf( PRINT_ALL, "backEnd.projection2D = %d\n", backEnd.projection2D);
 		// Eye space transform.
@@ -847,11 +846,10 @@ static void ComputeColors( shaderStage_t *pStage )
 
 			for ( i = 0; i < tess.numVertexes; i++ )
 			{
-				float len;
 				vec3_t v;
 
 				VectorSubtract( tess.xyz[i], backEnd.viewParms.or.origin, v );
-				len = VectorLength( v );
+				float len = VectorLength( v );
 
 				len /= tess.shader->portalRange;
 
@@ -898,8 +896,8 @@ static void ComputeColors( shaderStage_t *pStage )
 
 static void ComputeTexCoords( shaderStage_t *pStage )
 {
-	int		i;
-	int		b;
+	uint32_t i;
+	uint32_t b;
 
 	for ( b = 0; b < NUM_TEXTURE_BUNDLES; b++ )
     {
@@ -953,38 +951,31 @@ static void ComputeTexCoords( shaderStage_t *pStage )
 				break;
 
 			case TMOD_TURBULENT:
-				RB_CalcTurbulentTexCoords( &pStage->bundle[b].texMods[tm].wave, 
-						                 ( float * ) tess.svars.texcoords[b] );
+				RB_CalcTurbulentTexCoords( &pStage->bundle[b].texMods[tm].wave, ( float * ) tess.svars.texcoords[b] );
 				break;
 
 			case TMOD_ENTITY_TRANSLATE:
-				RB_CalcScrollTexCoords( backEnd.currentEntity->e.shaderTexCoord,
-									 ( float * ) tess.svars.texcoords[b] );
+				RB_CalcScrollTexCoords( backEnd.currentEntity->e.shaderTexCoord, ( float * ) tess.svars.texcoords[b] );
 				break;
 
 			case TMOD_SCROLL:
-				RB_CalcScrollTexCoords( pStage->bundle[b].texMods[tm].scroll,
-										 ( float * ) tess.svars.texcoords[b] );
+				RB_CalcScrollTexCoords( pStage->bundle[b].texMods[tm].scroll, ( float * ) tess.svars.texcoords[b] );
 				break;
 
 			case TMOD_SCALE:
-				RB_CalcScaleTexCoords( pStage->bundle[b].texMods[tm].scale,
-									 ( float * ) tess.svars.texcoords[b] );
+				RB_CalcScaleTexCoords( pStage->bundle[b].texMods[tm].scale, ( float * ) tess.svars.texcoords[b] );
 				break;
 			
 			case TMOD_STRETCH:
-				RB_CalcStretchTexCoords( &pStage->bundle[b].texMods[tm].wave, 
-						               ( float * ) tess.svars.texcoords[b] );
+				RB_CalcStretchTexCoords( &pStage->bundle[b].texMods[tm].wave, ( float * ) tess.svars.texcoords[b] );
 				break;
 
 			case TMOD_TRANSFORM:
-				RB_CalcTransformTexCoords( &pStage->bundle[b].texMods[tm],
-						                 ( float * ) tess.svars.texcoords[b] );
+				RB_CalcTransformTexCoords( &pStage->bundle[b].texMods[tm], ( float * ) tess.svars.texcoords[b] );
 				break;
 
 			case TMOD_ROTATE:
-				RB_CalcRotateTexCoords( pStage->bundle[b].texMods[tm].rotateSpeed,
-										( float * ) tess.svars.texcoords[b] );
+				RB_CalcRotateTexCoords( pStage->bundle[b].texMods[tm].rotateSpeed, ( float * ) tess.svars.texcoords[b] );
 				break;
 
 			default:
@@ -1031,43 +1022,46 @@ ProjectDlightTexture
 Perform dynamic lighting with another rendering pass
 ===================
 */
-static void ProjectDlightTexture( void ) {
-	int		i, l;
-	vec3_t	origin;
+static void ProjectDlightTexture( void )
+{
 	float	*texCoords;
-	byte	*colors;
 	byte	clipBits[SHADER_MAX_VERTEXES];
-	int		numIndexes;
-	float	scale;
-	float	radius;
-	vec3_t	floatColor;
-	float	modulate;
 
 	if ( !backEnd.refdef.num_dlights ) {
 		return;
 	}
 
-	for ( l = 0 ; l < backEnd.refdef.num_dlights ; l++ ) {
-		dlight_t	*dl;
+    uint32_t l;
+	for ( l = 0 ; l < backEnd.refdef.num_dlights ; l++ )
+    {
+		//dlight_t	*dl;
 
 		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
 			continue;	// this surface definately doesn't have any of this light
 		}
 		texCoords = tess.svars.texcoords[0][0];
-		colors = tess.svars.colors[0];
+		//colors = tess.svars.colors[0];
 
-		dl = &backEnd.refdef.dlights[l];
-		VectorCopy( dl->transformed, origin );
-        radius = dl->radius;
-		scale = 1.0f / radius;
+		//dl = &backEnd.refdef.dlights[l];
+        vec3_t	origin;
 
-		floatColor[0] = dl->color[0] * 255.0f;
-		floatColor[1] = dl->color[1] * 255.0f;
-		floatColor[2] = dl->color[2] * 255.0f;
+		VectorCopy( backEnd.refdef.dlights[l].transformed, origin );
 
-		for ( i = 0 ; i < tess.numVertexes ; i++, texCoords += 2, colors += 4 ) {
+
+        float radius = backEnd.refdef.dlights[l].radius;
+		float scale = 1.0f / radius;
+    	float modulate;
+
+        float floatColor[3] = {
+		    backEnd.refdef.dlights[l].color[0] * 255.0f,
+		    backEnd.refdef.dlights[l].color[1] * 255.0f,
+		    backEnd.refdef.dlights[l].color[2] * 255.0f
+        };
+
+        uint32_t i;
+		for ( i = 0 ; i < tess.numVertexes ; i++, texCoords += 2)
+        {
 			vec3_t	dist;
-			int		clip;
 
 			backEnd.pc.c_dlightVertexes++;
 
@@ -1075,44 +1069,59 @@ static void ProjectDlightTexture( void ) {
 			texCoords[0] = 0.5f + dist[0] * scale;
 			texCoords[1] = 0.5f + dist[1] * scale;
 
-			clip = 0;
+			uint32_t clip = 0;
 			if ( texCoords[0] < 0.0f ) {
 				clip |= 1;
-			} else if ( texCoords[0] > 1.0f ) {
+			}
+            else if ( texCoords[0] > 1.0f ) {
 				clip |= 2;
 			}
+
 			if ( texCoords[1] < 0.0f ) {
 				clip |= 4;
-			} else if ( texCoords[1] > 1.0f ) {
+			}
+            else if ( texCoords[1] > 1.0f ) {
 				clip |= 8;
 			}
+
 			// modulate the strength based on the height and color
-			if ( dist[2] > radius ) {
+			if ( dist[2] > radius )
+            {
 				clip |= 16;
 				modulate = 0.0f;
-			} else if ( dist[2] < -radius ) {
+			}
+            else if ( dist[2] < -radius )
+            {
 				clip |= 32;
 				modulate = 0.0f;
-			} else {
+			}
+            else
+            {
 				dist[2] = fabs(dist[2]);
-				if ( dist[2] < radius * 0.5f ) {
+				if ( dist[2] < radius * 0.5f )
+                {
 					modulate = 1.0f;
-				} else {
+				}
+                else
+                {
 					modulate = 2.0f * (radius - dist[2]) * scale;
 				}
 			}
 			clipBits[i] = clip;
-
-			colors[0] = (floatColor[0] * modulate);
-			colors[1] = (floatColor[1] * modulate);
-			colors[2] = (floatColor[2] * modulate);
-			colors[3] = 255;
+            
+            // += 4 
+			tess.svars.colors[i][0] = (floatColor[0] * modulate);
+			tess.svars.colors[i][1] = (floatColor[1] * modulate);
+			tess.svars.colors[i][2] = (floatColor[2] * modulate);
+			tess.svars.colors[i][3] = 255;
 		}
 
+      
 		// build a list of triangles that need light
-		numIndexes = 0;
-		for ( i = 0 ; i < tess.numIndexes ; i += 3 ) {
-			int		a, b, c;
+		uint32_t numIndexes = 0;
+		for ( i = 0 ; i < tess.numIndexes ; i += 3 )
+        {
+			uint32_t a, b, c;
 
 			a = tess.indexes[i];
 			b = tess.indexes[i+1];
@@ -1123,7 +1132,7 @@ static void ProjectDlightTexture( void ) {
 			numIndexes += 3;
 		}
 
-		if ( !numIndexes ) {
+		if ( numIndexes == 0 ) {
 			continue;
 		}
 
@@ -1136,8 +1145,8 @@ static void ProjectDlightTexture( void ) {
 
 		// VULKAN
 
-		VkPipeline pipeline = g_stdPipelines.dlight_pipelines[dl->additive > 0 ? 1 : 0][tess.shader->cullType][tess.shader->polygonOffset];
-		vk_shade_geometry(pipeline, qfalse, normal, qtrue);
+		vk_shade_geometry(g_stdPipelines.dlight_pipelines[backEnd.refdef.dlights[l].additive > 0 ? 1 : 0][tess.shader->cullType][tess.shader->polygonOffset],
+                VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 
 	}
 }
@@ -1174,15 +1183,13 @@ static void RB_FogPass( void ) {
 
     assert(tess.shader->fogPass > 0);
     VkPipeline pipeline = g_stdPipelines.fog_pipelines[tess.shader->fogPass - 1][tess.shader->cullType][tess.shader->polygonOffset];
-    vk_shade_geometry(pipeline, qfalse, normal, qtrue);
+    vk_shade_geometry(pipeline, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 }
 
 
 void RB_StageIteratorGeneric( void )
 {
-//	shaderCommands_t *input;
-
-//	input = &tess;
+//	shaderCommands_t *input = &tess;
 
 	RB_DeformTessGeometry();
 
@@ -1194,7 +1201,7 @@ void RB_StageIteratorGeneric( void )
     
     uint32_t stage = 0;
 
-	for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ )
+	for ( stage = 0; stage < MAX_SHADER_STAGES; ++stage )
 	{
 		if ( NULL == tess.xstages[stage])
 		{
@@ -1212,7 +1219,7 @@ void RB_StageIteratorGeneric( void )
 		//
 		// do multitexture
 		//
-        qboolean multitexture = (tess.xstages[stage]->bundle[1].image[0] != NULL);
+        VkBool32 multitexture = (tess.xstages[stage]->bundle[1].image[0] != NULL);
 
 		if ( multitexture )
 		{
@@ -1233,17 +1240,18 @@ void RB_StageIteratorGeneric( void )
             s_CurTmu = 0;
 		}
 
-        
-        enum Vk_Depth_Range depth_range = normal;
+       
+
+        enum Vk_Depth_Range depth_range = DEPTH_RANGE_NORMAL;
         if (tess.shader->isSky)
         {
-            depth_range = force_one;
+            depth_range = DEPTH_RANGE_ONE;
             if (r_showsky->integer)
-                depth_range = force_zero;
+                depth_range = DEPTH_RANGE_ZERO;
         }
         else if (backEnd.currentEntity->e.renderfx & RF_DEPTHHACK)
         {
-            depth_range = weapon;
+            depth_range = DEPTH_RANGE_WEAPON;
         }
 
         if (r_lightmap->integer && multitexture)
@@ -1252,15 +1260,15 @@ void RB_StageIteratorGeneric( void )
         
         if (backEnd.viewParms.isMirror)
         {
-            vk_shade_geometry(tess.xstages[stage]->vk_mirror_pipeline, multitexture, depth_range, qtrue);
+            vk_shade_geometry(tess.xstages[stage]->vk_mirror_pipeline, multitexture, depth_range, VK_TRUE);
         }
         else if (backEnd.viewParms.isPortal)
         {
-            vk_shade_geometry(tess.xstages[stage]->vk_portal_pipeline, multitexture, depth_range, qtrue);
+            vk_shade_geometry(tess.xstages[stage]->vk_portal_pipeline, multitexture, depth_range, VK_TRUE);
         }
         else
         {
-            vk_shade_geometry(tess.xstages[stage]->vk_pipeline, multitexture, depth_range, qtrue);
+            vk_shade_geometry(tess.xstages[stage]->vk_pipeline, multitexture, depth_range, VK_TRUE);
         }
 
                 

@@ -2,10 +2,10 @@
 #define VK_SHADE_GEOMETRY
 
 enum Vk_Depth_Range {
-	normal, // [0..1]
-	force_zero, // [0..0]
-	force_one, // [1..1]
-	weapon // [0..0.3]
+	DEPTH_RANGE_NORMAL, // [0..1]
+	DEPTH_RANGE_ZERO, // [0..0]
+	DEPTH_RANGE_ONE, // [1..1]
+	DEPTH_RANGE_WEAPON // [0..0.3]
 };
 
 
