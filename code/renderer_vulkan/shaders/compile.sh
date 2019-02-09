@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set your VULKAN_SDK location  before running
+# Set your VULKAN_SDK location before running
 VULKAN_SDK=~/vulkan/1.1.82.0/x86_64/
 if [[ ! -x "./bintoc" ]]
 then

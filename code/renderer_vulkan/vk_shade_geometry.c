@@ -38,6 +38,8 @@ struct ShadingData_t
 
 	// host visible memory that holds both vertex and index data
 	VkDeviceMemory geometry_buffer_memory;
+
+    VkDescriptorSet curDescriptorSets[2];
 };
 
 struct ShadingData_t shadingDat;
@@ -210,27 +212,7 @@ void R_SetupProjection( float pMatProj[16] )
 
 }
 
-/*
-static void get_mvp_transform(float* mvp, const int isProj2D)
-{
-	if (isProj2D)
-    {
-		float mvp0 = 2.0f / glConfig.vidWidth;
-		float mvp5 = 2.0f / glConfig.vidHeight;
 
-		mvp[0]  =  mvp0; mvp[1]  =  0.0f; mvp[2]  = 0.0f; mvp[3]  = 0.0f;
-		mvp[4]  =  0.0f; mvp[5]  =  mvp5; mvp[6]  = 0.0f; mvp[7]  = 0.0f;
-		mvp[8]  =  0.0f; mvp[9]  =  0.0f; mvp[10] = 1.0f; mvp[11] = 0.0f;
-		mvp[12] = -1.0f; mvp[13] = -1.0f; mvp[14] = 0.0f; mvp[15] = 1.0f;
-	}
-    else
-    {
-		// update q3's proj matrix (opengl) to vulkan conventions: z - [0, 1] instead of [-1, 1] and invert y direction
-		
-        MatrixMultiply4x4_SSE(s_modelview_matrix, backEnd.viewParms.projectionMatrix, mvp);
-	}
-}
-*/
 
 static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 {
@@ -313,7 +295,7 @@ VkRect2D get_scissor_rect(void)
 //
 // Host access to buffer must be externally synchronized
 
-void vk_createVertexBuffer(void)
+static void vk_createVertexBuffer(void)
 {
     ri.Printf(PRINT_ALL, " Create vertex buffer: shadingDat.vertex_buffer \n");
 
@@ -331,7 +313,8 @@ void vk_createVertexBuffer(void)
     VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &shadingDat.vertex_buffer));
 }
 
-void vk_createIndexBuffer(void)
+
+static void vk_createIndexBuffer(void)
 {
     ri.Printf(PRINT_ALL, " Create index buffer: shadingDat.index_buffer \n");
 
@@ -347,6 +330,7 @@ void vk_createIndexBuffer(void)
 
     VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &shadingDat.index_buffer));
 }
+
 
 void vk_createGeometryBuffers(void)
 {
@@ -439,24 +423,11 @@ void vk_createGeometryBuffers(void)
 // the renderer front end should never modify glstate_t
 //typedef struct {
 
-static int s_CurTmu;
-//	int			texEnv[2];
-//	int			faceCulling;
-//	unsigned long	glStateBits;
-//} glstate_t;
-static VkDescriptorSet s_CurrentDescriptorSets[2] = {0};
-// static int	s_CurTextures[2];
 
-void GL_Bind( image_t* pImage )
+
+void updateCurDescriptor( VkDescriptorSet curDesSet, uint32_t tmu)
 {
-
-//    if ( s_CurTextures[s_CurTmu] != pImage->index )
-    {
-//        s_CurTextures[s_CurTmu] = pImage->index;
-
-        // VULKAN
-        s_CurrentDescriptorSets[s_CurTmu] = pImage->descriptor_set;
-    }
+    shadingDat.curDescriptorSets[tmu] = curDesSet;
 }
 
 
@@ -473,38 +444,14 @@ void vk_destroy_shading_data(void)
 
     memset(&shadingDat, 0, sizeof(shadingDat));
 
-//////////////////////////////////////////////////////////////
-    memset(s_CurrentDescriptorSets, 0,  2 * sizeof(VkDescriptorSet));
 
     VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
     
-//    s_CurTextures[0] = s_CurTextures[1] = 0;
-
-    s_CurTmu = 0;
-
-///////////////////////////////////////////////////////////////
 }
+
 
 void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed)
 {
-
-    // color
-    if ((shadingDat.color_st_elements + tess.numVertexes) * sizeof(color4ub_t) > COLOR_SIZE)
-        ri.Error(ERR_DROP, "vulkan: vertex buffer overflow (color)\n");
-
-    unsigned char* dst_color = shadingDat.vertex_buffer_ptr + COLOR_OFFSET + shadingDat.color_st_elements * sizeof(color4ub_t);
-    memcpy(dst_color, tess.svars.colors, tess.numVertexes * sizeof(color4ub_t));
-    // st0
-
-    unsigned char* dst_st0 = shadingDat.vertex_buffer_ptr + ST0_OFFSET + shadingDat.color_st_elements * sizeof(vec2_t);
-    memcpy(dst_st0, tess.svars.texcoords[0], tess.numVertexes * sizeof(vec2_t));
-
-	// st1
-	if (multitexture)
-    {
-		unsigned char* dst = shadingDat.vertex_buffer_ptr + ST1_OFFSET + shadingDat.color_st_elements * sizeof(vec2_t);
-		memcpy(dst, tess.svars.texcoords[1], tess.numVertexes * sizeof(vec2_t));
-	}
 
 	// configure vertex data stream
 	VkBuffer bufs[3] = { shadingDat.vertex_buffer, shadingDat.vertex_buffer, shadingDat.vertex_buffer };
@@ -513,6 +460,26 @@ void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth
 		ST0_OFFSET   + shadingDat.color_st_elements * sizeof(vec2_t),
 		ST1_OFFSET   + shadingDat.color_st_elements * sizeof(vec2_t)
 	};
+
+
+    // color
+    if ((shadingDat.color_st_elements + tess.numVertexes) * sizeof(color4ub_t) > COLOR_SIZE)
+        ri.Error(ERR_DROP, "vulkan: vertex buffer overflow (color)\n");
+
+    unsigned char* dst_color = shadingDat.vertex_buffer_ptr + offs[0];
+    memcpy(dst_color, tess.svars.colors, tess.numVertexes * sizeof(color4ub_t));
+    // st0
+
+    unsigned char* dst_st0 = shadingDat.vertex_buffer_ptr + offs[1];
+    memcpy(dst_st0, tess.svars.texcoords[0], tess.numVertexes * sizeof(vec2_t));
+
+	// st1
+	if (multitexture)
+    {
+		unsigned char* dst = shadingDat.vertex_buffer_ptr + offs[2];
+		memcpy(dst, tess.svars.texcoords[1], tess.numVertexes * sizeof(vec2_t));
+	}
+
     
 	qvkCmdBindVertexBuffers(vk.command_buffer, 1, multitexture ? 3 : 2, bufs, offs);
 	shadingDat.color_st_elements += tess.numVertexes;
@@ -525,7 +492,7 @@ void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth
 //    Any bindings that were previously applied via these sets are no longer valid.
 
 	qvkCmdBindDescriptorSets(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        vk.pipeline_layout, 0, (multitexture ? 2 : 1), s_CurrentDescriptorSets, 0, NULL);
+        vk.pipeline_layout, 0, (multitexture ? 2 : 1), shadingDat.curDescriptorSets, 0, NULL);
 
     // bind pipeline
 	qvkCmdBindPipeline(vk.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -567,15 +534,15 @@ void vk_bind_geometry(void)
 
 	// xyz stream
 	{
-		unsigned char* dst = shadingDat.vertex_buffer_ptr + XYZ_OFFSET + shadingDat.xyz_elements * sizeof(vec4_t);
+        const VkDeviceSize xyz_offset = XYZ_OFFSET + shadingDat.xyz_elements * sizeof(vec4_t);
+		unsigned char* dst = shadingDat.vertex_buffer_ptr + xyz_offset;
 		memcpy(dst, tess.xyz, tess.numVertexes * sizeof(vec4_t));
 
-		VkDeviceSize xyz_offset = XYZ_OFFSET + shadingDat.xyz_elements * sizeof(vec4_t);
+
 		qvkCmdBindVertexBuffers(vk.command_buffer, 0, 1, &shadingDat.vertex_buffer, &xyz_offset);
 		shadingDat.xyz_elements += tess.numVertexes;
 
-        if (shadingDat.xyz_elements * sizeof(vec4_t) > XYZ_SIZE)
-			ri.Error(ERR_DROP, "vk_bind_geometry: vertex buffer overflow (xyz)\n");
+        assert (shadingDat.xyz_elements * sizeof(vec4_t) < XYZ_SIZE);
 	}
 
 	// indexes stream
@@ -588,8 +555,8 @@ void vk_bind_geometry(void)
 		qvkCmdBindIndexBuffer(vk.command_buffer, shadingDat.index_buffer, shadingDat.index_buffer_offset, VK_INDEX_TYPE_UINT32);
 		shadingDat.index_buffer_offset += indexes_size;
 
-        if (shadingDat.index_buffer_offset > INDEX_BUFFER_SIZE)
-			ri.Error(ERR_DROP, "vk_bind_geometry: index buffer overflow\n");
+        assert (shadingDat.index_buffer_offset < INDEX_BUFFER_SIZE);
+		//	ri.Error(ERR_DROP, "vk_bind_geometry: index buffer overflow\n");
 	}
 
 
@@ -987,33 +954,6 @@ static void ComputeTexCoords( shaderStage_t *pStage )
 }
 
 
-static void R_BindAnimatedImage( textureBundle_t *bundle )
-{
-	int		index;
-
-	if ( bundle->isVideoMap ) {
-		ri.CIN_RunCinematic(bundle->videoMapHandle);
-		ri.CIN_UploadCinematic(bundle->videoMapHandle);
-		return;
-	}
-
-	if ( bundle->numImageAnimations <= 1 ) {
-		GL_Bind( bundle->image[0] );
-		return;
-	}
-
-	// it is necessary to do this messy calc to make sure animations line up
-	// exactly with waveforms of the same frequency
-	index = (int)( tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE );
-	index >>= FUNCTABLE_SIZE2;
-
-	if ( index < 0 ) {
-		index = 0;	// may happen with shader time offsets
-	}
-	index %= bundle->numImageAnimations;
-
-	GL_Bind( bundle->image[ index ] );
-}
 
 /*
 ===================
@@ -1138,7 +1078,7 @@ static void ProjectDlightTexture( void )
 
 
 
-		GL_Bind( tr.dlightImage );
+		updateCurDescriptor( tr.dlightImage->descriptor_set, 0 );
 		// include GLS_DEPTHFUNC_EQUAL so alpha tested surfaces don't add light where they aren't rendered
 		backEnd.pc.c_totalIndexes += numIndexes;
 		backEnd.pc.c_dlightIndexes += numIndexes;
@@ -1177,7 +1117,7 @@ static void RB_FogPass( void ) {
 
 	RB_CalcFogTexCoords( ( float * ) tess.svars.texcoords[0] );
 
-	GL_Bind( tr.fogImage );
+	updateCurDescriptor( tr.fogImage->descriptor_set, 0);
 
 	// VULKAN
 
@@ -1212,14 +1152,45 @@ void RB_StageIteratorGeneric( void )
 		ComputeTexCoords( tess.xstages[stage] );
 
         // base
-        s_CurTmu = 0 ;
-
         // set state
-		R_BindAnimatedImage( &tess.xstages[stage]->bundle[0] );
+		//R_BindAnimatedImage( &tess.xstages[stage]->bundle[0] );
+        VkBool32 multitexture = (tess.xstages[stage]->bundle[1].image[0] != NULL);
+
+    {        
+	    if ( tess.xstages[stage]->bundle[0].isVideoMap )
+        {
+		    ri.CIN_RunCinematic(tess.xstages[stage]->bundle[0].videoMapHandle);
+		    ri.CIN_UploadCinematic(tess.xstages[stage]->bundle[0].videoMapHandle);
+		    goto ENDANIMA;
+	    }
+
+        int numAnimaImg = tess.xstages[stage]->bundle[0].numImageAnimations;
+
+        if ( numAnimaImg <= 1 )
+        {
+		    updateCurDescriptor( tess.xstages[stage]->bundle[0].image[0]->descriptor_set, 0);
+            //GL_Bind(tess.xstages[stage]->bundle[0].image[0]);
+            goto ENDANIMA;
+	    }
+
+        // it is necessary to do this messy calc to make sure animations line up
+        // exactly with waveforms of the same frequency
+	    int index = (int)( tess.shaderTime * tess.xstages[stage]->bundle[0].imageAnimationSpeed * FUNCTABLE_SIZE ) >> FUNCTABLE_SIZE2;
+        
+        if ( index < 0 ) {
+		    index = 0;	// may happen with shader time offsets
+	    }
+
+	    index %= numAnimaImg;
+
+	    updateCurDescriptor( tess.xstages[stage]->bundle[0].image[ index ]->descriptor_set, 0);
+        //GL_Bind(tess.xstages[stage]->bundle[0].image[ index ]);
+    }
+    
+ENDANIMA:
 		//
 		// do multitexture
 		//
-        VkBool32 multitexture = (tess.xstages[stage]->bundle[1].image[0] != NULL);
 
 		if ( multitexture )
 		{
@@ -1232,12 +1203,36 @@ void RB_StageIteratorGeneric( void )
             // bug with multitexture and clip planes
 
 
-            // lightmap/secondary pass
-            s_CurTmu = 1 ;
+            if ( tess.xstages[stage]->bundle[1].isVideoMap )
+            {
+                ri.CIN_RunCinematic(tess.xstages[stage]->bundle[1].videoMapHandle);
+                ri.CIN_UploadCinematic(tess.xstages[stage]->bundle[1].videoMapHandle);
+                goto END_ANIMA2;
+            }
 
-            R_BindAnimatedImage( &tess.xstages[stage]->bundle[1] );
-            // disable texturing on TEXTURE1, then select TEXTURE0
-            s_CurTmu = 0;
+            if ( tess.xstages[stage]->bundle[1].numImageAnimations <= 1 ) {
+                updateCurDescriptor( tess.xstages[stage]->bundle[1].image[0]->descriptor_set, 1);
+                goto END_ANIMA2;
+            }
+
+            // it is necessary to do this messy calc to make sure animations line up
+            // exactly with waveforms of the same frequency
+            int index2 = (int)( tess.shaderTime * tess.xstages[stage]->bundle[1].imageAnimationSpeed * FUNCTABLE_SIZE ) >> FUNCTABLE_SIZE2;
+
+            if ( index2 < 0 ) {
+                index2 = 0;	// may happen with shader time offsets
+            }
+	        
+            index2 %= tess.xstages[stage]->bundle[1].numImageAnimations;
+
+            updateCurDescriptor( tess.xstages[stage]->bundle[1].image[ index2 ]->descriptor_set , 1);
+
+END_ANIMA2:
+
+            if (r_lightmap->integer)
+                updateCurDescriptor(tr.whiteImage->descriptor_set, 0); 
+            
+            // replace diffuse texture with a white one thus effectively render only lightmap
 		}
 
        
@@ -1254,9 +1249,7 @@ void RB_StageIteratorGeneric( void )
             depth_range = DEPTH_RANGE_WEAPON;
         }
 
-        if (r_lightmap->integer && multitexture)
-            GL_Bind(tr.whiteImage); // replace diffuse texture with a white one thus effectively render only lightmap
-
+ 
         
         if (backEnd.viewParms.isMirror)
         {

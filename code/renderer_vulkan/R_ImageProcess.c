@@ -120,25 +120,7 @@ void R_LightScaleTexture (unsigned char* dst, unsigned char* in, unsigned int nB
 
 static void imsave(char *fileName, unsigned char* buffer2, unsigned int width, unsigned int height);
 
-static const unsigned char mipBlendColors[16][4] =
-{
-	{0,0,0,0},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-	{255,0,0,128},
-	{0,255,0,128},
-	{0,0,255,128},
-};
+
 
 /*
 ==================
@@ -150,6 +132,27 @@ Apply a color blend over a set of pixels
 void R_BlendOverTexture(unsigned char* data, const uint32_t pixelCount, uint32_t l)
 {
 	uint32_t i;
+
+    static const unsigned char mipBlendColors[16][4] =
+    {
+        {0,0,0,0},
+        {255,0,0,128},
+        {0,255,0,128},
+        {0,0,255,128},
+        {255,0,0,128},
+        {0,255,0,128},
+        {0,0,255,128},
+        {255,0,0,128},
+        {0,255,0,128},
+        {0,0,255,128},
+        {255,0,0,128},
+        {0,255,0,128},
+        {0,0,255,128},
+        {255,0,0,128},
+        {0,255,0,128},
+        {0,0,255,128},
+    };
+
     const unsigned int alpha = mipBlendColors[l][3];
 	const unsigned int inverseAlpha = 255 - alpha;
     
@@ -328,7 +331,7 @@ static void DEBUG_resample(const char *name, unsigned char* data, unsigned char*
 }
 
 
-void ResampleTexture(unsigned char *pOut, const unsigned int inwidth, const unsigned int inheight,
+void ResampleTexture(unsigned char * pOut, const unsigned int inwidth, const unsigned int inheight,
                                const unsigned char *pIn, const unsigned int outwidth, const unsigned int outheight)
 {
 	unsigned int i, j;
@@ -336,21 +339,21 @@ void ResampleTexture(unsigned char *pOut, const unsigned int inwidth, const unsi
 
     // printf("inwidth: %d \t outwidth: %d \n", inwidth, outwidth);
 
+
+    unsigned int fracstep = (inwidth << 16)/outwidth;
+
+    unsigned int frac1 = fracstep>>2;
+    unsigned int frac2 = 3*(fracstep>>2);
+
+    for(i=0; i<outwidth; i++)
     {
-        unsigned int fracstep = (inwidth << 16)/outwidth;
+        p1[i] = 4*(frac1>>16);
+        frac1 += fracstep;
 
-        unsigned int frac1 = fracstep>>2;
-        unsigned int frac2 = 3*(fracstep>>2);
-
-        for(i=0; i<outwidth; i++)
-        {
-            p1[i] = 4*(frac1>>16);
-            frac1 += fracstep;
-
-            p2[i] = 4*(frac2>>16);
-            frac2 += fracstep;
-        }
+        p2[i] = 4*(frac2>>16);
+        frac2 += fracstep;
     }
+ 
 
    
 	for (i=0; i<outheight; i++)
@@ -387,7 +390,7 @@ void ResampleTexture(unsigned char *pOut, const unsigned int inwidth, const unsi
 }
 
 
-void GetScaledDimension(const unsigned int width, const unsigned int height, unsigned int *outW, unsigned int *outH, VkBool32 isPicMip)
+void GetScaledDimension(const unsigned int width, const unsigned int height, unsigned int * const outW, unsigned int * const outH, const VkBool32 isPicMip)
 {
     const unsigned int max_texture_size = 2048;
     

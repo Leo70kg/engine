@@ -5,7 +5,7 @@ extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 32 = use 32-bit textures
 										// all else = error
 
-/*
+
 // VULKAN
 static struct Vk_Image upload_vk_image(const struct Image_Upload_Data* upload_data, VkBool32 isRepTex)
 {
@@ -193,4 +193,224 @@ unsigned int R_SumOfUsedImages( void )
 	return total;
 }
 
+
+
+static void bind_image_with_memory(VkImage image)
+{
+    VkMemoryRequirements memory_requirements;
+    qvkGetImageMemoryRequirements(vk.device, image, &memory_requirements);
+    
+    // Try to find an existing chunk of sufficient capacity.
+    uint32_t mask = (memory_requirements.alignment - 1);
+
+
+    // ensure that memory region has proper alignment
+    uint32_t offset_aligned = (StagImg.used + mask) & (~mask);
+    uint32_t needed = offset_aligned + memory_requirements.size; 
+    
+    // ensure that device local memory is enough
+    assert (needed <= IMAGE_CHUNK_SIZE);
+
+    StagImg.used = needed;
+    
+    // To attach memory to a VkImage object created without the VK_IMAGE_CREATE_DISJOINT_BIT set
+    //
+    // StagImg.devMemStoreImg is the VkDeviceMemory object describing the device memory to attach.
+    // offset_aligned is the start offset of the region of memory which is to be bound to the image. 
+    // The number of bytes returned in the VkMemoryRequirements::size member in memory,
+    // starting from memoryOffset bytes, will be bound to the specified image.
+
+    VK_CHECK(qvkBindImageMemory(vk.device, image, StagImg.devMemStoreImg, offset_aligned));
+    // 	for debug info
+    ri.Printf(PRINT_ALL, " StagImg.used = %d \n", StagImg.used);
+
+}
+
+
+static void R_BindAnimatedImage( textureBundle_t *bundle, uint32_t curTMU )
+{
+	int		index;
+
+	if ( bundle->isVideoMap ) {
+		ri.CIN_RunCinematic(bundle->videoMapHandle);
+		ri.CIN_UploadCinematic(bundle->videoMapHandle);
+		return;
+	}
+
+	if ( bundle->numImageAnimations <= 1 ) {
+		updateCurDescriptor( bundle->image[0]->descriptor_set, curTMU);
+        //GL_Bind(bundle->image[0]);
+		return;
+	}
+
+	// it is necessary to do this messy calc to make sure animations line up
+	// exactly with waveforms of the same frequency
+	index = (int)( tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE );
+	index >>= FUNCTABLE_SIZE2;
+
+	if ( index < 0 ) {
+		index = 0;	// may happen with shader time offsets
+	}
+	index %= bundle->numImageAnimations;
+
+	updateCurDescriptor( bundle->image[ index ]->descriptor_set , curTMU);
+    //GL_Bind(bundle->image[ index ], curTMU);
+
+}
+
+
+static void vk_createImageViewAndDescriptorSet(VkImage h_image, VkImageView* pView)
+{
+    VkImageViewCreateInfo desc;
+    desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    desc.pNext = NULL;
+    desc.flags = 0;
+    desc.image = h_image;
+    desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    // format is a VkFormat describing the format and type used 
+    // to interpret data elements in the image.
+    desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+    // the components field allows you to swizzle the color channels around
+    desc.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    desc.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    desc.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    desc.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    // The subresourceRange field describes what the image's purpose is
+    // and which part of the image should be accessed. 
+    //
+    // selecting the set of mipmap levels and array layers to be accessible to the view.
+    desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    desc.subresourceRange.baseMipLevel = 0;
+    desc.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    desc.subresourceRange.baseArrayLayer = 0;
+    desc.subresourceRange.layerCount = 1;
+    // Image objects are not directly accessed by pipeline shaders for reading or writing image data.
+    // Instead, image views representing contiguous ranges of the image subresources and containing
+    // additional metadata are used for that purpose. Views must be created on images of compatible
+    // types, and must represent a valid subset of image subresources.
+    //
+    // Some of the image creation parameters are inherited by the view. In particular, image view
+    // creation inherits the implicit parameter usage specifying the allowed usages of the image 
+    // view that, by default, takes the value of the corresponding usage parameter specified in
+    // VkImageCreateInfo at image creation time.
+    //
+    // This implicit parameter can be overriden by chaining a VkImageViewUsageCreateInfo structure
+    // through the pNext member to VkImageViewCreateInfo.
+    VK_CHECK(qvkCreateImageView(vk.device, &desc, NULL, pView));
+}
+
+
+
+static void vk_upload_image_data(VkImage image, uint32_t width, uint32_t height, const unsigned char* pPixels)
+{
+
+    VkBufferImageCopy regions[12];
+    uint32_t curLevel = 0;
+
+    uint32_t buffer_size = 0;
+
+    while (1)
+    {
+	    VkBufferImageCopy region;
+	    region.bufferOffset = buffer_size;
+	    region.bufferRowLength = 0;
+	    region.bufferImageHeight = 0;
+	    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	    region.imageSubresource.mipLevel = curLevel;
+	    region.imageSubresource.baseArrayLayer = 0;
+	    region.imageSubresource.layerCount = 1;
+	    region.imageOffset.x = 0;
+	    region.imageOffset.y = 0;
+	    region.imageOffset.z = 0;
+
+	    region.imageExtent.width = width;
+	    region.imageExtent.height = height;
+	    region.imageExtent.depth = 1;
+
+	    regions[curLevel] = region;
+	    curLevel++;
+
+	    buffer_size += width * height * 4;
+
+	    if ((width == 1) && (height == 1))
+		    break;
+
+	    width >>= 1;
+	    if (width == 0) 
+		    width = 1;
+
+	    height >>= 1;
+	    if (height == 0)
+		    height = 1;
+    }
+
+    //max mipmap buffer size
+    assert(buffer_size <= StagImg.buf_size);
+
+    void* data;
+    
+    VK_CHECK(qvkMapMemory(vk.device, StagImg.devMemMappable, 0, VK_WHOLE_SIZE, 0, &data));
+
+    memcpy(data, pPixels, buffer_size);
+
+    qvkUnmapMemory(vk.device, StagImg.devMemMappable);
+    
+    
+    vk_stagBufferToDeviceLocalMem(image ,regions ,curLevel);
+}
+
+
+static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height, const unsigned char* pPixels)
+{
+
+    VkBufferImageCopy region;
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset.x = 0;
+    region.imageOffset.y = 0;
+    region.imageOffset.z = 0;
+
+    region.imageExtent.width = width;
+    region.imageExtent.height = height;
+    region.imageExtent.depth = 1;
+
+
+    const uint32_t buffer_size = width * height * 4;
+
+    void* data;
+    VK_CHECK(qvkMapMemory(vk.device, StagImg.devMemMappable, 0, VK_WHOLE_SIZE, 0, &data));
+    memcpy(data, pPixels, buffer_size);
+    qvkUnmapMemory(vk.device, StagImg.devMemMappable);
+
+
+    vk_stagBufferToDeviceLocalMem(image, &region, 1);
+}
+
+/*
+static void get_mvp_transform(float* mvp, const int isProj2D)
+{
+	if (isProj2D)
+    {
+		float mvp0 = 2.0f / glConfig.vidWidth;
+		float mvp5 = 2.0f / glConfig.vidHeight;
+
+		mvp[0]  =  mvp0; mvp[1]  =  0.0f; mvp[2]  = 0.0f; mvp[3]  = 0.0f;
+		mvp[4]  =  0.0f; mvp[5]  =  mvp5; mvp[6]  = 0.0f; mvp[7]  = 0.0f;
+		mvp[8]  =  0.0f; mvp[9]  =  0.0f; mvp[10] = 1.0f; mvp[11] = 0.0f;
+		mvp[12] = -1.0f; mvp[13] = -1.0f; mvp[14] = 0.0f; mvp[15] = 1.0f;
+	}
+    else
+    {
+		// update q3's proj matrix (opengl) to vulkan conventions: z - [0, 1] instead of [-1, 1] and invert y direction
+		
+        MatrixMultiply4x4_SSE(s_modelview_matrix, backEnd.viewParms.projectionMatrix, mvp);
+	}
+}
 */

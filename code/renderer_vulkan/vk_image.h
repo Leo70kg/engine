@@ -20,10 +20,8 @@ void R_LoadImage2(const char *name, unsigned char **pic, uint32_t* width, uint32
 
 
 
-VkDescriptorSet* getCurDescriptorSetsPtr(void);
-
 void gpuMemUsageInfo_f(void);
 
-void GL_Bind( image_t *image );
+
 
 #endif

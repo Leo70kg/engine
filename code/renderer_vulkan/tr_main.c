@@ -389,7 +389,7 @@ void R_SetupFrustum (void)
 	//VectorScale( tr.viewParms.or.axis[0], xs, tr.viewParms.frustum[3].normal );
 	//VectorMA( tr.viewParms.frustum[3].normal, -xc, tr.viewParms.or.axis[2], tr.viewParms.frustum[3].normal );
 	int	i;
-	for (i=0 ; i<4 ; i++)
+	for (i=0; i<4; i++)
     {
 		tr.viewParms.frustum[i].type = PLANE_NON_AXIAL;
 		tr.viewParms.frustum[i].dist = DotProduct (tr.viewParms.or.origin, tr.viewParms.frustum[i].normal);

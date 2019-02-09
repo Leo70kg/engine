@@ -214,7 +214,7 @@ void RB_ShadowTessEnd( void ) {
 
 	// draw the silhouette edges
 
-	GL_Bind( tr.whiteImage );
+	updateCurDescriptor( tr.whiteImage->descriptor_set, 0);
 
 	R_ExtrudeShadowEdges();
 
@@ -247,7 +247,7 @@ void RB_ShadowFinish( void )
 	}
 
 
-	GL_Bind( tr.whiteImage );
+	updateCurDescriptor( tr.whiteImage->descriptor_set, 0);
 
 	// VULKAN
 

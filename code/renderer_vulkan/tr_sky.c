@@ -438,7 +438,7 @@ static void DrawSkyBox( shader_t *shader )
 
         // VULKAN: draw skybox side
 
-        GL_Bind(shader->sky.outerbox[sky_texorder[i]]);
+        updateCurDescriptor(shader->sky.outerbox[sky_texorder[i]]->descriptor_set, 0);
 
         tess.numVertexes = 0;
         tess.numIndexes = 0;

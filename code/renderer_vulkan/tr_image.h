@@ -13,7 +13,7 @@ typedef struct image_s {
 
 //	int			internalFormat;
 //	int			TMU;				// only needed for voodoo2
-    uint32_t         index;
+    uint32_t    index;
 
 	VkImage handle;
 
@@ -32,7 +32,7 @@ typedef struct image_s {
 
     int			wrapClampMode;		// GL_CLAMP or GL_REPEAT, for vulkan
     qboolean    mipmap;             // for vulkan
-    //qboolean    allowPicmip;        // for vulkan
+    qboolean    allowPicmip;        // for vulkan
 	struct image_s*	next;
 } image_t;
 

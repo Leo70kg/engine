@@ -70,7 +70,7 @@ void R_LoadImage2(const char *name, unsigned char **pic, uint32_t* width, uint32
             {
              // try jpg in place of tga
                 char altname[128] = {0};
-                strcpy( altname, name );                      
+                strncpy( altname, name, 128 );                      
                 char* pt = altname + len - 4;
 
                 pt[1] = 'j';

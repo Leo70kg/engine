@@ -121,7 +121,7 @@ void R_DebugGraphics( void )
 	// the render thread can't make callbacks to the main thread
 	R_IssuePendingRenderCommands();
 
-	GL_Bind( tr.whiteImage);
+	updateCurDescriptor( tr.whiteImage->descriptor_set, 0);
 	ri.CM_DrawDebugSurface( R_DebugPolygon );
 }
 
@@ -165,8 +165,6 @@ void RB_ShowImages(void)
 		float y = i / 20 * h;
 
 
-		GL_Bind( image );
-
 		memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
 
 		tess.numIndexes = 6;
@@ -198,8 +196,9 @@ void RB_ShowImages(void)
 		tess.xyz[3][1] = y + h;
 		tess.svars.texcoords[0][3][0] = 0;
 		tess.svars.texcoords[0][3][1] = 1;
-
-
+		
+        
+        updateCurDescriptor( image->descriptor_set, 0);
         vk_bind_geometry();
         vk_shade_geometry(g_stdPipelines.images_debug_pipeline, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 
@@ -217,7 +216,7 @@ Draws triangle outlines for debugging
 */
 void DrawTris (shaderCommands_t *input)
 {
-	GL_Bind( tr.whiteImage );
+	updateCurDescriptor( tr.whiteImage->descriptor_set, 0);
 
 	// VULKAN
 
