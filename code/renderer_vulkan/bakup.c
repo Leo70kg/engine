@@ -393,7 +393,7 @@ static void vk_uploadSingleImage(VkImage image, uint32_t width, uint32_t height,
     vk_stagBufferToDeviceLocalMem(image, &region, 1);
 }
 
-/*
+
 static void get_mvp_transform(float* mvp, const int isProj2D)
 {
 	if (isProj2D)
@@ -413,4 +413,194 @@ static void get_mvp_transform(float* mvp, const int isProj2D)
         MatrixMultiply4x4_SSE(s_modelview_matrix, backEnd.viewParms.projectionMatrix, mvp);
 	}
 }
+
+
+model_t* R_AllocModel( void )
+{
+
+    ri.Printf( PRINT_ALL, "Allocate Memory for model. \n");
+
+	if ( tr.numModels == MAX_MOD_KNOWN )
+    {
+        ri.Printf(PRINT_WARNING, "R_AllocModel: MAX_MOD_KNOWN.\n");
+		return NULL;
+	}
+
+	model_t* mod = ri.Hunk_Alloc( sizeof( model_t ), h_low );
+	mod->index = tr.numModels;
+	tr.models[tr.numModels] = mod;
+	tr.numModels++;
+
+	return mod;
+}
+
+
+
+
+
+
+	if( ext != NULL )
+	{
+		uint32_t i;
+		// Look for the correct loader and use it
+		for( i = 0; i < numModelLoaders; i++ )
+		{
+			if( !Q_stricmp( ext, modelLoaders[ i ].ext ) )
+			{
+				// Load
+				hModel = modelLoaders[ i ].ModelLoader( localName, mod );
+				break;
+			}
+		}
+
+		// A loader was found
+		if( i < numModelLoaders )
+		{
+			if( !hModel )
+			{
+				// Loader failed, most likely because the file isn't there;
+				// try again without the extension
+				orgNameFailed = qtrue;
+				orgLoader = i;
+				stripExtension( name, localName, MAX_QPATH );
+			}
+			else
+			{
+				// Something loaded
+				return mod->index;
+			}
+		}
+		else
+		{
+			ri.Printf( PRINT_WARNING, "RegisterModel: %s not find \n ", name);
+		}
+	}
+
+
+static int R_ComputeLOD( trRefEntity_t *ent )
+{
+    ri.Printf(PRINT_ALL, "\n------ R_ComputeLOD ------\n");
+	float flod;
+	int lod;
+
+	if ( tr.currentModel->numLods < 2 )
+	{
+		// model has only 1 LOD level, skip computations and bias
+		lod = 0;
+	}
+	else
+	{
+		// multiple LODs exist, so compute projected bounding sphere
+		// and use that as a criteria for selecting LOD
+	    float radius;
+
+		if(tr.currentModel->type == MOD_MDR)
+		{
+			mdrHeader_t* mdr = (mdrHeader_t *) tr.currentModel->modelData;
+			int frameSize = (size_t) (&((mdrFrame_t *)0)->bones[mdr->numBones]);
+			mdrFrame_t* mdrframe = (mdrFrame_t *) ((unsigned char *) mdr + mdr->ofsFrames + frameSize * ent->e.frame);
+			
+			radius = RadiusFromBounds(mdrframe->bounds[0], mdrframe->bounds[1]);
+		}
+		else
+		{
+			md3Frame_t* frame = (md3Frame_t *) (( ( unsigned char * ) tr.currentModel->md3[0] ) + tr.currentModel->md3[0]->ofsFrames);
+
+			frame += ent->e.frame;
+
+			radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
+		}
+
+        float projectedRadius = ProjectRadius( radius, ent->e.origin, tr.viewParms.projectionMatrix);
+		
+        if ( projectedRadius != 0 )
+		{
+			float lodscale = r_lodscale->value;
+			if (lodscale > 20)
+                lodscale = 20;
+			flod = 1.0f - projectedRadius * lodscale;
+		}
+		else
+		{
+			// object intersects near view plane, e.g. view weapon
+			flod = 0;
+		}
+
+		flod *= tr.currentModel->numLods;
+		
+        lod = (int)(flod);
+
+		if ( lod < 0 )
+		{
+			lod = 0;
+		}
+		else if ( lod >= tr.currentModel->numLods )
+		{
+			lod = tr.currentModel->numLods - 1;
+		}
+	}
+
+	lod += r_lodbias->integer;
+	
+	if ( lod >= tr.currentModel->numLods )
+		lod = tr.currentModel->numLods - 1;
+    else if ( lod < 0 )
+		lod = 0;
+
+	return lod;
+}
+
+
+/*
+=================
+RB_BeginDrawingView
+
+Any mirrored or portaled views have already been drawn, so prepare
+to actually render the visible surfaces for this view
+=================
+
+void RB_BeginDrawingView (void)
+{
+	// we will need to change the projection matrix before drawing
+	// 2D images again
+	backEnd.projection2D = qfalse;
+
+	//
+	// set the modelview matrix for the viewer
+	//
+
+	// ensures that depth writes are enabled for the depth clear
+    if(r_fastsky->integer && !( backEnd.refdef.rd.rdflags & RDF_NOWORLDMODEL ))
+    {
+        #ifndef NDEBUG
+        static const float fast_sky_color[4] = { 0.8f, 0.7f, 0.4f, 1.0f };
+        #else
+        static const float fast_sky_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        #endif
+        vk_clearColorAttachments(fast_sky_color);
+    }
+    
+
+	// VULKAN
+    vk_clearDepthStencilAttachments();
+
+	if ( ( backEnd.refdef.rd.rdflags & RDF_HYPERSPACE ) )
+	{
+		//RB_Hyperspace();
+        // A player has predicted a teleport, but hasn't arrived yet
+        const float c = ( backEnd.refdef.rd.time & 255 ) / 255.0f;
+        const float color[4] = { c, c, c, 1 };
+
+        // so short, do we really need this?
+	    vk_clearColorAttachments(color);
+
+	    backEnd.isHyperspace = qtrue;
+	}
+	else
+	{
+		backEnd.isHyperspace = qfalse;
+	}
+}
 */
+
+

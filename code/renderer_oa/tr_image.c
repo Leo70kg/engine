@@ -1096,6 +1096,7 @@ image_t *R_CreateImage(const char *name, unsigned char* pic, int width, int heig
     }
 
 	// lightmaps are always allocated on TMU 1
+
 	if ( qglActiveTextureARB && isLightmap ) {
 		image->TMU = 1;
 	} else {

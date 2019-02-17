@@ -3273,8 +3273,6 @@ void CL_InitRef(void)
 	ri.Sys_SetEnv = Sys_SetEnv;
 	ri.Sys_LowPhysicalMemory = Sys_LowPhysicalMemory;
 
-
-    // GLimp
 /*  
     ri.GLimpEndFrame = GLimp_EndFrame;
     ri.GLimpInit = GLimp_Init;

@@ -1,8 +1,7 @@
-
 #include "tr_local.h"
 #include "tr_model.h"
 #include "R_LerpTag.h"
-
+#include "../renderercommon/ref_import.h"
 
 static md3Tag_t *R_GetTag( md3Header_t *mod, int frame, const char *tagName ) {
 	md3Tag_t		*tag;
@@ -134,13 +133,12 @@ static int R_IQMLerpTag( orientation_t *tag, iqmData_t *data,
 int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFrame, 
 					 float frac, const char *tagName )
 {
+
+    // ri.Printf(PRINT_ALL, "R_LerpTag\n");
+
 	md3Tag_t	*start, *end;
 	md3Tag_t	start_space, end_space;
-	int		i;
-	float		frontLerp, backLerp;
-	model_t		*model;
-
-	model = R_GetModelByHandle( handle );
+	model_t* model = R_GetModelByHandle( handle );
 	if ( !model->md3[0] )
 	{
 		if(model->type == MOD_MDR)
@@ -167,14 +165,13 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 		return qfalse;
 	}
 
-	frontLerp = frac;
-	backLerp = 1.0f - frac;
-
-	for ( i = 0 ; i < 3 ; i++ ) {
-		tag->origin[i] = start->origin[i] * backLerp +  end->origin[i] * frontLerp;
-		tag->axis[0][i] = start->axis[0][i] * backLerp +  end->axis[0][i] * frontLerp;
-		tag->axis[1][i] = start->axis[1][i] * backLerp +  end->axis[1][i] * frontLerp;
-		tag->axis[2][i] = start->axis[2][i] * backLerp +  end->axis[2][i] * frontLerp;
+    
+	uint32_t i;
+    for ( i = 0 ; i < 3 ; i++ ) {
+		tag->origin[i] = start->origin[i] + (end->origin[i] - start->origin[i]) * frac;
+		tag->axis[0][i] = start->axis[0][i] + (end->axis[0][i] - start->axis[0][i]) * frac;
+		tag->axis[1][i] = start->axis[1][i] + (end->axis[1][i] - start->axis[1][i]) * frac;
+		tag->axis[2][i] = start->axis[2][i] + (end->axis[2][i] - start->axis[2][i]) * frac;
 	}
 	VectorNormalize( tag->axis[0] );
 	VectorNormalize( tag->axis[1] );

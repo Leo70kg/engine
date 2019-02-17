@@ -70,44 +70,6 @@ void reset_modelview_matrix(void)
 }
 
 
-float ProjectRadius( float r, vec3_t location, float pMatProj[16] )
-{
-    float pr = 0;
-    float tmpVec[3];
-    VectorSubtract(location, tr.viewParms.or.origin, tmpVec);
-	float dist = DotProduct( tr.viewParms.or.axis[0], tmpVec );
-
-	if ( dist > 0 )
-    {
-    
-        // vec3_t	p;
-        // p[0] = 0;
-        // p[1] = r ;
-        // p[2] = -dist;
-
-
-        //  float projected[4];
-        //	projected[0] = p[0] * pMatProj[0] + p[1] * pMatProj[4] + p[2] * pMatProj[8] + pMatProj[12];
-        //  projected[1] = p[0] * pMatProj[1] - p[1] * pMatProj[5] + p[2] * pMatProj[9] + pMatProj[13];
-        //	projected[2] = p[0] * pMatProj[2] + p[1] * pMatProj[6] + p[2] * pMatProj[10] + pMatProj[14];
-        //  projected[3] = p[0] * pMatProj[3] + p[1] * pMatProj[7] + p[2] * pMatProj[11] + pMatProj[15];
-        //  pr = projected[1] / projected[3];
-        
-        float p1 = - r * pMatProj[5] - dist * pMatProj[9] + pMatProj[13];
-        float p3 =   r * pMatProj[7] - dist * pMatProj[11] + pMatProj[15];
-
-        pr = p1 / p3;
-        
-
-        if ( pr > 1.0f )
-            pr = 1.0f;
-    }
-
-	return pr;
-}
-
-
-
 
 void R_SetupProjection( float pMatProj[16] )
 {
@@ -182,13 +144,11 @@ void R_SetupProjection( float pMatProj[16] )
 	// update q3's proj matrix (opengl) to vulkan conventions: z - [0, 1] instead of [-1, 1] and invert y direction
     
     // Vulkan clip space has inverted Y and half Z.	
-    
     float zNear	= r_znear->value;
 	float p10 = -zFar / (zFar - zNear);
 
     float py = tan(tr.viewParms.fovY * (M_PI / 360.0f));
     float px = tan(tr.viewParms.fovX * (M_PI / 360.0f));
-
 
 	pMatProj[0] = 1.0f / px;
 	pMatProj[1] = 0;
@@ -209,7 +169,6 @@ void R_SetupProjection( float pMatProj[16] )
 	pMatProj[13] = 0;
 	pMatProj[14] = zNear * p10;
 	pMatProj[15] = 0;
-
 }
 
 
@@ -346,8 +305,9 @@ void vk_createGeometryBuffers(void)
     VkMemoryRequirements ib_memory_requirements;
     qvkGetBufferMemoryRequirements(vk.device, shadingDat.index_buffer, &ib_memory_requirements);
 
-    VkDeviceSize mask = (ib_memory_requirements.alignment - 1);
-    VkDeviceSize idxBufOffset = ~mask & (vb_memory_requirements.size + mask);
+    const VkDeviceSize mask = (ib_memory_requirements.alignment - 1);
+
+    const VkDeviceSize idxBufOffset = (vb_memory_requirements.size + mask) & (~mask);
 
     uint32_t memory_type_bits = vb_memory_requirements.memoryTypeBits & ib_memory_requirements.memoryTypeBits;
 
@@ -446,7 +406,6 @@ void vk_destroy_shading_data(void)
 
 
     VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
-    
 }
 
 
@@ -572,7 +531,6 @@ void vk_bind_geometry(void)
 
         MatrixMultiply4x4_SSE(s_modelview_matrix, backEnd.viewParms.projectionMatrix, push_constants);
 
-        //ri.Printf( PRINT_ALL, "backEnd.projection2D = %d\n", backEnd.projection2D);
 		// Eye space transform.
 
         /*
@@ -634,8 +592,6 @@ void vk_bind_geometry(void)
 		// Specify push constants.
 		float mvp[16] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
         
-        //ri.Printf( PRINT_ALL, "projection2D = %d\n", backEnd.projection2D); 
-
         if (backEnd.projection2D)
         {
             float mvp0 = 2.0f / glConfig.vidWidth;
@@ -1236,7 +1192,6 @@ END_ANIMA2:
 		}
 
        
-
         enum Vk_Depth_Range depth_range = DEPTH_RANGE_NORMAL;
         if (tess.shader->isSky)
         {
@@ -1248,7 +1203,6 @@ END_ANIMA2:
         {
             depth_range = DEPTH_RANGE_WEAPON;
         }
-
  
         
         if (backEnd.viewParms.isMirror)
@@ -1287,4 +1241,3 @@ END_ANIMA2:
 		RB_FogPass();
 	}
 }
-

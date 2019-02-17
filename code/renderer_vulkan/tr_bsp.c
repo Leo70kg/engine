@@ -1340,16 +1340,25 @@ static	void R_LoadSubmodels( lump_t *l )
 
 	s_worldData.bmodels = out = (bmodel_t*) ri.Hunk_Alloc( count * sizeof(*out), h_low );
 
-	for ( i=0 ; i<count ; i++, in++, out++ ) {
-		model_t *model;
+	for ( i=0 ; i<count ; i++, in++, out++ )
+    {
+		// model_t *model = R_AllocModel();
 
-		model = R_AllocModel();
+        model_t* model = ri.Hunk_Alloc( sizeof( model_t ), h_low );
+        assert( model != NULL );			// this should never happen
 
-		assert( model != NULL );			// this should never happen
-
-		model->type = MOD_BRUSH;
+        model->index = tr.numModels;
+        model->type = MOD_BRUSH;
 		model->bmodel = out;
-		Com_sprintf( model->name, sizeof( model->name ), "*%d", i );
+		snprintf( model->name, sizeof( model->name ), "*%d", i );
+
+        tr.models[tr.numModels] = model;
+
+        if ( ++tr.numModels == MAX_MOD_KNOWN )
+        {
+            ri.Printf(PRINT_WARNING, "R_AllocModel: MAX_MOD_KNOWN.\n");
+	    }
+        ri.Printf( PRINT_ALL, "Allocate Memory for %s model. \n", model->name);
 
 		for (j=0 ; j<3 ; j++) {
 			out->bounds[0][j] = LittleFloat (in->mins[j]);

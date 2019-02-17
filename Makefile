@@ -1619,10 +1619,12 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/tr_displayResolution.o \
   $(B)/renderer_vulkan/vk_instance.o \
   $(B)/renderer_vulkan/vk_clear_attachments.o \
+  $(B)/renderer_vulkan/vk_cmd.o \
   $(B)/renderer_vulkan/vk_image.o \
   $(B)/renderer_vulkan/vk_image_sampler2.o \
   $(B)/renderer_vulkan/vk_pipelines.o \
   $(B)/renderer_vulkan/vk_frame.o \
+  $(B)/renderer_vulkan/vk_swapchain.o \
   $(B)/renderer_vulkan/vk_screenshot.o \
   $(B)/renderer_vulkan/vk_shade_geometry.o \
   $(B)/renderer_vulkan/vk_depth_attachment.o \
@@ -1637,14 +1639,14 @@ Q3VKOBJ = \
   $(B)/renderer_vulkan/single_texture_vert.o \
   \
   $(B)/renderer_vulkan/fun_log.o \
-  \
-  $(B)/renderer_vulkan/R_LoadImage.o \
+  $(B)/renderer_vulkan/R_LoadImage2.o
+
+#  $(B)/renderer_vulkan/R_LoadImage.o \
   $(B)/renderer_vulkan/tr_image_png.o \
   $(B)/renderer_vulkan/tr_image_jpg.o \
   $(B)/renderer_vulkan/tr_image_bmp.o \
   $(B)/renderer_vulkan/tr_image_tga.o \
   $(B)/renderer_vulkan/tr_image_pcx.o \
-  $(B)/renderer_vulkan/R_LoadImage2.o
 
 
 

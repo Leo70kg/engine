@@ -14,13 +14,13 @@ typedef struct
 // when there are multiple models of different formats available
 static const modelExtToLoaderMap_t modelLoaders[ ] =
 {
-	{ "iqm", R_RegisterIQM },
+    { "md3", R_RegisterMD3 },
 	{ "mdr", R_RegisterMDR },
-	{ "md3", R_RegisterMD3 },
+    { "iqm", R_RegisterIQM },
 	{ "md4", R_RegisterMD4 }
 };
 
-static const int numModelLoaders = ARRAY_LEN(modelLoaders);
+static const uint32_t numModelLoaders = ARRAY_LEN(modelLoaders);
 
 
 /*
@@ -35,110 +35,100 @@ asked for again.
 */
 qhandle_t RE_RegisterModel( const char *name )
 {
-	model_t		*mod;
-	qhandle_t	hModel;
+
 	qboolean	orgNameFailed = qfalse;
 	int			orgLoader = -1;
 
 
-
 	if ( !name || !name[0] ) {
-		ri.Printf( PRINT_ALL, "RE_RegisterModel: NULL name\n" );
+		ri.Printf( PRINT_WARNING, "RE_RegisterModel: NULL name\n" );
 		return 0;
 	}
 
 	if ( strlen( name ) >= MAX_QPATH ) {
-		ri.Printf( PRINT_ALL, "Model name exceeds MAX_QPATH\n" );
+		ri.Printf( PRINT_WARNING, "Model name exceeds MAX_QPATH\n" );
 		return 0;
 	}
 
 	//
 	// search the currently loaded models
 	//
-	for ( hModel = 1 ; hModel < tr.numModels; hModel++ ) {
-		mod = tr.models[hModel];
-		if ( !strcmp( mod->name, name ) ) {
-			if( mod->type == MOD_BAD ) {
+    qhandle_t hModel;
+
+	for ( hModel = 1; hModel < tr.numModels; hModel++ )
+    {
+		if ( 0 == strcmp( tr.models[hModel]->name, name ) )
+        {
+			if( tr.models[hModel]->type == MOD_BAD )
+            {
 				return 0;
 			}
 			return hModel;
 		}
 	}
 
+
 	// allocate a new model_t
+    ri.Printf( PRINT_ALL, "Allocate Memory for %s. \n", name);
+	
+    model_t* mod = ri.Hunk_Alloc( sizeof( model_t ), h_low );
 
-	if ( ( mod = R_AllocModel() ) == NULL ) {
-		ri.Printf( PRINT_WARNING, "RE_RegisterModel: R_AllocModel() failed for '%s'\n", name);
-		return 0;
-	}
-
-	// only set the name after the model has been successfully loaded
-	Q_strncpyz( mod->name, name, sizeof( mod->name ) );
-
-
-	// make sure the render thread is stopped
-	R_IssuePendingRenderCommands();
-
+    // only set the name after the model has been successfully loaded
+    strncpy(mod->name, name, MAX_QPATH);
+	mod->index = tr.numModels;
 	mod->type = MOD_BAD;
 	mod->numLods = 0;
 
-	//
-	// load the files
-	//
-	char localName[ MAX_QPATH ] = {0};
-	strncpy( localName, name, MAX_QPATH );
+    tr.models[tr.numModels] = mod;
 
-	const char* ext = getExtension( localName );
-
-	if( *ext )
-	{
-		int	i;
-		// Look for the correct loader and use it
-		for( i = 0; i < numModelLoaders; i++ )
-		{
-			if( !Q_stricmp( ext, modelLoaders[ i ].ext ) )
-			{
-				// Load
-				hModel = modelLoaders[ i ].ModelLoader( localName, mod );
-				break;
-			}
-		}
-
-		// A loader was found
-		if( i < numModelLoaders )
-		{
-			if( !hModel )
-			{
-				// Loader failed, most likely because the file isn't there;
-				// try again without the extension
-				orgNameFailed = qtrue;
-				orgLoader = i;
-				stripExtension( name, localName, MAX_QPATH );
-			}
-			else
-			{
-				// Something loaded
-				return mod->index;
-			}
-		}
-		else
-		{
-			ri.Printf( PRINT_WARNING, "RegisterModel: %s not find \n ", name);
-		}
-
+	if ( ++tr.numModels > MAX_MOD_KNOWN )
+    {
+        ri.Printf(PRINT_WARNING, "RE_RegisterModel: MAX_MOD_KNOWN.\n");
 	}
-	else
-    	ri.Printf( PRINT_WARNING, "RegisterModel: %s without extention. Try and find a suitable match using all the model formats supported\n ", name);
+
+	// make sure the render thread is stopped
+    //	R_IssuePendingRenderCommands();
+
+
+	// load the files
+
+    const char* dot = strrchr(name, '.');
     
+    if(dot != NULL)
+    {
+        if( (dot[1] == 'm') && (dot[2] == 'd') && (dot[3] == '3') )
+        {
+            hModel = R_RegisterMD3(name, mod);
+        }
+        else if( (dot[1] == 'm') && (dot[2] == 'd') && (dot[3] == '4') )
+        {
+            hModel = R_RegisterMD4(name, mod);
+        }
+        else if( (dot[1] == 'm') && (dot[2] == 'd') && (dot[3] == 'r') )
+        {
+            hModel = R_RegisterMDR(name, mod);
+        }
+        else if( (dot[1] == 'i') && (dot[2] == 'q') && (dot[3] == 'm') )
+        {
+            hModel = R_RegisterIQM(name, mod);
+        }
+        else
+        {
+        	ri.Printf( PRINT_WARNING, " %s format not support now. \n ", name);
+        }
+    }
+	else    
 	{
-        int i;
+        ri.Printf( PRINT_WARNING, "RegisterModel: %s without extention. Try and find a suitable match using all the model formats supported\n ", name);
+
+        uint32_t i;
         for( i = 0; i < numModelLoaders; i++ )
         {
             if (i == orgLoader)
                 continue;
             
-            char altName[ MAX_QPATH ] = {0};
-            snprintf( altName, sizeof (altName), "%s.%s", localName, modelLoaders[ i ].ext );
+            char altName[ MAX_QPATH * 2 ] = {0};
+            snprintf( altName, sizeof (altName), "%s.%s", name, modelLoaders[ i ].ext );
 
             // Load
             hModel = modelLoaders[ i ].ModelLoader( altName, mod );

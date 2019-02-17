@@ -52,6 +52,24 @@ static cvar_t* r_displayIndex;
 
 
 
+/*
+SDL_WINDOW_FULLSCREEN, for "real" fullscreen with a videomode change; 
+SDL_WINDOW_FULLSCREEN_DESKTOP for "fake" fullscreen that takes the size of the desktop.
+
+static VkBool32 isWindowFullscreen (void)
+{
+	return (SDL_GetWindowFlags(window_sdl) & SDL_WINDOW_FULLSCREEN) != 0;
+}
+
+static VkBool32 isDesktopFullscreen (void)
+{
+	return (SDL_GetWindowFlags(window_sdl) & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP;
+}
+
+*/
+
+
+
 static void VKimp_DetectAvailableModes(void)
 {
 	int i, j;
@@ -144,7 +162,7 @@ static int VKimp_SetMode(int mode, qboolean fullscreen)
 {
 	SDL_DisplayMode desktopMode;
 
-	Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN;
+	Uint32 flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN;
 
 	if ( r_allowResize->integer )
 		flags |= SDL_WINDOW_RESIZABLE;
@@ -255,6 +273,10 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
     SDL_FreeSurface( icon );
 #endif
 
+    SDL_ShowWindow (window_sdl);
+
+
+
 	if( window_sdl )
     {
         VKimp_DetectAvailableModes();
@@ -299,7 +321,6 @@ void vk_createWindow(void)
     glConfig.colorBits = 32;
     glConfig.depthBits = 24;
     glConfig.stencilBits = 8;
-
 
 
 
@@ -406,7 +427,30 @@ Minimize the game so that user is back at the desktop
 */
 void minimizeWindowImpl( void )
 {
-	SDL_MinimizeWindow( window_sdl );
+    VkBool32 toggleWorked = 1;
+    ri.Printf( PRINT_ALL, " Minimizing Window (SDL). \n");
+
+	VkBool32 isWinFullscreen = ( SDL_GetWindowFlags( window_sdl ) & SDL_WINDOW_FULLSCREEN );
+    
+
+    if( isWinFullscreen )
+	{
+		toggleWorked = (SDL_SetWindowFullscreen( window_sdl, 0 ) >= 0);
+	}
+
+    // SDL_WM_ToggleFullScreen didn't work, so do it the slow way
+    if( toggleWorked )
+    {
+        // ri.IN_Shutdown( );
+        SDL_MinimizeWindow( window_sdl );
+        // SDL_HideWindow( window_sdl );
+    }
+    else
+    {
+        ri.Printf( PRINT_ALL, " SDL_SetWindowFullscreen didn't work, so do it the slow way \n");
+
+        ri.Cmd_ExecuteText(EXEC_APPEND, "vid_restart\n");
+    }
 }
 
 /*

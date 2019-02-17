@@ -3,6 +3,8 @@
 #include "vk_instance.h"
 #include "vk_shade_geometry.h"
 #include "vk_frame.h"
+#include "vk_swapchain.h"
+
 //  Synchronization of access to resources is primarily the responsibility
 //  of the application in Vulkan. The order of execution of commands with
 //  respect to the host and other commands on the device has few implicit
@@ -640,16 +642,14 @@ void vk_end_frame(void)
     {
         return;
     }
-    else if(result == VK_ERROR_OUT_OF_DATE_KHR)
+    else if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_ERROR_SURFACE_LOST_KHR)
     {
-        if( r_fullscreen->integer == 1)
-		{
-			r_fullscreen->integer = 0;
-            r_mode->integer = 3;
-		}
+        // we first call vkDeviceWaitIdle because we 
+        // shouldn't touch resources that still be in use
+        qvkDeviceWaitIdle(vk.device);
+        // recreate the objects that depend on the swap chain and the window size
 
-        ri.Cmd_ExecuteText (EXEC_NOW, "vid_restart\n");
-        // hasty prevent crash.
+        vk_recreateSwapChain();
     }
 }
 

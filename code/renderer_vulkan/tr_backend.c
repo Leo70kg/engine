@@ -32,15 +32,29 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 /*
-=================
-RB_BeginDrawingView
-
-Any mirrored or portaled views have already been drawn, so prepare
-to actually render the visible surfaces for this view
-=================
+==================
+RB_RenderDrawSurfList
+==================
 */
-void RB_BeginDrawingView (void)
+void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 {
+	shader_t		*shader, *oldShader;
+	int				fogNum, oldFogNum;
+	int				entityNum, oldEntityNum;
+	int				dlighted, oldDlighted;
+	int				i;
+	drawSurf_t		*drawSurf;
+	int				oldSort;
+	float			originalTime;
+
+	// save original time for entity shader offsets
+	originalTime = backEnd.refdef.floatTime;
+
+    // Any mirrored or portaled views have already been drawn, 
+    // so prepare to actually render the visible surfaces for this view
+	// clear the z buffer, set the modelview, etc
+	// RB_BeginDrawingView ();
+
 	// we will need to change the projection matrix before drawing
 	// 2D images again
 	backEnd.projection2D = qfalse;
@@ -80,29 +94,6 @@ void RB_BeginDrawingView (void)
 	{
 		backEnd.isHyperspace = qfalse;
 	}
-}
-
-/*
-==================
-RB_RenderDrawSurfList
-==================
-*/
-void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
-{
-	shader_t		*shader, *oldShader;
-	int				fogNum, oldFogNum;
-	int				entityNum, oldEntityNum;
-	int				dlighted, oldDlighted;
-	int				i;
-	drawSurf_t		*drawSurf;
-	int				oldSort;
-	float			originalTime;
-
-	// save original time for entity shader offsets
-	originalTime = backEnd.refdef.floatTime;
-
-	// clear the z buffer, set the modelview, etc
-	RB_BeginDrawingView ();
 
 	// draw everything
 	oldEntityNum = -1;
@@ -432,14 +423,12 @@ const void* RB_SwapBuffers( const void *data )
 	RB_EndSurface();
 
 	// texture swapping test
-	if ( r_showImages->integer ) {
-		RB_ShowImages();
-	}
+	// if ( r_showImages->integer ) {
+	//	RB_ShowImages();
+	//}
 
 	//const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t *)data;
 
-
-	backEnd.projection2D = qfalse;
 
 	// VULKAN
 	vk_end_frame();

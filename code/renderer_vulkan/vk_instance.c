@@ -1117,6 +1117,8 @@ void vulkanInfo_f( void )
     snprintf(tmpBuf, 128, " Vk api version: %d.%d.%d ", major, minor, patch);
 	
     strncpy( glConfig.version_string, tmpBuf, sizeof( glConfig.version_string ) );
+
+    gpuMemUsageInfo_f();
 }
 
 

@@ -31,11 +31,10 @@ static void* q3_stbi_realloc(void* p, size_t old_size, size_t new_size) {
 #include "tiny_jpeg.h"
 
 
-
-static void LoadBMP( const char *name, unsigned char **pic, int *width, int *height );
-static void LoadTGA( const char *name, unsigned char **pic, int *width, int *height );
-static void LoadJPG( const char *name, unsigned char **pic, int *width, int *height );
-static void LoadPCX32 ( const char *filename, unsigned char **pic, int *width, int *height);
+static void LoadTGA( const char* name, unsigned char** pic, uint32_t* width, uint32_t* height);
+static void LoadBMP( const char* name, unsigned char** pic, uint32_t* width, uint32_t* height);
+static void LoadJPG( const char* name, unsigned char** pic, uint32_t* width, uint32_t* height);
+static void LoadPCX32 ( const char* filename, unsigned char** pic, uint32_t* width, uint32_t* height);
 
 
 
@@ -45,10 +44,6 @@ static void LoadPCX32 ( const char *filename, unsigned char **pic, int *width, i
 void R_LoadImage2(const char *name, unsigned char **pic, uint32_t* width, uint32_t* height)
 {
 
-	*pic = NULL;
-	*width = 0;
-	*height = 0;
-
 	const int len = (int)strlen(name);
 	if (len<5)
     {
@@ -57,7 +52,7 @@ void R_LoadImage2(const char *name, unsigned char **pic, uint32_t* width, uint32
 	}
 
     // point to '.', .jped are assume not exist
-    char* pPnt = (char*)name + len - 4;
+    const char* const pPnt = (char*)name + len - 4;
     
     if(pPnt[0] == '.')
     {   // have a extension
@@ -123,16 +118,14 @@ void R_LoadImage2(const char *name, unsigned char **pic, uint32_t* width, uint32
             LoadJPG( altname, pic, width, height );
         }
         
-        if( *pic != NULL )
+        if( *pic == NULL )
         {
-            ri.Printf( PRINT_WARNING, "%s without a extension, using %s instead. \n",
-                    name, altname);
-        }
-        else
             ri.Printf( PRINT_WARNING, "%s not present.\n", name);
+        }
+        // else
+        //    ri.Printf( PRINT_ALL, "%s without a extension, using %s instead. \n", name, altname);
 
     }
-
 }
 
 
@@ -151,7 +144,7 @@ typedef struct _TargaHeader {
 
 
 
-static void LoadTGA( const char *name, unsigned char **pic, int *width, int *height)
+static void LoadTGA( const char* name, unsigned char** pic, uint32_t* width, uint32_t* height)
 {
 	int	columns, rows, numPixels;
 	unsigned char* pixbuf;
@@ -390,16 +383,16 @@ static void LoadTGA( const char *name, unsigned char **pic, int *width, int *hei
 }
 
 
-static void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height )
+static void LoadJPG( const char* name, unsigned char** pic, uint32_t* width, uint32_t* height)
 {
     char* fbuffer;
-    int len = ri.R_ReadFile(filename, &fbuffer);
+    int len = ri.R_ReadFile(name, &fbuffer);
     if (!fbuffer) {
         return;
     }
   
     int components;
-    *pic = stbi_load_from_memory((unsigned char*)fbuffer, len, width, height, &components, STBI_rgb_alpha);
+    *pic = stbi_load_from_memory((unsigned char*)fbuffer, len, (int*)width, (int*)height, &components, STBI_rgb_alpha);
     if (*pic == NULL) {
         ri.FS_FreeFile(fbuffer);
         return;
@@ -451,7 +444,7 @@ typedef struct
 
 
 
-static void LoadBMP( const char *name, unsigned char **pic, int *width, int *height )
+static void LoadBMP( const char *name, unsigned char **pic, uint32_t *width, uint32_t *height )
 {
 	int		columns, rows, numPixels;
 	unsigned char	*pixbuf;
@@ -602,13 +595,6 @@ static void LoadBMP( const char *name, unsigned char **pic, int *width, int *hei
 }
 
 
-
-/*
-=====================================
-LoadPCX
-=====================================
-*/
-
 typedef struct {
     char	manufacturer;
     char	version;
@@ -625,7 +611,7 @@ typedef struct {
     char	data;			// unbounded
 } pcx_t;
 
-static void LoadPCX ( const char *filename, unsigned char **pic, unsigned char **palette, int *width, int *height)
+static void LoadPCX ( const char *filename, unsigned char **pic, unsigned char **palette, uint32_t *width, uint32_t *height)
 {
 	char* raw;
 	pcx_t	*pcx;
@@ -715,12 +701,7 @@ static void LoadPCX ( const char *filename, unsigned char **pic, unsigned char *
 }
 
 
-/*
-==============
-LoadPCX32
-==============
-*/
-static void LoadPCX32 ( const char *filename, unsigned char **pic, int *width, int *height)
+static void LoadPCX32 ( const char *filename, unsigned char **pic, uint32_t *width, uint32_t *height)
 {
 	unsigned char	*palette;
 	unsigned char	*pic8;

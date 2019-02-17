@@ -28,34 +28,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/ref_import.h"
 
 
-
 model_t* R_GetModelByHandle( qhandle_t index )
 {
-	if ( (index < 1) || (index >= tr.numModels) )
+	if ( (index < 0) || (index >= tr.numModels) )
     {
-        ri.Printf(PRINT_WARNING, " out of range gets the defualt model.\n");
+        ri.Printf(PRINT_WARNING, "index = %d, out of range gets the defualt model.\n", index);
 		return tr.models[0];
 	}
 
 	return tr.models[index];
-}
-
-
-
-model_t* R_AllocModel( void )
-{
-	if ( tr.numModels == MAX_MOD_KNOWN )
-    {
-        ri.Printf(PRINT_WARNING, "R_AllocModel: MAX_MOD_KNOWN.\n");
-		return NULL;
-	}
-
-	model_t* mod = ri.Hunk_Alloc( sizeof( model_t ), h_low );
-	mod->index = tr.numModels;
-	tr.models[tr.numModels] = mod;
-	tr.numModels++;
-
-	return mod;
 }
 
 

@@ -10,14 +10,13 @@
 
 // dirty_depth_attachment;
 
-static VkBool32 s_depth_attachment_dirty = 0;
+static VkBool32 s_depth_attachment_dirty;
 
 
 void set_depth_attachment(VkBool32 s)
 {   
     s_depth_attachment_dirty = s;
 }
-
 
 
 void vk_clearDepthStencilAttachments(void)

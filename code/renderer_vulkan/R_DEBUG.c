@@ -139,17 +139,7 @@ Also called by RE_EndRegistration
 void RB_ShowImages(void)
 {
 
-	if ( !backEnd.projection2D )
-    {
-        backEnd.projection2D = qtrue;
-
-        // set 2D virtual screen size
-        // set time for 2D shaders
-        
-        int t = ri.Milliseconds();
-        backEnd.refdef.rd.time = t;
-        backEnd.refdef.floatTime = t * 0.001f;
-	}
+    backEnd.projection2D = qtrue;
 
 	const float black[4] = {0, 0, 0, 1};
 	vk_clearColorAttachments(black);
@@ -205,6 +195,8 @@ void RB_ShowImages(void)
 	}
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
+    
+    backEnd.projection2D = qfalse;
 }
 
 /*

@@ -110,7 +110,6 @@ void R_LightScaleTexture (unsigned char* dst, unsigned char* in, unsigned int nB
             dst[n3] = in[n3];
         }
     }
-
 }
 
 
@@ -184,7 +183,7 @@ void R_MipMap(const unsigned char* in, uint32_t width, uint32_t height, unsigned
         out[0] = in[0];
 		return;
     }
-    unsigned int i;
+    uint32_t i;
 
     const unsigned int row = width * 4;
 	width >>= 1;
@@ -205,7 +204,7 @@ void R_MipMap(const unsigned char* in, uint32_t width, uint32_t height, unsigned
     {   
         for (i=0; i<height; i++, in+=row)
         {
-            unsigned int j;
+            uint32_t j;
             for (j=0; j<width; j++, out+=4, in+=8)
             {
                 out[0] = (in[0] + in[4] + in[row+0] + in[row+4])>>2;

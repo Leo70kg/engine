@@ -2,13 +2,13 @@
 #include "vk_image_sampler.h"
 #include "R_ImageProcess.h"
 #include "vk_image.h"
+#include "vk_cmd.h"
 #include "vk_instance.h"
 #include "tr_globals.h"
 #include "tr_cvar.h"
 
 
-
-#define IMAGE_CHUNK_SIZE        (128 * 1024 * 1024)
+#define IMAGE_CHUNK_SIZE        (192 * 1024 * 1024)
 
 // 2 for mipmap, 4 for RGBA, 1024 width
 #define MAX_IMAGE_SIZE        (2 * 4 * 1024 * 1024)
@@ -44,7 +44,7 @@ struct StagingBufferImage
     // Host visible memory used to copy image data to device local memory.
     VkDeviceMemory devMemMappable;
 
-    // Device local memory
+    // One large device device local memory allocation, assigned to multiple images
     VkDeviceMemory devMemStoreImg;
     uint32_t memUsed;
 
@@ -211,7 +211,6 @@ static void vk_createStagingBuffer(uint32_t size)
 }
 
 
-
 static void vk_destroy_staging_buffer(void)
 {
     if (StagImg.buff != VK_NULL_HANDLE)
@@ -233,41 +232,6 @@ static void vk_destroy_staging_buffer(void)
 }
 
 
-void record_image_layout_transition( 
-        VkCommandBuffer cmdBuf,
-        VkImage image,
-        VkImageAspectFlags image_aspect_flags,
-        VkAccessFlags src_access_flags,
-        VkImageLayout old_layout,
-        VkAccessFlags dst_access_flags,
-        VkImageLayout new_layout )
-{
-
-	VkImageMemoryBarrier barrier = {0};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.pNext = NULL;
-	barrier.srcAccessMask = src_access_flags;
-	barrier.dstAccessMask = dst_access_flags;
-	barrier.oldLayout = old_layout;
-	barrier.newLayout = new_layout;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.image = image;
-	barrier.subresourceRange.aspectMask = image_aspect_flags;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-// vkCmdPipelineBarrier is a synchronization command that inserts a dependency between
-// commands submitted to the same queue, or between commands in the same subpass.
-// When vkCmdPipelineBarrier is submitted to a queue, it defines a memory dependency
-// between commands that were submitted before it, and those submitted after it.
-    
-    // cmdBuf is the command buffer into which the command is recorded.
-	qvkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,	0, NULL, 0, NULL, 1, &barrier);
-}
 
 
 
@@ -322,8 +286,6 @@ static void vk_stagBufferToDeviceLocalMem(VkImage image, VkBufferImageCopy* pReg
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 
-   
-
     
     // To copy data from a buffer object to an image object
     
@@ -342,7 +304,6 @@ static void vk_stagBufferToDeviceLocalMem(VkImage image, VkBufferImageCopy* pReg
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    ////////
     
     VK_CHECK(qvkEndCommandBuffer(cmd_buf));
 
@@ -385,17 +346,13 @@ static int generateHashValue( const char *fname )
 }
 
 
-
 /*
 ================
 This is the only way any image_t are created
 ================
 */
-
-static VkImage vk_createImageAndBindWithMemory(const uint32_t width, const uint32_t height, const uint32_t mipLevels)
+static void vk_createImageAndBindWithMemory(image_t* pImg)
 {
-
-    VkImage this_image;
 
     VkImageCreateInfo desc;
     desc.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -403,10 +360,10 @@ static VkImage vk_createImageAndBindWithMemory(const uint32_t width, const uint3
     desc.flags = 0;
     desc.imageType = VK_IMAGE_TYPE_2D;
     desc.format = VK_FORMAT_R8G8B8A8_UNORM;
-    desc.extent.width = width;
-    desc.extent.height = height;
+    desc.extent.width = pImg->uploadWidth;
+    desc.extent.height = pImg->uploadHeight;
     desc.extent.depth = 1;
-    desc.mipLevels = mipLevels;
+    desc.mipLevels = pImg->mipLevels;
     desc.arrayLayers = 1;
     desc.samples = VK_SAMPLE_COUNT_1_BIT;
     desc.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -416,18 +373,18 @@ static VkImage vk_createImageAndBindWithMemory(const uint32_t width, const uint3
     desc.pQueueFamilyIndices = NULL;
     desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &this_image));
+    VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &pImg->handle));
 
     // =======================================================
     // Binding it with device local memory
     // =======================================================
     VkMemoryRequirements memory_requirements;
-    qvkGetImageMemoryRequirements(vk.device, this_image, &memory_requirements);
+    qvkGetImageMemoryRequirements(vk.device, pImg->handle, &memory_requirements);
     
     const uint32_t mask = (memory_requirements.alignment - 1);
 
     // ensure that memory region has proper alignment
-    uint32_t offset_aligned = (StagImg.memUsed + mask) & (~mask);
+    const uint32_t offset_aligned = (StagImg.memUsed + mask) & (~mask);
     
     StagImg.memUsed = offset_aligned + memory_requirements.size;
 
@@ -442,12 +399,14 @@ static VkImage vk_createImageAndBindWithMemory(const uint32_t width, const uint3
     // The number of bytes returned in the VkMemoryRequirements::size member in memory,
     // starting from memoryOffset bytes, will be bound to the specified image.
 
-    VK_CHECK(qvkBindImageMemory(vk.device, this_image, StagImg.devMemStoreImg, offset_aligned));
+    VK_CHECK(qvkBindImageMemory(vk.device, pImg->handle, StagImg.devMemStoreImg, offset_aligned));
     // 	for debug info
     //  ri.Printf(PRINT_ALL, "GPU image chuck memory Used = %dM,%dK Bytes\n", 
     //        StagImg.memUsed / (1024 * 1024), (StagImg.memUsed % (1024 * 1024))/1024);
-    return this_image;
+    // return this_image;
 }
+
+
 
 static void vk_createImageViewAndDescriptorSet(image_t* pImage)
 {
@@ -463,7 +422,7 @@ static void vk_createImageViewAndDescriptorSet(image_t* pImage)
     // format is a VkFormat describing the format and type used 
     // to interpret data elements in the image.
     desc.format = VK_FORMAT_R8G8B8A8_UNORM;
-
+    
     // the components field allows you to swizzle the color channels around
     desc.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     desc.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -567,62 +526,75 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, const uint32_t wid
     //ri.Printf( PRINT_ALL, "R_CreateImage: %s\n", name);
     
     // Create image_t object.
+
     image_t* pImage = (image_t*) ri.Hunk_Alloc( sizeof( image_t ), h_low );
 
+    strncpy (pImage->imgName, name, sizeof(pImage->imgName));
     pImage->index = tr.numImages;
     pImage->mipmap = isMipMap;
+    pImage->mipLevels = 1;
     pImage->allowPicmip = allowPicmip;
     pImage->wrapClampMode = glWrapClampMode;
     pImage->width = width;
     pImage->height = height;
-
-    strncpy (pImage->imgName, name, sizeof(pImage->imgName));
-
-    const int hash = generateHashValue(name);
-    pImage->next = hashTable[hash];
-    hashTable[hash] = pImage;
-
+    pImage->isLightmap = (strncmp(name, "*lightmap", 9) == 0);
     // Create corresponding GPU resource, lightmaps are always allocated on TMU 1 .
-    // pImage->TMU = (strncmp(name, "*lightmap", 9) == 0);
-	
+    // A texture mapping unit (TMU) is a component in modern graphics processing units (GPUs). 
+    // Historically it was a separate physical processor. A TMU is able to rotate, resize, 
+    // and distort a bitmap image (performing texture sampling), to be placed onto an arbitrary
+    // plane of a given 3D model as a texture. This process is called texture mapping. 
+    // In modern graphics cards it is implemented as a discrete stage in a graphics pipeline, 
+    // whereas when first introduced it was implemented as a separate processor, 
+    // e.g. as seen on the Voodoo2 graphics card. 
+    //
+    // The TMU came about due to the compute demands of sampling and transforming a flat
+    // image (as the texture map) to the correct angle and perspective it would need to
+    // be in 3D space. The compute operation is a large matrix multiply, 
+    // which CPUs of the time (early Pentiums) could not cope with at acceptable performance.
+    //
+    // Today (2013), TMUs are part of the shader pipeline and decoupled from the
+    // Render Output Pipelines (ROPs). For example, in AMD's Cypress GPU, 
+    // each shader pipeline (of which there are 20) has four TMUs, giving the GPU 80 TMUs.
+    // This is done by chip designers to closely couple shaders and the texture engines
+    // they will be working with. 
+    //
+    // 3D scenes are generally composed of two things: 3D geometry, and the textures 
+    // that cover that geometry. Texture units in a video card take a texture and 'map' it
+    // to a piece of geometry. That is, they wrap the texture around the geometry and 
+    // produce textured pixels which can then be written to the screen. 
+    //
+    // Textures can be an actual image, a lightmap, or even normal maps for advanced 
+    // surface lighting effects. 
+
 
     // convert to exact power of 2 sizes
-    uint32_t scaled_width, scaled_height;
-    GetScaledDimension(width, height, &scaled_width, &scaled_height, allowPicmip);
-   
+    GetScaledDimension(width, height, &pImage->uploadWidth, &pImage->uploadHeight, allowPicmip);
+  
 
-    
-    const uint32_t nBytes = 4 * scaled_width * scaled_height;
-    
-    unsigned char * const upload_buffer = (unsigned char*) malloc ( 2 * nBytes);
+    uint32_t buffer_size = 4 * pImage->uploadWidth * pImage->uploadHeight;
+    unsigned char * const upload_buffer = (unsigned char*) malloc ( 2 * buffer_size);
 
-    if ( (scaled_width != width) || (scaled_height != height) )
+    if ( (pImage->uploadWidth != width) || (pImage->uploadHeight != height) )
     {
-        //go down from [width, height] to [scaled_width, scaled_height]
-
+        // just info
         ri.Printf( PRINT_WARNING, "ResampleTexture: inwidth: %d, inheight: %d, outwidth: %d, outheight: %d\n",
-                width, height, scaled_width, scaled_height );
-        ResampleTexture (upload_buffer, width, height, pic, scaled_width, scaled_height);
+                width, height, pImage->uploadWidth, pImage->uploadHeight );
+        
+        //go down from [width, height] to [scaled_width, scaled_height]
+        ResampleTexture (upload_buffer, width, height, pic, pImage->uploadWidth, pImage->uploadHeight);
     }
     else
     {
-        memcpy(upload_buffer, pic, nBytes);
+        memcpy(upload_buffer, pic, buffer_size);
     }
 
-
     ////////////////////////////////////////////////////////////////////
-    
-    uint32_t buffer_size = nBytes;
-    uint32_t curMipMapLevel = 1;
-
     // 2^12 = 4096
     // The set of all bytes bound to all the source regions must not overlap
     // the set of all bytes bound to the destination regions.
     //
     // The set of all bytes bound to each destination region must not overlap
     // the set of all bytes bound to another destination region.
-    //
-    // Copy regions must be non-empty.
 
     VkBufferImageCopy regions[12];
 
@@ -636,22 +608,21 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, const uint32_t wid
     regions[0].imageOffset.x = 0;
     regions[0].imageOffset.y = 0;
     regions[0].imageOffset.z = 0;
-    regions[0].imageExtent.width = scaled_width;
-    regions[0].imageExtent.height = scaled_height;
+    regions[0].imageExtent.width = pImage->uploadWidth;
+    regions[0].imageExtent.height = pImage->uploadHeight;
     regions[0].imageExtent.depth = 1;
 
 
     if(isMipMap)
     {
-
-        uint32_t base_width = scaled_width;
-        uint32_t base_height = scaled_height;
+        uint32_t curMipMapLevel = 1; 
+        uint32_t base_width = pImage->uploadWidth;
+        uint32_t base_height = pImage->uploadHeight;
 
         unsigned char* in_ptr = upload_buffer;
         unsigned char* dst_ptr = in_ptr + buffer_size;
 
         R_LightScaleTexture(upload_buffer, upload_buffer, buffer_size);
-
 
         // Use the normal mip-mapping to go down from [scaled_width, scaled_height] to [1,1] dimensions.
 
@@ -715,15 +686,13 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, const uint32_t wid
             in_ptr = dst_ptr;
             dst_ptr += curLevelSize; 
         }
-
-
+        pImage->mipLevels = curMipMapLevel; 
         // ri.Printf( PRINT_WARNING, "curMipMapLevel: %d, base_width: %d, base_height: %d, buffer_size: %d, name: %s\n",
         //    curMipMapLevel, scaled_width, scaled_height, buffer_size, name);
-
     }
 
-
-    pImage->handle = vk_createImageAndBindWithMemory(scaled_width, scaled_height, curMipMapLevel);
+    
+    vk_createImageAndBindWithMemory(pImage);
     vk_createImageViewAndDescriptorSet(pImage);
 
 
@@ -733,12 +702,15 @@ image_t* R_CreateImage( const char *name, unsigned char* pic, const uint32_t wid
     qvkUnmapMemory(vk.device, StagImg.devMemMappable);
     free(upload_buffer);
 
-    vk_stagBufferToDeviceLocalMem(pImage->handle, regions, curMipMapLevel);
+    vk_stagBufferToDeviceLocalMem(pImage->handle, regions, pImage->mipLevels);
 
-    
+    const int hash = generateHashValue(name);
+    pImage->next = hashTable[hash];
+    hashTable[hash] = pImage;
+
 
     if(!isAlone)
-    {
+    {        
         tr.images[tr.numImages] = pImage;
         tr.numImages++;
     }
@@ -788,8 +760,8 @@ image_t* R_FindImageFile(const char *name, VkBool32 mipmap, VkBool32 allowPicmip
 	//
 	// load the pic from disk
     //
-    uint32_t width, height;
-    unsigned char* pic;
+    uint32_t width = 0, height = 0;
+    unsigned char* pic = NULL;
     R_LoadImage2( name, &pic, &width, &height );
     if (pic == NULL)
     {
@@ -810,24 +782,23 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
 {
 
     image_t* prtImage = tr.scratchImage[client];
-
     
     // if the scratchImage isn't in the format we want, specify it as a new texture
-    if ( (cols != prtImage->width) || (rows != prtImage->height) )
+    if ( (cols != prtImage->uploadWidth) || (rows != prtImage->uploadHeight) )
     {
         ri.Printf(PRINT_ALL, "w=%d, h=%d, cols=%d, rows=%d, client=%d, prtImage->width=%d, prtImage->height=%d\n", 
-           w, h, cols, rows, client, prtImage->width, prtImage->height);
+           w, h, cols, rows, client, prtImage->uploadWidth, prtImage->uploadHeight);
 
-        prtImage->width = cols;
-        prtImage->height = rows;
-
+        prtImage->uploadWidth = cols;
+        prtImage->uploadHeight = rows;
+        prtImage->mipLevels = 1; 
         // VULKAN
 
         qvkDestroyImage(vk.device, prtImage->handle, NULL);
         qvkDestroyImageView(vk.device, prtImage->view, NULL);
         qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &prtImage->descriptor_set);
         
-        prtImage->handle = vk_createImageAndBindWithMemory(cols, rows, 1);
+        vk_createImageAndBindWithMemory(prtImage);
 
         //vk_createImageView(prtImage->handle, &prtImage->view);
         //vk_createDescriptorSet(prtImage->view , vk_find_sampler(0, 0), &prtImage->descriptor_set);
@@ -852,14 +823,12 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
         region.imageExtent.height = rows;
         region.imageExtent.depth = 1;
 
-
         const uint32_t buffer_size = cols * rows * 4;
 
         void* pDat;
         VK_CHECK(qvkMapMemory(vk.device, StagImg.devMemMappable, 0, VK_WHOLE_SIZE, 0, &pDat));
         memcpy(pDat, data, buffer_size);
         qvkUnmapMemory(vk.device, StagImg.devMemMappable);
-
 
         vk_stagBufferToDeviceLocalMem(tr.scratchImage[client]->handle, &region, 1);
 
@@ -895,7 +864,6 @@ void RE_UploadCinematic (int w, int h, int cols, int rows, const unsigned char *
 
         vk_stagBufferToDeviceLocalMem(tr.scratchImage[client]->handle, &region, 1);
     }
-
 }
 
 
@@ -945,7 +913,6 @@ static void R_CreateWhiteImage(void)
 }
 
 
-
 static void R_CreateIdentityLightImage(void)
 {
     uint32_t x,y;
@@ -962,7 +929,6 @@ static void R_CreateIdentityLightImage(void)
 		}
 	}
 	tr.identityLightImage = R_CreateImage("*identityLight", (unsigned char *)data, 8, 8, qfalse, qfalse, GL_REPEAT, VK_FALSE );
-
 }
 
 
@@ -1094,24 +1060,12 @@ void vk_destroyImageRes(void)
 
 	vk_destroy_staging_buffer();   
 
-
 	ri.Printf(PRINT_ALL, " tr.images[1:%d].{VkImage VkImageView descriptor_set} \n", tr.numImages);
 
 	uint32_t i = 0;
 	for (i = 0; i < tr.numImages; i++)
 	{
-		if (tr.images[i]->handle != VK_NULL_HANDLE)
-		{
-			qvkDestroyImageView(vk.device, tr.images[i]->view, NULL);
-			qvkDestroyImage(vk.device, tr.images[i]->handle, NULL);
-		}
-
-		if(tr.images[i]->descriptor_set != VK_NULL_HANDLE)
-		{   
-			//ri.Printf(PRINT_ALL, " Free Descriptor Sets s_vkImages[%d].descriptor_set. \n", i);
-			//To free allocated descriptor sets
-			qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &tr.images[i]->descriptor_set);
-		}
+        R_DestroySingleImage(tr.images[i]);
 	}
 
 /*
@@ -1127,7 +1081,6 @@ void vk_destroyImageRes(void)
 		// scratchimage is usually used for cinematic drawing
 		R_DestroySingleImage(tr.scratchImage[i]);
 	}
-//    R_DestroySingleImage(tr.fontIamge);
 
     // Destroying a pool object implicitly frees all objects allocated from that pool. 
     // Specifically, destroying VkCommandPool frees all VkCommandBuffer objects that 

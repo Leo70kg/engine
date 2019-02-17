@@ -1,4 +1,5 @@
-
+#include "VKimpl.h"
+#include "vk_instance.h"
 //  ===============  Command Buffer Lifecycle ====================
 // Each command buffer is always in one of the following states:
 //
@@ -56,3 +57,42 @@
 // the primary moves to the invalid state. A primary moving to any other state does 
 // not affect the state of the secondary. Resetting or freeing a primary command buffer 
 // removes the linkage to any secondary command buffers that were recorded to it.
+//
+//
+
+void record_image_layout_transition( 
+        VkCommandBuffer cmdBuf,
+        VkImage image,
+        VkImageAspectFlags image_aspect_flags,
+        VkAccessFlags src_access_flags,
+        VkImageLayout old_layout,
+        VkAccessFlags dst_access_flags,
+        VkImageLayout new_layout )
+{
+
+	VkImageMemoryBarrier barrier = {0};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = NULL;
+	barrier.srcAccessMask = src_access_flags;
+	barrier.dstAccessMask = dst_access_flags;
+	barrier.oldLayout = old_layout;
+	barrier.newLayout = new_layout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = image;
+	barrier.subresourceRange.aspectMask = image_aspect_flags;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+// vkCmdPipelineBarrier is a synchronization command that inserts a dependency between
+// commands submitted to the same queue, or between commands in the same subpass.
+// When vkCmdPipelineBarrier is submitted to a queue, it defines a memory dependency
+// between commands that were submitted before it, and those submitted after it.
+    
+    // cmdBuf is the command buffer into which the command is recorded.
+	qvkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,	0, NULL, 0, NULL, 1, &barrier);
+}
+

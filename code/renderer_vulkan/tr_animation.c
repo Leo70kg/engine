@@ -38,79 +38,7 @@ frame.
 */
 
 
-static int R_ComputeLOD( trRefEntity_t *ent )
-{
-    ri.Printf(PRINT_ALL, "\n------ R_ComputeLOD ------\n");
-	float flod;
-	int lod;
-
-	if ( tr.currentModel->numLods < 2 )
-	{
-		// model has only 1 LOD level, skip computations and bias
-		lod = 0;
-	}
-	else
-	{
-		// multiple LODs exist, so compute projected bounding sphere
-		// and use that as a criteria for selecting LOD
-	    float radius;
-
-		if(tr.currentModel->type == MOD_MDR)
-		{
-			mdrHeader_t* mdr = (mdrHeader_t *) tr.currentModel->modelData;
-			int frameSize = (size_t) (&((mdrFrame_t *)0)->bones[mdr->numBones]);
-			mdrFrame_t* mdrframe = (mdrFrame_t *) ((unsigned char *) mdr + mdr->ofsFrames + frameSize * ent->e.frame);
-			
-			radius = RadiusFromBounds(mdrframe->bounds[0], mdrframe->bounds[1]);
-		}
-		else
-		{
-			md3Frame_t* frame = (md3Frame_t *) (( ( unsigned char * ) tr.currentModel->md3[0] ) + tr.currentModel->md3[0]->ofsFrames);
-
-			frame += ent->e.frame;
-
-			radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
-		}
-
-        float projectedRadius = ProjectRadius( radius, ent->e.origin, tr.viewParms.projectionMatrix);
-		
-        if ( projectedRadius != 0 )
-		{
-			float lodscale = r_lodscale->value;
-			if (lodscale > 20)
-                lodscale = 20;
-			flod = 1.0f - projectedRadius * lodscale;
-		}
-		else
-		{
-			// object intersects near view plane, e.g. view weapon
-			flod = 0;
-		}
-
-		flod *= tr.currentModel->numLods;
-		
-        lod = (int)(flod);
-
-		if ( lod < 0 )
-		{
-			lod = 0;
-		}
-		else if ( lod >= tr.currentModel->numLods )
-		{
-			lod = tr.currentModel->numLods - 1;
-		}
-	}
-
-	lod += r_lodbias->integer;
-	
-	if ( lod >= tr.currentModel->numLods )
-		lod = tr.currentModel->numLods - 1;
-    else if ( lod < 0 )
-		lod = 0;
-
-	return lod;
-}
-
+extern int R_ComputeLOD( trRefEntity_t *ent );
 
 static int R_MDRCullModel( mdrHeader_t *header, trRefEntity_t *ent )
 {
@@ -277,7 +205,11 @@ void R_MDRAddAnimSurfaces( trRefEntity_t *ent )
 	}	
 
 	// figure out the current LOD of the model we're rendering, and set the lod pointer respectively.
-	int lodnum = R_ComputeLOD(ent);
+    int lodnum = 0;
+
+    if ( tr.currentModel->numLods > 1 )
+	    lodnum = R_ComputeLOD( ent );
+
 	// check whether this model has as that many LODs at all. If not, try the closest thing we got.
 	if(header->numLODs <= 0)
 		return;

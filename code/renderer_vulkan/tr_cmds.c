@@ -142,15 +142,12 @@ void* R_GetCommandBuffer( int bytes )
 
 /*
 =============
-R_AddDrawSurfCmd
-
+submits a single 'draw' command into the command queue
 =============
 */
 void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs )
 {
-	drawSurfsCommand_t	*cmd;
-
-	cmd = (drawSurfsCommand_t*) R_GetCommandBuffer(sizeof(*cmd));
+	drawSurfsCommand_t* cmd = (drawSurfsCommand_t*) R_GetCommandBuffer(sizeof(*cmd));
 	if ( !cmd ) {
 		return;
 	}

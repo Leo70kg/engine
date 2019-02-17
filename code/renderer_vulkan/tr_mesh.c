@@ -119,79 +119,73 @@ static int R_CullModel( md3Header_t *header, trRefEntity_t *ent ) {
 
 int R_ComputeLOD( trRefEntity_t *ent )
 {
-	float radius;
+ 
+    int lod = 0;
+
+    float radius;
     // radius are guarentee large than 0;
-	float flod, lodscale;
-	float projectedRadius;
-	md3Frame_t *frame;
-    int lod;
-	if ( tr.currentModel->numLods < 2 )
-	{
-		// model has only 1 LOD level, skip computations and bias
-		lod = 0;
-	}
-	else
-	{
-		// multiple LODs exist, so compute projected bounding sphere
-		// and use that as a criteria for selecting LOD
-		mdrHeader_t *mdr;
-		mdrFrame_t *mdrframe;
-		if(tr.currentModel->type == MOD_MDR)
-		{
-			int frameSize;
-			mdr = (mdrHeader_t *) tr.currentModel->modelData;
-			frameSize = (size_t) (&((mdrFrame_t *)0)->bones[mdr->numBones]);
-			
-			mdrframe = (mdrFrame_t *) ((byte *) mdr + mdr->ofsFrames + frameSize * ent->e.frame);
-			
-			radius = RadiusFromBounds(mdrframe->bounds[0], mdrframe->bounds[1]);
-		}
-		else
-		{
-			frame = ( md3Frame_t * ) ( ( ( unsigned char * ) tr.currentModel->md3[0] ) + tr.currentModel->md3[0]->ofsFrames );
 
-			frame += ent->e.frame;
+    // multiple LODs exist, so compute projected bounding sphere
+    // and use that as a criteria for selecting LOD
+    if(tr.currentModel->type == MOD_MDR)
+    {
+        mdrHeader_t * mdr = (mdrHeader_t *) tr.currentModel->modelData;
+        int frameSize = (size_t) (&((mdrFrame_t *)0)->bones[mdr->numBones]);
 
-			radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
-		}
-/*
-		frame = ( md3Frame_t * ) ( ( ( unsigned char * ) tr.currentModel->md3[0] ) + tr.currentModel->md3[0]->ofsFrames );
-		frame += ent->e.frame;
+        mdrFrame_t * mdrframe = (mdrFrame_t *) ((byte *) mdr + mdr->ofsFrames + frameSize * ent->e.frame);
 
-		radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
-*/
-		if ( ( projectedRadius = ProjectRadius( radius, ent->e.origin, tr.viewParms.projectionMatrix) ) != 0 )
-		{
-			lodscale = r_lodscale->value;
-			if (lodscale > 20)
-                lodscale = 20;
-			
-            flod = 1.0f - projectedRadius * lodscale;
-		}
-		else
-		{
-			// object intersects near view plane, e.g. view weapon
-			flod = 0;
-		}
+        radius = RadiusFromBounds(mdrframe->bounds[0], mdrframe->bounds[1]);
+    }
+    else
+    {
+        md3Frame_t * frame = ( md3Frame_t * ) ( ( ( unsigned char * ) tr.currentModel->md3[0] ) + tr.currentModel->md3[0]->ofsFrames );
 
-		lod = ( flod * tr.currentModel->numLods );
+        frame += ent->e.frame;
 
-		if ( lod < 0 )
-		{
-			lod = 0;
-		}
-		else if ( lod >= tr.currentModel->numLods )
-		{
-			lod = tr.currentModel->numLods - 1;
-		}
-	}
+        radius = RadiusFromBounds( frame->bounds[0], frame->bounds[1] );
+    }
 
-	lod += r_lodbias->integer;
-	
-	if ( lod >= tr.currentModel->numLods )
-		lod = tr.currentModel->numLods - 1;
-	if ( lod < 0 )
-		lod = 0;
+    float tmpVec[3];
+    VectorSubtract(ent->e.origin, tr.viewParms.or.origin, tmpVec);
+    float dist = DotProduct( tr.viewParms.or.axis[0], tmpVec);
+    if ( dist > 0 )
+    {
+
+        // vec3_t	p;
+        // p[0] = 0;
+        // p[1] = r ;
+        // p[2] = -dist;
+
+        //  pMatProj = tr.viewParms.projectionMatrix
+        //  float projected[4];
+        //	projected[0] = p[0] * pMatProj[0] + p[1] * pMatProj[4] + p[2] * pMatProj[8] + pMatProj[12];
+        //  projected[1] = p[0] * pMatProj[1] - p[1] * pMatProj[5] + p[2] * pMatProj[9] + pMatProj[13];
+        //	projected[2] = p[0] * pMatProj[2] + p[1] * pMatProj[6] + p[2] * pMatProj[10] + pMatProj[14];
+        //  projected[3] = p[0] * pMatProj[3] + p[1] * pMatProj[7] + p[2] * pMatProj[11] + pMatProj[15];
+        //  pr = projected[1] / projected[3];
+
+        float p1 = - radius * tr.viewParms.projectionMatrix[5] - dist * tr.viewParms.projectionMatrix[9] + tr.viewParms.projectionMatrix[13];
+        float p3 =   radius * tr.viewParms.projectionMatrix[7] - dist * tr.viewParms.projectionMatrix[11] + tr.viewParms.projectionMatrix[15];
+
+        float projectedRadius = p1 / p3;
+
+
+        lod = (1.0f - projectedRadius * 5) * tr.currentModel->numLods ;
+
+    }
+
+
+ 
+    if ( lod < 0 )
+    {
+        lod = 0;
+    }
+    else if ( lod >= tr.currentModel->numLods )
+    {
+        lod = tr.currentModel->numLods - 1;
+    }
+
+
 
 	return lod;
 }
@@ -239,14 +233,15 @@ R_AddMD3Surfaces
 
 =================
 */
-void R_AddMD3Surfaces( trRefEntity_t *ent ) {
+void R_AddMD3Surfaces( trRefEntity_t *ent )
+{
 	int				i;
 	md3Header_t		*header = NULL;
 	md3Surface_t	*surface = NULL;
 	md3Shader_t		*md3Shader = NULL;
 	shader_t		*shader = NULL;
 	int				cull;
-	int				lod;
+	int				lod = 0;
 	int				fogNum;
 	qboolean		personalModel;
 
@@ -292,8 +287,9 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 
 	//
 	// compute LOD
-	//
-	lod = R_ComputeLOD( ent );
+	// model has only 1 LOD level, skip computations and bias
+    if ( tr.currentModel->numLods > 1 )
+	    lod = R_ComputeLOD( ent );
 
 	header = tr.currentModel->md3[lod];
 
@@ -342,7 +338,7 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 				}
 			}
 			if (shader == tr.defaultShader) {
-				ri.Printf( PRINT_DEVELOPER, "WARNING: no shader for surface %s in skin %s\n", surface->name, skin->name);
+				ri.Printf( PRINT_DEVELOPER, "no shader for surface %s in skin %s\n", surface->name, skin->name);
 			}
 			else if (shader->defaultShader) {
 				ri.Printf( PRINT_DEVELOPER, "WARNING: shader %s in skin %s not found\n", shader->name, skin->name);
@@ -384,4 +380,3 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 	}
 
 }
-

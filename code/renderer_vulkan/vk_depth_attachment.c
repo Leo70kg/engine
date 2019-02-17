@@ -1,31 +1,17 @@
 #include "tr_local.h"
 
 #include "vk_instance.h"
-
 #include "vk_image.h"
+#include "vk_cmd.h"
 
-
-/*
-static uint32_t find_depth_image_memory_type(uint32_t memory_type_bits, VkMemoryPropertyFlags properties)
-{
-    uint32_t i;
-    
-	for (i = 0; i < vk.devMemProperties.memoryTypeCount; i++)
-    {
-		if ( (memory_type_bits & (1 << i)) && (vk.devMemProperties.memoryTypes[i].propertyFlags & properties) == properties)
-        {
-			return i;
-		}
-	}
-
-	ri.Error(ERR_FATAL, "Vulkan: failed to find matching memory type with requested properties");
-	return -1;
-}
-*/
 
 void vk_createDepthAttachment(void)
 {
-
+    
+    // A depth attachment is based on an image, just like the color attachment
+    // The difference is that the swap chain will not automatically create
+    // depth image for us. We need only s single depth image, because only
+    // one draw operation is running at once.
     ri.Printf(PRINT_ALL, " Create depth image: vk.depth_image. \n");
     {
         VkImageCreateInfo desc;
@@ -49,7 +35,7 @@ void vk_createDepthAttachment(void)
         VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &vk.depth_image));
     }
 
-    ri.Printf(PRINT_ALL, " Allocate depth image memory: vk.depth_image_memory. \n");
+    ri.Printf(PRINT_ALL, " Allocate device local memory for depth image: vk.depth_image_memory. \n");
     {
         VkMemoryRequirements memory_requirements;
         qvkGetImageMemoryRequirements(vk.device, vk.depth_image, &memory_requirements);
@@ -64,7 +50,8 @@ void vk_createDepthAttachment(void)
         VK_CHECK(qvkBindImageMemory(vk.device, vk.depth_image, vk.depth_image_memory, 0));
     }
 
-    // create depth image view
+
+    ri.Printf(PRINT_ALL, " Create image view for depth image: vk.depth_image_view. \n");
     {
         VkImageViewCreateInfo desc;
         desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -85,11 +72,8 @@ void vk_createDepthAttachment(void)
         VK_CHECK(qvkCreateImageView(vk.device, &desc, NULL, &vk.depth_image_view));
     }
 
-    VkImageAspectFlags image_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    VkImageAspectFlags image_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 
-    //r_stencilbits->integer
-    if (1)
-        image_aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
 
     VkCommandBufferAllocateInfo alloc_info;
@@ -140,7 +124,7 @@ void vk_createDepthAttachment(void)
 
 void vk_destroyDepthAttachment(void)
 {
+    qvkDestroyImageView(vk.device, vk.depth_image_view, NULL);
 	qvkDestroyImage(vk.device, vk.depth_image, NULL);
 	qvkFreeMemory(vk.device, vk.depth_image_memory, NULL);
-	qvkDestroyImageView(vk.device, vk.depth_image_view, NULL);
 }

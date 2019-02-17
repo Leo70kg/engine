@@ -250,7 +250,14 @@ disadvantages
 
     basically equivalent, only difference is location of the virtual viewpoint
     only a single portal/mirror is allowed at once to avoid infinite recursion
-    insert PVS sample point at mirror location
+    insert PVS sample point at mirror location.
+
+    https://stackoverflow.com/questions/9449369/quake-3-portal-and-frustum-culling
+    
+    R_MarkLeaves() marks the precomputed PVS (potentially visible set) of leaf nodes (convex hulls)
+    given the location of the camera / eye. The BSP tree traversal solves the drawing order problem
+    (depth sorting) for software rendering, but at the time, it still resulted in too much overdraw.
+    The PVS is used to prune leaf nodes that are demonstrably not visible from the current node / position.
 
 ## Environment mapping 
 

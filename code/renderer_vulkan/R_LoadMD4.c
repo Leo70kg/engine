@@ -185,15 +185,17 @@ qhandle_t R_RegisterMD4(const char *name, model_t *mod)
 		int ident = LittleLong(*(unsigned *)buf);
 		if ( ident == MD4_IDENT ) {
 			loaded = R_LoadMD4( mod, buf, name );
-		} else {
+		} 
+        /*
+        else {
 			if ( ident != MD3_IDENT ) {
 				ri.Printf (PRINT_WARNING,"RE_RegisterModel: unknown fileid for %s\n", name);
 				goto fail;
 			}
 
-			loaded = R_LoadMD3( mod, lod, buf, name );
+			loaded = R_LoadMD4( mod, lod, buf, name );
 		}
-		
+		*/
 		ri.FS_FreeFile (buf);
 
 		if ( !loaded ) {

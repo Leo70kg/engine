@@ -176,7 +176,7 @@
                                       for more information
   r_detailTextures                  - enables/disables detail texturing stages
   r_stencilbits                     - number of desired stencil bits
-
+  r_lodbias                         - push/pull LOD transitions
 ```
 
 ## New commands

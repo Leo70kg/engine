@@ -8,8 +8,8 @@
 typedef struct image_s {
 	char		imgName[MAX_QPATH];		// game path, including extension
 	uint32_t	width, height;				// source image
-//	int			uploadWidth, uploadHeight;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
-//	uint32_t texnum;					// gl texture binding
+	uint32_t	uploadWidth, uploadHeight;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
+
 
 //	int			internalFormat;
 //	int			TMU;				// only needed for voodoo2
@@ -31,8 +31,11 @@ typedef struct image_s {
 
 
     int			wrapClampMode;		// GL_CLAMP or GL_REPEAT, for vulkan
-    qboolean    mipmap;             // for vulkan
-    qboolean    allowPicmip;        // for vulkan
+    VkBool32    mipmap;             // for vulkan
+    uint32_t    mipLevels;			// gl texture binding
+    VkBool32    allowPicmip;        // for vulkan
+    VkBool32    isLightmap;
+
 	struct image_s*	next;
 } image_t;
 

@@ -490,7 +490,8 @@ Returns qtrue if it should be mirrored
 */
 qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum, 
 							 orientation_t *surface, orientation_t *camera,
-							 vec3_t pvsOrigin, qboolean *mirror ) {
+							 vec3_t pvsOrigin, qboolean *mirror )
+{
 	int			i;
 	cplane_t	originalPlane, plane;
 	trRefEntity_t	*e;
@@ -695,8 +696,6 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 
 	assert( tess.numVertexes < 128 );
 
-    //ri.Printf(PRINT_ALL, "numVertexes: %d\n", tess.numVertexes);
-
 	for ( i = 0; i < tess.numVertexes; i++ )
 	{
 		int j;
@@ -795,6 +794,7 @@ static qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
 
 	// trivially reject portal/mirror
 	if ( SurfIsOffscreen( drawSurf, clipDest ) ) {
+        //ri.Printf(PRINT_ALL, "isSurfOffscreen: 1\n");
 		return qfalse;
 	}
 
@@ -818,7 +818,7 @@ static qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
 	R_MirrorVector (oldParms.or.axis[2], &surface, &camera, newParms.or.axis[2]);
 
 	// OPTIMIZE: restrict the viewport on the mirrored view
-
+    ri.Printf(PRINT_ALL, "R_MirrorViewBySurface()\n");
 	// render the mirror view
 	R_RenderView (&newParms);
 
@@ -1068,13 +1068,10 @@ recurse:
 R_AddDrawSurf
 =================
 */
-void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, 
-				   int fogIndex, int dlightMap ) {
-	int			index;
-
-	// instead of checking for overflow, we just mask the index
-	// so it wraps around
-	index = tr.refdef.numDrawSurfs & DRAWSURF_MASK;
+void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap )
+{
+	// instead of checking for overflow, we just mask the index so it wraps around
+	int index = tr.refdef.numDrawSurfs & DRAWSURF_MASK;
 	// the sort data is packed into a single 32 bit value so it can be
 	// compared quickly during the qsorting process
 	tr.refdef.drawSurfs[index].sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT) 

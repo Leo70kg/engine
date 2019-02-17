@@ -2313,6 +2313,8 @@ VID_Restart -- johnfitz -- change video modes on the fly
 */
 static void VID_Restart (void)
 {
+		Con_Printf ("VID_Restart \n");
+
 	int width, height, refreshrate, bpp;
 	qboolean fullscreen;
 

@@ -22,7 +22,7 @@ out gl_PerVertex {
 void main() {
     vec4 p = vec4(in_position, 1.0);
 
-    gl_Position = clip_space_xform *  p;
+    gl_Position = clip_space_xform * p;
     gl_ClipDistance[0] = dot(clipping_plane, vec4(p * eye_space_xform, 1.0));
 
     frag_color = in_color;

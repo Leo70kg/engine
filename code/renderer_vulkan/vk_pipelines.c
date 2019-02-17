@@ -410,7 +410,6 @@ static void vk_create_pipeline(const struct Vk_Pipeline_Def* def, VkPipeline* pP
 		depth_stencil_state.front.reference = 0;
 
 		depth_stencil_state.back = depth_stencil_state.front;
-
     }
     else if (def->shadow_phase == SHADOWS_RENDERING_FULLSCREEN_QUAD)
     {
