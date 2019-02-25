@@ -554,12 +554,31 @@ void RB_TakeVideoFrameCmd( const videoFrameCommand_t * const cmd )
 		
 //	qglReadPixels(0, 0, cmd->width, cmd->height, GL_RGB,
 //		GL_UNSIGNED_BYTE, cBuf);
+    unsigned char* const pImg = (unsigned char*) malloc ( cmd->width * cmd->height * 4);
+    
+    vk_read_pixels(pImg);
 
-    vk_read_pixels(cBuf);
+    //destptr = cmd->encodeBuffer;
+
+
+    unsigned char* buffer_ptr = cmd->encodeBuffer;
+    const unsigned char* buffer2_ptr = pImg;
+
+    uint32_t i;
+    for (i = 0; i < cmd->width * cmd->height; i++)
+    {
+        buffer_ptr[0] = buffer2_ptr[0];
+        buffer_ptr[1] = buffer2_ptr[1];
+        buffer_ptr[2] = buffer2_ptr[2];
+        buffer_ptr += 3;
+        buffer2_ptr += 4;
+    }
+
+//    vk_read_pixels(cBuf);
 //    cmd->width = glConfig.vidWidth;
 //    cmd->height = glConfig.vidHeight;
 
-
+    free(pImg);
 	memcount = padwidth * cmd->height;
 
 
@@ -571,6 +590,7 @@ void RB_TakeVideoFrameCmd( const videoFrameCommand_t * const cmd )
 	}
 	else
 	{
+/*       
 		byte *lineend, *memend;
 		byte *srcptr, *destptr;
 	
@@ -595,7 +615,7 @@ void RB_TakeVideoFrameCmd( const videoFrameCommand_t * const cmd )
 			
 			srcptr += padlen;
 		}
-		
+*/		
 		ri.CL_WriteAVIVideoFrame(cmd->encodeBuffer, avipadwidth * cmd->height);
 	}
 
