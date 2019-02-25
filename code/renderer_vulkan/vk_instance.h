@@ -50,6 +50,7 @@ extern PFN_vkCmdBlitImage								qvkCmdBlitImage;
 extern PFN_vkCmdClearAttachments						qvkCmdClearAttachments;
 extern PFN_vkCmdCopyBufferToImage						qvkCmdCopyBufferToImage;
 extern PFN_vkCmdCopyImage								qvkCmdCopyImage;
+extern PFN_vkCmdCopyImageToBuffer                       qvkCmdCopyImageToBuffer;
 extern PFN_vkCmdDraw									qvkCmdDraw;
 extern PFN_vkCmdDrawIndexed						    	qvkCmdDrawIndexed;
 extern PFN_vkCmdEndRenderPass							qvkCmdEndRenderPass;

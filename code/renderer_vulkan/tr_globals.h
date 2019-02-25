@@ -134,7 +134,7 @@ typedef struct {
 	trRefEntity_t	*currentEntity;
 
 	qboolean	projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
-//	byte		color2D[4];
+	unsigned char	Color2D[4];
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
 } backEndState_t;
 

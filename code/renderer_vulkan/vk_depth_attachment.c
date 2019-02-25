@@ -7,7 +7,6 @@
 
 void vk_createDepthAttachment(void)
 {
-    
     // A depth attachment is based on an image, just like the color attachment
     // The difference is that the swap chain will not automatically create
     // depth image for us. We need only s single depth image, because only
@@ -75,7 +74,6 @@ void vk_createDepthAttachment(void)
     VkImageAspectFlags image_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 
 
-
     VkCommandBufferAllocateInfo alloc_info;
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
@@ -117,7 +115,6 @@ void vk_createDepthAttachment(void)
     VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
     VK_CHECK(qvkQueueWaitIdle(vk.queue));
     qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &pCB);
-
 }
 
 

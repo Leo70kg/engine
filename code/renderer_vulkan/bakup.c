@@ -603,4 +603,431 @@ void RB_BeginDrawingView (void)
 }
 */
 
+/*
+void vk_clear_attachments(VkBool32 clear_depth_stencil, VkBool32 clear_color, float* color)
+{
+
+	if (!clear_depth_stencil && !clear_color)
+		return;
+
+	VkClearAttachment attachments[2];
+	uint32_t attachment_count = 0;
+
+	if (clear_depth_stencil)
+    {
+		attachments[0].aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		attachments[0].clearValue.depthStencil.depth = 1.0f;
+
+		if (r_shadows->integer == 2) {
+			attachments[0].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			attachments[0].clearValue.depthStencil.stencil = 0;
+		}
+		attachment_count = 1;
+	}
+
+	if (clear_color)
+    {
+		attachments[attachment_count].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		attachments[attachment_count].colorAttachment = 0;
+		attachments[attachment_count].clearValue.color.float32[0] = color[0];
+  		attachments[attachment_count].clearValue.color.float32[1] = color[1];
+		attachments[attachment_count].clearValue.color.float32[2] = color[2];
+		attachments[attachment_count].clearValue.color.float32[3] = color[3];
+		attachment_count++;
+	}
+
+	VkClearRect clear_rect[2];
+	clear_rect[0].rect = get_scissor_rect();
+	clear_rect[0].baseArrayLayer = 0;
+	clear_rect[0].layerCount = 1;
+	int rect_count = 1;
+
+	// Split viewport rectangle into two non-overlapping rectangles.
+	// It's a HACK to prevent Vulkan validation layer's performance warning:
+	//		"vkCmdClearAttachments() issued on command buffer object XXX prior to any Draw Cmds.
+	//		 It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw."
+	// 
+	// NOTE: we don't use LOAD_OP_CLEAR for color attachment when we begin renderpass
+	// since at that point we don't know whether we need color buffer clear (usually we don't).
+	if (clear_color) {
+		uint32_t h = clear_rect[0].rect.extent.height / 2;
+		clear_rect[0].rect.extent.height = h;
+		clear_rect[1] = clear_rect[0];
+		clear_rect[1].rect.offset.y = h;
+		rect_count = 2;
+	}
+
+	qvkCmdClearAttachments(vk.command_buffer, attachment_count, attachments, rect_count, clear_rect);
+}
+*/
+
+
+void vk_createGeometryBuffers(void)
+{
+
+    // The buffer has been created, but it doesn't actually have any memory
+    // assigned to it yet.
+
+    VkMemoryRequirements vb_memory_requirements;
+    qvkGetBufferMemoryRequirements(vk.device, shadingDat.vertex_buffer, &vb_memory_requirements);
+
+    VkMemoryRequirements ib_memory_requirements;
+    qvkGetBufferMemoryRequirements(vk.device, shadingDat.index_buffer, &ib_memory_requirements);
+
+    const VkDeviceSize mask = (ib_memory_requirements.alignment - 1);
+
+    const VkDeviceSize idxBufOffset = (vb_memory_requirements.size + mask) & (~mask);
+
+    uint32_t memory_type_bits = vb_memory_requirements.memoryTypeBits & ib_memory_requirements.memoryTypeBits;
+
+    VkMemoryAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.allocationSize = idxBufOffset + ib_memory_requirements.size;
+    // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit specifies that memory allocated with
+    // this type can be mapped for host access using vkMapMemory.
+    //
+    // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache
+    // management commands vkFlushMappedMemoryRanges and vkInvalidateMappedMemoryRanges
+    // are not needed to flush host writes to the device or make device writes visible
+    // to the host, respectively.
+    alloc_info.memoryTypeIndex = find_memory_type(memory_type_bits, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    ri.Printf(PRINT_ALL, " Allocate device memory: shadingDat.geometry_buffer_memory(%ld bytes). \n",
+            alloc_info.allocationSize);
+
+    VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &shadingDat.geometry_buffer_memory));
+
+    // To attach memory to a buffer object
+    // vk.device is the logical device that owns the buffer and memory.
+    // vertex_buffer/index_buffer is the buffer to be attached to memory.
+    // 
+    // geometry_buffer_memory is a VkDeviceMemory object describing the 
+    // device memory to attach.
+    // 
+    // idxBufOffset is the start offset of the region of memory 
+    // which is to be bound to the buffer.
+    // 
+    // The number of bytes returned in the VkMemoryRequirements::size member
+    // in memory, starting from memoryOffset bytes, will be bound to the 
+    // specified buffer.
+    qvkBindBufferMemory(vk.device, shadingDat.vertex_buffer, shadingDat.geometry_buffer_memory, 0);
+    qvkBindBufferMemory(vk.device, shadingDat.index_buffer, shadingDat.geometry_buffer_memory, idxBufOffset);
+
+    // Host Access to Device Memory Objects
+    // Memory objects created with vkAllocateMemory are not directly host accessible.
+    // Memory objects created with the memory property VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+    // are considered mappable. 
+    // Memory objects must be mappable in order to be successfully mapped on the host
+    // VK_WHOLE_SIZE: map from offset to the end of the allocation.
+    // &data points to a pointer in which is returned a host-accessible pointer
+    // to the beginning of the mapped range. This pointer minus offset must be
+    // aligned to at least VkPhysicalDeviceLimits::minMemoryMapAlignment.
+    void* data;
+    VK_CHECK(qvkMapMemory(vk.device, shadingDat.geometry_buffer_memory, 0, VK_WHOLE_SIZE, 0, &data));
+    shadingDat.vertex_buffer_ptr = (unsigned char*)data;
+    shadingDat.index_buffer_ptr = (unsigned char*)data + idxBufOffset;
+}
+
+
+static void vk_read_pixels(unsigned char* buffer)
+{
+
+    ri.Printf(PRINT_ALL, " vk_read_pixels() \n\n");
+
+	qvkDeviceWaitIdle(vk.device);
+
+	// Create image in host visible memory to serve as a destination for framebuffer pixels.
+	VkImageCreateInfo desc;
+	desc.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	desc.pNext = NULL;
+	desc.flags = 0;
+	desc.imageType = VK_IMAGE_TYPE_2D;
+	desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+	desc.extent.width = glConfig.vidWidth;
+	desc.extent.height = glConfig.vidHeight;
+	desc.extent.depth = 1;
+	desc.mipLevels = 1;
+	desc.arrayLayers = 1;
+	desc.samples = VK_SAMPLE_COUNT_1_BIT;
+	desc.tiling = VK_IMAGE_TILING_LINEAR;
+	desc.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	desc.queueFamilyIndexCount = 0;
+	desc.pQueueFamilyIndices = NULL;
+	desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImage image;
+	VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &image));
+
+	VkMemoryRequirements memory_requirements;
+	qvkGetImageMemoryRequirements(vk.device, image, &memory_requirements);
+	VkMemoryAllocateInfo alloc_info;
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.pNext = NULL;
+	alloc_info.allocationSize = memory_requirements.size;
+	alloc_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	
+    VkDeviceMemory memory;
+	VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
+	VK_CHECK(qvkBindImageMemory(vk.device, image, memory, 0));
+
+  
+    {
+
+        VkCommandBufferAllocateInfo alloc_info;
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.pNext = NULL;
+        alloc_info.commandPool = vk.command_pool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandBufferCount = 1;
+
+        VkCommandBuffer cmdBuf;
+        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &cmdBuf));
+
+        VkCommandBufferBeginInfo begin_info;
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.pNext = NULL;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        begin_info.pInheritanceInfo = NULL;
+
+        VK_CHECK(qvkBeginCommandBuffer(cmdBuf, &begin_info));
+
+        record_image_layout_transition(cmdBuf, 
+                vk.swapchain_images_array[vk.idx_swapchain_image], 
+                VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_MEMORY_READ_BIT, 
+                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_TRANSFER_READ_BIT, 
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+        record_image_layout_transition(cmdBuf, 
+                image, VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL);
+
+        VK_CHECK(qvkEndCommandBuffer(cmdBuf));
+
+        VkSubmitInfo submit_info;
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = NULL;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = NULL;
+        submit_info.pWaitDstStageMask = NULL;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &cmdBuf;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = NULL;
+
+        VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
+        VK_CHECK(qvkQueueWaitIdle(vk.queue));
+        qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmdBuf);
+    }
+
+
+    //////////////////////////////////////////////////////////////////////
+	
+    // Check if we can use vkCmdBlitImage for the given 
+    // source and destination image formats.
+	VkBool32 blit_enabled = 1;
+	{
+		VkFormatProperties formatProps;
+		qvkGetPhysicalDeviceFormatProperties(
+                vk.physical_device, vk.surface_format.format, &formatProps );
+
+		if ((formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) == 0)
+			blit_enabled = 0;
+
+		qvkGetPhysicalDeviceFormatProperties(
+                vk.physical_device, VK_FORMAT_R8G8B8A8_UNORM, &formatProps );
+
+		if ((formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT) == 0)
+			blit_enabled = 0;
+	}
+
+	if (blit_enabled)
+    {
+        ri.Printf(PRINT_ALL, " blit_enabled \n\n");
+
+        VkCommandBufferAllocateInfo alloc_info;
+    	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    	alloc_info.pNext = NULL;
+    	alloc_info.commandPool = vk.command_pool;
+    	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    	alloc_info.commandBufferCount = 1;
+
+    	VkCommandBuffer command_buffer;
+    	VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
+
+    	VkCommandBufferBeginInfo begin_info;
+    	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    	begin_info.pNext = NULL;
+    	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    	begin_info.pInheritanceInfo = NULL;
+
+    	VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
+        //	recorder(command_buffer);
+        {
+            VkImageBlit region;
+            region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.srcSubresource.mipLevel = 0;
+            region.srcSubresource.baseArrayLayer = 0;
+            region.srcSubresource.layerCount = 1;
+
+            region.srcOffsets[0].x = 0;
+            region.srcOffsets[0].y = 0;
+            region.srcOffsets[0].z = 0;
+
+            region.srcOffsets[1].x = glConfig.vidWidth;
+            region.srcOffsets[1].y = glConfig.vidHeight;
+            region.srcOffsets[1].z = 1;
+
+            region.dstSubresource = region.srcSubresource;
+            region.dstOffsets[0] = region.srcOffsets[0];
+            region.dstOffsets[1] = region.srcOffsets[1];
+
+            qvkCmdBlitImage(command_buffer,
+                    vk.swapchain_images_array[vk.idx_swapchain_image], 
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
+                    VK_IMAGE_LAYOUT_GENERAL, 1, &region, VK_FILTER_NEAREST);
+        }
+
+	    VK_CHECK(qvkEndCommandBuffer(command_buffer));
+
+    	VkSubmitInfo submit_info;
+    	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    	submit_info.pNext = NULL;
+    	submit_info.waitSemaphoreCount = 0;
+    	submit_info.pWaitSemaphores = NULL;
+    	submit_info.pWaitDstStageMask = NULL;
+    	submit_info.commandBufferCount = 1;
+    	submit_info.pCommandBuffers = &command_buffer;
+    	submit_info.signalSemaphoreCount = 0;
+    	submit_info.pSignalSemaphores = NULL;
+
+    	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
+    	VK_CHECK(qvkQueueWaitIdle(vk.queue));
+    	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);   
+	}
+    else
+    {
+
+	    VkCommandBufferAllocateInfo alloc_info;
+    	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    	alloc_info.pNext = NULL;
+    	alloc_info.commandPool = vk.command_pool;
+    	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    	alloc_info.commandBufferCount = 1;
+
+	    VkCommandBuffer command_buffer;
+    	VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
+
+	    VkCommandBufferBeginInfo begin_info;
+    	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    	begin_info.pNext = NULL;
+    	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    	begin_info.pInheritanceInfo = NULL;
+
+	    VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
+	    {
+            ////   recorder(command_buffer);
+            VkImageCopy region;
+            region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.srcSubresource.mipLevel = 0;
+            region.srcSubresource.baseArrayLayer = 0;
+            region.srcSubresource.layerCount = 1;
+            region.srcOffset.x = 0;
+            region.srcOffset.y = 0;
+            region.srcOffset.z = 0;
+            region.dstSubresource = region.srcSubresource;
+            region.dstOffset = region.srcOffset;
+            region.extent.width = glConfig.vidWidth;
+            region.extent.height = glConfig.vidHeight;
+            region.extent.depth = 1;
+
+            qvkCmdCopyImage(command_buffer, 
+                    vk.swapchain_images_array[vk.idx_swapchain_image], 
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
+		
+        }
+        VK_CHECK(qvkEndCommandBuffer(command_buffer));
+
+	    VkSubmitInfo submit_info;
+    	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    	submit_info.pNext = NULL;
+    	submit_info.waitSemaphoreCount = 0;
+    	submit_info.pWaitSemaphores = NULL;
+    	submit_info.pWaitDstStageMask = NULL;
+    	submit_info.commandBufferCount = 1;
+    	submit_info.pCommandBuffers = &command_buffer;
+    	submit_info.signalSemaphoreCount = 0;
+    	submit_info.pSignalSemaphores = NULL;
+
+    	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
+        VK_CHECK(qvkQueueWaitIdle(vk.queue));
+    	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
+	}
+
+
+
+	// Copy data from destination image to memory buffer.
+	VkImageSubresource subresource;
+	subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	subresource.mipLevel = 0;
+	subresource.arrayLayer = 0;
+	VkSubresourceLayout layout;
+	qvkGetImageSubresourceLayout(vk.device, image, &subresource, &layout);
+
+
+    // Memory objects created with vkAllocateMemory are not directly host accessible.
+    // Memory objects created with the memory property 
+    // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT are considered mappable. 
+    // Memory objects must be mappable in order to be successfully 
+    // mapped on the host. 
+    // To retrieve a host virtual address pointer to 
+    // a region of a mappable memory object
+    unsigned char* data;
+    VK_CHECK(qvkMapMemory(vk.device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&data));
+	data += layout.offset;
+
+	unsigned char* buffer_ptr = buffer + glConfig.vidWidth * (glConfig.vidHeight - 1) * 4;
+	
+    int j = 0;
+    for (j = 0; j < glConfig.vidHeight; j++)
+    {
+		memcpy(buffer_ptr, data, glConfig.vidWidth * 4);
+		buffer_ptr -= glConfig.vidWidth * 4;
+		data += layout.rowPitch;
+	}
+
+
+	if (!blit_enabled)
+    {
+        ri.Printf(PRINT_ALL, "blit_enabled = 0 \n\n");
+
+		//auto fmt = vk.surface_format.format;
+		VkBool32 swizzle_components = 
+            (vk.surface_format.format == VK_FORMAT_B8G8R8A8_SRGB ||
+             vk.surface_format.format == VK_FORMAT_B8G8R8A8_UNORM ||
+             vk.surface_format.format == VK_FORMAT_B8G8R8A8_SNORM);
+        
+		if (swizzle_components)
+        {
+			buffer_ptr = buffer;
+            unsigned int i = 0;
+            unsigned int pixels = glConfig.vidWidth * glConfig.vidHeight;
+			for (i = 0; i < pixels; i++)
+            {
+				unsigned char tmp = buffer_ptr[0];
+				buffer_ptr[0] = buffer_ptr[2];
+				buffer_ptr[2] = tmp;
+				buffer_ptr += 4;
+			}
+		}
+	}
+	qvkUnmapMemory(vk.device, memory);
+	qvkFreeMemory(vk.device, memory, NULL);
+
+    qvkDestroyImage(vk.device, image, NULL);
+}
 

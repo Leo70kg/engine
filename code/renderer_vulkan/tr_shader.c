@@ -31,7 +31,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
 
-
 // the shader is parsed into these global variables, then copied into
 // dynamically allocated memory if it is valid.
 static	shaderStage_t	stages[MAX_SHADER_STAGES] = {0};		
@@ -1183,7 +1182,7 @@ static void ParseSkyParms( char **text ) {
 	if ( strcmp( token, "-" ) ) {
 		for (i=0 ; i<6 ; i++) {
 			snprintf( pathname, sizeof(pathname), "%s_%s.tga", token, suf[i] );
-			shader.sky.innerbox[i] = R_FindImageFile( ( char * ) pathname, qtrue, qtrue, GL_REPEAT );
+			shader.sky.innerbox[i] = R_FindImageFile( ( char * ) pathname, qtrue, qtrue, GL_CLAMP );
 			if ( !shader.sky.innerbox[i] ) {
 				shader.sky.innerbox[i] = tr.defaultImage;
 			}
@@ -2127,77 +2126,73 @@ shader_t* GeneratePermanentShader( void )
 	return newShader;
 }
 
+void setDefaultShader(void)
+{
+    shader.defaultShader = qtrue;
+}
 
 void R_CreateDefaultShadingCmds(const char* name, image_t* image)
 {
     
     ri.Printf( PRINT_ALL, "R_CreateDefaultShade: shader %s, image: %s\n", name, image->imgName );
 
-	if ( NULL == image )
-	{
-		ri.Printf( PRINT_WARNING, "R_CreateDefaultShadingCmds: Couldn't find image for shader %s\n", name );
-		shader.defaultShader = qtrue;
-        return;
-	}
-//    else
+    if ( shader.lightmapIndex == LIGHTMAP_NONE )
     {
-        if ( shader.lightmapIndex == LIGHTMAP_NONE )
-        {
-            // dynamic colors at vertexes
-            stages[0].bundle[0].image[0] = image;
-            stages[0].active = qtrue;
-            stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
-            stages[0].stateBits = GLS_DEFAULT;
-        }
-        else if ( shader.lightmapIndex == LIGHTMAP_BY_VERTEX )
-        {
-            // explicit colors at vertexes
-            stages[0].bundle[0].image[0] = image;
-            stages[0].active = qtrue;
-            stages[0].rgbGen = CGEN_EXACT_VERTEX;
-            stages[0].alphaGen = AGEN_SKIP;
-            stages[0].stateBits = GLS_DEFAULT;
-        }
-        else if ( shader.lightmapIndex == LIGHTMAP_2D )
-        {
-            // GUI elements
-            stages[0].bundle[0].image[0] = image;
-            stages[0].active = qtrue;
-            stages[0].rgbGen = CGEN_VERTEX;
-            stages[0].alphaGen = AGEN_VERTEX;
-            stages[0].stateBits = GLS_DEPTHTEST_DISABLE |
-                GLS_SRCBLEND_SRC_ALPHA |
-                GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-        }
-        else if ( shader.lightmapIndex == LIGHTMAP_WHITEIMAGE )
-        {
-            // fullbright level
-            stages[0].bundle[0].image[0] = tr.whiteImage;
-            stages[0].active = qtrue;
-            stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-            stages[0].stateBits = GLS_DEFAULT;
-
-            stages[1].bundle[0].image[0] = image;
-            stages[1].active = qtrue;
-            stages[1].rgbGen = CGEN_IDENTITY;
-            stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-        }
-        else
-        {
-            // two pass lightmap
-            stages[0].bundle[0].image[0] = tr.lightmaps[shader.lightmapIndex];
-            stages[0].bundle[0].isLightmap = qtrue;
-            stages[0].active = qtrue;
-            stages[0].rgbGen = CGEN_IDENTITY;	// lightmaps are scaled on creation
-            // for identitylight
-            stages[0].stateBits = GLS_DEFAULT;
-
-            stages[1].bundle[0].image[0] = image;
-            stages[1].active = qtrue;
-            stages[1].rgbGen = CGEN_IDENTITY;
-            stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-        }
+        // dynamic colors at vertexes
+        stages[0].bundle[0].image[0] = image;
+        stages[0].active = qtrue;
+        stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
+        stages[0].stateBits = GLS_DEFAULT;
     }
+    else if ( shader.lightmapIndex == LIGHTMAP_BY_VERTEX )
+    {
+        // explicit colors at vertexes
+        stages[0].bundle[0].image[0] = image;
+        stages[0].active = qtrue;
+        stages[0].rgbGen = CGEN_EXACT_VERTEX;
+        stages[0].alphaGen = AGEN_SKIP;
+        stages[0].stateBits = GLS_DEFAULT;
+    }
+    else if ( shader.lightmapIndex == LIGHTMAP_2D )
+    {
+        // GUI elements
+        stages[0].bundle[0].image[0] = image;
+        stages[0].active = qtrue;
+        stages[0].rgbGen = CGEN_VERTEX;
+        stages[0].alphaGen = AGEN_VERTEX;
+        stages[0].stateBits = GLS_DEPTHTEST_DISABLE |
+            GLS_SRCBLEND_SRC_ALPHA |
+            GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+    }
+    else if ( shader.lightmapIndex == LIGHTMAP_WHITEIMAGE )
+    {
+        // fullbright level
+        stages[0].bundle[0].image[0] = tr.whiteImage;
+        stages[0].active = qtrue;
+        stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
+        stages[0].stateBits = GLS_DEFAULT;
+
+        stages[1].bundle[0].image[0] = image;
+        stages[1].active = qtrue;
+        stages[1].rgbGen = CGEN_IDENTITY;
+        stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+    }
+    else
+    {
+        // two pass lightmap
+        stages[0].bundle[0].image[0] = tr.lightmaps[shader.lightmapIndex];
+        stages[0].bundle[0].isLightmap = qtrue;
+        stages[0].active = qtrue;
+        stages[0].rgbGen = CGEN_IDENTITY;	// lightmaps are scaled on creation
+        // for identitylight
+        stages[0].stateBits = GLS_DEFAULT;
+
+        stages[1].bundle[0].image[0] = image;
+        stages[1].active = qtrue;
+        stages[1].rgbGen = CGEN_IDENTITY;
+        stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+    }
+
 }
 
 

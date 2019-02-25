@@ -500,8 +500,8 @@ typedef enum {
 } surfaceType_t;
 
 typedef struct drawSurf_s {
-	unsigned			sort;			// bit combination for fast compares
-	surfaceType_t		*surface;		// any of surface*_t
+	unsigned		sort;			// bit combination for fast compares
+	surfaceType_t * surface;		// any of surface*_t
 } drawSurf_t;
 
 #define	MAX_FACE_POINTS		64
@@ -1109,7 +1109,6 @@ SCENE GENERATION
 ============================================================
 */
 
-void	RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
 void	RE_UploadCinematic (int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
 
 void	RE_BeginFrame( void );

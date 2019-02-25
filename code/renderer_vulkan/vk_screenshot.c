@@ -8,24 +8,7 @@
 
 #include "../renderercommon/ref_import.h"
 
-typedef struct {
-	int commandId;
-	int x;
-	int y;
-	int width;
-	int height;
-	char *fileName;
-	qboolean jpeg;
-} screenshotCommand_t;
 
-typedef struct {
-	int				commandId;
-	int				width;
-	int				height;
-	unsigned char*  captureBuffer;
-	unsigned char*  encodeBuffer;
-	VkBool32        motionJpeg;
-} videoFrameCommand_t;
 
 /* 
 ============================================================================== 
@@ -44,51 +27,87 @@ we use statics to store a count and start writing the first screenshot/screensho
 FIXME: the statics don't get a reinit between fs_game changes
 
 ============================================================================== 
-*/ 
-static void vk_read_pixels(unsigned char* buffer)
-{
+*/
 
-    ri.Printf(PRINT_ALL, " vk_read_pixels() \n\n");
+
+/*
+
+Images created with tiling equal to VK_IMAGE_TILING_LINEAR have further restrictions on their
+limits and capabilities compared to images created with tiling equal to VK_IMAGE_TILING_OPTIMAL.
+Creation of images with tiling VK_IMAGE_TILING_LINEAR may not be supported unless other parameters
+meetall of the constraints:
+* imageType is VK_IMAGE_TYPE_2D
+* format is not a depth/stencil format
+* mipLevels is 1
+* arrayLayers is 1
+* samples is VK_SAMPLE_COUNT_1_BIT
+* usage only includes VK_IMAGE_USAGE_TRANSFER_SRC_BIT and/or VK_IMAGE_USAGE_TRANSFER_DST_BIT
+Implementations may support additional limits and capabilities beyond those listed above.
+
+*/
+
+
+static void flipY(unsigned char *pBuf, const uint32_t w, const uint32_t h)
+{
+    const uint32_t a_row = w * 4;
+    const uint32_t nLines = h / 2;
+
+    unsigned char* pTmp = (unsigned char*) malloc( a_row );
+    unsigned char *pSrc = pBuf;
+    unsigned char *pDst = pBuf + w * (h - 1) * 4;
+
+    uint32_t j = 0;
+    for (j = 0; j < nLines; j++)
+    {
+        memcpy(pTmp, pSrc, a_row );
+        memcpy(pSrc, pDst, a_row );
+        memcpy(pDst, pTmp, a_row );
+
+        pSrc += a_row;
+        pDst -= a_row;
+	}
+
+    free(pTmp);
+}
+
+
+static void vk_read_pixels(unsigned char* pBuf)
+{
 
 	qvkDeviceWaitIdle(vk.device);
 
 	// Create image in host visible memory to serve as a destination for framebuffer pixels.
-	VkImageCreateInfo desc;
-	desc.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	desc.pNext = NULL;
-	desc.flags = 0;
-	desc.imageType = VK_IMAGE_TYPE_2D;
-	desc.format = VK_FORMAT_R8G8B8A8_UNORM;
-	desc.extent.width = glConfig.vidWidth;
-	desc.extent.height = glConfig.vidHeight;
-	desc.extent.depth = 1;
-	desc.mipLevels = 1;
-	desc.arrayLayers = 1;
-	desc.samples = VK_SAMPLE_COUNT_1_BIT;
-	desc.tiling = VK_IMAGE_TILING_LINEAR;
-	desc.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	desc.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	desc.queueFamilyIndexCount = 0;
-	desc.pQueueFamilyIndices = NULL;
-	desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    VkImage image;
-	VK_CHECK(qvkCreateImage(vk.device, &desc, NULL, &image));
-
-	VkMemoryRequirements memory_requirements;
-	qvkGetImageMemoryRequirements(vk.device, image, &memory_requirements);
-	VkMemoryAllocateInfo alloc_info;
-	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	alloc_info.pNext = NULL;
-	alloc_info.allocationSize = memory_requirements.size;
-	alloc_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	
-    VkDeviceMemory memory;
-	VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &memory));
-	VK_CHECK(qvkBindImageMemory(vk.device, image, memory, 0));
-
   
+    const uint32_t sizeFB = glConfig.vidWidth * glConfig.vidHeight * 4;
+    
+
+	VkBuffer buffer;
+    VkDeviceMemory memory;
+    {
+        VkBufferCreateInfo buffer_create_info;
+        memset(&buffer_create_info, 0, sizeof(buffer_create_info));
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.size = sizeFB;
+        buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        VK_CHECK( qvkCreateBuffer(vk.device, &buffer_create_info, NULL, &buffer) );
+
+        VkMemoryRequirements memory_requirements;
+        qvkGetBufferMemoryRequirements(vk.device, buffer, &memory_requirements);
+
+        VkMemoryAllocateInfo memory_allocate_info;
+        memset(&memory_allocate_info, 0, sizeof(memory_allocate_info));
+        memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_allocate_info.allocationSize = memory_requirements.size;
+        //
+        memory_allocate_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        VK_CHECK( qvkAllocateMemory(vk.device, &memory_allocate_info, NULL, &memory) );
+        VK_CHECK( qvkBindBufferMemory(vk.device, buffer, memory, 0) );
+    }
+
+
+
     {
 
         VkCommandBufferAllocateInfo alloc_info;
@@ -107,19 +126,47 @@ static void vk_read_pixels(unsigned char* buffer)
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         begin_info.pInheritanceInfo = NULL;
 
+
         VK_CHECK(qvkBeginCommandBuffer(cmdBuf, &begin_info));
 
-        record_image_layout_transition(cmdBuf, 
-                vk.swapchain_images_array[vk.idx_swapchain_image], 
-                VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_MEMORY_READ_BIT, 
-                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_TRANSFER_READ_BIT, 
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-        record_image_layout_transition(cmdBuf, 
-                image, VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL);
+        VkImageMemoryBarrier image_barrier;
+        image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        image_barrier.pNext = NULL;
+        image_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+        image_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        image_barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_barrier.image = vk.swapchain_images_array[vk.idx_swapchain_image];
+        image_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_barrier.subresourceRange.baseMipLevel = 0;
+        image_barrier.subresourceRange.levelCount = 1;
+        image_barrier.subresourceRange.baseArrayLayer = 0;
+        image_barrier.subresourceRange.layerCount = 1;
 
+        qvkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &image_barrier);
+
+        ////
+        //
+        VkBufferImageCopy image_copy;
+        memset(&image_copy, 0, sizeof(image_copy));
+        image_copy.bufferOffset = 0;
+        image_copy.bufferRowLength = glConfig.vidWidth;
+        image_copy.bufferImageHeight = glConfig.vidHeight;
+        image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_copy.imageSubresource.layerCount = 1;
+        image_copy.imageExtent.width = glConfig.vidWidth;
+        image_copy.imageExtent.height = glConfig.vidHeight;
+        image_copy.imageExtent.depth = 1;
+
+        qvkCmdCopyImageToBuffer(cmdBuf, vk.swapchain_images_array[vk.idx_swapchain_image], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1, &image_copy);
+
+        ////
         VK_CHECK(qvkEndCommandBuffer(cmdBuf));
+             
+  
 
         VkSubmitInfo submit_info;
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -133,227 +180,64 @@ static void vk_read_pixels(unsigned char* buffer)
         submit_info.pSignalSemaphores = NULL;
 
         VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
+
+
         VK_CHECK(qvkQueueWaitIdle(vk.queue));
         qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmdBuf);
     }
 
 
-    //////////////////////////////////////////////////////////////////////
-	
-    // Check if we can use vkCmdBlitImage for the given 
-    // source and destination image formats.
-	VkBool32 blit_enabled = 1;
-	{
-		VkFormatProperties formatProps;
-		qvkGetPhysicalDeviceFormatProperties(
-                vk.physical_device, vk.surface_format.format, &formatProps );
-
-		if ((formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) == 0)
-			blit_enabled = 0;
-
-		qvkGetPhysicalDeviceFormatProperties(
-                vk.physical_device, VK_FORMAT_R8G8B8A8_UNORM, &formatProps );
-
-		if ((formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT) == 0)
-			blit_enabled = 0;
-	}
-
-	if (blit_enabled)
-    {
-        ri.Printf(PRINT_ALL, " blit_enabled \n\n");
-
-        VkCommandBufferAllocateInfo alloc_info;
-    	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    	alloc_info.pNext = NULL;
-    	alloc_info.commandPool = vk.command_pool;
-    	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    	alloc_info.commandBufferCount = 1;
-
-    	VkCommandBuffer command_buffer;
-    	VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
-
-    	VkCommandBufferBeginInfo begin_info;
-    	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    	begin_info.pNext = NULL;
-    	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    	begin_info.pInheritanceInfo = NULL;
-
-    	VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
-        //	recorder(command_buffer);
-        {
-            VkImageBlit region;
-            region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.srcSubresource.mipLevel = 0;
-            region.srcSubresource.baseArrayLayer = 0;
-            region.srcSubresource.layerCount = 1;
-
-            region.srcOffsets[0].x = 0;
-            region.srcOffsets[0].y = 0;
-            region.srcOffsets[0].z = 0;
-
-            region.srcOffsets[1].x = glConfig.vidWidth;
-            region.srcOffsets[1].y = glConfig.vidHeight;
-            region.srcOffsets[1].z = 1;
-
-            region.dstSubresource = region.srcSubresource;
-            region.dstOffsets[0] = region.srcOffsets[0];
-            region.dstOffsets[1] = region.srcOffsets[1];
-
-            qvkCmdBlitImage(command_buffer,
-                    vk.swapchain_images_array[vk.idx_swapchain_image], 
-                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
-                    VK_IMAGE_LAYOUT_GENERAL, 1, &region, VK_FILTER_NEAREST);
-        }
-
-	    VK_CHECK(qvkEndCommandBuffer(command_buffer));
-
-    	VkSubmitInfo submit_info;
-    	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    	submit_info.pNext = NULL;
-    	submit_info.waitSemaphoreCount = 0;
-    	submit_info.pWaitSemaphores = NULL;
-    	submit_info.pWaitDstStageMask = NULL;
-    	submit_info.commandBufferCount = 1;
-    	submit_info.pCommandBuffers = &command_buffer;
-    	submit_info.signalSemaphoreCount = 0;
-    	submit_info.pSignalSemaphores = NULL;
-
-    	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
-    	VK_CHECK(qvkQueueWaitIdle(vk.queue));
-    	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);   
-	}
-    else
-    {
-
-
-	    VkCommandBufferAllocateInfo alloc_info;
-    	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    	alloc_info.pNext = NULL;
-    	alloc_info.commandPool = vk.command_pool;
-    	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    	alloc_info.commandBufferCount = 1;
-
-	    VkCommandBuffer command_buffer;
-    	VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &command_buffer));
-
-	    VkCommandBufferBeginInfo begin_info;
-    	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    	begin_info.pNext = NULL;
-    	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    	begin_info.pInheritanceInfo = NULL;
-
-	    VK_CHECK(qvkBeginCommandBuffer(command_buffer, &begin_info));
-	    {
-            ////   recorder(command_buffer);
-            VkImageCopy region;
-            region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.srcSubresource.mipLevel = 0;
-            region.srcSubresource.baseArrayLayer = 0;
-            region.srcSubresource.layerCount = 1;
-            region.srcOffset.x = 0;
-            region.srcOffset.y = 0;
-            region.srcOffset.z = 0;
-            region.dstSubresource = region.srcSubresource;
-            region.dstOffset = region.srcOffset;
-            region.extent.width = glConfig.vidWidth;
-            region.extent.height = glConfig.vidHeight;
-            region.extent.depth = 1;
-
-            qvkCmdCopyImage(command_buffer, 
-                    vk.swapchain_images_array[vk.idx_swapchain_image], 
-                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
-		
-        }
-        VK_CHECK(qvkEndCommandBuffer(command_buffer));
-
-	    VkSubmitInfo submit_info;
-    	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    	submit_info.pNext = NULL;
-    	submit_info.waitSemaphoreCount = 0;
-    	submit_info.pWaitSemaphores = NULL;
-    	submit_info.pWaitDstStageMask = NULL;
-    	submit_info.commandBufferCount = 1;
-    	submit_info.pCommandBuffers = &command_buffer;
-    	submit_info.signalSemaphoreCount = 0;
-    	submit_info.pSignalSemaphores = NULL;
-
-    	VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
-        VK_CHECK(qvkQueueWaitIdle(vk.queue));
-    	qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &command_buffer);
-	}
-
-
-
-	// Copy data from destination image to memory buffer.
-	VkImageSubresource subresource;
-	subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	subresource.mipLevel = 0;
-	subresource.arrayLayer = 0;
-	VkSubresourceLayout layout;
-	qvkGetImageSubresourceLayout(vk.device, image, &subresource, &layout);
-
-
     // Memory objects created with vkAllocateMemory are not directly host accessible.
     // Memory objects created with the memory property 
     // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT are considered mappable. 
-    // Memory objects must be mappable in order to be successfully 
-    // mapped on the host. 
-    // To retrieve a host virtual address pointer to 
-    // a region of a mappable memory object
+    // Memory objects must be mappable in order to be successfully mapped on the host. 
+    // To retrieve a host virtual address pointer to a region of a mappable memory object
     unsigned char* data;
     VK_CHECK(qvkMapMemory(vk.device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&data));
-	data += layout.offset;
+    memcpy(pBuf, data, sizeFB);
+    qvkUnmapMemory(vk.device, memory);
+    qvkFreeMemory(vk.device, memory, NULL);
+    qvkDestroyBuffer(vk.device, buffer, NULL);
+  
+    // why this is need ?
+    flipY(pBuf, glConfig.vidWidth, glConfig.vidHeight);
 
-	unsigned char* buffer_ptr = buffer + glConfig.vidWidth * (glConfig.vidHeight - 1) * 4;
-	
-    int j = 0;
-    for (j = 0; j < glConfig.vidHeight; j++)
+    ri.Printf(PRINT_ALL, "read %dx%d pixels from GPU\n", glConfig.vidWidth, glConfig.vidHeight);
+
+/*
+    VkBool32 swizzle_components = 
+        (vk.surface_format.format == VK_FORMAT_B8G8R8A8_SRGB ||
+         vk.surface_format.format == VK_FORMAT_B8G8R8A8_UNORM ||
+         vk.surface_format.format == VK_FORMAT_B8G8R8A8_SNORM);
+
+    if (swizzle_components)
     {
-		memcpy(buffer_ptr, data, glConfig.vidWidth * 4);
-		buffer_ptr -= glConfig.vidWidth * 4;
-		data += layout.rowPitch;
-	}
-
-
-	if (!blit_enabled)
-    {
-        ri.Printf(PRINT_ALL, "blit_enabled = 0 \n\n");
-
-		//auto fmt = vk.surface_format.format;
-		VkBool32 swizzle_components = 
-            (vk.surface_format.format == VK_FORMAT_B8G8R8A8_SRGB ||
-             vk.surface_format.format == VK_FORMAT_B8G8R8A8_UNORM ||
-             vk.surface_format.format == VK_FORMAT_B8G8R8A8_SNORM);
-        
-		if (swizzle_components)
+        unsigned int i = 0;
+        const uint32_t pixels = glConfig.vidWidth * glConfig.vidHeight;
+        for (i = 0; i < pixels; i++)
         {
-			buffer_ptr = buffer;
-            unsigned int i = 0;
-            unsigned int pixels = glConfig.vidWidth * glConfig.vidHeight;
-			for (i = 0; i < pixels; i++)
-            {
-				unsigned char tmp = buffer_ptr[0];
-				buffer_ptr[0] = buffer_ptr[2];
-				buffer_ptr[2] = tmp;
-				buffer_ptr += 4;
-			}
-		}
-	}
-	qvkUnmapMemory(vk.device, memory);
-	qvkFreeMemory(vk.device, memory, NULL);
-
-    qvkDestroyImage(vk.device, image, NULL);
+            unsigned char tmp = pBuf[0];
+            pBuf[0] = pBuf[2];
+            pBuf[2] = tmp;
+            pBuf += 4;
+        }
+    }
+*/
 }
 
 
-static void RB_TakeScreenshot( int width, int height, char *fileName )
+
+
+
+void RB_TakeScreenshot( int width, int height, char *fileName )
 {
 
-    const unsigned int cnPixels = glConfig.vidWidth * glConfig.vidHeight;
+    const uint32_t cnPixels = glConfig.vidWidth * glConfig.vidHeight;
+    const uint32_t c = 18 + cnPixels * 3;
 
-	unsigned char* const buffer = (unsigned char*) malloc ( cnPixels * 3 + 18);
+	unsigned char* const buffer = (unsigned char*) malloc ( c );
 	memset (buffer, 0, 18);
+    
 	buffer[2] = 2;		// uncompressed type
 	buffer[12] = width & 255;
 	buffer[13] = width >> 8;
@@ -362,48 +246,30 @@ static void RB_TakeScreenshot( int width, int height, char *fileName )
 	buffer[16] = 24;	// pixel size
 
 
+    unsigned char* const pImg = (unsigned char*) malloc ( cnPixels * 4);
+
+    vk_read_pixels(pImg);
+
+    unsigned char* buffer_ptr = buffer + 18;
+    const unsigned char* buffer2_ptr = pImg;
+
+    uint32_t i;
+    for (i = 0; i < cnPixels; i++)
     {
-        unsigned char* const pImg = (unsigned char*) malloc( cnPixels * 4);
-
-        vk_read_pixels(pImg);
-
-        unsigned char* buffer_ptr = buffer + 18;
-        const unsigned char* buffer2_ptr = pImg;
-
-        unsigned int i;
-        for (i = 0; i < cnPixels; i++)
-        {
-            buffer_ptr[0] = buffer2_ptr[0];
-            buffer_ptr[1] = buffer2_ptr[1];
-            buffer_ptr[2] = buffer2_ptr[2];
-            buffer_ptr += 3;
-            buffer2_ptr += 4;
-        }
-        
-        free(pImg);
+        buffer_ptr[0] = buffer2_ptr[0];
+        buffer_ptr[1] = buffer2_ptr[1];
+        buffer_ptr[2] = buffer2_ptr[2];
+        buffer_ptr += 3;
+        buffer2_ptr += 4;
     }
 
-    {
-        unsigned int i;
-        // swap rgb to bgr
-        unsigned int const c = 18 + width * height * 3;
-        for (i=18 ; i<c ; i+=3)
-        {
-            unsigned char temp = buffer[i];
-            buffer[i] = buffer[i+2];
-            buffer[i+2] = temp;
-        }
+    free(pImg);
 
-        ri.FS_WriteFile( fileName, buffer, c );
 
-    }
+    ri.FS_WriteFile( fileName, buffer, c );
 
-	
 	free( buffer );
 }
-
-
-
 
 
 static void R_TakeScreenshot( int x, int y, int width, int height, char *name, qboolean jpeg )
@@ -463,7 +329,7 @@ static void R_LevelShot( void )
 	buffer[16] = 24;	// pixel size
 
     {
-        unsigned char* buffer2 = (unsigned char*) ri.Hunk_AllocateTempMemory(glConfig.vidWidth*glConfig.vidHeight*4);
+        unsigned char* buffer2 = (unsigned char*) malloc (glConfig.vidWidth*glConfig.vidHeight*4);
         vk_read_pixels(buffer2);
 
         unsigned char* buffer_ptr = source;
@@ -476,7 +342,7 @@ static void R_LevelShot( void )
             buffer_ptr += 3;
             buffer2_ptr += 4;
         }
-        ri.Hunk_FreeTempMemory(buffer2);
+        free(buffer2);
     }
 
 	// resample from source
@@ -663,13 +529,76 @@ void R_ScreenShotJPEG_f(void)
 	}
 }
 
-const void *RB_TakeScreenshotCmd( const void *data )
+
+
+
+void RB_TakeVideoFrameCmd( const videoFrameCommand_t * const cmd )
 {
-	const screenshotCommand_t* cmd = (const screenshotCommand_t *)data;
+
+	byte				*cBuf;
+	size_t				memcount, linelen;
+	int				padwidth, avipadwidth, padlen, avipadlen;
 	
-	RB_TakeScreenshot( cmd->width, cmd->height, cmd->fileName);
+
+
+	linelen = cmd->width * 3;
+
+	// Alignment stuff for glReadPixels
+	padwidth = PAD(linelen, 4);
+	padlen = padwidth - linelen;
+	// AVI line padding
+	avipadwidth = PAD(linelen, 4);
+	avipadlen = avipadwidth - linelen;
+
+	cBuf = PADP(cmd->captureBuffer, 4);
+		
+//	qglReadPixels(0, 0, cmd->width, cmd->height, GL_RGB,
+//		GL_UNSIGNED_BYTE, cBuf);
+
+    vk_read_pixels(cBuf);
+//    cmd->width = glConfig.vidWidth;
+//    cmd->height = glConfig.vidHeight;
+
+
+	memcount = padwidth * cmd->height;
+
+
+	if(0)
+	{
+//		memcount = RE_SaveJPGToBuffer(cmd->encodeBuffer, linelen * cmd->height,
+//			90,	cmd->width, cmd->height, cBuf, padlen);
+//		ri.CL_WriteAVIVideoFrame(cmd->encodeBuffer, memcount);
+	}
+	else
+	{
+		byte *lineend, *memend;
+		byte *srcptr, *destptr;
 	
-	return (const void *)(cmd + 1);	
+		srcptr = cBuf;
+		destptr = cmd->encodeBuffer;
+		memend = srcptr + memcount;
+		
+		// swap R and B and remove line paddings
+		while(srcptr < memend)
+		{
+			lineend = srcptr + linelen;
+			while(srcptr < lineend)
+			{
+				*destptr++ = srcptr[2];
+				*destptr++ = srcptr[1];
+				*destptr++ = srcptr[0];
+				srcptr += 3;
+			}
+			
+			memset(destptr, '\0', avipadlen);
+			destptr += avipadlen;
+			
+			srcptr += padlen;
+		}
+		
+		ri.CL_WriteAVIVideoFrame(cmd->encodeBuffer, avipadwidth * cmd->height);
+	}
+
 }
 
 

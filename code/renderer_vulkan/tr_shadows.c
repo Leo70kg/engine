@@ -274,17 +274,14 @@ void RB_ShadowFinish( void )
 
 
 
-    float bak[16];
+    float bak[16] = { 1, 0 , 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1};
      
    
-    get_modelview_matrix(bak);
-    // set backEnd.or.modelMatrix to identity matrix
-    reset_modelview_matrix();
-
-    vk_bind_geometry();
+    vk_bind_geometry2(bak);
     vk_shade_geometry(g_stdPipelines.shadow_finish_pipeline, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
-
-    set_modelview_matrix(bak);
 
     tess.numIndexes = 0;
     tess.numVertexes = 0;

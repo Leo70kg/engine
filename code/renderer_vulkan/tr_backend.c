@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_cvar.h"
 
 #include "vk_instance.h"
-#include "vk_clear_attachments.h"
+//#include "vk_clear_attachments.h"
 #include "vk_frame.h"
 #include "vk_screenshot.h"
 #include "vk_shade_geometry.h"
@@ -36,7 +36,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 RB_RenderDrawSurfList
 ==================
 */
-void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
+static void RB_RenderDrawSurfList( drawSurf_t* drawSurfs, int numDrawSurfs )
 {
 	shader_t		*shader, *oldShader;
 	int				fogNum, oldFogNum;
@@ -135,8 +135,10 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 		//
 		if ( entityNum != oldEntityNum )
         {
+            oldEntityNum = entityNum;
 
-			if ( entityNum != ENTITYNUM_WORLD ) {
+			if ( entityNum != ENTITYNUM_WORLD )
+            {
 				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
 				backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
 				// we have to reset the shaderTime as well otherwise image animations start
@@ -154,7 +156,9 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 				if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
 					// hack the depth range to prevent view model from poking into walls
 				}
-			} else {
+			}
+            else
+            {
 				backEnd.currentEntity = &tr.worldEntity;
 				backEnd.refdef.floatTime = originalTime;
 				backEnd.or = backEnd.viewParms.world;
@@ -167,8 +171,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 
 			// VULKAN
             set_modelview_matrix(backEnd.or.modelMatrix);
-			oldEntityNum = entityNum;
-		}
+        }
 
 		// add the triangles for this surface
 		rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
@@ -191,72 +194,11 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs )
 
 
 
-/*
-=============
-FIXME: not exactly backend
-Stretches a raw 32 bit power of 2 bitmap image over the given screen rectangle.
-Used for cinematics.
-=============
-*/
-void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
+
+
+
+void RB_StretchPic( const stretchPicCommand_t * const cmd )
 {
-	int			i, j;
-	int			start, end;
-
-	if ( !tr.registered ) {
-		return;
-	}
-	R_IssuePendingRenderCommands();
-
-	start = end = 0;
-	if ( r_speeds->integer ) {
-		start = ri.Milliseconds();
-	}
-
-	// make sure rows and cols are powers of 2
-	for ( i = 0 ; ( 1 << i ) < cols ; i++ )
-    {
-        ;
-	}
-	for ( j = 0 ; ( 1 << j ) < rows ; j++ )
-    {
-        ;
-	}
-    
-	if ( ( 1 << i ) != cols || ( 1 << j ) != rows) {
-		ri.Error (ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
-	}
-
-    RE_UploadCinematic(w, h, cols, rows, data, client, dirty);
-
-	if ( r_speeds->integer ) {
-		end = ri.Milliseconds();
-        ri.Printf( PRINT_ALL, "TexSubImage2D %i, %i: %i msec\n", cols, rows, end - start );
-	}
-
-    tr.cinematicShader->stages[0]->bundle[0].image[0] = tr.scratchImage[client];
-    RE_StretchPic(x, y, w, h,  0.5f / cols, 0.5f / rows,  1.0f - 0.5f / cols, 1.0f - 0.5 / rows, tr.cinematicShader->index);
-}
-
-
-float sf_Color2D[4];
-
-const void* RB_SetColor( const void *data )
-{
-	const setColorCommand_t	*cmd = (const setColorCommand_t *)data;
-
-	sf_Color2D[0] = cmd->color[0];
-	sf_Color2D[1] = cmd->color[1];
-	sf_Color2D[2] = cmd->color[2];
-	sf_Color2D[3] = cmd->color[3];
-
-	return (const void *)(cmd + 1);
-}
-
-
-const void *RB_StretchPic( const void *data )
-{
-	const stretchPicCommand_t* cmd = (const stretchPicCommand_t *)data;
 
 	if ( qfalse == backEnd.projection2D )
     {
@@ -289,204 +231,237 @@ const void *RB_StretchPic( const void *data )
 	const unsigned int n2 = n0 + 2;
 	const unsigned int n3 = n0 + 3;
 
-	{
-		uint32_t numIndexes = tess.numIndexes;
+	
+    uint32_t numIndexes = tess.numIndexes;
 
-		tess.indexes[ numIndexes ] = n3;
-		tess.indexes[ numIndexes + 1 ] = n0;
-		tess.indexes[ numIndexes + 2 ] = n2;
-		tess.indexes[ numIndexes + 3 ] = n2;
-		tess.indexes[ numIndexes + 4 ] = n0;
-		tess.indexes[ numIndexes + 5 ] = n1;
-	}
+    tess.indexes[ numIndexes ] = n3;
+    tess.indexes[ numIndexes + 1 ] = n0;
+    tess.indexes[ numIndexes + 2 ] = n2;
+    tess.indexes[ numIndexes + 3 ] = n2;
+    tess.indexes[ numIndexes + 4 ] = n0;
+    tess.indexes[ numIndexes + 5 ] = n1;
+	
 
-	{
-		const unsigned char r = sf_Color2D[0]*255;
-		const unsigned char g = sf_Color2D[1]*255;
-		const unsigned char b = sf_Color2D[2]*255;
-		const unsigned char a = sf_Color2D[3]*255;
+/*
+    tess.vertexColors[ n0 ][ 0 ] = sf_Color2D[0];
+    tess.vertexColors[ n0 ][ 1 ] = sf_Color2D[1];
+    tess.vertexColors[ n0 ][ 2 ] = sf_Color2D[2];
+    tess.vertexColors[ n0 ][ 3 ] = sf_Color2D[3];
 
-		tess.vertexColors[ n0 ][ 0 ] = r;
-		tess.vertexColors[ n0 ][ 1 ] = g;
-		tess.vertexColors[ n0 ][ 2 ] = b;
-		tess.vertexColors[ n0 ][ 3 ] = a;
+    tess.vertexColors[ n1 ][ 0 ] = sf_Color2D[0];
+    tess.vertexColors[ n1 ][ 1 ] = sf_Color2D[1];
+    tess.vertexColors[ n1 ][ 2 ] = sf_Color2D[2];
+    tess.vertexColors[ n1 ][ 3 ] = sf_Color2D[3];
 
-		tess.vertexColors[ n1 ][ 0 ] = r;
-		tess.vertexColors[ n1 ][ 1 ] = g;
-		tess.vertexColors[ n1 ][ 2 ] = b;
-		tess.vertexColors[ n1 ][ 3 ] = a;
+    tess.vertexColors[ n2 ][ 0 ] = sf_Color2D[0];
+    tess.vertexColors[ n2 ][ 1 ] = sf_Color2D[1];
+    tess.vertexColors[ n2 ][ 2 ] = sf_Color2D[2];
+    tess.vertexColors[ n2 ][ 3 ] = sf_Color2D[3];
 
-		tess.vertexColors[ n2 ][ 0 ] = r;
-		tess.vertexColors[ n2 ][ 1 ] = g;
-		tess.vertexColors[ n2 ][ 2 ] = b;
-		tess.vertexColors[ n2 ][ 3 ] = a;
+    tess.vertexColors[ n3 ][ 0 ] = sf_Color2D[0];
+    tess.vertexColors[ n3 ][ 1 ] = sf_Color2D[1];
+    tess.vertexColors[ n3 ][ 2 ] = sf_Color2D[2];
+    tess.vertexColors[ n3 ][ 3 ] = sf_Color2D[3];
+*/
 
-		tess.vertexColors[ n3 ][ 0 ] = r;
-		tess.vertexColors[ n3 ][ 1 ] = g;
-		tess.vertexColors[ n3 ][ 2 ] = b;
-		tess.vertexColors[ n3 ][ 3 ] = a;
-	}
+    memcpy(tess.vertexColors[ n0 ], backEnd.Color2D, 4);
+    memcpy(tess.vertexColors[ n1 ], backEnd.Color2D, 4);
+    memcpy(tess.vertexColors[ n2 ], backEnd.Color2D, 4);
+    memcpy(tess.vertexColors[ n3 ], backEnd.Color2D, 4);
 
 
-	{
-		tess.xyz[ n0 ][0] = cmd->x;
-		tess.xyz[ n0 ][1] = cmd->y;
-		tess.xyz[ n0 ][2] = 0;
+    tess.xyz[ n0 ][0] = cmd->x;
+    tess.xyz[ n0 ][1] = cmd->y;
+    tess.xyz[ n0 ][2] = 0;
+    tess.xyz[ n1 ][0] = cmd->x + cmd->w;
+    tess.xyz[ n1 ][1] = cmd->y;
+    tess.xyz[ n1 ][2] = 0;
+    tess.xyz[ n2 ][0] = cmd->x + cmd->w;
+    tess.xyz[ n2 ][1] = cmd->y + cmd->h;
+    tess.xyz[ n2 ][2] = 0;
+    tess.xyz[ n3 ][0] = cmd->x;
+    tess.xyz[ n3 ][1] = cmd->y + cmd->h;
+    tess.xyz[ n3 ][2] = 0;
 
-		tess.xyz[ n1 ][0] = cmd->x + cmd->w;
-		tess.xyz[ n1 ][1] = cmd->y;
-		tess.xyz[ n1 ][2] = 0;
 
-		tess.xyz[ n2 ][0] = cmd->x + cmd->w;
-		tess.xyz[ n2 ][1] = cmd->y + cmd->h;
-		tess.xyz[ n2 ][2] = 0;
+    tess.texCoords[ n0 ][0][0] = cmd->s1;
+    tess.texCoords[ n0 ][0][1] = cmd->t1;
 
-		tess.xyz[ n3 ][0] = cmd->x;
-		tess.xyz[ n3 ][1] = cmd->y + cmd->h;
-		tess.xyz[ n3 ][2] = 0;
-	}
+    tess.texCoords[ n1 ][0][0] = cmd->s2;
+    tess.texCoords[ n1 ][0][1] = cmd->t1;
 
-	{
-		tess.texCoords[ n0 ][0][0] = cmd->s1;
-		tess.texCoords[ n0 ][0][1] = cmd->t1;
+    tess.texCoords[ n2 ][0][0] = cmd->s2;
+    tess.texCoords[ n2 ][0][1] = cmd->t2;
 
-		tess.texCoords[ n1 ][0][0] = cmd->s2;
-		tess.texCoords[ n1 ][0][1] = cmd->t1;
-
-		tess.texCoords[ n2 ][0][0] = cmd->s2;
-		tess.texCoords[ n2 ][0][1] = cmd->t2;
-
-		tess.texCoords[ n3 ][0][0] = cmd->s1;
-		tess.texCoords[ n3 ][0][1] = cmd->t2;
-	}
+    tess.texCoords[ n3 ][0][0] = cmd->s1;
+    tess.texCoords[ n3 ][0][1] = cmd->t2;
 
 	tess.numVertexes += 4;
 	tess.numIndexes += 6;
 
-	return (const void *)(cmd + 1);
-}
-
-
-/*
-=============
-RB_DrawSurfs
-
-=============
-*/
-const void* RB_DrawSurfs( const void *data )
-{
-
-	// finish any 2D drawing if needed
-	if ( tess.numIndexes ) {
-		RB_EndSurface();
-	}
-
-	const drawSurfsCommand_t* cmd = (const drawSurfsCommand_t *)data;
-
-	backEnd.refdef = cmd->refdef;
-	backEnd.viewParms = cmd->viewParms;
-
-	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
-
-	return (const void *)(cmd + 1);
-}
-
-
-/*
-=============
-RB_DrawBuffer
-
-=============
-*/
-const void* RB_DrawBuffer( const void *data )
-{
-	const drawBufferCommand_t* cmd = (const drawBufferCommand_t *)data;
-
-	// VULKAN
-	vk_begin_frame();
-
-    set_depth_attachment(VK_FALSE);
-	
-    vk_resetGeometryBuffer();
-
-	return (const void *)(cmd + 1);
 }
 
 
 
 
-const void* RB_SwapBuffers( const void *data )
+
+static void R_PerformanceCounters( void )
 {
+    
+	if (r_speeds->integer == 1) {
+		ri.Printf (PRINT_ALL, "%i/%i shaders/surfs %i leafs %i verts %i/%i tris\n",
+			backEnd.pc.c_shaders, backEnd.pc.c_surfaces, tr.pc.c_leafs, backEnd.pc.c_vertexes, 
+			backEnd.pc.c_indexes/3, backEnd.pc.c_totalIndexes/3); 
+	} else if (r_speeds->integer == 2) {
+		ri.Printf (PRINT_ALL, "(patch) %i sin %i sclip  %i sout %i bin %i bclip %i bout\n",
+			tr.pc.c_sphere_cull_patch_in, tr.pc.c_sphere_cull_patch_clip, tr.pc.c_sphere_cull_patch_out, 
+			tr.pc.c_box_cull_patch_in, tr.pc.c_box_cull_patch_clip, tr.pc.c_box_cull_patch_out );
+		ri.Printf (PRINT_ALL, "(md3) %i sin %i sclip  %i sout %i bin %i bclip %i bout\n",
+			tr.pc.c_sphere_cull_md3_in, tr.pc.c_sphere_cull_md3_clip, tr.pc.c_sphere_cull_md3_out, 
+			tr.pc.c_box_cull_md3_in, tr.pc.c_box_cull_md3_clip, tr.pc.c_box_cull_md3_out );
+	} else if (r_speeds->integer == 3) {
+		ri.Printf (PRINT_ALL, "viewcluster: %i\n", tr.viewCluster );
+	} else if (r_speeds->integer == 4) {
+		if ( backEnd.pc.c_dlightVertexes ) {
+			ri.Printf (PRINT_ALL, "dlight srf:%i  culled:%i  verts:%i  tris:%i\n", 
+				tr.pc.c_dlightSurfaces, tr.pc.c_dlightSurfacesCulled,
+				backEnd.pc.c_dlightVertexes, backEnd.pc.c_dlightIndexes / 3 );
+		}
+	} 
 
-	// finish any 2D drawing if needed
 
-	RB_EndSurface();
-
-	// texture swapping test
-	// if ( r_showImages->integer ) {
-	//	RB_ShowImages();
-	//}
-
-	//const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t *)data;
-
-
-	// VULKAN
-	vk_end_frame();
-
-	return (const void *)((const swapBuffersCommand_t *)data + 1);
+	memset( &tr.pc, 0, sizeof( tr.pc ) );
+	memset( &backEnd.pc, 0, sizeof( backEnd.pc ) );
 }
 
 /*
 ====================
-RB_ExecuteRenderCommands
-
 This function will be called synchronously if running without
 smp extensions, or asynchronously by another thread.
 ====================
 */
-void RB_ExecuteRenderCommands( const void *data )
+void R_IssueRenderCommands( qboolean runPerformanceCounters )
 {
-	int		t1, t2;
 
-	t1 = ri.Milliseconds ();
+    if(runPerformanceCounters)
+    {
+        R_PerformanceCounters();
+    }
+
+    // actually start the commands going
+    // let it start on the new batch
+    // RB_ExecuteRenderCommands( cmdList->cmds );
+    int	t1 = ri.Milliseconds ();
+
+    // add an end-of-list command
+    *(int *)(backEndData->commands.cmds + backEndData->commands.used) = RC_END_OF_LIST;
 
 
-	while ( 1 ) {
-		switch ( *(const int *)data ) {
-		case RC_SET_COLOR:
-			data = RB_SetColor( data );
-			break;
-		case RC_STRETCH_PIC:
-			data = RB_StretchPic( data );
-			break;
-		case RC_DRAW_SURFS:
-			data = RB_DrawSurfs( data );
-			break;
-		case RC_DRAW_BUFFER:
-			data = RB_DrawBuffer( data );
-			//begin_frame_called = qtrue;
-			break;
-		case RC_SWAP_BUFFERS:
-			data = RB_SwapBuffers( data );
-			//end_frame_called = qtrue;
-			break;
-		case RC_SCREENSHOT:
-			data = RB_TakeScreenshotCmd( data );
-			break;
+    const void * data = backEndData->commands.cmds;
 
-		case RC_END_OF_LIST:
-		default:
-			// stop rendering on this thread
-			t2 = ri.Milliseconds ();
-			backEnd.pc.msec = t2 - t1;
-/*
-			// VULKAN
-			if (com_errorEntered && (begin_frame_called && !end_frame_called)) {
-				vk_end_frame();
-			}
-*/
-			return;
-		}
-	}
 
+    while(1)
+    {   
+        const int T = *(const int *)data;
+        switch ( T )
+        {
+            case RC_SET_COLOR:
+                {
+                    const setColorCommand_t * const cmd = data;
+
+                    backEnd.Color2D[0] = cmd->color[0] * 255;
+                    backEnd.Color2D[1] = cmd->color[1] * 255;
+                    backEnd.Color2D[2] = cmd->color[2] * 255;
+                    backEnd.Color2D[3] = cmd->color[3] * 255;
+                    
+                    data += sizeof(setColorCommand_t);
+                } break;
+
+            case RC_STRETCH_PIC:
+                {
+                    const stretchPicCommand_t * const cmd = data;
+
+                    RB_StretchPic( cmd );
+
+                    data += sizeof(stretchPicCommand_t);
+                } break;
+
+            case RC_DRAW_SURFS:
+                {  
+                    const drawSurfsCommand_t * const cmd = (const drawSurfsCommand_t *)data;
+
+                    // RB_DrawSurfs( cmd );
+                    // finish any 2D drawing if needed
+                    if ( tess.numIndexes ) {
+                        RB_EndSurface();
+                    }
+
+                    backEnd.refdef = cmd->refdef;
+                    backEnd.viewParms = cmd->viewParms;
+
+                    RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+                    data += sizeof(drawSurfsCommand_t);
+                } break;
+
+            case RC_DRAW_BUFFER:
+                {
+                    //data = RB_DrawBuffer( data ); 
+                    // const drawBufferCommand_t * const cmd = (const drawBufferCommand_t *)data;
+                    vk_resetGeometryBuffer();
+
+                    // VULKAN
+                    vk_begin_frame();
+
+                    data += sizeof(drawBufferCommand_t);
+
+                    //begin_frame_called = qtrue;
+                } break;
+
+            case RC_SWAP_BUFFERS:
+                {
+                    // data = RB_SwapBuffers( data );
+                    // finish any 2D drawing if needed
+
+                    RB_EndSurface();
+
+#ifndef NDEBUG
+                    // texture swapping test
+                    if ( r_showImages->integer ) {
+                        RB_ShowImages();
+                    }
+#endif
+
+                    // VULKAN
+                    vk_end_frame();
+
+                    data += sizeof(swapBuffersCommand_t);
+                } break;
+
+            case RC_SCREENSHOT:
+                {   
+                    const screenshotCommand_t * const cmd = data;
+
+                    RB_TakeScreenshot( cmd->width, cmd->height, cmd->fileName);
+
+                    data += sizeof(screenshotCommand_t);
+                } break;
+
+
+            case RC_VIDEOFRAME:
+                {
+                    const videoFrameCommand_t * const cmd = data;
+
+                    RB_TakeVideoFrameCmd( cmd );
+
+                    data += sizeof(videoFrameCommand_t);
+                } break;
+
+            case RC_END_OF_LIST:
+                // stop rendering on this thread
+                backEnd.pc.msec = ri.Milliseconds () - t1;
+
+                backEndData->commands.used = 0;
+                return;
+        }
+    }
 }

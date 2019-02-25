@@ -59,14 +59,14 @@ void R_InitScene(void)
 	if (max_polyverts < MAX_POLYVERTS)
 		max_polyverts = MAX_POLYVERTS;
 
-	unsigned int len = sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts;
+	unsigned int len = sizeof( backEndData_t ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts;
     
     char* ptr = ri.Hunk_Alloc( len, h_low);
     memset(ptr, 0, len);
 
 	backEndData = (backEndData_t *) ptr;
-	backEndData->polys = (srfPoly_t *) (ptr + sizeof( *backEndData ));
-	backEndData->polyVerts = (polyVert_t *) (ptr + sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys);
+	backEndData->polys = (srfPoly_t *) (ptr + sizeof( backEndData_t ));
+	backEndData->polyVerts = (polyVert_t *) (ptr + sizeof( backEndData_t ) + sizeof(srfPoly_t) * max_polys);
 
 	backEndData->commands.used = 0;
 

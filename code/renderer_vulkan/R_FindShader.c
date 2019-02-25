@@ -136,6 +136,10 @@ most world construction surfaces.
 
 ===============
 */
+
+extern void setDefaultShader(void);
+
+
 shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImage )
 {
 	char strippedName[MAX_QPATH] = {0};
@@ -249,12 +253,18 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 
 
     image_t* image = R_FindImageFile( name, mipRawImage, mipRawImage, mipRawImage ? GL_REPEAT : GL_CLAMP );
-//    if(image != NULL)
-    R_CreateDefaultShadingCmds(name, image);
+    
+    if(image != NULL)
+    {
+        // create the default shading commands
 
-	//
-	// create the default shading commands
-	//
+        R_CreateDefaultShadingCmds(name, image);
+    }
+    else
+	{
+	    setDefaultShader();
+	}
+
 
     return FinishShader();
 }

@@ -642,7 +642,7 @@ void vk_end_frame(void)
     {
         return;
     }
-    else if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_ERROR_SURFACE_LOST_KHR)
+    else if( (result == VK_ERROR_OUT_OF_DATE_KHR) || (result == VK_ERROR_SURFACE_LOST_KHR))
     {
         // we first call vkDeviceWaitIdle because we 
         // shouldn't touch resources that still be in use

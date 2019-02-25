@@ -1020,7 +1020,8 @@ RB_SurfaceEntity
 Entities that have a single procedurally generated surface
 ====================
 */
-void RB_SurfaceEntity( surfaceType_t *surfType ) {
+void RB_SurfaceEntity( surfaceType_t *surfType )
+{
 	switch( backEnd.currentEntity->e.reType ) {
 	case RT_SPRITE:
 		RB_SurfaceSprite();
@@ -1052,17 +1053,18 @@ void RB_SurfaceSkip( void *surf ) {
 }
 
 
-void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) = {
-	(void(*)(void*))RB_SurfaceBad,			// SF_BAD, 
-	(void(*)(void*))RB_SurfaceSkip,			// SF_SKIP, 
-	(void(*)(void*))RB_SurfaceFace,			// SF_FACE,
-	(void(*)(void*))RB_SurfaceGrid,			// SF_GRID,
-	(void(*)(void*))RB_SurfaceTriangles,	// SF_TRIANGLES,
-	(void(*)(void*))RB_SurfacePolychain,	// SF_POLY,
-	(void(*)(void*))RB_SurfaceMesh,			// SF_MD3,
-	(void(*)(void*))RB_MDRSurfaceAnim,		// SF_MDR,
-	(void(*)(void*))RB_IQMSurfaceAnim,		// SF_IQM,
-	(void(*)(void*))RB_SurfaceAnim,			// SF_MD4,
-	(void(*)(void*))RB_SurfaceFlare,		// SF_FLARE,
-	(void(*)(void*))RB_SurfaceEntity,		// SF_ENTITY
+
+void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void * ) = {
+	(void (* )(void* ))RB_SurfaceBad,			// SF_BAD, 
+	(void (* )(void* ))RB_SurfaceSkip,			// SF_SKIP, 
+	(void (* )(void* ))RB_SurfaceFace,			// SF_FACE,
+	(void (* )(void* ))RB_SurfaceGrid,			// SF_GRID,
+	(void (* )(void* ))RB_SurfaceTriangles,	// SF_TRIANGLES,
+	(void (* )(void* ))RB_SurfacePolychain,	// SF_POLY,
+	(void (* )(void* ))RB_SurfaceMesh,			// SF_MD3,
+	(void (* )(void* ))RB_MDRSurfaceAnim,		// SF_MDR,
+	(void (* )(void* ))RB_IQMSurfaceAnim,		// SF_IQM,
+	(void (* )(void* ))RB_SurfaceAnim,			// SF_MD4,
+	(void (* )(void* ))RB_SurfaceFlare,		// SF_FLARE,
+	(void (* )(void* ))RB_SurfaceEntity,		// SF_ENTITY
 };

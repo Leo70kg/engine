@@ -353,7 +353,6 @@ void ResampleTexture(unsigned char * pOut, const unsigned int inwidth, const uns
         frac2 += fracstep;
     }
  
-
    
 	for (i=0; i<outheight; i++)
 	{

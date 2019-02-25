@@ -31,10 +31,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vk_shade_geometry.h"
 #include "vk_pipelines.h"
 #include "vk_image.h"
-#include "vk_clear_attachments.h"
 #include "R_LerpTag.h"
 #include "R_ModelBounds.h"
-
+#include "R_StretchRaw.h"
 
 refimport_t	ri;
 
@@ -133,7 +132,7 @@ void R_Init( void )
 	{
 		vk_initialize();
 	}
-	
+
 
 	R_InitImages();
 
@@ -181,31 +180,25 @@ void RE_Shutdown( qboolean destroyWindow )
 
     // contains vulkan resources/state, reinitialized on a map change.
 
-
     vk_destroyShaderStagePipeline();
  
-    vk_destroyImageRes();
-
-    set_depth_attachment(VK_FALSE);
 
     vk_resetGeometryBuffer();
-    
+
+    vk_destroyImageRes();
+
+	if ( tr.registered )
+    {	
+        tr.registered = qfalse;
+
+	}
+
     if (destroyWindow)
     {
         vk_shutdown();
         vk_destroyWindow();
     }
     
-	if ( tr.registered )
-    {
-        R_IssueRenderCommands( qfalse );
-		
-        memset( tr.images, 0, sizeof( tr.images ) );
-
-	    tr.numImages = 0;
-	}
-
-	tr.registered = qfalse;
 }
 
 
@@ -214,8 +207,6 @@ void RE_BeginRegistration(glconfig_t *glconfigOut)
 	R_Init();
 
 	*glconfigOut = glConfig;
-
-	R_IssuePendingRenderCommands();
 
 	tr.viewCluster = -1; // force markleafs to regenerate
 

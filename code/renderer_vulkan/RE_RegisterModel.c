@@ -86,10 +86,6 @@ qhandle_t RE_RegisterModel( const char *name )
         ri.Printf(PRINT_WARNING, "RE_RegisterModel: MAX_MOD_KNOWN.\n");
 	}
 
-	// make sure the render thread is stopped
-    //	R_IssuePendingRenderCommands();
-
-
 	// load the files
 
     const char* dot = strrchr(name, '.');

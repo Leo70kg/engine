@@ -149,9 +149,6 @@ static	void R_LoadLightmaps( lump_t *l ) {
 	}
 	buf = fileBase + l->fileofs;
 
-	// we are about to upload textures
-	R_IssuePendingRenderCommands();
-
 	// create all the lightmaps
 	tr.numLightmaps = len / (LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3);
 	if ( tr.numLightmaps == 1 ) {

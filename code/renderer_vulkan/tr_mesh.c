@@ -29,19 +29,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/ref_import.h"
 
 
-/*
-=============
-R_CullModel
-=============
-*/
-static int R_CullModel( md3Header_t *header, trRefEntity_t *ent ) {
+
+static int R_CullModel( md3Header_t *header, trRefEntity_t *ent )
+{
 	vec3_t		bounds[2];
-	md3Frame_t	*oldFrame, *newFrame;
 	int			i;
 
 	// compute frame pointers
-	newFrame = ( md3Frame_t * ) ( ( byte * ) header + header->ofsFrames ) + ent->e.frame;
-	oldFrame = ( md3Frame_t * ) ( ( byte * ) header + header->ofsFrames ) + ent->e.oldframe;
+	md3Frame_t* newFrame = ( md3Frame_t * ) ( ( byte * ) header + header->ofsFrames ) + ent->e.frame;
+	md3Frame_t* oldFrame = ( md3Frame_t * ) ( ( byte * ) header + header->ofsFrames ) + ent->e.oldframe;
 
 	// cull bounding sphere ONLY if this is not an upscaled entity
 	if ( !ent->e.nonNormalizedAxes )
@@ -155,6 +151,7 @@ int R_ComputeLOD( trRefEntity_t *ent )
         // p[0] = 0;
         // p[1] = r ;
         // p[2] = -dist;
+        // p[3] = 1;
 
         //  pMatProj = tr.viewParms.projectionMatrix
         //  float projected[4];
@@ -162,6 +159,7 @@ int R_ComputeLOD( trRefEntity_t *ent )
         //  projected[1] = p[0] * pMatProj[1] - p[1] * pMatProj[5] + p[2] * pMatProj[9] + pMatProj[13];
         //	projected[2] = p[0] * pMatProj[2] + p[1] * pMatProj[6] + p[2] * pMatProj[10] + pMatProj[14];
         //  projected[3] = p[0] * pMatProj[3] + p[1] * pMatProj[7] + p[2] * pMatProj[11] + pMatProj[15];
+        //  perspective devide
         //  pr = projected[1] / projected[3];
 
         float p1 = - radius * tr.viewParms.projectionMatrix[5] - dist * tr.viewParms.projectionMatrix[9] + tr.viewParms.projectionMatrix[13];
@@ -169,22 +167,21 @@ int R_ComputeLOD( trRefEntity_t *ent )
 
         float projectedRadius = p1 / p3;
 
+	    //ri.Printf( PRINT_ALL, "%f: \n", projectedRadius);
+        
+        lod = (1.0f - projectedRadius * 5.0f) * tr.currentModel->numLods;
 
-        lod = (1.0f - projectedRadius * 5) * tr.currentModel->numLods ;
+         
+        if ( lod < 0 )
+        {
+            lod = 0;
+        }
+        else if ( lod >= tr.currentModel->numLods )
+        {
+            lod = tr.currentModel->numLods - 1;
+        }
 
     }
-
-
- 
-    if ( lod < 0 )
-    {
-        lod = 0;
-    }
-    else if ( lod >= tr.currentModel->numLods )
-    {
-        lod = tr.currentModel->numLods - 1;
-    }
-
 
 
 	return lod;

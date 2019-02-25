@@ -24,7 +24,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // the window surface needs to be createdd right after the instance creation
 // because it can actually influence the physical device selection
 
-#include "sdl_icon.h"
 #include "VKimpl.h"
 #include "vk_instance.h"
 #include "tr_displayResolution.h"
@@ -32,6 +31,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_cvar.h"
 
 #include "tr_globals.h" // glConfig
+
+#include "icon_oa.h"
 
 
 #ifdef _WIN32
@@ -51,7 +52,6 @@ static SDL_Window* window_sdl = NULL;
 static cvar_t* r_displayIndex;
 
 
-
 /*
 SDL_WINDOW_FULLSCREEN, for "real" fullscreen with a videomode change; 
 SDL_WINDOW_FULLSCREEN_DESKTOP for "fake" fullscreen that takes the size of the desktop.
@@ -65,9 +65,7 @@ static VkBool32 isDesktopFullscreen (void)
 {
 	return (SDL_GetWindowFlags(window_sdl) & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP;
 }
-
 */
-
 
 
 static void VKimp_DetectAvailableModes(void)
@@ -162,7 +160,7 @@ static int VKimp_SetMode(int mode, qboolean fullscreen)
 {
 	SDL_DisplayMode desktopMode;
 
-	Uint32 flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN;
+	Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN;
 
 	if ( r_allowResize->integer )
 		flags |= SDL_WINDOW_RESIZABLE;
@@ -170,22 +168,6 @@ static int VKimp_SetMode(int mode, qboolean fullscreen)
 	int x = SDL_WINDOWPOS_UNDEFINED, y = SDL_WINDOWPOS_UNDEFINED;
 
 	ri.Printf(PRINT_ALL,  "...VKimp_SetMode()...\n");
-
-
-#ifdef USE_ICON
-SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
-			(void *)CLIENT_WINDOW_ICON.pixel_data,
-			CLIENT_WINDOW_ICON.width,
-			CLIENT_WINDOW_ICON.height,
-			CLIENT_WINDOW_ICON.bytes_per_pixel * 8,
-			CLIENT_WINDOW_ICON.bytes_per_pixel * CLIENT_WINDOW_ICON.width,
-#ifdef Q3_LITTLE_ENDIAN
-			0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
-#else
-			0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF
-#endif
-			);
-#endif
 
 
     SDL_GetNumVideoDisplays();
@@ -262,19 +244,6 @@ SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
 
 	window_sdl = SDL_CreateWindow( CLIENT_WINDOW_TITLE, x, y,
 						glConfig.vidWidth, glConfig.vidHeight, flags );
-	if( window_sdl == NULL )
-		ri.Error(ERR_FATAL,"SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
-    else{
-        ri.Printf(PRINT_ALL, "SDL_CreateWindow successed.\n");
-    }
-#ifdef USE_ICON
-	SDL_SetWindowIcon( window_sdl, icon );
-
-    SDL_FreeSurface( icon );
-#endif
-
-    SDL_ShowWindow (window_sdl);
-
 
 
 	if( window_sdl )
@@ -303,6 +272,28 @@ void vk_createWindow(void)
 	r_displayIndex = ri.Cvar_Get( "r_displayIndex", "0", CVAR_ARCHIVE | CVAR_LATCH );
 
 
+#ifdef USE_ICON
+
+    SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
+			(void *)CLIENT_WINDOW_ICON.pixel_data,
+			CLIENT_WINDOW_ICON.width,
+			CLIENT_WINDOW_ICON.height,
+			CLIENT_WINDOW_ICON.bytes_per_pixel * 8,
+			CLIENT_WINDOW_ICON.bytes_per_pixel * CLIENT_WINDOW_ICON.width,
+#ifdef Q3_LITTLE_ENDIAN
+            0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
+#else
+			0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF
+#endif
+			);
+
+    if(icon == NULL)
+    {
+        ri.Printf(PRINT_ALL, " SDL_CreateRGBSurface Failed. \n" );
+    }
+
+#endif
+
 
     // These values force the UI to disable driver selection
 	glConfig.driverType = GLDRV_ICD;
@@ -327,20 +318,30 @@ void vk_createWindow(void)
 	if(ri.Cvar_VariableIntegerValue( "com_abnormalExit" ) )
 	{
 		ri.Cvar_Set( "r_fullscreen", "0" );
+        ri.Cvar_Set( "r_mode", "3" );
 		ri.Cvar_Set( "com_abnormalExit", "0" );
 	}
 
-  
-	if (!SDL_WasInit(SDL_INIT_VIDEO))
+    // Use this function to get a mask of the specified 
+    // subsystems which have previously been initialized. 
+    // If flags is 0 it returns a mask of all initialized subsystems, 
+    // otherwise it returns the initialization status of the specified subsystems. 
+	if (0 == SDL_WasInit(SDL_INIT_VIDEO))
 	{
+        ri.Printf(PRINT_ALL, "Video is not initialized before, so initial it.\n");
+        
 		if (SDL_Init(SDL_INIT_VIDEO) != 0)
 		{
-			ri.Printf(PRINT_ALL, "SDL_Init( SDL_INIT_VIDEO ) FAILED (%s)\n", SDL_GetError());
+			ri.Printf(PRINT_ALL, " SDL_Init( SDL_INIT_VIDEO ) FAILED (%s)\n", SDL_GetError());
 		}
         else
         {
     		ri.Printf(PRINT_ALL, " SDL using driver \"%s\"\n", SDL_GetCurrentVideoDriver( ));
         }
+    }
+    else
+    {
+        ri.Printf(PRINT_ALL, "Video is already initialized.\n");
     }
 
 	if( 0 == VKimp_SetMode(r_mode->integer, r_fullscreen->integer) )
@@ -364,6 +365,11 @@ void vk_createWindow(void)
 
 
 success:
+
+	SDL_SetWindowIcon( window_sdl, icon );
+
+    SDL_FreeSurface( icon );
+
 
 	ri.Printf(PRINT_ALL,  "MODE: %s, %d x %d, refresh rate: %dhz\n",
         ((r_fullscreen->integer == 1) ? "fullscreen" : "windowed"), 
@@ -393,16 +399,14 @@ void vk_getInstanceProcAddrImpl(void)
 void vk_destroyWindow( void )
 {
 	ri.Printf(PRINT_ALL, " Destroy Window Subsystem.\n");
-
-    //Sys_UnloadLibrary(vk_library_handle);
 	
     memset(&glConfig, 0, sizeof(glConfig));
 
-    SDL_DestroyWindow( window_sdl );
-    window_sdl = NULL;
-
 	ri.IN_Shutdown();
 	SDL_QuitSubSystem( SDL_INIT_VIDEO );
+
+    SDL_DestroyWindow( window_sdl );
+    window_sdl = NULL;
 }
 
 

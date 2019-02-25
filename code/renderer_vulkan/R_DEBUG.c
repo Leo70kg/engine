@@ -4,7 +4,6 @@
 #include "vk_instance.h"
 #include "vk_image.h"
 #include "vk_pipelines.h"
-#include "vk_clear_attachments.h"
 #include "tr_cvar.h"
 
 
@@ -23,8 +22,7 @@ void R_DebugPolygon( int color, int numPoints, float *points )
     float pa[3], pb[3];
 //	transform_to_eye_space(&points[0], pa);
     
-    float m[15];
-    get_modelview_matrix(m);
+    const float* m = getptr_modelview_matrix();
     
 
     pa[0] = m[0]*points[0] + m[4]*points[1] + m[8 ]*points[2] + points[12];
@@ -119,7 +117,9 @@ Visualization aid for movement clipping debugging
 void R_DebugGraphics( void )
 {
 	// the render thread can't make callbacks to the main thread
-	R_IssuePendingRenderCommands();
+	if ( tr.registered ) {
+		R_IssueRenderCommands( qfalse );
+	}
 
 	updateCurDescriptor( tr.whiteImage->descriptor_set, 0);
 	ri.CM_DrawDebugSurface( R_DebugPolygon );

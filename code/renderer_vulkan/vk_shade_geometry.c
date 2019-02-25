@@ -1,4 +1,3 @@
-#include "vk_clear_attachments.h"
 #include "vk_shade_geometry.h"
 #include "vk_instance.h"
 #include "tr_globals.h"
@@ -37,9 +36,15 @@ struct ShadingData_t
 	uint32_t index_buffer_offset;
 
 	// host visible memory that holds both vertex and index data
-	VkDeviceMemory geometry_buffer_memory;
-
+	VkDeviceMemory vertex_buffer_memory;
+	VkDeviceMemory index_buffer_memory;
     VkDescriptorSet curDescriptorSets[2];
+
+    // This flag is used to decide whether framebuffer's depth attachment should be cleared
+    // with vmCmdClearAttachment (dirty_depth_attachment == true), or it have just been
+    // cleared by render pass instance clear op (dirty_depth_attachment == false).
+
+    VkBool32 s_depth_attachment_dirty;
 };
 
 struct ShadingData_t shadingDat;
@@ -54,14 +59,15 @@ VkBuffer vk_getIndexBuffer(void)
 
 static float s_modelview_matrix[16] QALIGN(16);
 
+
 void set_modelview_matrix(const float mv[16])
 {
     memcpy(s_modelview_matrix, mv, 64);
 }
 
-void get_modelview_matrix(float* mv)
+const float * getptr_modelview_matrix()
 {
-    memcpy(mv, s_modelview_matrix, 64);
+    return s_modelview_matrix;
 }
 
 void reset_modelview_matrix(void)
@@ -223,7 +229,7 @@ static VkViewport get_viewport(enum Vk_Depth_Range depth_range)
 }
 
 
-VkRect2D get_scissor_rect(void)
+static VkRect2D get_scissor_rect(void)
 {
 	VkRect2D r;
 	if (backEnd.projection2D)
@@ -254,7 +260,7 @@ VkRect2D get_scissor_rect(void)
 //
 // Host access to buffer must be externally synchronized
 
-static void vk_createVertexBuffer(void)
+void vk_createVertexBuffer(void)
 {
     ri.Printf(PRINT_ALL, " Create vertex buffer: shadingDat.vertex_buffer \n");
 
@@ -270,10 +276,43 @@ static void vk_createVertexBuffer(void)
     desc.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     
     VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &shadingDat.vertex_buffer));
+
+
+    VkMemoryRequirements vb_memory_requirements;
+    qvkGetBufferMemoryRequirements(vk.device, shadingDat.vertex_buffer, &vb_memory_requirements);
+    
+    uint32_t memory_type_bits = vb_memory_requirements.memoryTypeBits;
+
+    VkMemoryAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.allocationSize = vb_memory_requirements.size;
+    // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit specifies that memory allocated with
+    // this type can be mapped for host access using vkMapMemory.
+    //
+    // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache
+    // management commands vkFlushMappedMemoryRanges and vkInvalidateMappedMemoryRanges
+    // are not needed to flush host writes to the device or make device writes visible
+    // to the host, respectively.
+    alloc_info.memoryTypeIndex = find_memory_type(memory_type_bits, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    ri.Printf(PRINT_ALL, " Allocate device memory for Vertex Buffer: %ld bytes. \n",
+            alloc_info.allocationSize);
+
+    VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &shadingDat.vertex_buffer_memory));
+
+    qvkBindBufferMemory(vk.device, shadingDat.vertex_buffer, shadingDat.vertex_buffer_memory, 0);
+
+    void* data;
+    VK_CHECK(qvkMapMemory(vk.device, shadingDat.vertex_buffer_memory, 0, VK_WHOLE_SIZE, 0, &data));
+    shadingDat.vertex_buffer_ptr = (unsigned char*)data;
+
 }
 
 
-static void vk_createIndexBuffer(void)
+
+void vk_createIndexBuffer(void)
 {
     ri.Printf(PRINT_ALL, " Create index buffer: shadingDat.index_buffer \n");
 
@@ -288,33 +327,18 @@ static void vk_createIndexBuffer(void)
     desc.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
     VK_CHECK(qvkCreateBuffer(vk.device, &desc, NULL, &shadingDat.index_buffer));
-}
 
-
-void vk_createGeometryBuffers(void)
-{
-
-    vk_createVertexBuffer();
-    vk_createIndexBuffer();
-    // The buffer has been created, but it doesn't actually have any memory
-    // assigned to it yet.
-
-    VkMemoryRequirements vb_memory_requirements;
-    qvkGetBufferMemoryRequirements(vk.device, shadingDat.vertex_buffer, &vb_memory_requirements);
-
+    
     VkMemoryRequirements ib_memory_requirements;
     qvkGetBufferMemoryRequirements(vk.device, shadingDat.index_buffer, &ib_memory_requirements);
 
-    const VkDeviceSize mask = (ib_memory_requirements.alignment - 1);
+    uint32_t memory_type_bits = ib_memory_requirements.memoryTypeBits;
 
-    const VkDeviceSize idxBufOffset = (vb_memory_requirements.size + mask) & (~mask);
-
-    uint32_t memory_type_bits = vb_memory_requirements.memoryTypeBits & ib_memory_requirements.memoryTypeBits;
 
     VkMemoryAllocateInfo alloc_info;
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
-    alloc_info.allocationSize = idxBufOffset + ib_memory_requirements.size;
+    alloc_info.allocationSize = ib_memory_requirements.size;
     // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit specifies that memory allocated with
     // this type can be mapped for host access using vkMapMemory.
     //
@@ -325,42 +349,16 @@ void vk_createGeometryBuffers(void)
     alloc_info.memoryTypeIndex = find_memory_type(memory_type_bits, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    ri.Printf(PRINT_ALL, " Allocate device memory: shadingDat.geometry_buffer_memory(%ld bytes). \n",
+    ri.Printf(PRINT_ALL, " Allocate device memory for Index Buffer: %ld bytes. \n",
             alloc_info.allocationSize);
 
-    VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &shadingDat.geometry_buffer_memory));
+    VK_CHECK(qvkAllocateMemory(vk.device, &alloc_info, NULL, &shadingDat.index_buffer_memory));
+    qvkBindBufferMemory(vk.device, shadingDat.index_buffer, shadingDat.index_buffer_memory, 0);
 
-    // To attach memory to a buffer object
-    // vk.device is the logical device that owns the buffer and memory.
-    // vertex_buffer/index_buffer is the buffer to be attached to memory.
-    // 
-    // geometry_buffer_memory is a VkDeviceMemory object describing the 
-    // device memory to attach.
-    // 
-    // idxBufOffset is the start offset of the region of memory 
-    // which is to be bound to the buffer.
-    // 
-    // The number of bytes returned in the VkMemoryRequirements::size member
-    // in memory, starting from memoryOffset bytes, will be bound to the 
-    // specified buffer.
-    qvkBindBufferMemory(vk.device, shadingDat.vertex_buffer, shadingDat.geometry_buffer_memory, 0);
-    qvkBindBufferMemory(vk.device, shadingDat.index_buffer, shadingDat.geometry_buffer_memory, idxBufOffset);
-
-    // Host Access to Device Memory Objects
-    // Memory objects created with vkAllocateMemory are not directly host accessible.
-    // Memory objects created with the memory property VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-    // are considered mappable. 
-    // Memory objects must be mappable in order to be successfully mapped on the host
-    // VK_WHOLE_SIZE: map from offset to the end of the allocation.
-    // &data points to a pointer in which is returned a host-accessible pointer
-    // to the beginning of the mapped range. This pointer minus offset must be
-    // aligned to at least VkPhysicalDeviceLimits::minMemoryMapAlignment.
     void* data;
-    VK_CHECK(qvkMapMemory(vk.device, shadingDat.geometry_buffer_memory, 0, VK_WHOLE_SIZE, 0, &data));
-    shadingDat.vertex_buffer_ptr = (unsigned char*)data;
-    shadingDat.index_buffer_ptr = (unsigned char*)data + idxBufOffset;
+    VK_CHECK(qvkMapMemory(vk.device, shadingDat.index_buffer_memory, 0, VK_WHOLE_SIZE, 0, &data));
+    shadingDat.index_buffer_ptr = (unsigned char*)data;
 }
-
 
 
 // Descriptors and Descriptor Sets
@@ -391,22 +389,6 @@ void updateCurDescriptor( VkDescriptorSet curDesSet, uint32_t tmu)
 }
 
 
-void vk_destroy_shading_data(void)
-{
-    ri.Printf(PRINT_ALL, " Destroy vertex/index buffer: shadingDat.vertex_buffer shadingDat.index_buffer. \n");
-    ri.Printf(PRINT_ALL, " Free device memory: shadingDat.geometry_buffer_memory. \n");
-
-    qvkDestroyBuffer(vk.device, shadingDat.vertex_buffer, NULL);
-	qvkDestroyBuffer(vk.device, shadingDat.index_buffer, NULL);
-    
-    qvkUnmapMemory(vk.device, shadingDat.geometry_buffer_memory);
-	qvkFreeMemory(vk.device, shadingDat.geometry_buffer_memory, NULL);
-
-    memset(&shadingDat, 0, sizeof(shadingDat));
-
-
-    VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
-}
 
 
 void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth_Range depth_range, VkBool32 indexed)
@@ -423,7 +405,7 @@ void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth
 
     // color
     if ((shadingDat.color_st_elements + tess.numVertexes) * sizeof(color4ub_t) > COLOR_SIZE)
-        ri.Error(ERR_DROP, "vulkan: vertex buffer overflow (color)\n");
+        ri.Error(ERR_DROP, "vulkan: vertex buffer overflow (color) %ld \n", (shadingDat.color_st_elements + tess.numVertexes) * sizeof(color4ub_t));
 
     unsigned char* dst_color = shadingDat.vertex_buffer_ptr + offs[0];
     memcpy(dst_color, tess.svars.colors, tess.numVertexes * sizeof(color4ub_t));
@@ -473,19 +455,73 @@ void vk_shade_geometry(VkPipeline pipeline, VkBool32 multitexture, enum Vk_Depth
 	else
 		qvkCmdDraw(vk.command_buffer, tess.numVertexes, 1, 0, 0);
 
-	set_depth_attachment(VK_TRUE);
+	
+    shadingDat.s_depth_attachment_dirty = VK_TRUE;
 }
 
 
-void vk_resetGeometryBuffer(void)
+void vk_bind_geometry2(float modelviewMat4x4[16]) 
 {
-	// Reset geometry buffer's current offsets.
-	shadingDat.xyz_elements = 0;
-	shadingDat.color_st_elements = 0;
-	shadingDat.index_buffer_offset = 0;
 
-    Mat4Identity(s_modelview_matrix);
+	// xyz stream
+	{
+        const VkDeviceSize xyz_offset = XYZ_OFFSET + shadingDat.xyz_elements * sizeof(vec4_t);
+		unsigned char* dst = shadingDat.vertex_buffer_ptr + xyz_offset;
+		memcpy(dst, tess.xyz, tess.numVertexes * sizeof(vec4_t));
+
+
+		qvkCmdBindVertexBuffers(vk.command_buffer, 0, 1, &shadingDat.vertex_buffer, &xyz_offset);
+		shadingDat.xyz_elements += tess.numVertexes;
+
+        assert (shadingDat.xyz_elements * sizeof(vec4_t) < XYZ_SIZE);
+	}
+
+	// indexes stream
+	{
+		const uint32_t indexes_size = tess.numIndexes * sizeof(uint32_t);        
+
+		unsigned char* dst = shadingDat.index_buffer_ptr + shadingDat.index_buffer_offset;
+		memcpy(dst, tess.indexes, indexes_size);
+
+		qvkCmdBindIndexBuffer(vk.command_buffer, shadingDat.index_buffer, shadingDat.index_buffer_offset, VK_INDEX_TYPE_UINT32);
+		shadingDat.index_buffer_offset += indexes_size;
+
+        assert (shadingDat.index_buffer_offset < INDEX_BUFFER_SIZE);
+	}
+
+
+
+    // push constants are another way of passing dynamic values to shaders
+    // Specify push constants.
+    float mvp[16] QALIGN(16); // mvp transform + eye transform + clipping plane in eye space
+
+    if (backEnd.projection2D)
+    {
+        float mvp0 = 2.0f / glConfig.vidWidth;
+        float mvp5 = 2.0f / glConfig.vidHeight;
+
+        mvp[0]  =  mvp0; mvp[1]  =  0.0f; mvp[2]  = 0.0f; mvp[3]  = 0.0f;
+        mvp[4]  =  0.0f; mvp[5]  =  mvp5; mvp[6]  = 0.0f; mvp[7]  = 0.0f;
+        mvp[8]  =  0.0f; mvp[9]  =  0.0f; mvp[10] = 1.0f; mvp[11] = 0.0f;
+        mvp[12] = -1.0f; mvp[13] = -1.0f; mvp[14] = 0.0f; mvp[15] = 1.0f;
+    }
+    else
+    {
+        // update q3's proj matrix (opengl) to vulkan conventions:
+        // z - [0, 1] instead of [-1, 1] and invert y direction
+
+        MatrixMultiply4x4_SSE(modelviewMat4x4, backEnd.viewParms.projectionMatrix, mvp);
+    }
+
+
+    // As described above in section Pipeline Layouts, the pipeline layout defines shader push constants
+    // which are updated via Vulkan commands rather than via writes to memory or copy commands.
+    // Push constants represent a high speed path to modify constant data in pipelines
+    // that is expected to outperform memory-backed resource updates.
+    qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 64, mvp);
+
 }
+
 
 
 void vk_bind_geometry(void) 
@@ -515,7 +551,6 @@ void vk_bind_geometry(void)
 		shadingDat.index_buffer_offset += indexes_size;
 
         assert (shadingDat.index_buffer_offset < INDEX_BUFFER_SIZE);
-		//	ri.Error(ERR_DROP, "vk_bind_geometry: index buffer overflow\n");
 	}
 
 
@@ -617,8 +652,119 @@ void vk_bind_geometry(void)
         // that is expected to outperform memory-backed resource updates.
 		qvkCmdPushConstants(vk.command_buffer, vk.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 64, mvp);
     }
+}
+
+
+void vk_resetGeometryBuffer(void)
+{
+	// Reset geometry buffer's current offsets.
+	shadingDat.xyz_elements = 0;
+	shadingDat.color_st_elements = 0;
+	shadingDat.index_buffer_offset = 0;
+    shadingDat.s_depth_attachment_dirty = VK_FALSE;
+
+    Mat4Identity(s_modelview_matrix);
+}
+
+
+void vk_destroy_shading_data(void)
+{
+    ri.Printf(PRINT_ALL, " Destroy vertex/index buffer: shadingDat.vertex_buffer shadingDat.index_buffer. \n");
+    ri.Printf(PRINT_ALL, " Free device memory: vertex_buffer_memory index_buffer_memory. \n");
+
+    qvkUnmapMemory(vk.device, shadingDat.vertex_buffer_memory);
+	qvkFreeMemory(vk.device, shadingDat.vertex_buffer_memory, NULL);
+
+    qvkUnmapMemory(vk.device, shadingDat.index_buffer_memory);
+	qvkFreeMemory(vk.device, shadingDat.index_buffer_memory, NULL);
+
+    qvkDestroyBuffer(vk.device, shadingDat.vertex_buffer, NULL);
+	qvkDestroyBuffer(vk.device, shadingDat.index_buffer, NULL);
+
+    memset(&shadingDat, 0, sizeof(shadingDat));
+
+
+    VK_CHECK(qvkResetDescriptorPool(vk.device, vk.descriptor_pool, 0));
+}
+
+
+
+void vk_clearDepthStencilAttachments(void)
+{
+    if(shadingDat.s_depth_attachment_dirty)
+    {
+        VkClearAttachment attachments;
+
+        attachments.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        attachments.clearValue.depthStencil.depth = 1.0f;
+
+        if (r_shadows->integer == 2) {
+            attachments.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            attachments.clearValue.depthStencil.stencil = 0;
+        }
+
+
+        VkClearRect clear_rect;
+        clear_rect.rect = get_scissor_rect();
+        clear_rect.baseArrayLayer = 0;
+        clear_rect.layerCount = 1;
+
+
+        qvkCmdClearAttachments(vk.command_buffer, 1, &attachments, 1, &clear_rect);
+    }
+}
+
+
+
+
+void vk_clearColorAttachments(const float* color)
+{
+
+    // ri.Printf(PRINT_ALL, "vk_clearColorAttachments\n");
+
+    VkClearAttachment attachments;
+	uint32_t attachment_count = 1;
+
+    attachments.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    attachments.colorAttachment = 0;
+    attachments.clearValue.color.float32[0] = color[0];
+    attachments.clearValue.color.float32[1] = color[1];
+    attachments.clearValue.color.float32[2] = color[2];
+    attachments.clearValue.color.float32[3] = color[3];
+
+/* 
+	VkClearRect clear_rect[2];
+	clear_rect[0].rect = get_scissor_rect();
+	clear_rect[0].baseArrayLayer = 0;
+	clear_rect[0].layerCount = 1;
+	uint32_t rect_count = 1;
+
+  
+	// Split viewport rectangle into two non-overlapping rectangles.
+	// It's a HACK to prevent Vulkan validation layer's performance warning:
+	//		"vkCmdClearAttachments() issued on command buffer object XXX prior to any Draw Cmds.
+	//		 It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw."
+	// 
+	// NOTE: we don't use LOAD_OP_CLEAR for color attachment when we begin renderpass
+	// since at that point we don't know whether we need color buffer clear (usually we don't).
+
+    uint32_t h = clear_rect[0].rect.extent.height / 2;
+    clear_rect[0].rect.extent.height = h;
+    clear_rect[1] = clear_rect[0];
+    clear_rect[1].rect.offset.y = h;
+    rect_count = 2;
+*/
+
+    VkClearRect clear_rect;
+	clear_rect.rect = get_scissor_rect();
+	clear_rect.baseArrayLayer = 0;
+	clear_rect.layerCount = 1;
+    uint32_t rect_count = 1;
+
+	qvkCmdClearAttachments(vk.command_buffer, attachment_count, &attachments, rect_count, &clear_rect);
 
 }
+
 
 
 

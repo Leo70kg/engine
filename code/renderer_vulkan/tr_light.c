@@ -43,9 +43,10 @@ the back end (before doing the lighting calculation)
 */
 void R_TransformDlights( int count, dlight_t *dl, orientationr_t *or) {
 	int		i;
-	vec3_t	temp;
 
-	for ( i = 0 ; i < count ; i++, dl++ ) {
+	for ( i = 0 ; i < count ; i++, dl++ )
+    {
+        vec3_t	temp;
 		VectorSubtract( dl->origin, or->origin, temp );
 		dl->transformed[0] = DotProduct( temp, or->axis[0] );
 		dl->transformed[1] = DotProduct( temp, or->axis[1] );

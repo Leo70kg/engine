@@ -60,6 +60,7 @@ PFN_vkCmdBlitImage								qvkCmdBlitImage;
 PFN_vkCmdClearAttachments						qvkCmdClearAttachments;
 PFN_vkCmdCopyBufferToImage						qvkCmdCopyBufferToImage;
 PFN_vkCmdCopyImage								qvkCmdCopyImage;
+PFN_vkCmdCopyImageToBuffer                      qvkCmdCopyImageToBuffer;
 PFN_vkCmdDraw									qvkCmdDraw;
 PFN_vkCmdDrawIndexed							qvkCmdDrawIndexed;
 PFN_vkCmdEndRenderPass							qvkCmdEndRenderPass;
@@ -407,6 +408,13 @@ static void vk_selectSurfaceFormat(void)
                 ( pSurfFmts[i].colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR) )
             {
 
+///////////
+    VkFormatProperties props;
+    qvkGetPhysicalDeviceFormatProperties(vk.physical_device, VK_FORMAT_R8G8B8A8_UNORM, &props);
+    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
+        ri.Printf(PRINT_ALL, "--- linearTilingFeatures supported. ---\n");
+
+//////////////
                 ri.Printf(PRINT_ALL, " format = VK_FORMAT_B8G8R8A8_UNORM \n");
                 ri.Printf(PRINT_ALL, " colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR \n");
                 
@@ -436,7 +444,11 @@ static void vk_selectSurfaceFormat(void)
     // To query supported format features which are properties of the physical device
 	
     VkFormatProperties props;
-	
+
+
+    // To determine the set of valid usage bits for a given format,
+    // call vkGetPhysicalDeviceFormatProperties.
+
     qvkGetPhysicalDeviceFormatProperties(vk.physical_device, VK_FORMAT_D24_UNORM_S8_UINT, &props);
 	//glConfig.stencilBits = 8;	
     if ( props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT )
@@ -639,6 +651,7 @@ static void vk_loadDeviceFunctions(void)
 	INIT_DEVICE_FUNCTION(vkCmdClearAttachments)
 	INIT_DEVICE_FUNCTION(vkCmdCopyBufferToImage)
 	INIT_DEVICE_FUNCTION(vkCmdCopyImage)
+    INIT_DEVICE_FUNCTION(vkCmdCopyImageToBuffer)
 	INIT_DEVICE_FUNCTION(vkCmdDraw)
 	INIT_DEVICE_FUNCTION(vkCmdDrawIndexed)
 	INIT_DEVICE_FUNCTION(vkCmdEndRenderPass)
@@ -778,6 +791,7 @@ void vk_clearProcAddress(void)
 	qvkCmdClearAttachments						= NULL;
 	qvkCmdCopyBufferToImage						= NULL;
 	qvkCmdCopyImage								= NULL;
+    qvkCmdCopyImageToBuffer                     = NULL;
 	qvkCmdDraw									= NULL;
 	qvkCmdDrawIndexed							= NULL;
 	qvkCmdEndRenderPass							= NULL;
@@ -967,7 +981,8 @@ void vk_initialize(void)
     vk_createPipelineLayout();
 
 	//
-	vk_createGeometryBuffers();
+	vk_createVertexBuffer();
+    vk_createIndexBuffer();;
 	//
 	// Shader modules.
 	//

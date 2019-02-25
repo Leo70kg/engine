@@ -10,8 +10,6 @@ cvar_t	*r_verbose;
 
 cvar_t	*r_znear;
 
-cvar_t	*r_skipBackEnd;
-
 
 cvar_t	*r_inGameVideo;
 cvar_t	*r_fastsky;
@@ -137,7 +135,6 @@ void R_Register( void )
 	r_lightmap = ri.Cvar_Get ("r_lightmap", "0", 0 );
 	r_portalOnly = ri.Cvar_Get ("r_portalOnly", "0", CVAR_CHEAT );
 
-	r_skipBackEnd = ri.Cvar_Get ("r_skipBackEnd", "0", CVAR_CHEAT);
 
 	r_norefresh = ri.Cvar_Get ("r_norefresh", "0", CVAR_CHEAT);
 	r_drawentities = ri.Cvar_Get ("r_drawentities", "1", CVAR_CHEAT );
