@@ -716,7 +716,7 @@ const void *RB_TakeScreenshotCmd( const void *data )
 
 static void R_ScreenshotFilename( int lastNumber, char *fileName )
 {
-	int		a,b,c,d;
+	int	a,b,c,d;
 
 	if ( lastNumber < 0 || lastNumber > 9999 ) {
 		snprintf( fileName, MAX_OSPATH, "screenshots/shot9999.tga" );

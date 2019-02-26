@@ -441,7 +441,7 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters )
                 {   
                     const screenshotCommand_t * const cmd = data;
 
-                    RB_TakeScreenshot( cmd->width, cmd->height, cmd->fileName);
+                    RB_TakeScreenshot( cmd->width, cmd->height, cmd->fileName, cmd->jpeg);
 
                     data += sizeof(screenshotCommand_t);
                 } break;

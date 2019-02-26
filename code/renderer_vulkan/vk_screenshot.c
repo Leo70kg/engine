@@ -8,7 +8,7 @@
 
 #include "../renderercommon/ref_import.h"
 
-
+#include "R_ImageJPG.h"
 
 /* 
 ============================================================================== 
@@ -47,7 +47,7 @@ Implementations may support additional limits and capabilities beyond those list
 */
 
 
-static void flipY(unsigned char *pBuf, const uint32_t w, const uint32_t h)
+static void imgFlipY(unsigned char * pBuf, const uint32_t w, const uint32_t h)
 {
     const uint32_t a_row = w * 4;
     const uint32_t nLines = h / 2;
@@ -71,6 +71,7 @@ static void flipY(unsigned char *pBuf, const uint32_t w, const uint32_t h)
 }
 
 
+// Just reading the pixels for the GPU MEM, don't care about swizzling
 static void vk_read_pixels(unsigned char* pBuf)
 {
 
@@ -107,30 +108,40 @@ static void vk_read_pixels(unsigned char* pBuf)
     }
 
 
+    //////////////////////////////////////////////////////////
 
+    VkBufferImageCopy image_copy;
     {
+        image_copy.bufferOffset = 0;
+        image_copy.bufferRowLength = glConfig.vidWidth;
+        image_copy.bufferImageHeight = glConfig.vidHeight;
 
-        VkCommandBufferAllocateInfo alloc_info;
-        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        alloc_info.pNext = NULL;
-        alloc_info.commandPool = vk.command_pool;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandBufferCount = 1;
+        image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_copy.imageSubresource.layerCount = 1;
+        image_copy.imageSubresource.mipLevel = 0;
+        image_copy.imageSubresource.baseArrayLayer = 0;
+        image_copy.imageOffset.x = 0;
+        image_copy.imageOffset.y = 0;
+        image_copy.imageOffset.z = 0;
+        image_copy.imageExtent.width = glConfig.vidWidth;
+        image_copy.imageExtent.height = glConfig.vidHeight;
+        image_copy.imageExtent.depth = 1;
+    }
 
-        VkCommandBuffer cmdBuf;
-        VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &cmdBuf));
+    // Memory barriers are used to explicitly control access to buffer and image subresource ranges.
+    // Memory barriers are used to transfer ownership between queue families, change image layouts,
+    // and define availability and visibility operations. They explicitly define the access types 
+    // and buffer and image subresource ranges that are included in the access scopes of a memory
+    // dependency that is created by a synchronization command that includes them.
+    //
+    // Image memory barriers only apply to memory accesses involving a specific image subresource
+    // range. That is, a memory dependency formed from an image memory barrier is scoped to access
+    // via the specified image subresource range. Image memory barriers can also be used to define
+    // image layout transitions or a queue family ownership transfer for the specified image 
+    // subresource range.
 
-        VkCommandBufferBeginInfo begin_info;
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.pNext = NULL;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        begin_info.pInheritanceInfo = NULL;
-
-
-        VK_CHECK(qvkBeginCommandBuffer(cmdBuf, &begin_info));
-
-
-        VkImageMemoryBarrier image_barrier;
+    VkImageMemoryBarrier image_barrier;
+    {
         image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         image_barrier.pNext = NULL;
         image_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
@@ -145,52 +156,52 @@ static void vk_read_pixels(unsigned char* pBuf)
         image_barrier.subresourceRange.levelCount = 1;
         image_barrier.subresourceRange.baseArrayLayer = 0;
         image_barrier.subresourceRange.layerCount = 1;
-
-        qvkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &image_barrier);
-
-        ////
-        //
-        VkBufferImageCopy image_copy;
-        memset(&image_copy, 0, sizeof(image_copy));
-        image_copy.bufferOffset = 0;
-        image_copy.bufferRowLength = glConfig.vidWidth;
-        image_copy.bufferImageHeight = glConfig.vidHeight;
-        image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_copy.imageSubresource.layerCount = 1;
-        image_copy.imageExtent.width = glConfig.vidWidth;
-        image_copy.imageExtent.height = glConfig.vidHeight;
-        image_copy.imageExtent.depth = 1;
-
-        qvkCmdCopyImageToBuffer(cmdBuf, vk.swapchain_images_array[vk.idx_swapchain_image], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1, &image_copy);
-
-        ////
-        VK_CHECK(qvkEndCommandBuffer(cmdBuf));
-             
-  
-
-        VkSubmitInfo submit_info;
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.pNext = NULL;
-        submit_info.waitSemaphoreCount = 0;
-        submit_info.pWaitSemaphores = NULL;
-        submit_info.pWaitDstStageMask = NULL;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &cmdBuf;
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = NULL;
-
-        VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
-
-
-        VK_CHECK(qvkQueueWaitIdle(vk.queue));
-        qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmdBuf);
     }
 
 
-    // Memory objects created with vkAllocateMemory are not directly host accessible.
-    // Memory objects created with the memory property 
-    // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT are considered mappable. 
-    // Memory objects must be mappable in order to be successfully mapped on the host. 
+    // read pixel with command buffer
+    VkCommandBuffer cmdBuf;
+
+    VkCommandBufferAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.commandPool = vk.command_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+    VK_CHECK(qvkAllocateCommandBuffers(vk.device, &alloc_info, &cmdBuf));
+
+    VkCommandBufferBeginInfo begin_info;
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.pNext = NULL;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    begin_info.pInheritanceInfo = NULL;
+    VK_CHECK(qvkBeginCommandBuffer(cmdBuf, &begin_info));
+
+    qvkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &image_barrier); 
+    qvkCmdCopyImageToBuffer(cmdBuf, vk.swapchain_images_array[vk.idx_swapchain_image], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1, &image_copy);
+    VK_CHECK(qvkEndCommandBuffer(cmdBuf));
+
+    VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
+    submit_info.waitSemaphoreCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &cmdBuf;
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = NULL;
+    VK_CHECK(qvkQueueSubmit(vk.queue, 1, &submit_info, VK_NULL_HANDLE));
+
+    VK_CHECK(qvkQueueWaitIdle(vk.queue));
+
+    qvkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmdBuf);
+
+
+    // Memory objects created with the memory property VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+    // are considered mappable. Memory objects must be mappable in order to be successfully
+    // mapped on the host. 
+    //
     // To retrieve a host virtual address pointer to a region of a mappable memory object
     unsigned char* data;
     VK_CHECK(qvkMapMemory(vk.device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&data));
@@ -198,77 +209,106 @@ static void vk_read_pixels(unsigned char* pBuf)
     qvkUnmapMemory(vk.device, memory);
     qvkFreeMemory(vk.device, memory, NULL);
     qvkDestroyBuffer(vk.device, buffer, NULL);
-  
-    // why this is need ?
-    flipY(pBuf, glConfig.vidWidth, glConfig.vidHeight);
-
-    ri.Printf(PRINT_ALL, "read %dx%d pixels from GPU\n", glConfig.vidWidth, glConfig.vidHeight);
-
-/*
-    VkBool32 swizzle_components = 
-        (vk.surface_format.format == VK_FORMAT_B8G8R8A8_SRGB ||
-         vk.surface_format.format == VK_FORMAT_B8G8R8A8_UNORM ||
-         vk.surface_format.format == VK_FORMAT_B8G8R8A8_SNORM);
-
-    if (swizzle_components)
-    {
-        unsigned int i = 0;
-        const uint32_t pixels = glConfig.vidWidth * glConfig.vidHeight;
-        for (i = 0; i < pixels; i++)
-        {
-            unsigned char tmp = pBuf[0];
-            pBuf[0] = pBuf[2];
-            pBuf[2] = tmp;
-            pBuf += 4;
-        }
-    }
-*/
 }
 
+extern void RE_SaveJPG(char * filename, int quality, int image_width, int image_height, unsigned char *image_buffer, int padding);
 
 
 
-
-void RB_TakeScreenshot( int width, int height, char *fileName )
+void RB_TakeScreenshot( int width, int height, char *fileName, VkBool32 isJpeg)
 {
+    ri.Printf(PRINT_ALL, "read %dx%d pixels from GPU\n", width, height);
+    const uint32_t cnPixels = width * height; 
 
-    const uint32_t cnPixels = glConfig.vidWidth * glConfig.vidHeight;
-    const uint32_t c = 18 + cnPixels * 3;
-
-	unsigned char* const buffer = (unsigned char*) malloc ( c );
-	memset (buffer, 0, 18);
-    
-	buffer[2] = 2;		// uncompressed type
-	buffer[12] = width & 255;
-	buffer[13] = width >> 8;
-	buffer[14] = height & 255;
-	buffer[15] = height >> 8;
-	buffer[16] = 24;	// pixel size
-
-
-    unsigned char* const pImg = (unsigned char*) malloc ( cnPixels * 4);
-
-    vk_read_pixels(pImg);
-
-    unsigned char* buffer_ptr = buffer + 18;
-    const unsigned char* buffer2_ptr = pImg;
-
-    uint32_t i;
-    for (i = 0; i < cnPixels; i++)
+    if(isJpeg)
     {
-        buffer_ptr[0] = buffer2_ptr[0];
-        buffer_ptr[1] = buffer2_ptr[1];
-        buffer_ptr[2] = buffer2_ptr[2];
-        buffer_ptr += 3;
-        buffer2_ptr += 4;
+        
+        //unsigned char *buffer;
+        //size_t offset = 0, memcount;
+        //int padlen;
+        //memcount = (width * 3 + padlen) * height;
+        //RE_SaveJPG(fileName, 90, width, height, buffer + offset, padlen);
+        unsigned char* const pImg = (unsigned char*) malloc ( cnPixels * 4);
+
+        vk_read_pixels(pImg);
+       
+        // but why this is need ? why the readed image got fliped about Y ???
+        imgFlipY(pImg, width, height);
+
+        // Remove alpha channel and rbg <-> bgr
+        {
+            unsigned char* pSrc = pImg;
+            unsigned char* pDst = pImg;
+
+            uint32_t i;
+            for (i = 0; i < cnPixels; i++)
+            {
+                pSrc[0] = pDst[2];
+                pSrc[1] = pDst[1];
+                pSrc[2] = pDst[0];
+                pSrc += 3;
+                pDst += 4;
+            }
+        }
+
+        RE_SaveJPG(fileName, 90, width, height, pImg, 0);
+
+        free( pImg );
+
+        //bufSize = RE_SaveJPGToBuffer(out, bufSize, 90, width, height, pImg, padding);
+        //ri.FS_WriteFile(filename, out, bufSize);
     }
+    else
+    {
 
-    free(pImg);
+        //const uint32_t cnPixels = width * height;
+        const uint32_t imgSize = 18 + cnPixels * 3;
 
+        unsigned char* const pBuffer = (unsigned char*) malloc ( imgSize + cnPixels * 4 );
+        unsigned char* const buffer_ptr = pBuffer + 18;
+        unsigned char* const pImg = pBuffer + imgSize;
+        
+        vk_read_pixels(pImg);
 
-    ri.FS_WriteFile( fileName, buffer, c );
+        // but why this is need ? why the readed image got fliped about Y ???
+        imgFlipY(pImg, width, height);
 
-	free( buffer );
+        memset (pBuffer, 0, 18);
+        pBuffer[2] = 2;		// uncompressed type
+        pBuffer[12] = width & 255;
+        pBuffer[13] = width >> 8;
+        pBuffer[14] = height & 255;
+        pBuffer[15] = height >> 8;
+        pBuffer[16] = 24;	// pixel size
+
+        //    VkBool32 need_swizzle = ( 
+        //            vk.surface_format.format == VK_FORMAT_B8G8R8A8_SRGB ||
+        //            vk.surface_format.format == VK_FORMAT_B8G8R8A8_UNORM ||
+        //           vk.surface_format.format == VK_FORMAT_B8G8R8A8_SNORM );
+
+        uint32_t i;
+        if (0)
+        {
+            for (i = 0; i < cnPixels; i++)
+            {
+                buffer_ptr[i*3]   = *(pImg + i*4 + 2);
+                buffer_ptr[i*3+1] = *(pImg + i*4 + 1);
+                buffer_ptr[i*3+2] = *(pImg + i*4 );;
+            }
+        }
+        else
+        {
+            for (i = 0; i < cnPixels; i++)
+            {
+                buffer_ptr[i*3]   = *(pImg + i*4 );
+                buffer_ptr[i*3+1] = *(pImg + i*4 + 1);
+                buffer_ptr[i*3+2] = *(pImg + i*4 + 2);
+            }
+        }
+        ri.FS_WriteFile( fileName, pBuffer, imgSize);
+        
+        free( pBuffer );
+    }
 }
 
 
@@ -365,7 +405,6 @@ static void R_LevelShot( void )
 			dst[2] = r / 12;
 		}
 	}
-
 
 	ri.FS_WriteFile( checkname, buffer, 128 * 128*3 + 18 );
 
@@ -514,11 +553,6 @@ void R_ScreenShotJPEG_f(void)
             }
 		}
 
-		if ( lastNumber == 10000 ) {
-			ri.Printf (PRINT_ALL, "ScreenShot: Couldn't create a file\n"); 
-			return;
- 		}
-
 		lastNumber++;
 	}
 
@@ -535,11 +569,9 @@ void R_ScreenShotJPEG_f(void)
 void RB_TakeVideoFrameCmd( const videoFrameCommand_t * const cmd )
 {
 
-	byte				*cBuf;
 	size_t				memcount, linelen;
-	int				padwidth, avipadwidth, padlen, avipadlen;
+	int				padwidth, avipadwidth, padlen;
 	
-
 
 	linelen = cmd->width * 3;
 
@@ -548,76 +580,61 @@ void RB_TakeVideoFrameCmd( const videoFrameCommand_t * const cmd )
 	padlen = padwidth - linelen;
 	// AVI line padding
 	avipadwidth = PAD(linelen, 4);
-	avipadlen = avipadwidth - linelen;
 
-	cBuf = PADP(cmd->captureBuffer, 4);
 		
-//	qglReadPixels(0, 0, cmd->width, cmd->height, GL_RGB,
-//		GL_UNSIGNED_BYTE, cBuf);
     unsigned char* const pImg = (unsigned char*) malloc ( cmd->width * cmd->height * 4);
     
     vk_read_pixels(pImg);
 
-    //destptr = cmd->encodeBuffer;
+    imgFlipY(pImg, cmd->width, cmd->height);
 
-
-    unsigned char* buffer_ptr = cmd->encodeBuffer;
-    const unsigned char* buffer2_ptr = pImg;
-
-    uint32_t i;
-    for (i = 0; i < cmd->width * cmd->height; i++)
-    {
-        buffer_ptr[0] = buffer2_ptr[0];
-        buffer_ptr[1] = buffer2_ptr[1];
-        buffer_ptr[2] = buffer2_ptr[2];
-        buffer_ptr += 3;
-        buffer2_ptr += 4;
-    }
-
-//    vk_read_pixels(cBuf);
-//    cmd->width = glConfig.vidWidth;
-//    cmd->height = glConfig.vidHeight;
-
-    free(pImg);
 	memcount = padwidth * cmd->height;
 
 
-	if(0)
+	if(cmd->motionJpeg)
 	{
-//		memcount = RE_SaveJPGToBuffer(cmd->encodeBuffer, linelen * cmd->height,
-//			90,	cmd->width, cmd->height, cBuf, padlen);
-//		ri.CL_WriteAVIVideoFrame(cmd->encodeBuffer, memcount);
+
+        const uint32_t cnPixels = cmd->width * cmd->height;
+        unsigned char* pSrc = pImg;
+        const unsigned char* pDst = pImg;
+
+        uint32_t i;
+        for (i = 0; i < cnPixels; i++)
+        {
+            pSrc[0] = pDst[2];
+            pSrc[1] = pDst[1];
+            pSrc[2] = pDst[0];
+            pSrc += 3;
+            pDst += 4;
+        }
+
+        
+		memcount = RE_SaveJPGToBuffer(cmd->encodeBuffer, linelen * cmd->height,
+			90,	cmd->width, cmd->height, pImg, padlen);
+        
+		ri.CL_WriteAVIVideoFrame(cmd->encodeBuffer, memcount);
 	}
 	else
 	{
-/*       
-		byte *lineend, *memend;
-		byte *srcptr, *destptr;
-	
-		srcptr = cBuf;
-		destptr = cmd->encodeBuffer;
-		memend = srcptr + memcount;
-		
-		// swap R and B and remove line paddings
-		while(srcptr < memend)
-		{
-			lineend = srcptr + linelen;
-			while(srcptr < lineend)
-			{
-				*destptr++ = srcptr[2];
-				*destptr++ = srcptr[1];
-				*destptr++ = srcptr[0];
-				srcptr += 3;
-			}
-			
-			memset(destptr, '\0', avipadlen);
-			destptr += avipadlen;
-			
-			srcptr += padlen;
-		}
-*/		
+
+        unsigned char* buffer_ptr = cmd->encodeBuffer;
+        const unsigned char* buffer2_ptr = pImg;
+
+        uint32_t i;
+        for (i = 0; i < cmd->width * cmd->height; i++)
+        {
+            buffer_ptr[0] = buffer2_ptr[0];
+            buffer_ptr[1] = buffer2_ptr[1];
+            buffer_ptr[2] = buffer2_ptr[2];
+            buffer_ptr += 3;
+            buffer2_ptr += 4;
+        }
+
 		ri.CL_WriteAVIVideoFrame(cmd->encodeBuffer, avipadwidth * cmd->height);
 	}
+
+
+    free(pImg);
 
 }
 

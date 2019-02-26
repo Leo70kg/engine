@@ -27,8 +27,6 @@ static void* q3_stbi_realloc(void* p, size_t old_size, size_t new_size) {
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#define TJE_IMPLEMENTATION
-#include "tiny_jpeg.h"
 
 
 static void LoadTGA( const char* name, unsigned char** pic, uint32_t* width, uint32_t* height);
@@ -729,3 +727,36 @@ static void LoadPCX32 ( const char *filename, unsigned char **pic, uint32_t *wid
 	ri.Free (palette);
 }
 
+
+
+///////////////////////
+
+// SAVE
+
+//////////////////////
+/*
+#define TJE_IMPLEMENTATION
+#include "tiny_jpeg.h"
+
+static void FS_ImgWrite(void* context, void* data, int size)
+{
+    //FILE* fd = (FILE*)context;
+    //fwrite(data, size, 1, fd);
+    ri.FS_WriteFile("lll.jpeg", data, size);
+}
+
+
+int RE_SaveJPG(char * fileName,
+                         const int quality,
+                         const int width,
+                         const int height,
+                         const int num_components,
+                         const unsigned char* src_data)
+{
+    tje_encode_to_file(fileName, width, height, num_components, src_data);
+
+    ri.Printf(PRINT_ALL, "RE_SaveJPG\n");
+    return tje_encode_with_func(FS_ImgWrite, (void*)fileName, quality, width, height, num_components, src_data);
+}
+
+*/
