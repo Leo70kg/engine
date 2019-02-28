@@ -29,7 +29,7 @@ typedef struct {
 	qboolean				registered;		// cleared at shutdown, set at beginRegistration
 
 	int						visCount;		// incremented every time a new vis cluster is entered
-	int						frameCount;		// incremented every frame
+//	int						frameCount;		// incremented every frame
 	int						viewCount;		// incremented every view (twice a scene if portaled)
 											// and every R_MarkFragments call
 
@@ -108,21 +108,6 @@ typedef struct {
 
 
 
-// all of the information needed by the back end must be contained in a backEndData_t.
-// This entire structure is duplicated so the front and back end can run in parallel
-// on an SMP machine
-
-typedef struct
-{
-	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
-	dlight_t	dlights[MAX_DLIGHTS];
-	trRefEntity_t	entities[MAX_REFENTITIES];
-	srfPoly_t	*polys;//[MAX_POLYS];
-	polyVert_t	*polyVerts;//[MAX_POLYVERTS];
-	renderCommandList_t	commands;
-} backEndData_t;
-
-
 // all state modified by the back end is seperated
 // from the front end state
 typedef struct {
@@ -140,6 +125,5 @@ typedef struct {
 
 extern backEndState_t backEnd;
 extern trGlobals_t	tr;
-extern backEndData_t* backEndData;	// the second one may not be allocated
 extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
 #endif

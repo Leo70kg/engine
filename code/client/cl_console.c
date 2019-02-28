@@ -736,7 +736,8 @@ void Con_DrawSolidConsole( float frac ) {
 Con_DrawConsole
 ==================
 */
-void Con_DrawConsole( void ) {
+void Con_DrawConsole( void )
+{
 	// check for console width changes from a vid mode change
 	Con_CheckResize ();
 
@@ -750,7 +751,9 @@ void Con_DrawConsole( void ) {
 
 	if ( con.displayFrac ) {
 		Con_DrawSolidConsole( con.displayFrac );
-	} else {
+	}
+    else
+    {
 		// draw notify lines
 		if ( clc.state == CA_ACTIVE ) {
 			Con_DrawNotify ();

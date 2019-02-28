@@ -1579,7 +1579,8 @@ void CIN_ResampleCinematic(int handle, int *buf2) {
 CIN_DrawCinematic
 ==================
 */
-void CIN_DrawCinematic (int handle) {
+void CIN_DrawCinematic (int handle)
+{
 	float	x, y, w, h;
 	byte	*buf;
 
@@ -1658,7 +1659,8 @@ void CL_PlayCinematic_f(void)
 }
 
 
-void SCR_DrawCinematic (void) {
+void SCR_DrawCinematic (void)
+{
 	if (CL_handle >= 0 && CL_handle < MAX_VIDEO_HANDLES) {
 		CIN_DrawCinematic(CL_handle);
 	}

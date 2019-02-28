@@ -613,8 +613,9 @@ R_GetCommandBuffer: make sure there is enough command space
 static void *R_GetCommandBuffer(int bytes)
 {
 	renderCommandList_t	*cmdList = &backEndData->commands;
-	
-    bytes = (bytes+sizeof(void *)-1) & ~(sizeof(void *)-1);
+
+    uint32_t mast = sizeof(void *)-1;
+    bytes = (bytes+mast) & ~mast;
 
 	// always leave room for the end of list command
 	if ( cmdList->used + bytes + 4 > MAX_RENDER_COMMANDS )

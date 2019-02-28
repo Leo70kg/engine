@@ -1009,28 +1009,32 @@ void R_InitImages( void )
 
 static void R_DestroySingleImage( image_t* pImg )
 {
-
-   	ri.Printf(PRINT_ALL, " Destroy %s {descriptor_set view handle} \n", pImg->imgName); 
-    if(pImg->descriptor_set != VK_NULL_HANDLE)
-    {   
-        //To free allocated descriptor sets
-        qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImg->descriptor_set);
-        pImg->descriptor_set = VK_NULL_HANDLE;
-    }
-
-    if (pImg->handle != VK_NULL_HANDLE)
+    if(pImg != NULL)
     {
-        qvkDestroyImageView(vk.device, pImg->view, NULL);
-        qvkDestroyImage(vk.device, pImg->handle, NULL);
-        pImg->handle = VK_NULL_HANDLE;
-    }
+        ri.Printf(PRINT_ALL, " Destroy %s {descriptor_set view handle} \n", pImg->imgName); 
+        if(pImg->descriptor_set != VK_NULL_HANDLE)
+        {   
+            //To free allocated descriptor sets
+            qvkFreeDescriptorSets(vk.device, vk.descriptor_pool, 1, &pImg->descriptor_set);
+            pImg->descriptor_set = VK_NULL_HANDLE;
+        }
 
+        if (pImg->view != VK_NULL_HANDLE)
+        {
+            qvkDestroyImageView(vk.device, pImg->view, NULL);
+            qvkDestroyImage(vk.device, pImg->handle, NULL);
+            pImg->view = VK_NULL_HANDLE;
+            pImg->handle = VK_NULL_HANDLE;
+        }
+    }
 }
 
 
 void vk_destroyImageRes(void)
 {
-	vk_free_sampler();
+    ri.Printf(PRINT_ALL, " vk_destroyImageRes \n"); 
+	
+    vk_free_sampler();
 
 /*
     R_DestroySingleImage(tr.identityLightImage);
@@ -1052,10 +1056,12 @@ void vk_destroyImageRes(void)
         R_DestroySingleImage(tr.images[i]);
 	}
 
+    vk_destroy_staging_buffer();
+
+
     memset( tr.images, 0, sizeof( tr.images ) );
     tr.numImages = 0;
     
-    vk_destroy_staging_buffer();
     // Destroying a pool object implicitly frees all objects allocated from that pool. 
     // Specifically, destroying VkCommandPool frees all VkCommandBuffer objects that 
     // were allocated from it, and destroying VkDescriptorPool frees all 

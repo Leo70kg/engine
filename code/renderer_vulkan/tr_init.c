@@ -51,6 +51,10 @@ void RE_EndRegistration( void )
 	if ( tr.registered ) {
 		R_IssueRenderCommands( qfalse );
 	}
+	
+    if (!ri.Sys_LowPhysicalMemory()) {
+//		RB_ShowImages();
+	}
 }
 
 
@@ -147,7 +151,7 @@ void R_Init( void )
     ri.Printf( PRINT_ALL, "----- R_Init finished -----\n" );
 }
 
-
+extern void R_DestroyScene(void);
 
 
 void RE_Shutdown( qboolean destroyWindow )
@@ -185,12 +189,14 @@ void RE_Shutdown( qboolean destroyWindow )
 
     vk_resetGeometryBuffer();
 
-    vk_destroyImageRes();
+
 
 	if ( tr.registered )
     {	
         tr.registered = qfalse;
+        R_DestroyScene();
 
+        vk_destroyImageRes();
 	}
 
     if (destroyWindow)

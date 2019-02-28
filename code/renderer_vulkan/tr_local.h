@@ -461,7 +461,7 @@ typedef struct {
 	vec3_t		pvsOrigin;			// may be different than or.origin for portals
 	qboolean	isPortal;			// true if this view is through a portal
 	qboolean	isMirror;			// the portal is a mirror, invert the face culling
-	int			frameCount;			// copied from tr.frameCount
+//	int			frameCount;			// copied from tr.frameCount
 	cplane_t	portalPlane;		// clip anything behind this if mirroring
 	int			viewportX, viewportY, viewportWidth, viewportHeight;
 	float		fovX, fovY;
@@ -1006,81 +1006,6 @@ void	RB_CalcDiffuseColor( unsigned char (*colors)[4] );
 
 
 
-/*
-=============================================================
-
-RENDERER BACK END COMMAND QUEUE
-
-=============================================================
-*/
-
-#define	MAX_RENDER_COMMANDS	0x40000
-
-typedef struct {
-	byte	cmds[MAX_RENDER_COMMANDS];
-	int		used;
-} renderCommandList_t;
-
-typedef struct {
-	int		commandId;
-	float	color[4];
-} setColorCommand_t;
-
-typedef struct {
-	int		commandId;
-	int		buffer;
-} drawBufferCommand_t;
-
-typedef struct {
-	int		commandId;
-	image_t	*image;
-	int		width;
-	int		height;
-	void	*data;
-} subImageCommand_t;
-
-typedef struct {
-	int		commandId;
-} swapBuffersCommand_t;
-
-typedef struct {
-	int		commandId;
-	int		buffer;
-} endFrameCommand_t;
-
-typedef struct {
-	int		commandId;
-	shader_t	*shader;
-	float	x, y;
-	float	w, h;
-	float	s1, t1;
-	float	s2, t2;
-} stretchPicCommand_t;
-
-typedef struct {
-	int		commandId;
-	trRefdef_t	refdef;
-	viewParms_t	viewParms;
-	drawSurf_t *drawSurfs;
-	int		numDrawSurfs;
-} drawSurfsCommand_t;
-
-
-
-typedef enum {
-	RC_END_OF_LIST,
-	RC_SET_COLOR,
-	RC_STRETCH_PIC,
-	RC_DRAW_SURFS,
-	RC_DRAW_BUFFER,
-	RC_SWAP_BUFFERS,
-	RC_SCREENSHOT,
-    RC_VIDEOFRAME
-} renderCommand_t;
-
-
-
-
 
 /*
 =============================================================
@@ -1091,7 +1016,6 @@ RENDERER BACK END FUNCTIONS
 */
 
 
-void *R_GetCommandBuffer( int bytes );
 void RB_ExecuteRenderCommands( const void *data );
 
 
@@ -1135,6 +1059,8 @@ void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
 // font stuff
 void R_InitFreeType(void);
 void R_DoneFreeType(void);
+
+void R_DestroyScene(void);
 
 
 extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);

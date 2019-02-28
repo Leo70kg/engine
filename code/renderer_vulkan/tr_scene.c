@@ -25,14 +25,29 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/ref_import.h"
 #include "../renderercommon/matrix_multiplication.h"
 
+
+
+// All of the information needed by the back end must be contained in a backEndData_t.
+// This entire structure is duplicated so the front and back end can run in parallel
+// on an SMP machine
+
+typedef struct
+{
+	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
+	dlight_t	dlights[MAX_DLIGHTS];
+	trRefEntity_t	entities[MAX_REFENTITIES];
+	srfPoly_t	*polys;//[MAX_POLYS];
+	polyVert_t	*polyVerts;//[MAX_POLYVERTS];
+} backEndData_t;
+
+backEndData_t* backEndData = NULL;
+
 // these are sort of arbitrary limits.
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
 #define	MAX_POLYS		600
 #define	MAX_POLYVERTS	3000
 
-int		max_polys;
-int		max_polyverts;
 
 int			r_firstSceneDrawSurf;
 
@@ -48,61 +63,68 @@ int			r_firstScenePoly;
 int			r_numpolyverts;
 
 
+void R_InitNextFrame(void )
+{
+	r_firstSceneDrawSurf = 0;
+
+	r_numdlights = 0;
+	r_firstSceneDlight = 0;
+
+	r_numentities = 0;
+	r_firstSceneEntity = 0;
+
+	r_numpolys = 0;
+	r_firstScenePoly = 0;
+
+	r_numpolyverts = 0;
+}
+
+
 
 void R_InitScene(void)
 {
-	max_polys = r_maxpolys->integer;
-	if (max_polys < MAX_POLYS)
-		max_polys = MAX_POLYS;
 
-	max_polyverts = r_maxpolyverts->integer;
-	if (max_polyverts < MAX_POLYVERTS)
-		max_polyverts = MAX_POLYVERTS;
+    ri.Printf( PRINT_WARNING, "R_InitScene \n");
 
-	unsigned int len = sizeof( backEndData_t ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts;
+
+	if (r_maxpolys->integer < MAX_POLYS)
+		r_maxpolys->integer = MAX_POLYS;
+
+	if (r_maxpolyverts->integer < MAX_POLYVERTS)
+		r_maxpolyverts->integer = MAX_POLYVERTS;
+
+	unsigned int len = sizeof( backEndData_t ) + sizeof(srfPoly_t) * r_maxpolys->integer + sizeof(polyVert_t) * r_maxpolyverts->integer;
     
-    char* ptr = ri.Hunk_Alloc( len, h_low);
+    //char* ptr = ri.Hunk_Alloc( len, h_low);
+    if(backEndData != NULL)
+    {
+        ri.Printf( PRINT_WARNING, " R_DestroyScene() \n");
+        ri.Free(backEndData);
+        backEndData = NULL;
+    }
+
+    char* ptr = ri.Malloc(len);
     memset(ptr, 0, len);
 
 	backEndData = (backEndData_t *) ptr;
 	backEndData->polys = (srfPoly_t *) (ptr + sizeof( backEndData_t ));
-	backEndData->polyVerts = (polyVert_t *) (ptr + sizeof( backEndData_t ) + sizeof(srfPoly_t) * max_polys);
+	backEndData->polyVerts = (polyVert_t *) (ptr + sizeof( backEndData_t ) + sizeof(srfPoly_t) * r_maxpolys->integer);
 
-	backEndData->commands.used = 0;
 
-	r_firstSceneDrawSurf = 0;
-
-	r_numdlights = 0;
-	r_firstSceneDlight = 0;
-
-	r_numentities = 0;
-	r_firstSceneEntity = 0;
-
-	r_numpolys = 0;
-	r_firstScenePoly = 0;
-
-	r_numpolyverts = 0;
+    R_InitNextFrame();
 }
 
-
-void R_ToggleSmpFrame(void )
+void R_DestroyScene(void)
 {
-
-	backEndData->commands.used = 0;
-
-	r_firstSceneDrawSurf = 0;
-
-	r_numdlights = 0;
-	r_firstSceneDlight = 0;
-
-	r_numentities = 0;
-	r_firstSceneEntity = 0;
-
-	r_numpolys = 0;
-	r_firstScenePoly = 0;
-
-	r_numpolyverts = 0;
+    ri.Printf( PRINT_WARNING, " R_DestroyScene() \n");
+    if( backEndData != NULL )
+    {
+        ri.Free(backEndData);
+	    // dynamic memory allocator for things that need to be freed
+        backEndData = NULL;
+    }
 }
+
 
 void RE_ClearScene( void ) {
 	r_firstSceneDlight = r_numdlights;
@@ -162,14 +184,14 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 	}
 
 	for ( j = 0; j < numPolys; j++ ) {
-		if ( r_numpolyverts + numVerts > max_polyverts || r_numpolys >= max_polys ) {
+		if ( r_numpolyverts + numVerts > r_maxpolyverts->integer || r_numpolys >= r_maxpolys->integer ) {
       /*
       NOTE TTimo this was initially a PRINT_WARNING
       but it happens a lot with high fighting scenes and particles
       since we don't plan on changing the const and making for room for those effects
       simply cut this message to developer only
       */
-			ri.Printf( PRINT_DEVELOPER, "WARNING: RE_AddPolyToScene: r_max_polys or r_max_polyverts reached\n");
+			ri.Printf( PRINT_WARNING, "RE_AddPolyToScene: r_max_polys or r_max_polyverts reached\n");
 			return;
 		}
 

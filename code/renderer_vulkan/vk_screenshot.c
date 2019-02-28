@@ -3,7 +3,6 @@
 #include "vk_image.h"
 #include "vk_cmd.h"
 #include "vk_screenshot.h"
-
 #include "R_ImageProcess.h"
 
 #include "../renderercommon/ref_import.h"
@@ -312,29 +311,6 @@ void RB_TakeScreenshot( int width, int height, char *fileName, VkBool32 isJpeg)
 }
 
 
-static void R_TakeScreenshot( int x, int y, int width, int height, char *name, qboolean jpeg )
-{
-	static char	fileName[MAX_OSPATH] = {0}; // bad things if two screenshots per frame?
-	
-    screenshotCommand_t	*cmd = (screenshotCommand_t*) R_GetCommandBuffer(sizeof(*cmd));
-	if ( !cmd ) {
-		return;
-	}
-	cmd->commandId = RC_SCREENSHOT;
-
-	cmd->x = x;
-	cmd->y = y;
-	cmd->width = width;
-	cmd->height = height;
-	
-    //Q_strncpyz( fileName, name, sizeof(fileName) );
-
-    strncpy(fileName, name, sizeof(fileName));
-
-	cmd->fileName = fileName;
-	cmd->jpeg = jpeg;
-}
-
 
 
 /*
@@ -636,25 +612,4 @@ void RB_TakeVideoFrameCmd( const videoFrameCommand_t * const cmd )
 
     free(pImg);
 
-}
-
-
-void RE_TakeVideoFrame( int width, int height, unsigned char *captureBuffer, unsigned char *encodeBuffer, qboolean motionJpeg )
-{
-	if( !tr.registered ) {
-		return;
-	}
-
-	videoFrameCommand_t	* cmd = R_GetCommandBuffer( sizeof( *cmd ) );
-	if( !cmd ) {
-		return;
-	}
-
-	cmd->commandId = RC_VIDEOFRAME;
-
-	cmd->width = width;
-	cmd->height = height;
-	cmd->captureBuffer = captureBuffer;
-	cmd->encodeBuffer = encodeBuffer;
-	cmd->motionJpeg = motionJpeg;
 }

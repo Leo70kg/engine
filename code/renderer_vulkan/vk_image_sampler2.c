@@ -67,6 +67,7 @@ static VkSampler s_ImgSamplers[MAX_VK_SAMPLERS] = {0};
 
 void vk_free_sampler(void)
 {
+    ri.Printf(PRINT_ALL, " vk_free_sampler(). \n"); 
     uint32_t i = 0;
     for (i = 0; i < s_NumSamplers; i++)
     {

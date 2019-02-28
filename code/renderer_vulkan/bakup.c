@@ -1031,3 +1031,30 @@ static void vk_read_pixels(unsigned char* buffer)
     qvkDestroyImage(vk.device, image, NULL);
 }
 
+
+/*
+============
+R_GetCommandBuffer
+
+make sure there is enough command space, waiting on the
+render thread if needed.
+============
+
+void* R_GetCommandBuffer( unsigned int bytes )
+{
+	renderCommandList_t	* cmdList = (renderCommandList_t* )CommandsList.cmds;
+
+	// always leave room for the end of list command
+	if ( cmdList->used + bytes + 4 > MAX_RENDER_COMMANDS )
+    {
+        ri.Printf( PRINT_WARNING, "GetCommandBuffer: run out of room, just start dropping commands");
+		return NULL;
+	}
+
+	cmdList->used += bytes;
+
+	return cmdList->cmds + cmdList->used - bytes;
+}
+*/
+
+
