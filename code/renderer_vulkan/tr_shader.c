@@ -1947,7 +1947,6 @@ void R_SetTheShader( const char *name, int lightmapIndex )
 	shader.needsST2 = qtrue;
 	shader.needsColor = qtrue;
 
-
     // stages
 	memset( &stages, 0, sizeof( stages ) );
     int i;

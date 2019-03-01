@@ -146,7 +146,6 @@ void RE_BeginFrame( void )
 	R_InitNextFrame();
 
 
-
 	//
 	// draw buffer stuff
 	//
@@ -184,10 +183,6 @@ void RE_EndFrame( int *frontEndMsec, int *backEndMsec )
 	}
 
 
-    endFrameCommand_t* pEnd = (endFrameCommand_t*)(CommandsList.cmds + CommandsList.used);
-    pEnd->commandId = RC_END_OF_LIST;
-
-
 	R_IssueRenderCommands( qtrue );
     
 
@@ -204,41 +199,32 @@ void RE_EndFrame( int *frontEndMsec, int *backEndMsec )
 
 void R_TakeScreenshot( int x, int y, int width, int height, char *name, qboolean jpeg )
 {
-	static char	fileName[MAX_OSPATH] = {0}; // bad things if two screenshots per frame?
-	
+    ri.Printf( PRINT_WARNING, "R_TakeScreenshot\n");
+
     // screenshotCommand_t	*cmd = (screenshotCommand_t*) R_GetCommandBuffer( sizeof(screenshotCommand_t) );
     screenshotCommand_t * cmd = (screenshotCommand_t *)( CommandsList.cmds + CommandsList.used );
-    CommandsList.used += sizeof(screenshotCommand_t);
-
 	cmd->commandId = RC_SCREENSHOT;
 	cmd->x = x;
 	cmd->y = y;
 	cmd->width = width;
 	cmd->height = height;
-	
-    //Q_strncpyz( fileName, name, sizeof(fileName) );
-
-    strncpy(fileName, name, sizeof(fileName));
-
-	cmd->fileName = fileName;
+    strncpy(cmd->fileName, name, 64);
 	cmd->jpeg = jpeg;
+    CommandsList.used += sizeof(screenshotCommand_t);
 }
 
 
 void RE_TakeVideoFrame( int width, int height, unsigned char *captureBuffer, unsigned char *encodeBuffer, qboolean motionJpeg )
 {
-
 	//videoFrameCommand_t	* cmd = R_GetCommandBuffer( sizeof( videoFrameCommand_t ) );
-   
     videoFrameCommand_t * cmd = (videoFrameCommand_t *)( CommandsList.cmds + CommandsList.used );
-    CommandsList.used += sizeof(videoFrameCommand_t);
-
 	cmd->commandId = RC_VIDEOFRAME;
 	cmd->width = width;
 	cmd->height = height;
 	cmd->captureBuffer = captureBuffer;
 	cmd->encodeBuffer = encodeBuffer;
 	cmd->motionJpeg = motionJpeg;
+    CommandsList.used += sizeof(videoFrameCommand_t);
 }
 
 //==================================================
@@ -538,10 +524,20 @@ void RB_StretchPic( const stretchPicCommand_t * const cmd )
 
 	tess.numVertexes += 4;
 	tess.numIndexes += 6;
-
 }
 
 
+/*
+=============
+RE_EndRegistration
+
+Touch all images to make sure they are resident
+=============
+*/
+void RE_EndRegistration( void )
+{
+	R_IssueRenderCommands( 0 );
+}
 
 
 /*
@@ -564,51 +560,55 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters )
     int	t1 = ri.Milliseconds ();
 
 
+    endFrameCommand_t* pEnd = (endFrameCommand_t*)(CommandsList.cmds + CommandsList.used);
+    pEnd->commandId = RC_END_OF_LIST;
+    CommandsList.used += sizeof(endFrameCommand_t);
+
     const void * data = CommandsList.cmds;
 
 
     while(1)
     {   
-        const int T = *(const int *)data;
-        switch ( T )
+        switch ( *(const int *)data )
         {
             case RC_SET_COLOR:
-                {
-                    const setColorCommand_t * const cmd = data;
+            {
+                const setColorCommand_t * const cmd = data;
 
-                    backEnd.Color2D[0] = cmd->color[0] * 255;
-                    backEnd.Color2D[1] = cmd->color[1] * 255;
-                    backEnd.Color2D[2] = cmd->color[2] * 255;
-                    backEnd.Color2D[3] = cmd->color[3] * 255;
+                backEnd.Color2D[0] = cmd->color[0] * 255;
+                backEnd.Color2D[1] = cmd->color[1] * 255;
+                backEnd.Color2D[2] = cmd->color[2] * 255;
+                backEnd.Color2D[3] = cmd->color[3] * 255;
                     
-                    data += sizeof(setColorCommand_t);
-                } break;
+                data += sizeof(setColorCommand_t);
+            } break;
 
             case RC_STRETCH_PIC:
-                {
-                    const stretchPicCommand_t * const cmd = data;
+            {
+                const stretchPicCommand_t * const cmd = data;
 
-                    RB_StretchPic( cmd );
+                RB_StretchPic( cmd );
 
-                    data += sizeof(stretchPicCommand_t);
-                } break;
+                data += sizeof(stretchPicCommand_t);
+            } break;
 
             case RC_DRAW_SURFS:
-                {  
-                    const drawSurfsCommand_t * const cmd = (const drawSurfsCommand_t *)data;
+            {  
+                const drawSurfsCommand_t * const cmd = (const drawSurfsCommand_t *)data;
 
                     // RB_DrawSurfs( cmd );
                     // finish any 2D drawing if needed
-                    if ( tess.numIndexes ) {
-                        RB_EndSurface();
-                    }
+                if ( tess.numIndexes ) {
+                    RB_EndSurface();
+                }
 
-                    backEnd.refdef = cmd->refdef;
-                    backEnd.viewParms = cmd->viewParms;
+                backEnd.refdef = cmd->refdef;
+                backEnd.viewParms = cmd->viewParms;
 
-                    RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
-                    data += sizeof(drawSurfsCommand_t);
-                } break;
+                RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+                
+                data += sizeof(drawSurfsCommand_t);
+            } break;
 
             case RC_DRAW_BUFFER:
             {
@@ -623,50 +623,52 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters )
             } break;
 
             case RC_SWAP_BUFFERS:
-                {
-                    // data = RB_SwapBuffers( data );
-                    // finish any 2D drawing if needed
-
-                    RB_EndSurface();
+            {
+                // data = RB_SwapBuffers( data );
+                // finish any 2D drawing if needed
+                RB_EndSurface();
 
 #ifndef NDEBUG
-                    // texture swapping test
-                    if ( r_showImages->integer ) {
-                        RB_ShowImages();
-                    }
+                // texture swapping test
+                if ( r_showImages->integer ) {
+                    RB_ShowImages();
+                }
 #endif
 
-                    // VULKAN
-                    vk_end_frame();
+                // VULKAN
+                vk_end_frame();
 
-                    data += sizeof(swapBuffersCommand_t);
-                } break;
+                data += sizeof(swapBuffersCommand_t);
+            } break;
 
             case RC_SCREENSHOT:
-                {   
-                    const screenshotCommand_t * const cmd = data;
+            {
+                ri.Printf( PRINT_WARNING, "RB_TakeScreenshot. \n");
+                
+                const screenshotCommand_t * const cmd = data;
 
-                    RB_TakeScreenshot( cmd->width, cmd->height, cmd->fileName, cmd->jpeg);
-
-                    data += sizeof(screenshotCommand_t);
-                } break;
+                RB_TakeScreenshot(cmd->fileName, cmd->width, cmd->height, cmd->jpeg);
+                
+                data += sizeof(screenshotCommand_t);
+            } break;
 
 
             case RC_VIDEOFRAME:
-                {
-                    const videoFrameCommand_t * const cmd = data;
+            {
+                const videoFrameCommand_t * const cmd = data;
 
-                    RB_TakeVideoFrameCmd( cmd );
+                RB_TakeVideoFrameCmd( cmd );
 
-                    data += sizeof(videoFrameCommand_t);
-                } break;
+                data += sizeof(videoFrameCommand_t);
+            } break;
 
             case RC_END_OF_LIST:
+            {
                 // stop rendering on this thread
                 backEnd.pc.msec = ri.Milliseconds () - t1;
-
                 CommandsList.used = 0;
-                return;
+
+            } return;
         }
     }
 }
@@ -745,3 +747,5 @@ void FixRenderCommandList( int newShader )
 		}
 	}
 }
+
+

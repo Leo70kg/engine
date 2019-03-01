@@ -39,7 +39,7 @@ cvar_t *s_alMinDistance;
 cvar_t *s_alMaxDistance;
 cvar_t *s_alRolloff;
 cvar_t *s_alGraceDistance;
-cvar_t *s_alDriver;
+//cvar_t *s_alDriver;
 cvar_t *s_alDevice;
 cvar_t *s_alInputDevice;
 cvar_t *s_alAvailableDevices;
@@ -2513,19 +2513,19 @@ qboolean S_AL_Init( soundInterface_t *si )
 	s_alRolloff = Cvar_Get( "s_alRolloff", "2", CVAR_CHEAT);
 	s_alGraceDistance = Cvar_Get("s_alGraceDistance", "512", CVAR_CHEAT);
 
-	s_alDriver = Cvar_Get( "s_alDriver", ALDRIVER_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH );
+	//s_alDriver = Cvar_Get( "s_alDriver", ALDRIVER_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH );
 
 	s_alInputDevice = Cvar_Get( "s_alInputDevice", "", CVAR_ARCHIVE | CVAR_LATCH );
 	s_alDevice = Cvar_Get("s_alDevice", "", CVAR_ARCHIVE | CVAR_LATCH);
 
 	// xmpspeed = 48000; // leilei - force it to 48000 which is the native mixing rate post-ac'97
 	// Load QAL
-	if( !QAL_Init( s_alDriver->string ) )
+	if( !QAL_Init( ALDRIVER_DEFAULT ) )
 	{
-		Com_Printf( "Failed to load library: \"%s\".\n", s_alDriver->string );
-		if( !Q_stricmp( s_alDriver->string, ALDRIVER_DEFAULT ) || !QAL_Init( ALDRIVER_DEFAULT ) ) {
-			return qfalse;
-		}
+		Com_Printf( "Failed to load library: \"%s\".\n", ALDRIVER_DEFAULT );
+	//	if( !Q_stricmp( s_alDriver->string, ALDRIVER_DEFAULT ) || !QAL_Init( ALDRIVER_DEFAULT ) ) {
+	//		return qfalse;
+	//	}
 	}
 
 	device = s_alDevice->string;

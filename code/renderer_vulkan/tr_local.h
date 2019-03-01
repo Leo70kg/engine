@@ -1055,7 +1055,7 @@ void RE_StretchPic ( float x, float y, float w, float h,
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_EndFrame( int *frontEndMsec, int *backEndMsec );
 void RE_RegisterFont(const char *fontName, int pointSize, fontInfo_t *font);
-
+void RE_EndRegistration( void );
 // font stuff
 void R_InitFreeType(void);
 void R_DoneFreeType(void);
@@ -1066,7 +1066,6 @@ void R_DestroyScene(void);
 extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])(void *);
 
 extern shaderCommands_t	tess;
-
 
 
 

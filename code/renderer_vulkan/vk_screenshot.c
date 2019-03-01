@@ -210,11 +210,8 @@ static void vk_read_pixels(unsigned char* pBuf)
     qvkDestroyBuffer(vk.device, buffer, NULL);
 }
 
-extern void RE_SaveJPG(char * filename, int quality, int image_width, int image_height, unsigned char *image_buffer, int padding);
 
-
-
-void RB_TakeScreenshot( int width, int height, char *fileName, VkBool32 isJpeg)
+void RB_TakeScreenshot(const char *fileName, int width, int height, VkBool32 isJpeg)
 {
     ri.Printf(PRINT_ALL, "read %dx%d pixels from GPU\n", width, height);
     const uint32_t cnPixels = width * height; 
@@ -254,8 +251,6 @@ void RB_TakeScreenshot( int width, int height, char *fileName, VkBool32 isJpeg)
 
         free( pImg );
 
-        //bufSize = RE_SaveJPGToBuffer(out, bufSize, 90, width, height, pImg, padding);
-        //ri.FS_WriteFile(filename, out, bufSize);
     }
     else
     {

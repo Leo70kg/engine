@@ -39,25 +39,6 @@ refimport_t	ri;
 
 
 
-/*
-=============
-RE_EndRegistration
-
-Touch all images to make sure they are resident
-=============
-*/
-void RE_EndRegistration( void )
-{
-	if ( tr.registered ) {
-		R_IssueRenderCommands( qfalse );
-	}
-	
-    if (!ri.Sys_LowPhysicalMemory()) {
-//		RB_ShowImages();
-	}
-}
-
-
 
 void R_Init( void )
 {	

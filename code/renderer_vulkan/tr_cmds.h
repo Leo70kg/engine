@@ -44,7 +44,7 @@ typedef struct {
 // 48
 typedef struct {
 	int		commandId;
-	shader_t	*shader;
+	shader_t* shader;
 	float	x, y;
 	float	w, h;
 	float	s1, t1;
@@ -84,7 +84,7 @@ typedef struct {
 	int width;
 	int height;
     VkBool32 jpeg;
-	char *fileName;
+	char fileName[64];
 } screenshotCommand_t;
 
 
