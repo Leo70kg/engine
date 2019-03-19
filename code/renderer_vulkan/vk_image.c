@@ -633,7 +633,7 @@ image_t* R_FindImageFile(const char *name, VkBool32 mipmap,
 	//
 	// load the pic from disk
     //
-    R_LoadImage2( name, &pic, &width, &height );
+    R_LoadImage( name, &pic, &width, &height );
 	if (pic == NULL)
 	{
         return NULL;

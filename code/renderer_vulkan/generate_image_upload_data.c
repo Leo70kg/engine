@@ -331,7 +331,7 @@ void generate_image_upload_data(
 	
     memcpy(scaled_buffer, data, nBytes);
 	
-    R_LightScaleTexture(scaled_buffer, scaled_width, scaled_height, !mipmap);
+    R_LightScaleTexture(scaled_buffer, scaled_width, scaled_height, !mipmap, scaled_buffer);
 
 	int miplevel = 0;
 
@@ -341,7 +341,7 @@ void generate_image_upload_data(
 
 	if (mipmap)
     {
-		while (scaled_width > 1 || scaled_height > 1)
+		while (1)
         {
             if ( r_simpleMipMaps->integer )
             {
@@ -357,6 +357,9 @@ void generate_image_upload_data(
 
 			scaled_height >>= 1;
 			if (scaled_height < 1) scaled_height = 1;
+
+            if((scaled_width == 1) && (scaled_height == 1))
+                break;
 
 			miplevel++;
 			unsigned int mip_level_size = scaled_width * scaled_height * 4;

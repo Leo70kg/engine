@@ -115,51 +115,58 @@ Scale up the pixel values in a texture to increase the
 lighting range
 ================
 */
-void R_LightScaleTexture (unsigned char*in, int inwidth, int inheight, int only_gamma )
+void R_LightScaleTexture (unsigned char* const in, int inwidth, int inheight, int only_gamma, unsigned char* const dst)
 {
     int	i;
-	int N = inwidth*inheight;
+	int nBytes = inwidth*inheight*4;
 	
     if ( only_gamma )
 	{
 		if ( !glConfig.deviceSupportsGamma )
 		{
-			for (i=0; i < N; )
-			{
-				in[i] = s_gammatable[in[i]];
-                i++;
-				in[i] = s_gammatable[in[i]];
-                i++;
-				in[i] = s_gammatable[in[i]];
-                i = i + 2;
-			}
+            for (i=0; i<nBytes; i+=4)
+            {
+                unsigned int n1 = i + 1;
+                unsigned int n2 = i + 2;
+                unsigned int n3 = i + 3;
+
+                dst[i] = s_gammatable[in[i]];
+                dst[n1] = s_gammatable[in[n1]];
+                dst[n2] = s_gammatable[in[n2]];
+                dst[n3] = in[n3];
+            }
 		}
 	}
 	else
 	{
 		if ( glConfig.deviceSupportsGamma )
 		{
-			for (i=0; i<N; )
-			{
-				in[i] = s_intensitytable[in[i]];
-				i++;
-				in[i] = s_intensitytable[in[i]];
-				i++;
-				in[i] = s_intensitytable[in[i]];
-				i = i + 2;
-			}
+            for (i=0; i<nBytes; i+=4)
+            {
+                unsigned int n1 = i + 1;
+                unsigned int n2 = i + 2;
+                unsigned int n3 = i + 3;
+
+                dst[i] = s_intensitytable[in[i]];
+                dst[n1] = s_intensitytable[in[n1]];
+                dst[n2] = s_intensitytable[in[n2]];
+                dst[n3] = in[n3];
+            }
 		}
 		else
 		{
-			for (i=0; i<N; )
-			{
-				in[i] = s_gammatable[s_intensitytable[in[i]]];
-				i++;
-				in[i] = s_gammatable[s_intensitytable[in[i]]];
-				i++;
-				in[i] = s_gammatable[s_intensitytable[in[i]]];
-				i=i+2;
-			}
+            for (i=0; i<nBytes; i+=4)
+            {
+                unsigned int n1 = i + 1;
+                unsigned int n2 = i + 2;
+                unsigned int n3 = i + 3;
+
+                dst[i] = s_gammatable[s_intensitytable[in[i]]];
+                dst[n1] = s_gammatable[s_intensitytable[in[n1]]];
+                dst[n2] = s_gammatable[s_intensitytable[in[n2]]];
+                dst[n3] = in[n3];
+            }
 		}
 	}
 }
+
