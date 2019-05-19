@@ -339,6 +339,8 @@ static int R_ComputeFogNum( md3Header_t *header, trRefEntity_t *ent )
 
 static int R_ComputeLOD( trRefEntity_t *ent )
 {
+
+
 	float flod;
 	int lod;
 

@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // tr_image.c
 #include "tr_local.h"
-
+extern glconfig_t glConfig;
 
 extern void (APIENTRYP qglActiveTextureARB) (GLenum texture);
 
@@ -759,7 +759,7 @@ static void R_LoadImage(const char *name, unsigned char **pic, int *width, int *
 				// try again without the extension
 				// orgNameFailed = qtrue;
 				orgLoader = i;
-				stripExtension( name, localName, MAX_QPATH );
+				R_StripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{
@@ -1096,6 +1096,7 @@ image_t *R_CreateImage(const char *name, unsigned char* pic, int width, int heig
     }
 
 	// lightmaps are always allocated on TMU 1
+
 	if ( qglActiveTextureARB && isLightmap ) {
 		image->TMU = 1;
 	} else {

@@ -22,7 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_image.c
 #include "tr_local.h"
 #include "tr_dsa.h"
-
+#include "image_loader.h"
+extern glconfig_t glConfig;
 extern cvar_t* r_ext_compressed_textures;
 static cvar_t* r_texturebits;
 static unsigned char s_intensitytable[256];
@@ -1482,6 +1483,16 @@ RawImage_ScaleToPower2
 
 ===============
 */
+static inline int NextPowerOfTwo(int in)
+{
+	int out;
+
+	for (out = 1; out < in; out <<= 1)
+		;
+
+	return out;
+}
+
 static qboolean RawImage_ScaleToPower2( byte **data, int *inout_width, int *inout_height, imgType_t type, imgFlags_t flags, byte **resampledBuffer)
 {
 	int width =         *inout_width;
@@ -2251,14 +2262,14 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 
 	Q_strncpyz( localName, name, MAX_QPATH );
 
-	const char* ext = getExtension( localName );
+	const char* ext = R_GetExtension( localName );
 
 	// If compressed textures are enabled, try loading a DDS first, it'll load fastest
 	if (r_ext_compressed_textures->integer)
 	{
 		char ddsName[MAX_QPATH];
 
-		stripExtension(name, ddsName, MAX_QPATH);
+		R_StripExtension(name, ddsName, MAX_QPATH);
 		Q_strcat(ddsName, MAX_QPATH, ".dds");
 
 		R_LoadDDS(ddsName, pic, width, height, picFormat, numMips);
@@ -2290,7 +2301,7 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, GLenum 
 				// try again without the extension
 				//orgNameFailed = qtrue;
 				orgLoader = i;
-				stripExtension( name, localName, MAX_QPATH );
+				R_StripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{
@@ -2385,7 +2396,7 @@ image_t	*R_FindImageFile( const char *name, imgType_t type, imgFlags_t flags )
 
 		normalFlags = (flags & ~IMGFLAG_GENNORMALMAP) | IMGFLAG_NOLIGHTSCALE;
 
-		stripExtension(name, normalName, MAX_QPATH);
+		R_StripExtension(name, normalName, MAX_QPATH);
 		Q_strcat(normalName, MAX_QPATH, "_n");
 
 		// find normalmap in case it's there
@@ -3058,7 +3069,7 @@ qhandle_t RE_RegisterSkin( const char *name ) {
 	}
 
 	// load and parse the skin file
-    ri.R_ReadFile( name, &text );
+    ri.FS_ReadFile( name, &text );
 	if ( !text ) {
 		return 0;
 	}

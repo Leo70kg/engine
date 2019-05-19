@@ -21,9 +21,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#include "../renderercommon/tr_common.h"
+#include "tr_common.h"
 #include "../renderercommon/qgl.h"
 typedef unsigned int   ui32_t;
+
+extern refimport_t ri;
 
 typedef struct ddsHeader_s
 {
@@ -242,7 +244,7 @@ void R_LoadDDS ( const char *filename, byte **pic, int *width, int *height, GLen
 	//
 	// load the file
 	//
-	len = ri.R_ReadFile( filename, &buffer);
+	len = ri.FS_ReadFile( filename, &buffer);
 	if (!buffer || len < 0) {
 		return;
 	}

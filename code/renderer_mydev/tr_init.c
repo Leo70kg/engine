@@ -39,11 +39,9 @@ cvar_t	*r_verbose;
 
 cvar_t	*r_znear;
 
-cvar_t	*r_smp;
 cvar_t	*r_showSmp;
 cvar_t	*r_skipBackEnd;
 
-cvar_t	*r_ignorehwgamma;
 
 cvar_t	*r_inGameVideo;
 cvar_t	*r_fastsky;
@@ -63,10 +61,6 @@ cvar_t	*r_facePlaneCull;
 cvar_t	*r_showcluster;
 cvar_t	*r_nocurves;
 
-cvar_t	*r_ext_compressed_textures;
-cvar_t	*r_ext_gamma_control;
-cvar_t	*r_ext_compiled_vertex_array;
-cvar_t	*r_ext_texture_env_add;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_logFile;
@@ -122,6 +116,7 @@ cvar_t	*r_debugLight;
 cvar_t	*r_debugSort;
 cvar_t	*r_printShaders;
 cvar_t	*r_saveFontData;
+
 
 cvar_t	*r_maxpolys;
 int		max_polys;
@@ -270,7 +265,7 @@ static void InitRenderAPI( void )
 	}
 
 	// init command buffers and SMP
-	R_InitCommandBuffers();
+    glConfig.smpActive = qfalse;
 
 	// print info
 	GfxInfo_f();
@@ -828,11 +823,6 @@ void GfxInfo_f( void )
     ri.Printf( PRINT_ALL, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
     ri.Printf( PRINT_ALL, "compressed textures: %s\n", enablestrings[glConfig.textureCompression!=TC_NONE] );
 
-    if (glConfig.smpActive) {
-        ri.Printf( PRINT_ALL, "Using dual processor acceleration\n" );
-    }
-
-
 	//
 	// Info that doesn't depend on r_renderAPI
 	//
@@ -864,10 +854,6 @@ void R_Register( void )
 	//
 	// latched and archived variables
 	//
-	r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compressed_textures", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_gamma_control = ri.Cvar_Get( "r_ext_gamma_control", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_compiled_vertex_array = ri.Cvar_Get( "r_ext_compiled_vertex_array", "1", CVAR_ARCHIVE | CVAR_LATCH);
-	r_ext_texture_env_add = ri.Cvar_Get( "r_ext_texture_env_add", "1", CVAR_ARCHIVE | CVAR_LATCH);
 	r_picmip = ri.Cvar_Get ("r_picmip", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_roundImagesDown = ri.Cvar_Get ("r_roundImagesDown", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_colorMipLevels = ri.Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
@@ -876,7 +862,6 @@ void R_Register( void )
 	r_stencilbits = ri.Cvar_Get( "r_stencilbits", "8", CVAR_ARCHIVE | CVAR_LATCH );
 	r_depthbits = ri.Cvar_Get( "r_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_mode = ri.Cvar_Get( "r_mode", "3", CVAR_ARCHIVE | CVAR_LATCH );
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_customwidth = ri.Cvar_Get( "r_customwidth", "960", CVAR_ARCHIVE | CVAR_LATCH );
@@ -886,7 +871,6 @@ void R_Register( void )
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", 0);
 	r_subdivisions = ri.Cvar_Get ("r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH);
-	r_smp = ri.Cvar_Get( "r_smp", "0", CVAR_ARCHIVE | CVAR_LATCH);
 
 	//
 	// temporary latched variables that can only change over a restart
@@ -948,7 +932,7 @@ void R_Register( void )
 	r_debugSurface = ri.Cvar_Get ("r_debugSurface", "0", CVAR_CHEAT);
 	r_nobind = ri.Cvar_Get ("r_nobind", "0", CVAR_CHEAT);
 	r_showtris = ri.Cvar_Get ("r_showtris", "0", CVAR_CHEAT);
-	r_showsky = ri.Cvar_Get ("r_showsky", "0", CVAR_CHEAT);
+	r_showsky = ri.Cvar_Get ("r_showsky", "0", CVAR_TEMP);
 	r_shownormals = ri.Cvar_Get ("r_shownormals", "0", CVAR_CHEAT);
 	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_CHEAT);
 	r_offsetFactor = ri.Cvar_Get( "r_offsetfactor", "-1", CVAR_CHEAT );
@@ -967,7 +951,6 @@ void R_Register( void )
 	ri.Cmd_AddCommand( "shaderlist", R_ShaderList_f );
 	ri.Cmd_AddCommand( "skinlist", R_SkinList_f );
 	ri.Cmd_AddCommand( "modellist", R_Modellist_f );
-	ri.Cmd_AddCommand( "modelist", R_ModeList_f );
 	ri.Cmd_AddCommand( "screenshot", R_ScreenShot_f );
 	ri.Cmd_AddCommand( "screenshotJPEG", R_ScreenShotJPEG_f );
 	ri.Cmd_AddCommand( "gfxinfo", GfxInfo_f );
@@ -1070,14 +1053,7 @@ void R_Init( void ) {
 	backEndData[0] = (backEndData_t *) ptr;
 	backEndData[0]->polys = (srfPoly_t *) ((char *) ptr + sizeof( *backEndData[0] ));
 	backEndData[0]->polyVerts = (polyVert_t *) ((char *) ptr + sizeof( *backEndData[0] ) + sizeof(srfPoly_t) * max_polys);
-	if ( r_smp->integer ) {
-		ptr = (byte*) ri.Hunk_Alloc( sizeof( *backEndData[1] ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low);
-		backEndData[1] = (backEndData_t *) ptr;
-		backEndData[1]->polys = (srfPoly_t *) ((char *) ptr + sizeof( *backEndData[1] ));
-		backEndData[1]->polyVerts = (polyVert_t *) ((char *) ptr + sizeof( *backEndData[1] ) + sizeof(srfPoly_t) * max_polys);
-	} else {
-		backEndData[1] = NULL;
-	}
+
 	R_ToggleSmpFrame();
 
 	InitRenderAPI();
@@ -1122,7 +1098,6 @@ void RE_Shutdown( qboolean destroyWindow ) {
     
     if ( tr.registered ) {
 		R_SyncRenderThread();
-		R_ShutdownCommandBuffers();
 		R_DeleteTextures();
 	}
 
@@ -1223,4 +1198,33 @@ refexport_t* GetRefAPI(int apiVersion, refimport_t *rimp)
 
 	return &re;
 }
+
+#ifdef USE_RENDERER_DLOPEN
+
+void QDECL Com_Printf( const char *msg, ... )
+{
+	va_list         argptr;
+	char            text[1024];
+
+	va_start(argptr, msg);
+	Q_vsnprintf(text, sizeof(text), msg, argptr);
+	va_end(argptr);
+
+	ri.Printf(PRINT_ALL, "%s", text);
+}
+
+void QDECL Com_Error( int level, const char *error, ... )
+{
+	va_list         argptr;
+	char            text[1024];
+
+	va_start(argptr, error);
+	Q_vsnprintf(text, sizeof(text), error, argptr);
+	va_end(argptr);
+
+	ri.Error(level, "%s", text);
+}
+
+#endif
+
 

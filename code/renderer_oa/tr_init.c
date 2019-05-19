@@ -219,24 +219,12 @@ static qboolean GLimp_GetProcAddresses( void )
 
     // get our config strings
 
-    strcpy( glConfig.version_string, pStr);
-    glConfig.version_string[strlen(pStr)+1] = 0;
-	ri.Printf( PRINT_ALL, "GL_VERSION: %s\n", pStr);
-
-    pStr = (char *) qglGetString(GL_VENDOR);
-    strcpy(glConfig.vendor_string, pStr);
-    glConfig.renderer_string[strlen(pStr)+1] = 0;
-	ri.Printf( PRINT_ALL, "GL_VENDOR: %s\n", pStr);
-
-    pStr = (char *) qglGetString(GL_RENDERER);
-    strcpy(glConfig.renderer_string, pStr);
-    glConfig.renderer_string[strlen(pStr)+1] = 0;
-	ri.Printf( PRINT_ALL, "GL_RENDERER: %s\n", pStr);
-
-    pStr = (char *)qglGetString(GL_EXTENSIONS);
-    strcpy(glConfig.extensions_string, pStr);
-    glConfig.extensions_string[strlen(pStr)+1] = 0;
-	ri.Printf( PRINT_ALL, "GL_EXTENSIONS: %s\n", pStr);
+    Q_strncpyz( glConfig.vendor_string, (char *) qglGetString (GL_VENDOR), sizeof( glConfig.vendor_string ) );
+    Q_strncpyz( glConfig.renderer_string, (char *) qglGetString (GL_RENDERER), sizeof( glConfig.renderer_string ) );
+    if (*glConfig.renderer_string && glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] == '\n')
+        glConfig.renderer_string[strlen(glConfig.renderer_string) - 1] = 0;
+    Q_strncpyz( glConfig.version_string, (char *) qglGetString (GL_VERSION), sizeof( glConfig.version_string ) );
+    Q_strncpyz( glConfig.extensions_string, (char *)qglGetString(GL_EXTENSIONS), sizeof( glConfig.extensions_string ) );
 
 	ri.Printf( PRINT_ALL,  "\n...Initializing OpenGL extensions\n" );
 
@@ -716,7 +704,7 @@ const void *RB_TakeScreenshotCmd( const void *data )
 
 static void R_ScreenshotFilename( int lastNumber, char *fileName )
 {
-	int		a,b,c,d;
+	int	a,b,c,d;
 
 	if ( lastNumber < 0 || lastNumber > 9999 ) {
 		snprintf( fileName, MAX_OSPATH, "screenshots/shot9999.tga" );
@@ -1131,7 +1119,7 @@ static void R_Register( void )
 	r_nobind = ri.Cvar_Get ("r_nobind", "0", CVAR_CHEAT);
 	r_showtris = ri.Cvar_Get ("r_showtris", "0", CVAR_CHEAT);
 	r_showsky = ri.Cvar_Get ("r_showsky", "0", CVAR_CHEAT);
-	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_CHEAT);
+	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_TEMP);
 	r_offsetFactor = ri.Cvar_Get( "r_offsetfactor", "-1", CVAR_CHEAT );
 	r_offsetUnits = ri.Cvar_Get( "r_offsetunits", "-2", CVAR_CHEAT );
 	r_lockpvs = ri.Cvar_Get ("r_lockpvs", "0", CVAR_CHEAT);
@@ -1362,7 +1350,7 @@ static qhandle_t RE_RegisterSkin( const char *name )
 	}
 
 	// load and parse the skin file
-    ri.R_ReadFile( name, &text );
+    ri.FS_ReadFile( name, &text );
 	if ( !text ) {
 		return 0;
 	}
@@ -1470,7 +1458,6 @@ void RE_Shutdown( qboolean destroyWindow )
 	ri.Cmd_RemoveCommand("skinlist");
 	ri.Cmd_RemoveCommand("gfxinfo");
 	ri.Cmd_RemoveCommand("minimize");
-	ri.Cmd_RemoveCommand("shaderstate");
 
 	if ( tr.registered )
     {
@@ -1661,3 +1648,33 @@ refexport_t* GetRefAPI(int apiVersion, refimport_t *rimp)
 
 	return &re;
 }
+
+#ifdef USE_RENDERER_DLOPEN
+
+void QDECL Com_Printf( const char *msg, ... )
+{
+	va_list         argptr;
+	char            text[1024];
+
+	va_start(argptr, msg);
+	Q_vsnprintf(text, sizeof(text), msg, argptr);
+	va_end(argptr);
+
+	ri.Printf(PRINT_ALL, "%s", text);
+}
+
+void QDECL Com_Error( int level, const char *error, ... )
+{
+	va_list         argptr;
+	char            text[1024];
+
+	va_start(argptr, error);
+	Q_vsnprintf(text, sizeof(text), error, argptr);
+	va_end(argptr);
+
+	ri.Error(level, "%s", text);
+}
+
+#endif
+
+

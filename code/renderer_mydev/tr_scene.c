@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Foobar; if not, write to the Free Software
+along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
@@ -36,22 +36,11 @@ int			r_firstScenePoly;
 int			r_numpolyverts;
 
 
-/*
-====================
-R_ToggleSmpFrame
 
-====================
-*/
-void R_ToggleSmpFrame( void ) {
-	if ( r_smp->integer ) {
-		// use the other buffers next frame, because another CPU
-		// may still be rendering into the current ones
-		tr.smpFrame ^= 1;
-	} else {
-		tr.smpFrame = 0;
-	}
+void R_ToggleSmpFrame( void )
+{
 
-	backEndData[tr.smpFrame]->commands.used = 0;
+	backEndData[0]->commands.used = 0;
 
 	r_firstSceneDrawSurf = 0;
 
@@ -95,7 +84,7 @@ void R_AddPolygonSurfaces( void ) {
 	shader_t	*sh;
 	srfPoly_t	*poly;
 
-	tr.currentEntityNum = ENTITYNUM_WORLD;
+	tr.currentEntityNum = REFENTITYNUM_WORLD;
 	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_ENTITYNUM_SHIFT;
 
 	for ( i = 0, poly = tr.refdef.polys; i < tr.refdef.numPolys ; i++, poly++ ) {
@@ -138,11 +127,11 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 			return;
 		}
 
-		poly = &backEndData[tr.smpFrame]->polys[r_numpolys];
+		poly = &backEndData[0]->polys[r_numpolys];
 		poly->surfaceType = SF_POLY;
 		poly->hShader = hShader;
 		poly->numVerts = numVerts;
-		poly->verts = &backEndData[tr.smpFrame]->polyVerts[r_numpolyverts];
+		poly->verts = &backEndData[0]->polyVerts[r_numpolyverts];
 		
 		memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
 
@@ -205,8 +194,8 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 		ri.Error( ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType );
 	}
 
-	backEndData[tr.smpFrame]->entities[r_numentities].e = *ent;
-	backEndData[tr.smpFrame]->entities[r_numentities].lightingCalculated = qfalse;
+	backEndData[0]->entities[r_numentities].e = *ent;
+	backEndData[0]->entities[r_numentities].lightingCalculated = qfalse;
 
 	r_numentities++;
 }
@@ -230,7 +219,7 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	if ( intensity <= 0 ) {
 		return;
 	}
-	dl = &backEndData[tr.smpFrame]->dlights[r_numdlights++];
+	dl = &backEndData[0]->dlights[r_numdlights++];
 	VectorCopy (org, dl->origin);
 	dl->radius = intensity;
 	dl->color[0] = r;
@@ -272,7 +261,6 @@ to handle mirrors,
 */
 void RE_RenderScene( const refdef_t *fd ) {
 	viewParms_t		parms;
-	int				startTime;
 
 	if ( !tr.registered ) {
 		return;
@@ -283,9 +271,10 @@ void RE_RenderScene( const refdef_t *fd ) {
 		return;
 	}
 
-	startTime = ri.Milliseconds();
+	int startTime = ri.Milliseconds();
+	qboolean customscrn = !(fd->rdflags & RDF_NOWORLDMODEL);
 
-	if (!tr.world && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
+	if (!tr.world && customscrn ) {
 		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
 	}
 
@@ -309,13 +298,13 @@ void RE_RenderScene( const refdef_t *fd ) {
 	// copy the areamask data over and note if it has changed, which
 	// will force a reset of the visible leafs even if the view hasn't moved
 	tr.refdef.areamaskModified = qfalse;
-	if ( ! (tr.refdef.rdflags & RDF_NOWORLDMODEL) ) {
-		int		areaDiff;
+	if ( customscrn ) {
+		int	areaDiff = 0;
 		int		i;
 
 		// compare the area bits
-		areaDiff = 0;
-		for (i = 0 ; i < MAX_MAP_AREA_BYTES/4 ; i++) {
+		for (i = 0 ; i < MAX_MAP_AREA_BYTES/4 ; i++)
+		{
 			areaDiff |= ((int *)tr.refdef.areamask)[i] ^ ((int *)fd->areamask)[i];
 			((int *)tr.refdef.areamask)[i] = ((int *)fd->areamask)[i];
 		}
@@ -332,16 +321,16 @@ void RE_RenderScene( const refdef_t *fd ) {
 	tr.refdef.floatTime = tr.refdef.time * 0.001f;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
-	tr.refdef.drawSurfs = backEndData[tr.smpFrame]->drawSurfs;
+	tr.refdef.drawSurfs = backEndData[0]->drawSurfs;
 
 	tr.refdef.num_entities = r_numentities - r_firstSceneEntity;
-	tr.refdef.entities = &backEndData[tr.smpFrame]->entities[r_firstSceneEntity];
+	tr.refdef.entities = &backEndData[0]->entities[r_firstSceneEntity];
 
 	tr.refdef.num_dlights = r_numdlights - r_firstSceneDlight;
-	tr.refdef.dlights = &backEndData[tr.smpFrame]->dlights[r_firstSceneDlight];
+	tr.refdef.dlights = &backEndData[0]->dlights[r_firstSceneDlight];
 
 	tr.refdef.numPolys = r_numpolys - r_firstScenePoly;
-	tr.refdef.polys = &backEndData[tr.smpFrame]->polys[r_firstScenePoly];
+	tr.refdef.polys = &backEndData[0]->polys[r_firstScenePoly];
 
 	// turn off dynamic lighting globally by clearing all the
 	// dlights if it needs to be disabled or if vertex lighting is enabled

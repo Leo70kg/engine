@@ -886,11 +886,6 @@ void CL_DemoCompleted( void )
 			Com_Printf( "%s", buffer );
 
 
-			// leilei - shove some abridged info in a cvar for display in the UI
-			{
-			Cvar_Set( "ui_timedemoResult", va("%3.1f fps %3.1f seconds", clc.timeDemoFrames*1000.0 / time,  time/1000.0) );
-
-			}
 			// Write a log of all the frame durations
 			if( cl_timedemoLog && strlen( cl_timedemoLog->string ) > 0 )
 			{
@@ -3245,9 +3240,7 @@ void CL_InitRef(void)
 	ri.CM_DrawDebugSurface = CM_DrawDebugSurface;
 
 	ri.FS_ReadFile = FS_ReadFile;
-////////////////
-    ri.R_ReadFile = R_ReadFile;
-///////////////
+
 	ri.FS_FreeFile = FS_FreeFile;
 	ri.FS_WriteFile = FS_WriteFile;
 	ri.FS_FreeFileList = FS_FreeFileList;
@@ -3273,26 +3266,7 @@ void CL_InitRef(void)
 	ri.Sys_SetEnv = Sys_SetEnv;
 	ri.Sys_LowPhysicalMemory = Sys_LowPhysicalMemory;
 
-
-    // GLimp
-/*  
-    ri.GLimpEndFrame = GLimp_EndFrame;
-    ri.GLimpInit = GLimp_Init;
-    ri.GLimpShutdown = GLimp_Shutdown;
-    ri.GLimpMinimize = GLimp_Minimize;
-    ri.GLimpSetGamma = GLimp_SetGamma;
-
-    ri.GLimpDeleteCtx = GLimp_DeleteGLContext;
-    ri.GLimpDestroyWin = GLimp_DestroyWindow;
-    ri.GLimpGetProcAddress = GLimp_GetProcAddress;
-    ri.GLimpLogComment = GLimp_LogComment;
-    ri.GLimpRendererSleep = GLimp_RendererSleep;
-    ri.GLimpSpawnRenderThread = GLimp_SpawnRenderThread;
-    ri.GLimpWakeRenderer = GLimp_WakeRenderer;
-    ri.GLimpFrontEndSleep = GLimp_FrontEndSleep;
-
-    ri.GLimpGetProcAddress = GLimp_GetProcAddress;
-*/    
+ 
     // 
 	ri.IN_Init = IN_Init;
 	ri.IN_Shutdown = IN_Shutdown;
@@ -3645,8 +3619,6 @@ void CL_Init( void )
 
 	// cgame might not be initialized before menu is used
 	Cvar_Get ("cg_viewsize", "100", CVAR_ARCHIVE );
-	// Make sure cg_stereoSeparation is zero as that variable is deprecated and should not be used anymore.
-	Cvar_Get ("cg_stereoSeparation", "0", CVAR_ROM);
 
 	//
 	// register our commands

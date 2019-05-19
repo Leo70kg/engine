@@ -28,12 +28,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qfiles.h"
 #include "../qcommon/qcommon.h"
 #include "../renderercommon/tr_public.h"
-#include "../renderercommon/tr_common.h"
+#include "tr_common.h"
 #include "../renderercommon/iqm.h"
 #include "../renderercommon/qgl.h"
 #include "tr_extratypes.h"
 #include "tr_fbo.h"
 #include "tr_postprocess.h"
+#include "image.h"
 
 #define GLE(ret, name, ...) extern name##proc * qgl##name;
 QGL_1_1_PROCS;
@@ -114,11 +115,12 @@ typedef struct {
 
 
 typedef struct {
+    float		modelMatrix[16] QALIGN(16);
+	float		transformMatrix[16] QALIGN(16);
 	vec3_t		origin;			// in world coordinates
 	vec3_t		axis[3];		// orientation in world
 	vec3_t		viewOrigin;		// viewParms->or.origin in local coordinates
-	float		modelMatrix[16];
-	float		transformMatrix[16];
+
 } orientationr_t;
 
 // Ensure this is >= the ATTR_INDEX_COUNT enum below
@@ -825,7 +827,7 @@ typedef struct {
 	int         targetFboLayer;
 	int         targetFboCubemapIndex;
 	float		fovX, fovY;
-	float		projectionMatrix[16];
+	float		projectionMatrix[16] QALIGN(16);
 	cplane_t	frustum[5];
 	vec3_t		visBounds[2];
 	float		zFar;
@@ -1325,6 +1327,10 @@ typedef struct {
 
 // the renderer front end should never modify glstate_t
 typedef struct {
+    float       modelview[16] QALIGN(16);
+	float       projection[16] QALIGN(16);
+	float       modelviewProjection[16] QALIGN(16);
+
 	qboolean	finishCalled;
 	int			texEnv[2];
 	int			faceCulling;
@@ -1336,9 +1342,6 @@ typedef struct {
 	uint32_t        vertexAttribsEnabled;  // global if no VAOs, tess only otherwise
 	FBO_t          *currentFBO;
 	vao_t          *currentVao;
-	mat4_t        modelview;
-	mat4_t        projection;
-	mat4_t		modelviewProjection;
 } glstate_t;
 
 typedef enum {
@@ -1851,8 +1854,8 @@ void	GL_TextureMode( const char *string );
 void	GL_CheckErrs( char *file, int line );
 #define GL_CheckErrors(...) GL_CheckErrs(__FILE__, __LINE__)
 void	GL_State( unsigned long stateVector );
-void    GL_SetProjectionMatrix(mat4_t matrix);
-void    GL_SetModelviewMatrix(mat4_t matrix);
+void    GL_SetProjectionMatrix(float matrix[16]);
+void    GL_SetModelviewMatrix(float matrix[16]);
 void	GL_Cull( int cullType );
 
 #define GLS_SRCBLEND_ZERO						0x00000001
@@ -1964,7 +1967,7 @@ typedef struct shaderCommands_s
 	int16_t		tangent[SHADER_MAX_VERTEXES][4] QALIGN(16);
 	vec2_t		texCoords[SHADER_MAX_VERTEXES] QALIGN(16);
 	vec2_t		lightCoords[SHADER_MAX_VERTEXES] QALIGN(16);
-	uint16_t	color[SHADER_MAX_VERTEXES][4] QALIGN(16);
+	uint16_t	vertexColors[SHADER_MAX_VERTEXES][4] QALIGN(16);
 	int16_t		lightdir[SHADER_MAX_VERTEXES][4] QALIGN(16);
 	//int			vertexDlightBits[SHADER_MAX_VERTEXES] QALIGN(16);
 
@@ -2169,7 +2172,7 @@ void GLSL_SetUniformFloat5(shaderProgram_t *program, int uniformNum, const vec5_
 void GLSL_SetUniformVec2(shaderProgram_t *program, int uniformNum, const vec2_t v);
 void GLSL_SetUniformVec3(shaderProgram_t *program, int uniformNum, const vec3_t v);
 void GLSL_SetUniformVec4(shaderProgram_t *program, int uniformNum, const vec4_t v);
-void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const mat4_t matrix);
+void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const float matrix[16]);
 
 shaderProgram_t *GLSL_GetGenericShaderProgram(int stage);
 
@@ -2428,5 +2431,5 @@ size_t RE_SaveJPGToBuffer(byte *buffer, size_t bufSize, int quality,
 void RE_TakeVideoFrame( int width, int height,
 		byte *captureBuffer, byte *encodeBuffer, qboolean motionJpeg );
 
-
+void Mat4Ortho( float left, float right, float bottom, float top, float znear, float zfar, float out[16] );
 #endif //TR_LOCAL_H

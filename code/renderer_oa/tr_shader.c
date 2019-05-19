@@ -146,7 +146,7 @@ void R_RemapShader(const char *shaderName, const char *newShaderName, const char
 	// remap all the shaders with the given name
 	// even tho they might have different lightmaps
     char strippedName[MAX_QPATH];
-	stripExtension(shaderName, strippedName, sizeof(strippedName));
+	R_StripExtension(shaderName, strippedName, sizeof(strippedName));
 	int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 	for (sh = hashTable[hash]; sh; sh = sh->next)
     {
@@ -3067,10 +3067,8 @@ static qboolean CollapseMultitexture( void ) {
 		return qfalse;
 	}
 
-	// GL_ADD is a separate extension
-	if ( collapse[i].multitextureEnv == GL_ADD && !glConfig.textureEnvAddAvailable ) {
-		return qfalse;
-	}
+
+
 
 	// make sure waveforms have identical parameters
 	if ( ( stages[0].rgbGen != stages[1].rgbGen ) ||
@@ -3078,6 +3076,7 @@ static qboolean CollapseMultitexture( void ) {
 		return qfalse;
 	}
 
+    // GL_ADD is a separate extension
 	// an add collapse can only have identity colors
 	if ( collapse[i].multitextureEnv == GL_ADD && stages[0].rgbGen != CGEN_IDENTITY ) {
 		return qfalse;
@@ -3534,13 +3533,13 @@ default shader if the real one can't be found.
 shader_t *R_FindShaderByName( const char *name )
 {
 	char		strippedName[MAX_QPATH];
-	shader_t	*sh;
+	shader_t* sh;
 
 	if ( (name==NULL) || (name[0] == 0) ) {
 		return tr.defaultShader;
 	}
 
-	stripExtension(name, strippedName, sizeof(strippedName));
+	R_StripExtension(name, strippedName, sizeof(strippedName));
 
 	long int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
@@ -3617,7 +3616,7 @@ shader_t *R_FindShaderReal( const char *name, int lightmapIndex, qboolean mipRaw
 		lightmapIndex = LIGHTMAP_BY_VERTEX;
 	}
 
-	stripExtension(name, strippedName, sizeof(strippedName));
+	R_StripExtension(name, strippedName, sizeof(strippedName));
 
 	int hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
@@ -4076,7 +4075,7 @@ static void ScanAndLoadShaderFiles( void )
 		snprintf( filename, sizeof( filename ), "scripts/%s", shaderFiles[i] );
 		ri.Printf(PRINT_ALL, "...loading '%s'\n", filename);
 		
-        long summand = ri.R_ReadFile(filename, &buffers[i]);
+        long summand = ri.FS_ReadFile(filename, &buffers[i]);
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
 

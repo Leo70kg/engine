@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #include "tr_local.h"
-
+extern glconfig_t glConfig;
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
 extern void (APIENTRYP qglActiveTextureARB) (GLenum texture);
@@ -129,7 +129,7 @@ void R_RemapShader(const char *shaderName, const char *newShaderName, const char
 
 	// remap all the shaders with the given name
 	// even tho they might have different lightmaps
-	stripExtension(shaderName, strippedName, sizeof(strippedName));
+	R_StripExtension(shaderName, strippedName, sizeof(strippedName));
 	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 	for (sh = hashTable[hash]; sh; sh = sh->next) {
 		if (Q_stricmp(sh->name, strippedName) == 0) {
@@ -1108,8 +1108,8 @@ static qboolean ParseStage( shaderStage_t *stage, char **text )
 
 	// decide which agens we can skip
 	if ( stage->alphaGen == AGEN_IDENTITY ) {
-		if ( stage->rgbGen == CGEN_IDENTITY
-			|| stage->rgbGen == CGEN_LIGHTING_DIFFUSE ) {
+		if ( stage->rgbGen == CGEN_IDENTITY || stage->rgbGen == CGEN_LIGHTING_DIFFUSE )
+		{
 			stage->alphaGen = AGEN_SKIP;
 		}
 	}
@@ -1302,8 +1302,7 @@ static void ParseSkyParms( char **text ) {
 	}
 	if ( strcmp( token, "-" ) ) {
 		for (i=0 ; i<6 ; i++) {
-			snprintf( pathname, sizeof(pathname), "%s_%s.tga"
-				, token, suf[i] );
+			snprintf( pathname, sizeof(pathname), "%s_%s.tga", token, suf[i] );
 			shader.sky.outerbox[i] = R_FindImageFile( ( char * ) pathname, IMGTYPE_COLORALPHA, imgFlags | IMGFLAG_CLAMPTOEDGE );
 
 			if ( !shader.sky.outerbox[i] ) {
@@ -1333,8 +1332,7 @@ static void ParseSkyParms( char **text ) {
 	}
 	if ( strcmp( token, "-" ) ) {
 		for (i=0 ; i<6 ; i++) {
-			snprintf( pathname, sizeof(pathname), "%s_%s.tga"
-				, token, suf[i] );
+			snprintf( pathname, sizeof(pathname), "%s_%s.tga", token, suf[i] );
 			shader.sky.innerbox[i] = R_FindImageFile( ( char * ) pathname, IMGTYPE_COLORALPHA, imgFlags );
 			if ( !shader.sky.innerbox[i] ) {
 				shader.sky.innerbox[i] = tr.defaultImage;
@@ -1514,7 +1512,6 @@ static qboolean ParseShader( char **text )
 			}
 			stages[s].active = qtrue;
 			s++;
-
 			continue;
 		}
 		// skip stuff that only the QuakeEdRadient needs
@@ -1541,11 +1538,11 @@ static qboolean ParseShader( char **text )
 
 			token = R_ParseExt( text, qfalse );
 			a = atof( token );
-			a = a / 180 * M_PI;
+			a *= (M_PI/180.0f);
 
 			token = R_ParseExt( text, qfalse );
 			b = atof( token );
-			b = b / 180 * M_PI;
+			b *= (M_PI/180.0f);
 
 			tr.sunDirection[0] = cos( a ) * cos( b );
 			tr.sunDirection[1] = sin( a ) * cos( b );
@@ -1716,7 +1713,6 @@ SHADER OPTIMIZATION AND FOGGING
 
 ========================================================================================
 */
-
 
 typedef struct {
 	int		blendA;
@@ -2392,7 +2388,7 @@ shader_t *R_FindShaderByName( const char *name ) {
 		return tr.defaultShader;
 	}
 
-	stripExtension(name, strippedName, sizeof(strippedName));
+	R_StripExtension(name, strippedName, sizeof(strippedName));
 
 	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
@@ -2458,7 +2454,7 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 		lightmapIndex = LIGHTMAP_BY_VERTEX;
 	}
 
-	stripExtension(name, strippedName, sizeof(strippedName));
+	R_StripExtension(name, strippedName, sizeof(strippedName));
 
 	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 
@@ -2497,7 +2493,7 @@ shader_t *R_FindShader( const char *name, int lightmapIndex, qboolean mipRawImag
 		}
 
 		if ( !ParseShader( &shaderText ) ) {
-			// had errors, so use default shader
+			ri.Printf( PRINT_WARNING, "ParseShader: %s had errors\n", strippedName );
 			shader.defaultShader = qtrue;
 		}
 		sh = FinishShader();
@@ -2873,7 +2869,7 @@ static void ScanAndLoadShaderFiles( void )
 
 		snprintf( filename, sizeof( filename ), "scripts/%s", shaderFiles[i] );
 		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
-		summand = ri.R_ReadFile( filename, &buffers[i] );
+		summand = ri.FS_ReadFile( filename, &buffers[i] );
 		
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );

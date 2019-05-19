@@ -15,15 +15,18 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Foobar; if not, write to the Free Software
+along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 // tr_main.c -- main control flow for each frame
 
 #include "tr_local.h"
+#include "../renderercommon/matrix_multiplication.h"
 
-trGlobals_t		tr;
+trGlobals_t	tr;
+refimport_t	ri;
+
 
 static float	s_flipMatrix[16] = {
 	// convert from our coordinate system (looking down X)
@@ -35,11 +38,10 @@ static float	s_flipMatrix[16] = {
 };
 
 
-refimport_t	ri;
 
 // entities that will have procedurally generated surfaces will just
 // point at this for their sorting surface
-surfaceType_t	entitySurface = SF_ENTITY;
+static surfaceType_t entitySurface = SF_ENTITY;
 
 /*
 =================
@@ -218,29 +220,7 @@ void R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const f
 	}
 }
 
-/*
-==========================
-myGlMultMatrix
 
-==========================
-*/
-//
-// NOTE; out = b * a,
-// a, b and c are specified in column-major order
-//
-void myGlMultMatrix( const float *a, const float *b, float *out ) {
-	int		i, j;
-
-	for ( i = 0 ; i < 4 ; i++ ) {
-		for ( j = 0 ; j < 4 ; j++ ) {
-			out[ i * 4 + j ] =
-				a [ i * 4 + 0 ] * b [ 0 * 4 + j ]
-				+ a [ i * 4 + 1 ] * b [ 1 * 4 + j ]
-				+ a [ i * 4 + 2 ] * b [ 2 * 4 + j ]
-				+ a [ i * 4 + 3 ] * b [ 3 * 4 + j ];
-		}
-	}
-}
 
 /*
 =================
@@ -271,16 +251,17 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
 	glMatrix[0] = or->axis[0][0];
 	glMatrix[4] = or->axis[1][0];
 	glMatrix[8] = or->axis[2][0];
-	glMatrix[12] = or->origin[0];
 
 	glMatrix[1] = or->axis[0][1];
 	glMatrix[5] = or->axis[1][1];
 	glMatrix[9] = or->axis[2][1];
-	glMatrix[13] = or->origin[1];
 
 	glMatrix[2] = or->axis[0][2];
 	glMatrix[6] = or->axis[1][2];
 	glMatrix[10] = or->axis[2][2];
+
+	glMatrix[12] = or->origin[0];
+	glMatrix[13] = or->origin[1];
 	glMatrix[14] = or->origin[2];
 
 	glMatrix[3] = 0;
@@ -296,7 +277,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
 
 	// compensate for scale in the axes if necessary
 	if ( ent->e.nonNormalizedAxes ) {
-		axisLength = VectorLength( ent->e.axis[0] );
+		axisLength = VectorLen( ent->e.axis[0] );
 		if ( !axisLength ) {
 			axisLength = 0;
 		} else {
@@ -318,7 +299,7 @@ R_RotateForViewer
 Sets up the modelview matrix for a given viewParm
 =================
 */
-void R_RotateForViewer (void) 
+static void R_RotateForViewer (void) 
 {
 	float	viewerMatrix[16];
 	vec3_t	origin;
@@ -530,7 +511,6 @@ void R_SetupFrustum (void) {
 	}
 }
 
-
 /*
 =================
 R_MirrorPoint
@@ -619,7 +599,8 @@ Returns qtrue if it should be mirrored
 */
 qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum, 
 							 orientation_t *surface, orientation_t *camera,
-							 vec3_t pvsOrigin, qboolean *mirror ) {
+							 vec3_t pvsOrigin, qboolean *mirror )
+{
 	int			i;
 	cplane_t	originalPlane, plane;
 	trRefEntity_t	*e;
@@ -630,7 +611,7 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 	R_PlaneForSurface( drawSurf->surface, &originalPlane );
 
 	// rotate the plane if necessary
-	if ( entityNum != ENTITYNUM_WORLD ) {
+	if ( entityNum != REFENTITYNUM_WORLD ) {
 		tr.currentEntityNum = entityNum;
 		tr.currentEntity = &tr.refdef.entities[entityNum];
 
@@ -649,7 +630,7 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 	}
 
 	VectorCopy( plane.normal, surface->axis[0] );
-	PerpendicularVector( surface->axis[1], surface->axis[0] );
+	VectorPerp( plane.normal, surface->axis[1]);
 	CrossProduct( surface->axis[0], surface->axis[1], surface->axis[2] );
 
 	// locate the portal entity closest to this plane.
@@ -690,7 +671,10 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 			
 		// now get the camera origin and orientation
 		VectorCopy( e->e.oldorigin, camera->origin );
-		AxisCopy( e->e.axis, camera->axis );
+		VectorCopy( e->e.axis[0], camera->axis[0] );
+		VectorCopy( e->e.axis[1], camera->axis[1] );
+		VectorCopy( e->e.axis[2], camera->axis[2] );
+
 		VectorSubtract( vec3_origin, camera->axis[0], camera->axis[0] );
 		VectorSubtract( vec3_origin, camera->axis[1], camera->axis[1] );
 
@@ -701,21 +685,21 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 				// continuous rotate
 				d = (tr.refdef.time/1000.0f) * e->e.frame;
 				VectorCopy( camera->axis[1], transformed );
-				RotatePointAroundVector( camera->axis[1], camera->axis[0], transformed, d );
+				PointRotateAroundVector( camera->axis[1], camera->axis[0], transformed, d );
 				CrossProduct( camera->axis[0], camera->axis[1], camera->axis[2] );
 			} else {
 				// bobbing rotate, with skinNum being the rotation offset
 				d = sin( tr.refdef.time * 0.003f );
 				d = e->e.skinNum + d * 4;
 				VectorCopy( camera->axis[1], transformed );
-				RotatePointAroundVector( camera->axis[1], camera->axis[0], transformed, d );
+				PointRotateAroundVector( camera->axis[1], camera->axis[0], transformed, d );
 				CrossProduct( camera->axis[0], camera->axis[1], camera->axis[2] );
 			}
 		}
 		else if ( e->e.skinNum ) {
 			d = e->e.skinNum;
 			VectorCopy( camera->axis[1], transformed );
-			RotatePointAroundVector( camera->axis[1], camera->axis[0], transformed, d );
+			PointRotateAroundVector( camera->axis[1], camera->axis[0], transformed, d );
 			CrossProduct( camera->axis[0], camera->axis[1], camera->axis[2] );
 		}
 		*mirror = qfalse;
@@ -747,7 +731,7 @@ static qboolean IsMirror( const drawSurf_t *drawSurf, int entityNum )
 	R_PlaneForSurface( drawSurf->surface, &originalPlane );
 
 	// rotate the plane if necessary
-	if ( entityNum != ENTITYNUM_WORLD ) 
+	if ( entityNum != REFENTITYNUM_WORLD )
 	{
 		tr.currentEntityNum = entityNum;
 		tr.currentEntity = &tr.refdef.entities[entityNum];
@@ -762,10 +746,6 @@ static qboolean IsMirror( const drawSurf_t *drawSurf, int entityNum )
 
 		// translate the original plane
 		originalPlane.dist = originalPlane.dist + DotProduct( originalPlane.normal, tr.or.origin );
-	} 
-	else 
-	{
-		plane = originalPlane;
 	}
 
 	// locate the portal entity closest to this plane.
@@ -813,10 +793,6 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 	unsigned int pointOr = 0;
 	unsigned int pointAnd = (unsigned int)~0;
 
-	if ( glConfig.smpActive ) {		// FIXME!  we can't do RB_BeginSurface/RB_EndSurface stuff with smp!
-		return qfalse;
-	}
-
 	R_RotateForViewer();
 
 	R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
@@ -850,7 +826,6 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 	// trivially reject
 	if ( pointAnd )
 	{
-        tess.numIndexes = 0;
 		return qtrue;
 	}
 
@@ -864,23 +839,22 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 	for ( i = 0; i < tess.numIndexes; i += 3 )
 	{
 		vec3_t normal;
-		float dot;
 		float len;
 
 		VectorSubtract( tess.xyz[tess.indexes[i]], tr.viewParms.or.origin, normal );
 
-		len = VectorLengthSquared( normal );			// lose the sqrt
+		len = normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2];// lose the sqrt
 		if ( len < shortest )
 		{
 			shortest = len;
 		}
 
-		if ( ( dot = DotProduct( normal, tess.normal[tess.indexes[i]] ) ) >= 0 )
+		if ( DotProduct( normal, tess.normal[tess.indexes[i]] ) >= 0 )
 		{
 			numTriangles--;
 		}
 	}
-    tess.numIndexes = 0;
+
 	if ( !numTriangles )
 	{
 		return qtrue;
@@ -908,7 +882,8 @@ R_MirrorViewBySurface
 Returns qtrue if another view has been rendered
 ========================
 */
-qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum) {
+qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
+{
 	vec4_t			clipDest[128];
 	viewParms_t		newParms;
 	viewParms_t		oldParms;
@@ -999,201 +974,62 @@ DRAWSURF SORTING
 ==========================================================================================
 */
 
+
 /*
-=================
-qsort replacement
-
-=================
+===============
+R_Radix
+===============
 */
-void SWAP_DRAW_SURF(void* a, void* b) {
-    char buf[sizeof(drawSurf_t)];
-    memcpy(buf, a, sizeof(drawSurf_t));
-    memcpy(a, b, sizeof(drawSurf_t));
-    memcpy(b, buf, sizeof(drawSurf_t));
-}
-
-
-/* this parameter defines the cutoff between using quick sort and
-   insertion sort for arrays; arrays with lengths shorter or equal to the
-   below value use insertion sort */
-
-#define CUTOFF 8            /* testing shows that this is good value */
-
-static void shortsort( drawSurf_t *lo, drawSurf_t *hi ) {
-    drawSurf_t	*p, *max;
-
-    while (hi > lo) {
-        max = lo;
-        for (p = lo + 1; p <= hi; p++ ) {
-            if ( p->sort > max->sort ) {
-                max = p;
-            }
-        }
-        SWAP_DRAW_SURF(max, hi);
-        hi--;
-    }
-}
-
-
-/* sort the array between lo and hi (inclusive)
-FIXME: this was lifted and modified from the microsoft lib source...
- */
-
-void qsortFast (
-    void *base,
-    unsigned num,
-    unsigned width
-    )
+static void R_Radix( int byte, int size, drawSurf_t *source, drawSurf_t *dest )
 {
-    char *lo, *hi;              /* ends of sub-array currently sorting */
-    char *mid;                  /* points to middle of subarray */
-    char *loguy, *higuy;        /* traveling pointers for partition step */
-    unsigned size;              /* size of the sub-array */
-    char *lostk[30], *histk[30];
-    int stkptr;                 /* stack for saving sub-array to be processed */
+  int           count[ 256 ] = { 0 };
+  int           index[ 256 ];
+  int           i;
+  unsigned char *sortKey = NULL;
+  unsigned char *end = NULL;
 
-    /* Note: the number of stack entries required is no more than
-       1 + log2(size), so 30 is sufficient for any array */
+  sortKey = ( (unsigned char *)&source[ 0 ].sort ) + byte;
+  end = sortKey + ( size * sizeof( drawSurf_t ) );
+  for( ; sortKey < end; sortKey += sizeof( drawSurf_t ) )
+    ++count[ *sortKey ];
 
-    if (num < 2 || width == 0)
-        return;                 /* nothing to do */
+  index[ 0 ] = 0;
 
-    stkptr = 0;                 /* initialize stack */
+  for( i = 1; i < 256; ++i )
+    index[ i ] = index[ i - 1 ] + count[ i - 1 ];
 
-    lo = (char*) base;
-    hi = (char *)base + width * (num-1);        /* initialize limits */
-
-    /* this entry point is for pseudo-recursion calling: setting
-       lo and hi and jumping to here is like recursion, but stkptr is
-       prserved, locals aren't, so we preserve stuff on the stack */
-recurse:
-
-    size = (hi - lo) / width + 1;        /* number of el's to sort */
-
-    /* below a certain size, it is faster to use a O(n^2) sorting method */
-    if (size <= CUTOFF) {
-         shortsort((drawSurf_t *)lo, (drawSurf_t *)hi);
-    }
-    else {
-        /* First we pick a partititioning element.  The efficiency of the
-           algorithm demands that we find one that is approximately the
-           median of the values, but also that we select one fast.  Using
-           the first one produces bad performace if the array is already
-           sorted, so we use the middle one, which would require a very
-           wierdly arranged array for worst case performance.  Testing shows
-           that a median-of-three algorithm does not, in general, increase
-           performance. */
-
-        mid = lo + (size / 2) * width;      /* find middle element */
-        SWAP_DRAW_SURF(mid, lo);               /* swap it to beginning of array */
-
-        /* We now wish to partition the array into three pieces, one
-           consisiting of elements <= partition element, one of elements
-           equal to the parition element, and one of element >= to it.  This
-           is done below; comments indicate conditions established at every
-           step. */
-
-        loguy = lo;
-        higuy = hi + width;
-
-        /* Note that higuy decreases and loguy increases on every iteration,
-           so loop must terminate. */
-        for (;;) {
-            /* lo <= loguy < hi, lo < higuy <= hi + 1,
-               A[i] <= A[lo] for lo <= i <= loguy,
-               A[i] >= A[lo] for higuy <= i <= hi */
-
-            do  {
-                loguy += width;
-            } while (loguy <= hi &&  
-				( ((drawSurf_t *)loguy)->sort <= ((drawSurf_t *)lo)->sort ) );
-
-            /* lo < loguy <= hi+1, A[i] <= A[lo] for lo <= i < loguy,
-               either loguy > hi or A[loguy] > A[lo] */
-
-            do  {
-                higuy -= width;
-            } while (higuy > lo && 
-				( ((drawSurf_t *)higuy)->sort >= ((drawSurf_t *)lo)->sort ) );
-
-            /* lo-1 <= higuy <= hi, A[i] >= A[lo] for higuy < i <= hi,
-               either higuy <= lo or A[higuy] < A[lo] */
-
-            if (higuy < loguy)
-                break;
-
-            /* if loguy > hi or higuy <= lo, then we would have exited, so
-               A[loguy] > A[lo], A[higuy] < A[lo],
-               loguy < hi, highy > lo */
-
-            SWAP_DRAW_SURF(loguy, higuy);
-
-            /* A[loguy] < A[lo], A[higuy] > A[lo]; so condition at top
-               of loop is re-established */
-        }
-
-        /*     A[i] >= A[lo] for higuy < i <= hi,
-               A[i] <= A[lo] for lo <= i < loguy,
-               higuy < loguy, lo <= higuy <= hi
-           implying:
-               A[i] >= A[lo] for loguy <= i <= hi,
-               A[i] <= A[lo] for lo <= i <= higuy,
-               A[i] = A[lo] for higuy < i < loguy */
-
-        SWAP_DRAW_SURF(lo, higuy);     /* put partition element in place */
-
-        /* OK, now we have the following:
-              A[i] >= A[higuy] for loguy <= i <= hi,
-              A[i] <= A[higuy] for lo <= i < higuy
-              A[i] = A[lo] for higuy <= i < loguy    */
-
-        /* We've finished the partition, now we want to sort the subarrays
-           [lo, higuy-1] and [loguy, hi].
-           We do the smaller one first to minimize stack usage.
-           We only sort arrays of length 2 or more.*/
-
-        if ( higuy - 1 - lo >= hi - loguy ) {
-            if (lo + width < higuy) {
-                lostk[stkptr] = lo;
-                histk[stkptr] = higuy - width;
-                ++stkptr;
-            }                           /* save big recursion for later */
-
-            if (loguy < hi) {
-                lo = loguy;
-                goto recurse;           /* do small recursion */
-            }
-        }
-        else {
-            if (loguy < hi) {
-                lostk[stkptr] = loguy;
-                histk[stkptr] = hi;
-                ++stkptr;               /* save big recursion for later */
-            }
-
-            if (lo + width < higuy) {
-                hi = higuy - width;
-                goto recurse;           /* do small recursion */
-            }
-        }
-    }
-
-    /* We have sorted the array, except for any pending sorts on the stack.
-       Check if there are any, and do them. */
-
-    --stkptr;
-    if (stkptr >= 0) {
-        lo = lostk[stkptr];
-        hi = histk[stkptr];
-        goto recurse;           /* pop subarray from stack */
-    }
-    else
-        return;                 /* all subarrays done */
+  sortKey = ( (unsigned char *)&source[ 0 ].sort ) + byte;
+  for( i = 0; i < size; ++i, sortKey += sizeof( drawSurf_t ) )
+    dest[ index[ *sortKey ]++ ] = source[ i ];
 }
+
+/*
+===============
+R_RadixSort
+
+Radix sort with 4 byte size buckets
+===============
+*/
+static void R_RadixSort( drawSurf_t *source, int size )
+{
+  static drawSurf_t scratch[ MAX_DRAWSURFS ];
+#ifdef Q3_LITTLE_ENDIAN
+  R_Radix( 0, size, source, scratch );
+  R_Radix( 1, size, scratch, source );
+  R_Radix( 2, size, source, scratch );
+  R_Radix( 3, size, scratch, source );
+#else
+  R_Radix( 3, size, source, scratch );
+  R_Radix( 2, size, scratch, source );
+  R_Radix( 1, size, source, scratch );
+  R_Radix( 0, size, scratch, source );
+#endif //Q3_LITTLE_ENDIAN
+}
+
+
 
 
 //==========================================================================================
-
 /*
 =================
 R_AddDrawSurf
@@ -1254,9 +1090,10 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	}
 
 	// sort the drawsurfs by sort type, then orientation, then shader
-	qsortFast (drawSurfs, numDrawSurfs, sizeof(drawSurf_t) );
-
-	// check for any pass through drawing, which
+	// qsortFast (drawSurfs, numDrawSurfs, sizeof(drawSurf_t) );
+    R_RadixSort (drawSurfs, numDrawSurfs);
+    
+    // check for any pass through drawing, which
 	// may cause another view to be rendered first
 	for ( i = 0 ; i < numDrawSurfs ; i++ ) {
 		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum, &dlighted );
@@ -1283,13 +1120,9 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	R_AddDrawSurfCmd( drawSurfs, numDrawSurfs );
 }
 
-/*
-=============
-R_AddEntitySurfaces
-=============
-*/
-void R_AddEntitySurfaces (void) {
-	trRefEntity_t	*ent;
+
+void R_AddEntitySurfaces (void)
+{
 	shader_t		*shader;
 
 	if ( !r_drawentities->integer ) {
@@ -1298,8 +1131,9 @@ void R_AddEntitySurfaces (void) {
 
 	for ( tr.currentEntityNum = 0; 
 	      tr.currentEntityNum < tr.refdef.num_entities; 
-		  tr.currentEntityNum++ ) {
-		ent = tr.currentEntity = &tr.refdef.entities[tr.currentEntityNum];
+		  tr.currentEntityNum++ )
+	{
+		trRefEntity_t* ent = tr.currentEntity = &tr.refdef.entities[tr.currentEntityNum];
 
 		ent->needDlights = qfalse;
 
@@ -1378,14 +1212,16 @@ void R_AddEntitySurfaces (void) {
 R_DebugPolygon
 ================
 */
-void R_DebugPolygon( int color, int numPoints, float *points ) {
+void R_DebugPolygon( int color, int numPoints, float *points )
+{
+	int i = 0 ;
 	GL_State( GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE );
 
 	// draw solid shade
 
 	qglColor3f( color&1, (color>>1)&1, (color>>2)&1 );
 	qglBegin( GL_POLYGON );
-	for (int i = 0 ; i < numPoints ; i++ ) {
+	for ( i = 0 ; i < numPoints ; i++ ) {
 		qglVertex3fv( points + i * 3 );
 	}
 	qglEnd();
@@ -1395,13 +1231,11 @@ void R_DebugPolygon( int color, int numPoints, float *points ) {
 	qglDepthRange( 0, 0 );
 	qglColor3f( 1, 1, 1 );
 	qglBegin( GL_POLYGON );
-	for (int i = 0 ; i < numPoints ; i++ ) {
+	for ( i = 0 ; i < numPoints ; i++ ) {
 		qglVertex3fv( points + i * 3 );
 	}
 	qglEnd();
 	qglDepthRange( 0, 1 );
-
-
 }
 
 /*
@@ -1412,6 +1246,9 @@ Visualization aid for movement clipping debugging
 ====================
 */
 void R_DebugGraphics( void ) {
+	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
+		return;
+	}
 	if ( !r_debugSurface->integer ) {
 		return;
 	}
@@ -1433,10 +1270,11 @@ A view may be either the actual camera view,
 or a mirror / remote location
 ================
 */
-void R_RenderView (viewParms_t *parms) {
+void R_RenderView (viewParms_t *parms)
+{
 	int		firstDrawSurf;
 
-	if ( parms->viewportWidth <= 0 || parms->viewportHeight <= 0 ) {
+	if ( (parms->viewportWidth <= 0) || (parms->viewportHeight <= 0) ) {
 		return;
 	}
 

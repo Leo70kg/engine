@@ -3,24 +3,25 @@
 
 
 /*
-====================================================================
+==========================================================
 
 IMPLEMENTATION SPECIFIC FUNCTIONS
 
-====================================================================
+==========================================================
 */
 
 
 #define VK_NO_PROTOTYPES
-#include "vulkan/vulkan.h"
+#include "../vulkan/vulkan.h"
 
+void vk_createWindowImpl(void);
+void vk_destroyWindowImpl(void);
 
-void VKimp_Init(void);
-void VKimp_Shutdown(void);
-void VKimp_CreateSurface(void);
-void VKimp_CreateInstance(void);
-void VKimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] );
-void VKimp_Minimize( void );
+void vk_getInstanceProcAddrImpl(void);
+
+void vk_createSurfaceImpl(VkSurfaceKHR* surface);
+
+void vk_minimizeWindowImpl( void );
 
 
 #endif

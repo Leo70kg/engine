@@ -1044,7 +1044,7 @@ void RB_IQMSurfaceAnim( surfaceType_t *surface ) {
 	outNormal = tess.normal[tess.numVertexes];
 	outTangent = tess.tangent[tess.numVertexes];
 	outTexCoord = &tess.texCoords[tess.numVertexes];
-	outColor = tess.color[tess.numVertexes];
+	outColor = tess.vertexColors[tess.numVertexes];
 
 	// compute interpolated joint matrices
 	if ( data->num_poses > 0 ) {

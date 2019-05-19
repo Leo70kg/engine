@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // tr_sky.c
 #include "tr_local.h"
+#include "../renderercommon/matrix_multiplication.h"
 
 #define SKY_SUBDIVISIONS		8
 #define HALF_SKY_SUBDIVISIONS	(SKY_SUBDIVISIONS/2)
@@ -802,11 +803,11 @@ void RB_DrawSun( float scale, shader_t *shader ) {
 	//qglTranslatef (backEnd.viewParms.or.origin[0], backEnd.viewParms.or.origin[1], backEnd.viewParms.or.origin[2]);
 	{
 		// FIXME: this could be a lot cleaner
-		mat4_t translation, modelview;
+		float translation[16] QALIGN(16);
 
 		Mat4Translation( backEnd.viewParms.or.origin, translation );
-		Mat4Multiply( backEnd.viewParms.world.modelMatrix, translation, modelview );
-		GL_SetModelviewMatrix( modelview );
+		MatrixMultiply4x4_SSE( translation, backEnd.viewParms.world.modelMatrix, glState.modelview );
+        MatrixMultiply4x4_SSE( glState.modelview, glState.projection, glState.modelviewProjection);	
 	}
 
 	dist = 	backEnd.viewParms.zFar / 1.75;		// div sqrt(3)
@@ -865,7 +866,7 @@ void RB_StageIteratorSky( void ) {
 
 	// draw the outer skybox
 	if ( tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage ) {
-		mat4_t oldmodelview;
+		float oldmodelview[16];
 		
 		GL_State( 0 );
 		GL_Cull( CT_FRONT_SIDED );
@@ -873,13 +874,13 @@ void RB_StageIteratorSky( void ) {
 
 		{
 			// FIXME: this could be a lot cleaner
-			mat4_t trans, product;
+			float trans[16] QALIGN(16);
+            float product[16] QALIGN(16);
 
 			Mat4Copy( glState.modelview, oldmodelview );
 			Mat4Translation( backEnd.viewParms.or.origin, trans );
-			Mat4Multiply( glState.modelview, trans, product );
+			MatrixMultiply4x4_SSE( trans, glState.modelview, product );
 			GL_SetModelviewMatrix( product );
-
 		}
 
 		DrawSkyBox( tess.shader );

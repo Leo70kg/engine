@@ -700,7 +700,7 @@ void CL_InitCGame( void )
 
 	t1 = Sys_Milliseconds();
 	
-    Com_Printf("...CL_InitCGame()...\n");
+
 	
     // put away the console
 	Con_Close();
@@ -753,6 +753,8 @@ void CL_InitCGame( void )
 
 	// clear anything that got printed
 	Con_ClearNotify ();
+
+    Com_Printf("...CL_InitCGame() Finished...\n");
 }
 
 

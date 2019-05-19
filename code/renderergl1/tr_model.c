@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_models.c -- model loading and caching
 
 #include "tr_local.h"
-
+extern glconfig_t glConfig;
 #define	LL(x) x=LittleLong(x)
 
 static qboolean R_LoadMD3(model_t *mod, int lod, void *buffer, const char *name );
@@ -63,7 +63,7 @@ qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 		else
 			snprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
 
-		ri.R_ReadFile( namebuf, &buf );
+		ri.FS_ReadFile( namebuf, &buf );
 		if(!buf)
 			continue;
 		
@@ -75,7 +75,7 @@ qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 		if (ident == MD3_IDENT)
 			loaded = R_LoadMD3(mod, lod, buf, name);
 		else
-			ri.Printf(PRINT_WARNING,"R_RegisterMD3: unknown fileid for %s\n", name);
+			ri.Printf(PRINT_WARNING, "R_RegisterMD3: unknown fileid for %s\n", name);
 		
 		ri.FS_FreeFile(buf);
 
@@ -120,7 +120,7 @@ qhandle_t R_RegisterMDR(const char *name, model_t *mod)
 	char* buf;
 
 	qboolean loaded = qfalse;
-	int filesize = ri.R_ReadFile(name, &buf);
+	int filesize = ri.FS_ReadFile(name, &buf);
 	if(!buf)
 	{
 		mod->type = MOD_BAD;
@@ -162,7 +162,7 @@ qhandle_t R_RegisterIQM(const char *name, model_t *mod)
 	qboolean loaded = qfalse;
 	int filesize;
 
-	filesize = ri.R_ReadFile(name, &buf);
+	filesize = ri.FS_ReadFile(name, &buf);
 	if(!buf)
 	{
 		mod->type = MOD_BAD;
@@ -329,7 +329,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 				// try again without the extension
 				orgNameFailed = qtrue;
 				orgLoader = i;
-				stripExtension( name, localName, MAX_QPATH );
+				R_StripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{

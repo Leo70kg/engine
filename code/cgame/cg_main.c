@@ -35,8 +35,8 @@ void CG_Init(int serverMessageNum, int serverCommandSequence, int clientNum);
 void CG_Shutdown(void);
 
 
-int realVidWidth;
-int realVidHeight; // leilei - global video hack
+//int realVidWidth;
+//int realVidHeight; // leilei - global video hack
 
 /*
 ================
@@ -2411,11 +2411,11 @@ void CG_Init(int serverMessageNum, int serverCommandSequence, int clientNum) {
 	cgs.screenXScale = cgs.glconfig.vidWidth / 640.0;
 	cgs.screenYScale = cgs.glconfig.vidHeight / 480.0;
 
-	realVidWidth = cgs.glconfig.vidWidth;
-	realVidHeight = cgs.glconfig.vidHeight;
+//	realVidWidth = cgs.glconfig.vidWidth;
+//	realVidHeight = cgs.glconfig.vidHeight;
 
 	// leilei - widescreen correction
-
+/*
 	{
 		float resbias;
 		float rex, rey;
@@ -2444,7 +2444,7 @@ void CG_Init(int serverMessageNum, int serverCommandSequence, int clientNum) {
 		// no wide screen
 		cgs.screenXBias = 0;
 	}
-
+*/
 
 
 	// get the gamestate from the client system
@@ -2461,7 +2461,6 @@ void CG_Init(int serverMessageNum, int serverCommandSequence, int clientNum) {
 
 	CG_ParseServerinfo();
 
-	// load the new map
 	// load the new map
 #ifndef SCRIPTHUD
 	CG_LoadingString("collision map");

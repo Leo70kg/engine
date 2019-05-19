@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_models.c -- model loading and caching
 
 #include "tr_local.h"
+#include "../renderercommon/matrix_multiplication.h"
 
 #define	LL(x) x=LittleLong(x)
 
@@ -80,7 +81,7 @@ asked for again.
 */
 qhandle_t RE_RegisterModel( const char *name ) {
 	model_t		*mod;
-	unsigned	*buf;
+	char	*buf;
 	int			lod;
 	int			ident;
 	qboolean	loaded;
@@ -146,7 +147,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 			strcat( filename, namebuf );
 		}
 
-		ri.R_ReadFile( filename, &buf );
+		ri.FS_ReadFile( filename, &buf );
 		if ( !buf ) {
 			continue;
 		}
@@ -611,8 +612,9 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 	model_t		*model;
 
 	model = R_GetModelByHandle( handle );
-	if ( !model->md3[0] ) {
-		AxisClear( tag->axis );
+	if ( !model->md3[0] )
+    {
+		Mat3x3Identity( tag->axis );
 		VectorClear( tag->origin );
 		return qfalse;
 	}
@@ -620,7 +622,7 @@ int R_LerpTag( orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 	start = R_GetTag( model->md3[0], startFrame, tagName );
 	end = R_GetTag( model->md3[0], endFrame, tagName );
 	if ( !start || !end ) {
-		AxisClear( tag->axis );
+		Mat3x3Identity( tag->axis );
 		VectorClear( tag->origin );
 		return qfalse;
 	}

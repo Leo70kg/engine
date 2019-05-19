@@ -17,6 +17,7 @@
  */
 
 #include "tr_local.h"
+#include "image_loader.h"
 
 typedef struct
 {
@@ -78,7 +79,7 @@ void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height 
 				// try again without the extension
 				orgNameFailed = qtrue;
 				orgLoader = i;
-				stripExtension( name, localName, MAX_QPATH );
+				R_StripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{

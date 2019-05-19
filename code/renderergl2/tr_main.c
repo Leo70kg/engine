@@ -22,12 +22,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_main.c -- main control flow for each frame
 
 #include "tr_local.h"
-
+#include "../renderercommon/matrix_multiplication.h"
 #include <string.h> // memcpy
-
+extern glconfig_t glConfig;
 trGlobals_t		tr;
 
-static float	s_flipMatrix[16] = {
+const static float s_flipMatrix[16] QALIGN(16) = {
 	// convert from our coordinate system (looking down X)
 	// to OpenGL's coordinate system (looking down -Z)
 	0, 0, -1, 0,
@@ -479,7 +479,7 @@ Called by both the front end and the back end
 */
 void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, orientationr_t *or )
 {
-	float	glMatrix[16];
+	float	glMatrix[16] QALIGN(16);
 	vec3_t	delta;
 	float	axisLength;
 
@@ -515,7 +515,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 	glMatrix[15] = 1;
 
 	Mat4Copy(glMatrix, or->transformMatrix);
-	MatrixMultiply4x4( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
+	MatrixMultiply4x4_SSE( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
 
 	// calculate the viewer origin in the model's space
 	// needed for fog, specular, and environment mapping
@@ -547,7 +547,7 @@ Sets up the modelview matrix for a given viewParm
 */
 void R_RotateForViewer (void) 
 {
-	float	viewerMatrix[16];
+	float	viewerMatrix[16] QALIGN(16);
 	vec3_t	origin;
 
 	memset (&tr.or, 0, sizeof(tr.or));
@@ -581,7 +581,7 @@ void R_RotateForViewer (void)
 
 	// convert from our coordinate system (looking down X)
 	// to OpenGL's coordinate system (looking down -Z)
-	MatrixMultiply4x4( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
+	MatrixMultiply4x4_SSE( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
 
 	tr.viewParms.world = tr.or;
 

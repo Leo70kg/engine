@@ -22,12 +22,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_main.c -- main control flow for each frame
 
 #include "tr_local.h"
+#include "../renderercommon/matrix_multiplication.h"
 ///////// externs ///////////
 extern int max_polys;
 extern int max_polyverts;
 extern	backEndData_t *backEndData;	// the second one may not be allocated
 ///////// globals ///////////
-
+extern glconfig_t glConfig;
 trGlobals_t	tr;
 
 refimport_t	ri;
@@ -297,7 +298,7 @@ static void R_RotateForViewer(void)
 
 	// convert from our coordinate system (looking down X)
 	// to OpenGL's coordinate system (looking down -Z)
-	MatrixMultiply4x4( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
+	MatrixMultiply4x4_SSE( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
 
 	tr.viewParms.world = tr.or;
 
@@ -1445,6 +1446,7 @@ void RE_RenderScene( const refdef_t *fd )
 		if ( areaDiff ) {
 			// a door just opened or something
 			tr.refdef.areamaskModified = qtrue;
+            ri.Printf(PRINT_ALL, "areamaskModified = qtrue\n");
 		}
 	}
 
@@ -1609,7 +1611,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 	glMatrix[11] = 0;
 	glMatrix[15] = 1;
 
-	MatrixMultiply4x4( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
+	MatrixMultiply4x4_SSE( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
 
 	// calculate the viewer origin in the model's space
 	// needed for fog, specular, and environment mapping

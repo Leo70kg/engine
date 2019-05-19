@@ -28,10 +28,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qfiles.h"
 #include "../qcommon/qcommon.h"
 #include "../renderercommon/tr_public.h"
-#include "../renderercommon/tr_common.h"
+#include "tr_common.h"
 #include "../renderercommon/iqm.h"
 #include "../renderercommon/qgl.h"
 
+#include "image.h"
 
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
@@ -70,10 +71,10 @@ typedef struct {
 
 
 typedef struct {
-	vec3_t		origin;			// in world coordinates
+    float		modelMatrix[16] QALIGN(16);
+    vec3_t		origin;			// in world coordinates
 	vec3_t		axis[3];		// orientation in world
 	vec3_t		viewOrigin;		// viewParms->or.origin in local coordinates
-	float		modelMatrix[16];
 } orientationr_t;
 
 //===============================================================================
@@ -1065,7 +1066,6 @@ void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int 
 #define	CULL_IN		0		// completely unclipped
 #define	CULL_CLIP	1		// clipped by one or more planes
 #define	CULL_OUT	2		// completely outside the clipping planes
-void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum);
 void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
 void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader, int *fogNum, int *dlightMap );
 void R_RenderView( viewParms_t *parms );
@@ -1393,8 +1393,8 @@ void	RB_CalcWaveColor( const waveForm_t *wf, unsigned char (*dstColors)[4] );
 void	RB_CalcAlphaFromEntity( unsigned char *dstColors );
 void	RB_CalcAlphaFromOneMinusEntity( unsigned char *dstColors );
 void	RB_CalcStretchTexCoords( const waveForm_t *wf, float *texCoords );
-void	RB_CalcColorFromEntity( unsigned char *dstColors );
-void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
+void	RB_CalcColorFromEntity( unsigned char (*dstColors)[4] );
+void	RB_CalcColorFromOneMinusEntity( unsigned char (*dstColors)[4] );
 void	RB_CalcSpecularAlpha( unsigned char *alphas );
 void	RB_CalcDiffuseColor( unsigned char (*colors)[4] );
 

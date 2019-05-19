@@ -19,9 +19,18 @@ along with Foobar; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-#include "tr_local.h"
+#include "tr_globals.h"
+#include "tr_cvar.h"
+#include "ref_import.h"
+#include "tr_light.h"
+#include "tr_Cull.h"
+#include "tr_world.h"
+#include "tr_model.h"
+#include "R_SortDrawSurfs.h"
+#include "srfTriangles_type.h"
+#include "srfSurfaceFace_type.h"
 
-
+extern void R_DlightBmodel( struct bmodel_s * bmodel );
 
 /*
 =================
@@ -31,10 +40,9 @@ Returns true if the grid is completely culled away.
 Also sets the clipped hint bit in tess
 =================
 */
-static qboolean	R_CullTriSurf( srfTriangles_t *cv ) {
-	int 	boxCull;
-
-	boxCull = R_CullLocalBox( cv->bounds );
+static qboolean	R_CullTriSurf( srfTriangles_t *cv )
+{
+	int 	boxCull = R_CullLocalBox( cv->bounds );
 
 	if ( boxCull == CULL_OUT ) {
 		return qtrue;
@@ -58,7 +66,7 @@ static qboolean	R_CullGrid( srfGridMesh_t *cv ) {
 		return qtrue;
 	}
 
-	if ( tr.currentEntityNum != ENTITYNUM_WORLD ) {
+	if ( tr.currentEntityNum != REFENTITYNUM_WORLD ) {
 		sphereCull = R_CullLocalPointAndRadius( cv->localOrigin, cv->meshRadius );
 	} else {
 		sphereCull = R_CullPointAndRadius( cv->localOrigin, cv->meshRadius );
@@ -113,8 +121,6 @@ This will also allow mirrors on both sides of a model without recursion.
 */
 static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 	srfSurfaceFace_t *sface;
-	float			d;
-
 	if ( r_nocull->integer ) {
 		return qfalse;
 	}
@@ -141,7 +147,7 @@ static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 	}
 
 	sface = ( srfSurfaceFace_t * ) surface;
-	d = DotProduct (tr.or.viewOrigin, sface->plane.normal);
+	float d = DotProduct (tr.or.viewOrigin, sface->plane.normal);
 
 	// don't cull exactly on the plane, because there are levels of rounding
 	// through the BSP, ICD, and hardware that may cause pixel gaps if an
@@ -181,7 +187,7 @@ static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 		tr.pc.c_dlightSurfacesCulled++;
 	}
 
-	face->dlightBits[ tr.smpFrame ] = dlightBits;
+	face->dlightBits = dlightBits;
 	return dlightBits;
 }
 
@@ -209,14 +215,14 @@ static int R_DlightGrid( srfGridMesh_t *grid, int dlightBits ) {
 		tr.pc.c_dlightSurfacesCulled++;
 	}
 
-	grid->dlightBits[ tr.smpFrame ] = dlightBits;
+	grid->dlightBits = dlightBits;
 	return dlightBits;
 }
 
 
 static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
 	// FIXME: more dlight culling to trisurfs...
-	surf->dlightBits[ tr.smpFrame ] = dlightBits;
+	surf->dlightBits = dlightBits;
 	return dlightBits;
 #if 0
 	int			i;
@@ -242,7 +248,7 @@ static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
 		tr.pc.c_dlightSurfacesCulled++;
 	}
 
-	grid->dlightBits[ tr.smpFrame ] = dlightBits;
+	grid->dlightBits = dlightBits;
 	return dlightBits;
 #endif
 }
@@ -281,7 +287,8 @@ static int R_DlightSurface( msurface_t *surf, int dlightBits ) {
 R_AddWorldSurface
 ======================
 */
-static void R_AddWorldSurface( msurface_t *surf, int dlightBits ) {
+static void R_AddWorldSurface( msurface_t *surf, int dlightBits )
+{
 	if ( surf->viewCount == tr.viewCount ) {
 		return;		// already in this view
 	}
@@ -353,7 +360,8 @@ void R_AddBrushModelSurfaces ( trRefEntity_t *ent ) {
 R_RecursiveWorldNode
 ================
 */
-static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits ) {
+static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits )
+{
 
 	do {
 		int			newDlights[2];
@@ -537,12 +545,8 @@ static const byte *R_ClusterPVS (int cluster) {
 	return tr.world->vis + cluster * tr.world->clusterBytes;
 }
 
-/*
-=================
-R_inPVS
-=================
-*/
-qboolean R_inPVS( const vec3_t p1, const vec3_t p2 ) {
+
+qboolean RE_inPVS( const vec3_t p1, const vec3_t p2 ) {
 	mnode_t *leaf;
 	byte	*vis;
 
@@ -564,7 +568,8 @@ Mark the leaves and nodes that are in the PVS for the current
 cluster
 ===============
 */
-static void R_MarkLeaves (void) {
+static void R_MarkLeaves (void)
+{
 	const byte	*vis;
 	mnode_t	*leaf, *parent;
 	int		i;
@@ -584,8 +589,8 @@ static void R_MarkLeaves (void) {
 	// hasn't changed, we don't need to mark everything again
 
 	// if r_showcluster was just turned on, remark everything 
-	if ( tr.viewCluster == cluster && !tr.refdef.areamaskModified 
-		&& !r_showcluster->modified ) {
+	if ( tr.viewCluster == cluster && !tr.refdef.AreamaskModified && !r_showcluster->modified )
+    {
 		return;
 	}
 
@@ -622,7 +627,7 @@ static void R_MarkLeaves (void) {
 		}
 
 		// check for door connection
-		if ( (tr.refdef.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
+		if ( (tr.refdef.rd.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
 			continue;		// not visible
 		}
 
@@ -642,24 +647,24 @@ static void R_MarkLeaves (void) {
 R_AddWorldSurfaces
 =============
 */
-void R_AddWorldSurfaces (void)
+void R_AddWorldSurfaces (viewParms_t * const pViewParams)
 {
 	if ( !r_drawworld->integer ) {
 		return;
 	}
 
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
+	if ( tr.refdef.rd.rdflags & RDF_NOWORLDMODEL ) {
 		return;
 	}
 
-	tr.currentEntityNum = ENTITYNUM_WORLD;
+	tr.currentEntityNum = REFENTITYNUM_WORLD;
 	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_ENTITYNUM_SHIFT;
 
 	// determine which leaves are in the PVS / areamask
 	R_MarkLeaves ();
 
 	// clear out the visible min/max
-	ClearBounds( tr.viewParms.visBounds[0], tr.viewParms.visBounds[1] );
+	ClearBounds( pViewParams->visBounds[0], pViewParams->visBounds[1] );
 
 	// perform frustum culling and add all the potentially visible surfaces
 	if ( tr.refdef.num_dlights > 32 ) {
@@ -667,3 +672,25 @@ void R_AddWorldSurfaces (void)
 	}
 	R_RecursiveWorldNode( tr.world->nodes, 15, ( 1 << tr.refdef.num_dlights ) - 1 );
 }
+
+
+void R_GetWorldBaseName(char* checkname)
+{
+    sprintf( checkname, "levelshots/%s.tga", tr.world->baseName );
+}
+
+void SetTessFogColor(unsigned char (*pcolor)[4], int fnum, int nVerts)
+{
+    fog_t* fog = tr.world->fogs + fnum;
+
+    uint32_t i; 
+    for (i = 0; i < nVerts; i++)
+    {
+        pcolor[i][0] = fog->colorRGBA[0];
+        pcolor[i][1] = fog->colorRGBA[1];
+        pcolor[i][2] = fog->colorRGBA[2];
+        pcolor[i][3] = fog->colorRGBA[3];
+    }
+}
+
+

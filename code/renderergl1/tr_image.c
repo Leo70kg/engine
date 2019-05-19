@@ -21,9 +21,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // tr_image.c
 #include "tr_local.h"
-
+#include "image_loader.h"
 extern void (APIENTRYP qglActiveTextureARB) (GLenum texture);
-
+extern glconfig_t glConfig;
 
 static unsigned char s_intensitytable[256];
 static unsigned char s_gammatable[256];
@@ -748,7 +748,7 @@ static void R_LoadImage(const char *name, unsigned char **pic, int *width, int *
 				// try again without the extension
 				orgNameFailed = qtrue;
 				orgLoader = i;
-				stripExtension( name, localName, MAX_QPATH );
+				R_StripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{
@@ -1536,7 +1536,7 @@ qhandle_t RE_RegisterSkin( const char *name ) {
 	}
 
 	// load and parse the skin file
-    ri.R_ReadFile(name, &text);
+    ri.FS_ReadFile(name, &text);
 	if ( !text ) {
 		return 0;
 	}

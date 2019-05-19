@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "tr_local.h"
-
+extern glconfig_t glConfig;
 int			r_firstSceneDrawSurf;
 
 int			r_numdlights;
@@ -483,9 +483,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 		}
 		else
 		{
-			Mat4Zero(tr.refdef.sunShadowMvp[0]);
-			Mat4Zero(tr.refdef.sunShadowMvp[1]);
-			Mat4Zero(tr.refdef.sunShadowMvp[2]);
+            memset(tr.refdef.sunShadowMvp, 0, 64 * 3);
 		}
 
 		// only rerender last cascade if sun has changed position

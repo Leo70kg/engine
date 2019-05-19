@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #include "tr_local.h"
-
+extern glconfig_t glConfig;
 backEndData_t* backEndData;
 
 /*
@@ -151,16 +151,9 @@ void *R_GetCommandBuffer( int bytes ) {
 }
 
 
-/*
-=============
-R_AddDrawSurfCmd
-
-=============
-*/
-void	R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs ) {
-	drawSurfsCommand_t	*cmd;
-
-	cmd = R_GetCommandBuffer( sizeof( *cmd ) );
+void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs )
+{
+	drawSurfsCommand_t	*cmd = R_GetCommandBuffer( sizeof( *cmd ) );
 	if ( !cmd ) {
 		return;
 	}
@@ -318,9 +311,6 @@ void RE_BeginFrame(void) {
 		if ((err = qglGetError()) != GL_NO_ERROR)
 			ri.Error(ERR_FATAL, "RE_BeginFrame() - glGetError() failed (0x%x)!", err);
 	}
-
-	
- 
 	
 }
 

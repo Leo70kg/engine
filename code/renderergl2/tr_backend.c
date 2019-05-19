@@ -22,7 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "tr_fbo.h"
 #include "tr_dsa.h"
-
+#include "../renderercommon/matrix_multiplication.h"
+extern glconfig_t glConfig;
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
 
@@ -267,17 +268,24 @@ void GL_State( unsigned long stateBits )
 }
 
 
-void GL_SetProjectionMatrix(mat4_t matrix)
+void GL_SetProjectionMatrix(float matrix[16])
 {
 	Mat4Copy(matrix, glState.projection);
-	Mat4Multiply(glState.projection, glState.modelview, glState.modelviewProjection);	
+	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);	
 }
 
 
-void GL_SetModelviewMatrix(mat4_t matrix)
+void GL_SetModelviewMatrix(float matrix[16])
 {
 	Mat4Copy(matrix, glState.modelview);
-	Mat4Multiply(glState.projection, glState.modelview, glState.modelviewProjection);	
+	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);	
+}
+
+void GL_SetMvpMatrix(float MV[16], float P[16])
+{
+	Mat4Copy(MV, glState.modelview);
+	Mat4Copy(P, glState.projection);
+	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);
 }
 
 
@@ -581,6 +589,20 @@ RENDER BACK END FUNCTIONS
 ============================================================================
 */
 
+
+void Mat4Ortho( float left, float right, float bottom, float top, float znear, float zfar, float out[16] )
+{
+    float x = 1.0f/ (right - left);
+    float y = 1.0f/ (top - bottom);
+    float z = 1.0f/ (zfar - znear);
+
+	out[0] = 2.0f * x;  out[4] = 0.0f;      out[ 8] = 0.0f;     out[12] = -(right + left) * x;
+	out[1] = 0.0f;      out[5] = 2.0f * y;  out[ 9] = 0.0f;     out[13] = -(top + bottom) * y;
+	out[2] = 0.0f;      out[6] = 0.0f;      out[10] = 2.0f * z; out[14] = -(zfar + znear) * z;
+	out[3] = 0.0f;      out[7] = 0.0f;      out[11] = 0.0f;     out[15] = 1.0f;
+}
+
+
 /*
 ================
 RB_SetGL2D
@@ -588,7 +610,6 @@ RB_SetGL2D
 ================
 */
 void	RB_SetGL2D (void) {
-	mat4_t matrix;
 	int width, height;
 
 	if (backEnd.projection2D && backEnd.last2DFBO == glState.currentFBO)
@@ -612,10 +633,10 @@ void	RB_SetGL2D (void) {
 	qglViewport( 0, 0, width, height );
 	qglScissor( 0, 0, width, height );
 
-	Mat4Ortho(0, width, height, 0, 0, 1, matrix);
-	GL_SetProjectionMatrix(matrix);
-	Mat4Identity(matrix);
-	GL_SetModelviewMatrix(matrix);
+    Mat4Identity(glState.modelview);
+	Mat4Ortho(0, width, height, 0, 0, 1, glState.projection);
+	MatrixMultiply4x4_SSE(glState.modelview, glState.projection, glState.modelviewProjection);	
+
 
 	GL_State( GLS_DEPTHTEST_DISABLE |
 			  GLS_SRCBLEND_SRC_ALPHA |
@@ -754,7 +775,6 @@ RB_StretchPic
 */
 const void *RB_StretchPic ( const void *data )
 {
-	int	numVerts, numIndexes;
 
     const stretchPicCommand_t* cmd = (const stretchPicCommand_t *)data;
 
@@ -781,57 +801,84 @@ const void *RB_StretchPic ( const void *data )
     }
 
 
-	numVerts = tess.numVertexes;
-	numIndexes = tess.numIndexes;
+	const unsigned int n0 = tess.numVertexes;
+	const unsigned int n1 = n0 + 1;
+	const unsigned int n2 = n0 + 2;
+	const unsigned int n3 = n0 + 3;
+
+	{
+		unsigned int numIndexes = tess.numIndexes;
+
+		tess.indexes[ numIndexes ] = n3;
+		tess.indexes[ numIndexes + 1 ] = n0;
+		tess.indexes[ numIndexes + 2 ] = n2;
+		tess.indexes[ numIndexes + 3 ] = n2;
+		tess.indexes[ numIndexes + 4 ] = n0;
+		tess.indexes[ numIndexes + 5 ] = n1;
+	}
+
+	{
+		const uint16_t r = backEnd.color2D[0] * 257;
+		const uint16_t g = backEnd.color2D[1] * 257;
+		const uint16_t b = backEnd.color2D[2] * 257;
+		const uint16_t a = backEnd.color2D[3] * 257;
+
+		tess.vertexColors[ n0 ][ 0 ] = r;
+		tess.vertexColors[ n0 ][ 1 ] = g;
+		tess.vertexColors[ n0 ][ 2 ] = b;
+		tess.vertexColors[ n0 ][ 3 ] = a;
+
+		tess.vertexColors[ n1 ][ 0 ] = r;
+		tess.vertexColors[ n1 ][ 1 ] = g;
+		tess.vertexColors[ n1 ][ 2 ] = b;
+		tess.vertexColors[ n1 ][ 3 ] = a;
+
+		tess.vertexColors[ n2 ][ 0 ] = r;
+		tess.vertexColors[ n2 ][ 1 ] = g;
+		tess.vertexColors[ n2 ][ 2 ] = b;
+		tess.vertexColors[ n2 ][ 3 ] = a;
+
+		tess.vertexColors[ n3 ][ 0 ] = r;
+		tess.vertexColors[ n3 ][ 1 ] = g;
+		tess.vertexColors[ n3 ][ 2 ] = b;
+		tess.vertexColors[ n3 ][ 3 ] = a;
+	}
+
+
+	{
+		tess.xyz[ n0 ][0] = cmd->x;
+		tess.xyz[ n0 ][1] = cmd->y;
+		tess.xyz[ n0 ][2] = 0;
+
+		tess.xyz[ n1 ][0] = cmd->x + cmd->w;
+		tess.xyz[ n1 ][1] = cmd->y;
+		tess.xyz[ n1 ][2] = 0;
+
+		tess.xyz[ n2 ][0] = cmd->x + cmd->w;
+		tess.xyz[ n2 ][1] = cmd->y + cmd->h;
+		tess.xyz[ n2 ][2] = 0;
+
+		tess.xyz[ n3 ][0] = cmd->x;
+		tess.xyz[ n3 ][1] = cmd->y + cmd->h;
+		tess.xyz[ n3 ][2] = 0;
+	}
+
+	{
+		tess.texCoords[ n0 ][0] = cmd->s1;
+		tess.texCoords[ n0 ][1] = cmd->t1;
+
+		tess.texCoords[ n1 ][0] = cmd->s2;
+		tess.texCoords[ n1 ][1] = cmd->t1;
+
+		tess.texCoords[ n2 ][0] = cmd->s2;
+		tess.texCoords[ n2 ][1] = cmd->t2;
+
+		tess.texCoords[ n3 ][0] = cmd->s1;
+		tess.texCoords[ n3 ][1] = cmd->t2;
+	}
 
 	tess.numVertexes += 4;
 	tess.numIndexes += 6;
-
-	tess.indexes[ numIndexes ] = numVerts + 3;
-	tess.indexes[ numIndexes + 1 ] = numVerts + 0;
-	tess.indexes[ numIndexes + 2 ] = numVerts + 2;
-	tess.indexes[ numIndexes + 3 ] = numVerts + 2;
-	tess.indexes[ numIndexes + 4 ] = numVerts + 0;
-	tess.indexes[ numIndexes + 5 ] = numVerts + 1;
-
-	{
-		uint16_t color[4];
-
-		VectorScale4(backEnd.color2D, 257, color);
-
-		VectorCopy4(color, tess.color[ numVerts ]);
-		VectorCopy4(color, tess.color[ numVerts + 1]);
-		VectorCopy4(color, tess.color[ numVerts + 2]);
-		VectorCopy4(color, tess.color[ numVerts + 3 ]);
-	}
-
-	tess.xyz[ numVerts ][0] = cmd->x;
-	tess.xyz[ numVerts ][1] = cmd->y;
-	tess.xyz[ numVerts ][2] = 0;
-
-	tess.texCoords[ numVerts ][0] = cmd->s1;
-	tess.texCoords[ numVerts ][1] = cmd->t1;
-
-	tess.xyz[ numVerts + 1 ][0] = cmd->x + cmd->w;
-	tess.xyz[ numVerts + 1 ][1] = cmd->y;
-	tess.xyz[ numVerts + 1 ][2] = 0;
-
-	tess.texCoords[ numVerts + 1 ][0] = cmd->s2;
-	tess.texCoords[ numVerts + 1 ][1] = cmd->t1;
-
-	tess.xyz[ numVerts + 2 ][0] = cmd->x + cmd->w;
-	tess.xyz[ numVerts + 2 ][1] = cmd->y + cmd->h;
-	tess.xyz[ numVerts + 2 ][2] = 0;
-
-	tess.texCoords[ numVerts + 2 ][0] = cmd->s2;
-	tess.texCoords[ numVerts + 2 ][1] = cmd->t2;
-
-	tess.xyz[ numVerts + 3 ][0] = cmd->x;
-	tess.xyz[ numVerts + 3 ][1] = cmd->y + cmd->h;
-	tess.xyz[ numVerts + 3 ][2] = 0;
-
-	tess.texCoords[ numVerts + 3 ][0] = cmd->s1;
-	tess.texCoords[ numVerts + 3 ][1] = cmd->t2;
 
 	return (const void *)(cmd + 1);
 }
@@ -1434,7 +1481,8 @@ const void *RB_PostProcess(const void *data)
 		srcFbo = tr.msaaResolveFbo;
 	}
 
-	ivec4_t srcBox, dstBox;
+	int srcBox[4];
+    int dstBox[4];
 
 	dstBox[0] = backEnd.viewParms.viewportX;
 	dstBox[1] = backEnd.viewParms.viewportY;
@@ -1543,7 +1591,7 @@ const void *RB_ExportCubemaps(const void *data)
 
 			if (cubemap->name[0])
 			{
-				stripExtension(cubemap->name, filename, MAX_QPATH);
+				R_StripExtension(cubemap->name, filename, MAX_QPATH);
 				Q_strcat(filename, sizeof(filename), ".dds");
 			}
 			else

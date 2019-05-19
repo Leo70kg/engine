@@ -22,13 +22,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_main.c -- main control flow for each frame
 
 #include "tr_local.h"
-
+#include "../renderercommon/matrix_multiplication.h"
 #include <string.h> // memcpy
 
-trGlobals_t		tr;
+trGlobals_t	tr;
 refimport_t	ri;
-
-
 
 
 static float	s_flipMatrix[16] = {
@@ -273,16 +271,17 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
 	glMatrix[0] = or->axis[0][0];
 	glMatrix[4] = or->axis[1][0];
 	glMatrix[8] = or->axis[2][0];
-	glMatrix[12] = or->origin[0];
 
 	glMatrix[1] = or->axis[0][1];
 	glMatrix[5] = or->axis[1][1];
 	glMatrix[9] = or->axis[2][1];
-	glMatrix[13] = or->origin[1];
 
 	glMatrix[2] = or->axis[0][2];
 	glMatrix[6] = or->axis[1][2];
 	glMatrix[10] = or->axis[2][2];
+
+	glMatrix[12] = or->origin[0];
+	glMatrix[13] = or->origin[1];
 	glMatrix[14] = or->origin[2];
 
 	glMatrix[3] = 0;
@@ -290,7 +289,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms,
 	glMatrix[11] = 0;
 	glMatrix[15] = 1;
 
-	MatrixMultiply4x4( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
+	MatrixMultiply4x4_SSE( glMatrix, viewParms->world.modelMatrix, or->modelMatrix );
 
 	// calculate the viewer origin in the model's space
 	// needed for fog, specular, and environment mapping
@@ -356,7 +355,7 @@ static void R_RotateForViewer (void)
 
 	// convert from our coordinate system (looking down X)
 	// to OpenGL's coordinate system (looking down -Z)
-	MatrixMultiply4x4( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
+	MatrixMultiply4x4_SSE( viewerMatrix, s_flipMatrix, tr.or.modelMatrix );
 
 	tr.viewParms.world = tr.or;
 
@@ -478,7 +477,7 @@ void R_SetupFrustum (viewParms_t *dest, float xmin, float xmax, float ymax, floa
 R_SetupProjection
 ===============
 */
-void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum)
+void R_SetupProjection(viewParms_t *dest, float zProj)
 {
 	float	xmin, xmax, ymin, ymax;
 	float	width, height;
@@ -512,10 +511,11 @@ void R_SetupProjection(viewParms_t *dest, float zProj, qboolean computeFrustum)
 	dest->projectionMatrix[7] = 0;
 	dest->projectionMatrix[11] = -1;
 	dest->projectionMatrix[15] = 0;
+
+    // Now that we have all the data for the projection matrix we can also setup the view frustum.
+
+	R_SetupFrustum(dest, xmin, xmax, ymax, zProj);
 	
-	// Now that we have all the data for the projection matrix we can also setup the view frustum.
-	if(computeFrustum)
-		R_SetupFrustum(dest, xmin, xmax, ymax, zProj);
 }
 
 /*
@@ -627,7 +627,8 @@ Returns qtrue if it should be mirrored
 */
 qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum, 
 							 orientation_t *surface, orientation_t *camera,
-							 vec3_t pvsOrigin, qboolean *mirror ) {
+							 vec3_t pvsOrigin, qboolean *mirror )
+{
 	int			i;
 	cplane_t	originalPlane, plane;
 	trRefEntity_t	*e;
@@ -773,7 +774,7 @@ static qboolean IsMirror( const drawSurf_t *drawSurf, int entityNum )
 
 		// translate the original plane
 		originalPlane.dist = originalPlane.dist + DotProduct( originalPlane.normal, tr.or.origin );
-	} 
+	}
 
 	// locate the portal entity closest to this plane.
 	// origin will be the origin of the portal, origin2 will be
@@ -881,6 +882,7 @@ static qboolean SurfIsOffscreen( const drawSurf_t *drawSurf, vec4_t clipDest[128
 			numTriangles--;
 		}
 	}
+
 	if ( !numTriangles )
 	{
 		return qtrue;
@@ -908,7 +910,8 @@ R_MirrorViewBySurface
 Returns qtrue if another view has been rendered
 ========================
 */
-qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum) {
+qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum)
+{
 	vec4_t			clipDest[128];
 	viewParms_t		newParms;
 	viewParms_t		oldParms;
@@ -1138,12 +1141,9 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	R_AddDrawSurfCmd( drawSurfs, numDrawSurfs );
 }
 
-/*
-=============
-R_AddEntitySurfaces
-=============
-*/
-void R_AddEntitySurfaces (void) {
+
+void R_AddEntitySurfaces (void)
+{
 	trRefEntity_t	*ent;
 	shader_t		*shader;
 
@@ -1153,7 +1153,8 @@ void R_AddEntitySurfaces (void) {
 
 	for ( tr.currentEntityNum = 0; 
 	      tr.currentEntityNum < tr.refdef.num_entities; 
-		  tr.currentEntityNum++ ) {
+		  tr.currentEntityNum++ )
+	{
 		ent = tr.currentEntity = &tr.refdef.entities[tr.currentEntityNum];
 
 		ent->needDlights = qfalse;
@@ -1231,38 +1232,13 @@ void R_AddEntitySurfaces (void) {
 
 
 /*
-====================
-R_GenerateDrawSurfs
-====================
-*/
-void R_GenerateDrawSurfs( void ) {
-	R_AddWorldSurfaces ();
-
-	R_AddPolygonSurfaces();
-
-	// set the projection matrix with the minimum zfar
-	// now that we have the world bounded
-	// this needs to be done before entities are
-	// added, because they use the projection
-	// matrix for lod calculation
-
-	// dynamically compute far clip plane distance
-	R_SetFarClip();
-
-	// we know the size of the clipping volume. Now set the rest of the projection matrix.
-	R_SetupProjectionZ (&tr.viewParms);
-
-	R_AddEntitySurfaces ();
-}
-
-/*
 ================
 R_DebugPolygon
 ================
 */
-void R_DebugPolygon( int color, int numPoints, float *points ) {
-	int		i;
-
+void R_DebugPolygon( int color, int numPoints, float *points )
+{
+	int i = 0 ;
 	GL_State( GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE );
 
 	// draw solid shade
@@ -1339,10 +1315,26 @@ void R_RenderView (viewParms_t *parms)
 	// set viewParms.world
 	R_RotateForViewer ();
 
-	R_SetupProjection(&tr.viewParms, r_zproj->value, qtrue);
+	R_SetupProjection(&tr.viewParms, r_zproj->value);
 
-	R_GenerateDrawSurfs();
+	// R_GenerateDrawSurfs();
+	R_AddWorldSurfaces ();
 
+	R_AddPolygonSurfaces();
+
+	// set the projection matrix with the minimum zfar
+	// now that we have the world bounded
+	// this needs to be done before entities are
+	// added, because they use the projection
+	// matrix for lod calculation
+
+	// dynamically compute far clip plane distance
+	R_SetFarClip();
+
+	// we know the size of the clipping volume. Now set the rest of the projection matrix.
+	R_SetupProjectionZ (&tr.viewParms);
+
+	R_AddEntitySurfaces ();
 	// if we overflowed MAX_DRAWSURFS, the drawsurfs
 	// wrapped around in the buffer and we will be missing
 	// the first surfaces, not the last ones

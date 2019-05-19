@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set your VULKAN_SDK location  before running
+# Set your VULKAN_SDK location before running
 VULKAN_SDK=~/vulkan/1.1.82.0/x86_64/
 if [[ ! -x "./bintoc" ]]
 then
@@ -20,5 +20,3 @@ find -type f -name "*.vspv" | \
 
 find -type f -name "*.fspv" | \
 	while read f; do ./bintoc ${f} `basename ${f%.*}`_frag_spv > ${f%.*}_frag.c; done
-
-

@@ -1,37 +1,40 @@
 #ifndef VK_IMAGE_H_
 #define VK_IMAGE_H_
 
-struct Image_Upload_Data
-{
-	unsigned char* buffer;
-	int buffer_size;
-	int mip_levels;
-	int base_level_width;
-	int base_level_height;
-};
+#include "tr_image.h"
 
-void generate_image_upload_data(struct Image_Upload_Data* upload_data, unsigned char* data,
-        int width, int height, qboolean mipmap, qboolean picmip);
+// work around, will be removed in the future
 
+#ifndef GL_REPEAT
+#define GL_REPEAT				0x2901
+#endif
 
-void record_image_layout_transition(VkCommandBuffer command_buffer, VkImage image, VkImageAspectFlags image_aspect_flags,
-	VkAccessFlags src_access_flags, VkImageLayout old_layout, VkAccessFlags dst_access_flags, VkImageLayout new_layout);
+#ifndef GL_CLAMP
+#define GL_CLAMP				0x2900
+#endif
+
+uint32_t find_memory_type(uint32_t memory_type_bits, VkMemoryPropertyFlags properties);
 
 
-void qDestroyImage(void);
+void vk_destroyImageRes(void);
 
-image_t* R_FindImageFile(const char *name, qboolean mipmap,	qboolean allowPicmip, int glWrapClampMode);
-image_t *R_CreateImage( const char *name, unsigned char *pic, int width, int height,
-						qboolean mipmap, qboolean allowPicmip, int glWrapClampMode );
+image_t* R_FindImageFile(const char *name, VkBool32 mipmap,	VkBool32 allowPicmip, int glWrapClampMode);
 
+image_t* R_CreateImage( const char *name, unsigned char* pic, uint32_t width, uint32_t height,
+						VkBool32 mipmap, VkBool32 allowPicmip, int glWrapClampMode);
 
+void vk_createBufferResource(uint32_t Size, VkBufferUsageFlags Usage, VkBuffer* pBuf, VkDeviceMemory* pDevMem);
 
-void R_LoadImage(const char *name, unsigned char **pic, int *width, int *height );
-void R_LoadImage2(const char *name, unsigned char **pic, int *width, int *height );
-
-
-void R_CreateBuiltinImages(void);
+void R_LoadImage(const char *name, unsigned char **pic, uint32_t* width, uint32_t* height );
 
 
-VkDescriptorSet* getCurDescriptorSetsPtr(void);
+void R_InitImages( void );
+
+void gpuMemUsageInfo_f(void);
+
+
+// TODO ; impl this
+// void R_ImageList_f( void );
+void printImageHashTable_f(void);
+
 #endif

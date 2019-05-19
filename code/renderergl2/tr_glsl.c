@@ -23,7 +23,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 #include "tr_dsa.h"
-
+#include "../renderercommon/matrix_multiplication.h"
+extern glconfig_t glConfig;
 extern const char *fallbackShader_bokeh_vp;
 extern const char *fallbackShader_bokeh_fp;
 extern const char *fallbackShader_calclevels4x_vp;
@@ -407,7 +408,7 @@ static int GLSL_LoadGPUShaderText(const char *name, const char *fallback, GLenum
  
 	if (fallback)
     {
-		ri.Printf(PRINT_ALL, "...loading built-in '%s'\n", filename);
+		//ri.Printf(PRINT_ALL, "...loading built-in '%s'\n", filename);
 		shaderText = fallback;
 		size = strlen(shaderText);
 	}
@@ -541,8 +542,8 @@ static int GLSL_InitGPUShader(shaderProgram_t * program, const char *name,
 	int attribs, qboolean fragmentShader, const GLchar *extra, qboolean addHeader,
 	const char *fallback_vp, const char *fallback_fp)
 {
-	char vpCode[32000];
-	char fpCode[32000];
+	char vpCode[16000];
+	char fpCode[16000];
 	char *postHeader;
 	int size;
 	int result;
@@ -551,7 +552,7 @@ static int GLSL_InitGPUShader(shaderProgram_t * program, const char *name,
 	if (addHeader)
 	{
 		GLSL_GetShaderHeader(GL_VERTEX_SHADER, extra, vpCode, size);
-		ri.Printf( PRINT_WARNING, "%ld\n", strlen(vpCode));
+		//ri.Printf( PRINT_WARNING, "%ld\n", strlen(vpCode));
 		postHeader = &vpCode[strlen(vpCode)];
 		size -= strlen(vpCode);
 	}
@@ -790,7 +791,8 @@ void GLSL_SetUniformFloat5(shaderProgram_t *program, int uniformNum, const vec5_
 	qglProgramUniform1fvEXT(program->program, uniforms[uniformNum], 5, v);
 }
 
-void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const mat4_t matrix)
+
+void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const float matrix[16])
 {
 	GLint *uniforms = program->uniforms;
 	vec_t *compare = (float *)(program->uniformBuffer + program->uniformBufferOffsets[uniformNum]);
@@ -804,15 +806,17 @@ void GLSL_SetUniformMat4(shaderProgram_t *program, int uniformNum, const mat4_t 
 		return;
 	}
 
-	if (Mat4Compare(matrix, compare))
+
+	if( matrix[ 0] != compare[ 0] || matrix[ 4] != compare[ 4] || matrix[ 8] != compare[ 8] || matrix[12] != compare[12] ||
+        matrix[ 1] != compare[ 1] || matrix[ 5] != compare[ 5] || matrix[ 9] != compare[ 9] || matrix[13] != compare[13] ||
+		matrix[ 2] != compare[ 2] || matrix[ 6] != compare[ 6] || matrix[10] != compare[10] || matrix[14] != compare[14] ||
+		matrix[ 3] != compare[ 3] || matrix[ 7] != compare[ 7] || matrix[11] != compare[11] || matrix[15] != compare[15] )
 	{
-		return;
+		Mat4Copy(matrix, compare);
+        qglProgramUniformMatrix4fvEXT(program->program, uniforms[uniformNum], 1, GL_FALSE, matrix);
 	}
-
-	Mat4Copy(matrix, compare);
-
-	qglProgramUniformMatrix4fvEXT(program->program, uniforms[uniformNum], 1, GL_FALSE, matrix);
 }
+
 
 void GLSL_DeleteGPUShader(shaderProgram_t *program)
 {

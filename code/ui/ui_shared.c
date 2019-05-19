@@ -704,12 +704,12 @@ void Window_Paint(Window *w, float fadeAmount, float fadeClamp, float fadeCycle)
 
 }
 //extern vmCvar_t  ui_leidebug;
-extern int realVidWidth;
-extern int realVidHeight;
+//extern int realVidWidth;
+//extern int realVidHeight;
 
 // leilei - widescreen adjust
 // no KM code was used in the end as that applied to renderer
-
+/*
 void Item_SetScreenCoords(itemDef_t *item, float x, float y) {
 
 	float resbias;
@@ -790,6 +790,28 @@ void Item_SetScreenCoords(itemDef_t *item, float x, float y) {
 	item->textRect.w = 0;
 	item->textRect.h = 0;
 }
+*/
+
+void Item_SetScreenCoords(itemDef_t *item, float x, float y) {
+  
+  if (item == NULL) {
+    return;
+  }
+
+  if (item->window.border != 0) {
+    x += item->window.borderSize;
+    y += item->window.borderSize;
+  }
+
+  item->window.rect.x = x + item->window.rectClient.x;
+  item->window.rect.y = y + item->window.rectClient.y;
+  item->window.rect.w = item->window.rectClient.w;
+  item->window.rect.h = item->window.rectClient.h;
+
+  // force the text rects to recompute
+  item->textRect.w = 0;
+  item->textRect.h = 0;
+}
 
 // FIXME: consolidate this with nearby stuff
 
@@ -814,6 +836,7 @@ void Item_UpdatePosition(itemDef_t *item) {
 	Item_SetScreenCoords(item, x, y);
 
 }
+
 
 // menus
 

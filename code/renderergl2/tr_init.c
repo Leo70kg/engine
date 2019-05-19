@@ -1515,9 +1515,9 @@ void GfxInfo_f( void )
 	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_IMAGE_UNITS: %d\n", glConfig.numTextureUnits );
 	ri.Printf( PRINT_ALL, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
 	ri.Printf( PRINT_ALL, "MODE: %d x %d hz:", glConfig.vidWidth, glConfig.vidHeight);
-	if ( glConfig.refresh_rate )
+	if ( glConfig.displayFrequency )
 	{
-		ri.Printf( PRINT_ALL, "%d\n", glConfig.refresh_rate );
+		ri.Printf( PRINT_ALL, "%d\n", glConfig.displayFrequency );
 	}
 	else
 	{
@@ -2051,3 +2051,33 @@ void RE_BeginRegistration(glconfig_t *glconfigOut)
 
 	tr.registered = qtrue;
 }
+
+#ifdef USE_RENDERER_DLOPEN
+
+void QDECL Com_Printf( const char *msg, ... )
+{
+	va_list         argptr;
+	char            text[1024];
+
+	va_start(argptr, msg);
+	Q_vsnprintf(text, sizeof(text), msg, argptr);
+	va_end(argptr);
+
+	ri.Printf(PRINT_ALL, "%s", text);
+}
+
+void QDECL Com_Error( int level, const char *error, ... )
+{
+	va_list         argptr;
+	char            text[1024];
+
+	va_start(argptr, error);
+	Q_vsnprintf(text, sizeof(text), error, argptr);
+	va_end(argptr);
+
+	ri.Error(level, "%s", text);
+}
+
+#endif
+
+

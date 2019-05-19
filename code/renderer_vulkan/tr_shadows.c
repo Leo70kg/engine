@@ -19,10 +19,16 @@ along with Foobar; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-#include "tr_local.h"
-#include "mvp_matrix.h"
+#include "tr_globals.h"
 #include "vk_shade_geometry.h"
-#include "Vk_Instance.h"
+#include "vk_instance.h"
+#include "vk_pipelines.h"
+#include "vk_image.h"
+#include "tr_cvar.h"
+#include "tr_backend.h"
+
+#include "R_ShaderCommands.h"
+// tess
 
 /*
 
@@ -59,6 +65,7 @@ static void R_AddEdgeDef( int i1, int i2, int facing ) {
 
 	numEdgeDefs[ i1 ]++;
 }
+
 
 static void R_ExtrudeShadowEdges( void ) {
 	int		i;
@@ -105,7 +112,7 @@ static void R_ExtrudeShadowEdges( void ) {
 
 
 // VULKAN
-static void R_Vk_Dx_RenderShadowEdges(VkPipeline vk_pipeline)
+static void vk_renderShadowEdges(VkPipeline vk_pipeline)
 {
 
 	int i = 0;
@@ -132,12 +139,16 @@ static void R_Vk_Dx_RenderShadowEdges(VkPipeline vk_pipeline)
 
 		for (k = 0; k < tess.numVertexes; k++)
         {
-			VectorSet(tess.svars.colors[k], 50, 50, 50);
+			tess.svars.colors[k][0] = 50;
+            tess.svars.colors[k][1] = 50;
+			tess.svars.colors[k][2] = 50;
 			tess.svars.colors[k][3] = 255;
 		}
+        
+        vk_UploadXYZI(tess.xyz, tess.numVertexes, tess.indexes, tess.numIndexes);
+        updateMVP(backEnd.viewParms.isPortal, backEnd.projection2D, getptr_modelview_matrix());
 
-        vk_bind_geometry();
-        vk_shade_geometry(vk_pipeline, qfalse, normal, qtrue);
+        vk_shade_geometry(vk_pipeline, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 
 
 		i += count;
@@ -166,9 +177,6 @@ void RB_ShadowTessEnd( void ) {
 		return;
 	}
 
-	if ( glConfig.stencilBits < 4 ) {
-		return;
-	}
 
 	VectorCopy( backEnd.currentEntity->lightDir, lightDir );
 
@@ -215,15 +223,15 @@ void RB_ShadowTessEnd( void ) {
 
 	// draw the silhouette edges
 
-	GL_Bind( tr.whiteImage );
+	updateCurDescriptor( tr.whiteImage->descriptor_set, 0);
 
 	R_ExtrudeShadowEdges();
 
 	// mirrors have the culling order reversed
-    int isMir = backEnd.viewParms.isMirror;
+
 	// VULKAN
-	R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[0][isMir]);
-	R_Vk_Dx_RenderShadowEdges(vk.shadow_volume_pipelines[1][isMir]);
+	vk_renderShadowEdges(g_globalPipelines.shadow_volume_pipelines[0][backEnd.viewParms.isMirror]);
+	vk_renderShadowEdges(g_globalPipelines.shadow_volume_pipelines[1][backEnd.viewParms.isMirror]);
 
 }
 
@@ -243,12 +251,8 @@ void RB_ShadowFinish( void )
 	if ( r_shadows->integer != 2 ) {
 		return;
 	}
-	if ( glConfig.stencilBits < 4 ) {
-		return;
-	}
 
-
-	GL_Bind( tr.whiteImage );
+	updateCurDescriptor( tr.whiteImage->descriptor_set, 0);
 
 	// VULKAN
 
@@ -268,28 +272,28 @@ void RB_ShadowFinish( void )
 
     for (i = 0; i < 4; i++)
     {
-        VectorSet(tess.svars.colors[i], 153, 153, 153);
+        tess.svars.colors[i][0] = 153;
+        tess.svars.colors[i][1] = 153;
+        tess.svars.colors[i][2] = 153;
         tess.svars.colors[i][3] = 255;
     }
     tess.numVertexes = 4;
 
+	//PushModelView();
 
-    // set backEnd.or.modelMatrix to identity matrix
-    float bak[16];
+    // Com_Memcpy(tmp, vk_world.modelview_transform, 64);
+
+    float tmp[16] = { 1, 0 , 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1};
      
-   
-    get_modelview_matrix(bak);
-
-    reset_modelview_matrix();
-
-    vk_bind_geometry();
-    vk_shade_geometry(vk.shadow_finish_pipeline, qfalse, normal, qtrue);
-
-    set_modelview_matrix(bak);
+    vk_UploadXYZI(tess.xyz, tess.numVertexes, tess.indexes, tess.numIndexes);
+    updateMVP(backEnd.viewParms.isPortal, backEnd.projection2D, tmp);
+    vk_shade_geometry(g_globalPipelines.shadow_finish_pipeline, VK_FALSE, DEPTH_RANGE_NORMAL, VK_TRUE);
 
     tess.numIndexes = 0;
     tess.numVertexes = 0;
-
 }
 
 

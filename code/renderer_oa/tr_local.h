@@ -33,8 +33,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../renderercommon/iqm.h"
 #include "../renderercommon/qgl.h"
 #include "../renderercommon/tr_public.h"
-#include "../renderercommon/tr_common.h"
-
+#include "tr_common.h"
+#include "image.h"
 
 #define GLE(ret, name, ...) extern name##proc * qgl##name;
 QGL_1_1_PROCS;
@@ -95,10 +95,10 @@ typedef struct
 
 
 typedef struct {
-	vec3_t		origin;			// in world coordinates
+    float		modelMatrix[16] QALIGN(16);
+    vec3_t		origin;			// in world coordinates
 	vec3_t		axis[3];		// orientation in world
 	vec3_t		viewOrigin;		// viewParms->or.origin in local coordinates
-	float		modelMatrix[16];
 } orientationr_t;
 
 //===============================================================================
@@ -1626,8 +1626,8 @@ void	RB_CalcAlphaFromOneMinusEntity( unsigned char *dstColors );
 void	RB_CalcStretchTexCoords( const waveForm_t *wf, float *texCoords );
 void	RB_CalcLightscaleTexCoords( float *texCoords );
 void	RB_CalcAtlasTexCoords( const atlas_t *at, float *st );
-void	RB_CalcColorFromEntity( unsigned char *dstColors );
-void	RB_CalcColorFromOneMinusEntity( unsigned char *dstColors );
+void	RB_CalcColorFromEntity( unsigned char (*dstColors)[4] );
+void	RB_CalcColorFromOneMinusEntity( unsigned char (*dstColors)[4] );
 void	RB_CalcFlatAmbient( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcFlatDirect( unsigned char *colors ); // leilei - cel hack
 void	RB_CalcNormal( unsigned char *colors ); // leilei - normal hack

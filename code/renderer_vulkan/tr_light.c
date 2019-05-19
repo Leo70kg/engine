@@ -20,8 +20,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 // tr_light.c
-
-#include "tr_local.h"
+#include "tr_globals.h"
+#include "ref_import.h"
+#include "tr_cvar.h"
+#include "tr_light.h"
+#include "tr_curve.h"
+#include "tr_model.h"
+#include "tr_world.h"
+#include "srfTriangles_type.h"
+#include "srfSurfaceFace_type.h"
 
 #define	DLIGHT_AT_RADIUS		16
 // at the edge of a dlight's influence, this amount of light will be added
@@ -39,11 +46,13 @@ Used by both the front end (for DlightBmodel) and
 the back end (before doing the lighting calculation)
 ===============
 */
-void R_TransformDlights( int count, dlight_t *dl, orientationr_t *or) {
+void R_TransformDlights( int count, dlight_t *dl, const orientationr_t * const or)
+{
 	int		i;
-	vec3_t	temp;
 
-	for ( i = 0 ; i < count ; i++, dl++ ) {
+	for ( i = 0 ; i < count ; i++, dl++ )
+    {
+        vec3_t	temp;
 		VectorSubtract( dl->origin, or->origin, temp );
 		dl->transformed[0] = DotProduct( temp, or->axis[0] );
 		dl->transformed[1] = DotProduct( temp, or->axis[1] );
@@ -95,11 +104,11 @@ void R_DlightBmodel( bmodel_t *bmodel ) {
 		surf = bmodel->firstSurface + i;
 
 		if ( *surf->data == SF_FACE ) {
-			((srfSurfaceFace_t *)surf->data)->dlightBits[ tr.smpFrame ] = mask;
+			((srfSurfaceFace_t *)surf->data)->dlightBits = mask;
 		} else if ( *surf->data == SF_GRID ) {
-			((srfGridMesh_t *)surf->data)->dlightBits[ tr.smpFrame ] = mask;
+			((srfGridMesh_t *)surf->data)->dlightBits = mask;
 		} else if ( *surf->data == SF_TRIANGLES ) {
-			((srfTriangles_t *)surf->data)->dlightBits[ tr.smpFrame ] = mask;
+			((srfTriangles_t *)surf->data)->dlightBits = mask;
 		}
 	}
 }
@@ -113,9 +122,7 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-extern	cvar_t	*r_ambientScale;
-extern	cvar_t	*r_directedScale;
-extern	cvar_t	*r_debugLight;
+
 
 /*
 =================
@@ -307,7 +314,7 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// if NOWORLDMODEL, only use dynamic lights (menu system, etc)
-	if ( !(refdef->rdflags & RDF_NOWORLDMODEL ) 
+	if ( !(refdef->rd.rdflags & RDF_NOWORLDMODEL ) 
 		&& tr.world->lightGridData ) {
 		R_SetupEntityLightingGrid( ent );
 	} else {
@@ -371,12 +378,7 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	ent->lightDir[2] = DotProduct( lightDir, ent->e.axis[2] );
 }
 
-/*
-=================
-R_LightForPoint
-=================
-*/
-int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir )
+int RE_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir )
 {
 	trRefEntity_t ent;
 	

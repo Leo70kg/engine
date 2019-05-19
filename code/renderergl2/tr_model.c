@@ -76,7 +76,7 @@ static qhandle_t R_RegisterMD3(const char *name, model_t *mod)
 		else
 			snprintf(namebuf, sizeof(namebuf), "%s.%s", filename, fext);
 
-		int size = ri.R_ReadFile( namebuf, &buf );
+		int size = ri.FS_ReadFile( namebuf, &buf );
 		if(!buf)
 			continue;
 #if defined( Q3_BIG_ENDIAN )		
@@ -127,7 +127,7 @@ static qhandle_t R_RegisterMDR(const char *name, model_t *mod)
 	
 	char* buf;
 	qboolean loaded = qfalse;
-	int filesize = ri.R_ReadFile(name, &buf);
+	int filesize = ri.FS_ReadFile(name, &buf);
 	if(!buf)
 	{
 		mod->type = MOD_BAD;
@@ -162,7 +162,7 @@ static qhandle_t R_RegisterIQM(const char *name, model_t *mod)
 	qboolean loaded = qfalse;
 	int filesize;
 
-	filesize = ri.R_ReadFile(name, &buf);
+	filesize = ri.FS_ReadFile(name, &buf);
 	if(!buf)
 	{
 		mod->type = MOD_BAD;
@@ -287,7 +287,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	//
 	Q_strncpyz( localName, name, MAX_QPATH );
 
-	const char* ext = getExtension( localName );
+	const char* ext = R_GetExtension( localName );
 
 	if( *ext )
 	{
@@ -311,7 +311,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 				// try again without the extension
 				//orgNameFailed = qtrue;
 				orgLoader = i;
-				stripExtension( name, localName, MAX_QPATH );
+				R_StripExtension( name, localName, MAX_QPATH );
 			}
 			else
 			{

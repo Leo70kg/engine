@@ -29,7 +29,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 
 #include "../renderercommon/tr_public.h"
-#include "../renderercommon/tr_common.h"
+#include "tr_common.h"
+#include "image.h"
 
 #include "qgl.h"
 
@@ -50,12 +51,6 @@ void GLimp_DestroyWindow(void);
 
 void* GLimp_GetProcAddress(const char* fun);
 
-void* GLimp_RendererSleep( void );
-
-qboolean GLimp_SpawnRenderThread( void (*function)( void ) );
-
-void GLimp_WakeRenderer( void *data );
-void GLimp_FrontEndSleep( void );
 
 /////////////////////////////////////////////
 
@@ -67,7 +62,7 @@ typedef unsigned int glIndex_t;
 // everything that is needed by the backend needs
 // to be double buffered to allow it to run in
 // parallel on a dual cpu machine
-#define	SMP_FRAMES		2
+#define	SMP_FRAMES		1
 
 // 12 bits
 // see QSORT_SHADERNUM_SHIFT
@@ -105,7 +100,7 @@ typedef struct {
 	vec3_t		origin;			// in world coordinates
 	vec3_t		axis[3];		// orientation in world
 	vec3_t		viewOrigin;		// viewParms->or.origin in local coordinates
-	float		modelMatrix[16];
+	float		modelMatrix[16] QALIGN(16);
 } orientationr_t;
 
 /*
@@ -924,7 +919,6 @@ typedef struct {
 // all state modified by the back end is seperated
 // from the front end state
 typedef struct {
-	int			smpFrame;
 	trRefdef_t	refdef;
 	viewParms_t	viewParms;
 	orientationr_t	or;
@@ -952,8 +946,6 @@ typedef struct {
 	int						frameCount;		// incremented every frame
 	int						viewCount;		// incremented every view (twice a scene if portaled)
 											// and every R_MarkFragments call
-
-	int						smpFrame;		// toggles from 0 to 1 every endFrame
 
 	qboolean				worldMapLoaded;
 	world_t					*world;
@@ -1032,18 +1024,6 @@ extern trGlobals_t	tr;
 extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
 extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 
-// VULKAN
-extern struct Vk_Instance	vk;				// shouldn't be cleared during ref re-init
-extern struct Vk_World		vk_world;		// this data is cleared during ref re-init
-
-
-//
-// cvars
-//
-//extern cvar_t	*r_renderAPI;			// 3D API to use: 0 - OpenGL, 1 - Vulkan, 2 - DX12
-
-extern cvar_t	*r_twinMode;			// Debug feature to compare rendering output between OpenGL/Vulkan/DX12 APIs
-
 extern cvar_t	*r_railWidth;
 extern cvar_t	*r_railCoreWidth;
 extern cvar_t	*r_railSegmentLength;
@@ -1079,13 +1059,6 @@ extern	cvar_t	*r_showcluster;
 extern cvar_t	*r_mode;				// video mode
 extern cvar_t	*r_fullscreen;
 extern cvar_t	*r_gamma;
-extern cvar_t	*r_ignorehwgamma;		// overrides hardware gamma capabilities
-
-extern cvar_t	*r_ext_compressed_textures;		// these control use of specific extensions
-extern cvar_t	*r_ext_gamma_control;
-extern cvar_t	*r_ext_texenv_op;
-extern cvar_t	*r_ext_compiled_vertex_array;
-extern cvar_t	*r_ext_texture_env_add;
 
 extern	cvar_t	*r_nobind;						// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;				// make most world faces use default shader
@@ -1120,7 +1093,6 @@ extern	cvar_t	*r_portalOnly;
 
 extern	cvar_t	*r_subdivisions;
 extern	cvar_t	*r_lodCurveError;
-extern	cvar_t	*r_smp;
 extern	cvar_t	*r_showSmp;
 extern	cvar_t	*r_skipBackEnd;
 
@@ -1209,7 +1181,7 @@ void	GL_Cull( int cullType );
 #define GLS_ATEST_GT_0							0x10000000
 #define GLS_ATEST_LT_80							0x20000000
 #define GLS_ATEST_GE_80							0x40000000
-#define		GLS_ATEST_BITS						0x70000000
+#define	GLS_ATEST_BITS                          0x70000000
 
 #define GLS_DEFAULT			GLS_DEPTHMASK_TRUE
 
@@ -1468,7 +1440,6 @@ RENDERER BACK END FUNCTIONS
 =============================================================
 */
 
-void RB_RenderThread( void );
 void RB_ExecuteRenderCommands( const void *data );
 
 /*
@@ -1577,14 +1548,9 @@ extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allo
 
 extern	volatile renderCommandList_t	*renderCommandList;
 
-extern	volatile qboolean	renderThreadActive;
-
 
 void *R_GetCommandBuffer( int bytes );
 void RB_ExecuteRenderCommands( const void *data );
-
-void R_InitCommandBuffers( void );
-void R_ShutdownCommandBuffers( void );
 
 void R_SyncRenderThread( void );
 

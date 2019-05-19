@@ -1284,22 +1284,23 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 R_LoadSubmodels
 =================
 */
-static	void R_LoadSubmodels( lump_t *l ) {
-	dmodel_t	*in;
+static	void R_LoadSubmodels( lump_t *l )
+{
+    ri.Printf (PRINT_ALL, "\n---R_LoadSubmodels---\n");
+
 	bmodel_t	*out;
 	int			i, j, count;
 
-	in = (void *)(fileBase + l->fileofs);
+	dmodel_t* in = (dmodel_t*) (fileBase + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		ri.Error (ERR_DROP, "LoadMap: funny lump size in %s",s_worldData.name);
 	count = l->filelen / sizeof(*in);
 
 	s_worldData.bmodels = out = ri.Hunk_Alloc( count * sizeof(*out), h_low );
 
-	for ( i=0 ; i<count ; i++, in++, out++ ) {
-		model_t *model;
-
-		model = R_AllocModel();
+	for ( i=0 ; i<count ; i++, in++, out++ )
+    {
+		model_t* model = R_AllocModel();
 
 		assert( model != NULL );			// this should never happen
 		if ( model == NULL ) {
@@ -1777,7 +1778,7 @@ void RE_LoadWorldMap( const char *name ) {
 
 
 	// load it
-    ri.R_ReadFile( name, &buffer );
+    ri.FS_ReadFile( name, &buffer );
 	if ( NULL == buffer )
 		ri.Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
 
@@ -1796,7 +1797,7 @@ void RE_LoadWorldMap( const char *name ) {
 	Q_strncpyz( s_worldData.name, name, sizeof( s_worldData.name ) );
 
 	Q_strncpyz( s_worldData.baseName, COM_SkipPath( s_worldData.name ), sizeof( s_worldData.name ) );
-	stripExtension(s_worldData.baseName, s_worldData.baseName, sizeof(s_worldData.baseName));
+	R_StripExtension(s_worldData.baseName, s_worldData.baseName, sizeof(s_worldData.baseName));
 
 	startMarker = ri.Hunk_Alloc(0, h_low);
 
